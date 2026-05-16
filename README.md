@@ -388,6 +388,25 @@ The `-c` flag on bandit is required — without it bandit ignores the
 project skip config. When touching the pptx exporter, also run an
 overflow check (see `CLAUDE.md` "Slide Deck Rules").
 
+## Desktop GUI (PySide6)
+
+A native desktop interface ships behind the `[gui]` extra:
+
+```powershell
+pip install autopapertoppt[gui]
+autopapertoppt-gui                 # or: autopapertoppt gui
+```
+
+The window has four tabs — **Search** (functional), **Settings**
+(functional, persists API keys via QSettings), **Enrich**, and
+**Deck** (the latter two land in a follow-up). The Windows release
+`.exe` bundles PySide6, so `autopapertoppt.exe gui` works without
+a separate Python install. UI ships in English and Traditional
+Chinese; deck output language remains 14-language (CLI / GUI both
+consume the same `exporters/i18n.py` table).
+
+Full reference: [`docs/gui.md`](docs/gui.md).
+
 ## Packaging as a standalone executable
 
 Two packagers are documented for shipping a single-file binary that
@@ -426,13 +445,14 @@ Two GitHub Actions workflows live under `.github/workflows/`:
      `twine upload` via `PYPI_API_TOKEN`.
   3. **`create-draft-release`** — open a *draft* GitHub release at
      tag `v<version>` with auto-generated notes.
-  4. **`build-nuitka`** — fan out to Linux / Windows / macOS runners,
-     each compiles a Nuitka onefile executable, smoke-tests it,
-     attaches the binary + a `.sha256` checksum to the draft release.
-     Build cache keyed on `pyproject.toml` cuts warm builds from
-     ~15 min to ~3 min.
-  5. **`publish-release`** — unmark the draft once all three Nuitka
-     assets are uploaded, so users never see a half-finished release.
+  4. **`build-nuitka`** — compile a Nuitka onefile `.exe` on a
+     Windows runner, smoke-test it, and attach the binary + a
+     `.sha256` checksum to the draft release. Windows-only by design:
+     Linux / macOS users install from PyPI, so shipping native
+     binaries there just inflates the release page. Build cache keyed
+     on `pyproject.toml` cuts warm builds from ~15 min to ~3 min.
+  5. **`publish-release`** — unmark the draft once the Nuitka asset
+     is uploaded, so users never see a half-finished release.
 
   **Skipping a release.** Include `[skip release]` anywhere in the
   commit message and the bump + every downstream job is skipped — use
@@ -451,7 +471,7 @@ To enable PyPI publishing + release executables:
    bump commit is pushed by the workflow's `GITHUB_TOKEN`.
 4. Cut releases by merging PRs into `main`. The pipeline takes
    ~3–5 min to publish to PyPI and ~10–15 min more (or ~3–5 min with
-   a warm Nuitka cache) for the three platform binaries to attach.
+   a warm Nuitka cache) for the Windows binary to attach.
 
 A protected `pypi` GitHub Environment is referenced by the publish
 step; create it under `Settings → Environments` if you want to

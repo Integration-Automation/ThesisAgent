@@ -838,10 +838,32 @@ def _configure_stdio_for_unicode() -> None:
                 reconfigure(encoding="utf-8", errors="replace")
 
 
+def _dispatch_gui(gui_argv: list[str]) -> int:
+    """Boot the PySide6 GUI, or print a helpful install hint."""
+    try:
+        from autopapertoppt.gui.app import main as gui_main
+    except ImportError as err:
+        print(
+            "error: GUI extras not installed. Run "
+            "`pip install autopapertoppt[gui]`.\n"
+            f"(import error: {err})",
+            file=sys.stderr,
+        )
+        return 2
+    return gui_main(gui_argv)
+
+
 def main(argv: list[str] | None = None) -> int:
     _configure_stdio_for_unicode()
+    # Pre-parse for the ``gui`` subcommand. argparse can't host it
+    # cleanly because the existing query/paper/pdf mode is a required
+    # mutually-exclusive group, and forcing one of those flags just to
+    # open the GUI would be silly.
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    if raw_argv and raw_argv[0] == "gui":
+        return _dispatch_gui(raw_argv[1:])
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw_argv)
     try:
         return asyncio.run(_run(args))
     except AutoPaperToPPTError as err:
