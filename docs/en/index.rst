@@ -435,6 +435,23 @@ write a copy and leave the original alone. Full reference:
 
 ----
 
+Packaging as a standalone executable
+------------------------------------
+
+To ship a binary that runs on machines without Python installed:
+
+* :doc:`/packaging-pyinstaller` — fast build, larger binary, 2–4 s
+  startup. Best for iteration.
+* :doc:`/packaging-nuitka` — slow build, smaller binary, sub-second
+  startup, some bytecode protection. Best when end users run the
+  binary many times.
+
+Both docs cover the project-specific gotcha — the dynamic source
+plugins under ``sources/<name>/`` — and provide commands for both
+the CLI and MCP server entry points.
+
+----
+
 Architecture
 ------------
 

@@ -2,18 +2,26 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 def resolve_safe(root: str | Path, reference: str | Path) -> Path:
     """Resolve `reference` relative to `root`, refusing anything that escapes `root`.
 
-    Rejects: absolute paths, `..` segments, and symlinks pointing outside `root`.
-    Returns a real, absolute path inside `root`.
+    Rejects: absolute paths (POSIX or Windows-style, regardless of host OS),
+    `..` segments, and symlinks pointing outside `root`. Returns a real,
+    absolute path inside `root`.
     """
     root_path = Path(root).expanduser().resolve()
     reference_path = Path(reference)
-    if reference_path.is_absolute():
+    reference_str = str(reference)
+    # Check both flavours so a Windows drive letter (e.g. "C:/evil/path") is
+    # still rejected on POSIX runners, where Path treats it as a directory name.
+    if (
+        reference_path.is_absolute()
+        or PurePosixPath(reference_str).is_absolute()
+        or PureWindowsPath(reference_str).is_absolute()
+    ):
         raise ValueError(f"absolute paths are not allowed: {reference}")
     if any(part == ".." for part in reference_path.parts):
         raise ValueError(f"parent-segment paths are not allowed: {reference}")

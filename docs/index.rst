@@ -29,3 +29,5 @@ Welcome to the AutoPaperToPPT documentation. Please select your language:
    cli
    mcp
    pptx_editing
+   packaging-pyinstaller
+   packaging-nuitka

@@ -1,7 +1,7 @@
 # AutoPaperToPPT
 
 > **語言**: [English](README.md) · **繁體中文** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
-> **文件**: [Read the Docs 原始檔](docs/) (Sphinx)
+> **文件**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 以關鍵字驅動的論文搜尋助手。從 arXiv、Semantic Scholar、OpenAlex、PubMed、ACM(走 Crossref)、IEEE Xplore、DBLP、通用 Crossref、OpenAIRE、Springer Nature、Google Scholar 抓論文,正規化成統一的 record,並把去重後的結果集匯出為 **論文口試級的 PowerPoint 投影片**、**Excel 工作簿**、**BibTeX 檔** —— 一次 CLI 呼叫或一次 MCP 工具呼叫即可完成全部。另可選擇讓 AI 讀 PDF 本文後產出每篇論文的結構化摘要(LLM-as-agent 路徑)或透過 Anthropic API 自動產(Python pipeline 路徑)。
 

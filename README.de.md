@@ -1,7 +1,7 @@
 # AutoPaperToPPT
 
 > **Sprachen**: [English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · **Deutsch** · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
-> **Dokumentation**: [Read the Docs Quelle](docs/) (Sphinx)
+> **Dokumentation**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 Stichwortgesteuerter Paper-Such-Assistent, der Ergebnisse von arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (via Crossref), IEEE Xplore, DBLP, generischem Crossref, OpenAIRE, Springer Nature und Google Scholar abruft, in ein einheitliches Datensatzformat normalisiert und die deduplizierte Ergebnismenge als **Paper-Review PowerPoint im Thesis-Stil**, **Excel-Arbeitsmappe** und **BibTeX-Datei** exportiert — alles aus einem CLI-Aufruf oder einem MCP-Tool-Aufruf. Kann optional jedes Paper anreichern, indem es das PDF liest und eine strukturierte Zusammenfassung erstellt, entweder im Kontext (LLM-as-agent-Pfad) oder über die Anthropic-API (Python-Pipeline-Pfad).
 
