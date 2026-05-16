@@ -190,27 +190,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-nuitka:
-    name: Nuitka build (${{ matrix.os }})
+    name: Nuitka build (windows-x86_64)
     needs: [bump-version, create-draft-release]
-    runs-on: ${{ matrix.os }}
+    # Windows is the only platform users have asked for an .exe on.
+    # Linux/macOS users install from PyPI; shipping a Nuitka binary
+    # there just inflates the release page without serving a real
+    # use case.
+    runs-on: windows-latest
     # Nuitka builds 5-15 min cold, 2-3 min warm with cache. The cap
-    # is generous for the cold case + lxml/pymupdf native link.
+    # is generous for the cold case + lxml native link.
     timeout-minutes: 45
-    strategy:
-      # Surface every platform's failure; one OS breaking shouldn't
-      # cancel the other two.
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            asset_name: autopapertoppt-linux-x86_64
-            exe_suffix: ""
-          - os: windows-latest
-            asset_name: autopapertoppt-windows-x86_64.exe
-            exe_suffix: ".exe"
-          - os: macos-latest
-            asset_name: autopapertoppt-macos-arm64
-            exe_suffix: ""
+    env:
+      ASSET_NAME: autopapertoppt-windows-x86_64.exe
     steps:
       - name: Checkout the bumped commit
         uses: actions/checkout@v4
@@ -260,7 +251,7 @@ jobs:
           python -m nuitka \
             --standalone \
             --onefile \
-            --output-filename=autopapertoppt${{ matrix.exe_suffix }} \
+            --output-filename=autopapertoppt.exe \
             --include-package=autopapertoppt \
             --include-package=arxiv \
             --include-package=semantic_scholar \
@@ -284,33 +275,26 @@ jobs:
         # surfaces it immediately rather than at the user's first run.
         shell: bash
         run: |
-          ./autopapertoppt${{ matrix.exe_suffix }} --version || true
-          ./autopapertoppt${{ matrix.exe_suffix }} --help > /dev/null
+          ./autopapertoppt.exe --version || true
+          ./autopapertoppt.exe --help > /dev/null
 
       - name: Rename for the platform-specific asset name
         shell: bash
-        run: |
-          mv "autopapertoppt${{ matrix.exe_suffix }}" "${{ matrix.asset_name }}"
+        run: mv autopapertoppt.exe "$ASSET_NAME"
 
       - name: Compute SHA-256 checksum
-        # Attach the checksum file alongside each binary so users can
+        # Attach the checksum file alongside the binary so users can
         # verify what they downloaded matches what CI built.
         shell: bash
-        run: |
-          if command -v sha256sum >/dev/null; then
-            sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
-          else
-            # macOS doesn't ship sha256sum; shasum -a 256 is the BSD equivalent.
-            shasum -a 256 "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
-          fi
+        run: sha256sum "$ASSET_NAME" > "$ASSET_NAME.sha256"
 
       - name: Attach binary + checksum to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.bump-version.outputs.version }}
           files: |
-            ${{ matrix.asset_name }}
-            ${{ matrix.asset_name }}.sha256
+            ${{ env.ASSET_NAME }}
+            ${{ env.ASSET_NAME }}.sha256
           # The release was created as a draft above; uploading does
           # not unmark it.
           draft: true
