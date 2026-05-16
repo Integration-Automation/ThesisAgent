@@ -97,9 +97,23 @@ async def get_client(source: str) -> httpx.AsyncClient:
 
 
 async def shutdown_clients() -> None:
-    """Close all shared clients. Call from app shutdown / CLI exit."""
+    """Close all shared clients. Call from app shutdown / CLI exit.
+
+    Tolerates clients whose original event loop has already closed —
+    that happens in the test suite where each ``asyncio.run`` spins
+    its own loop, and a client cached during an earlier test cannot
+    be re-closed in a later loop's context. We drop those clients
+    from the registry; the OS will reclaim the dangling sockets.
+    """
     async with _LOCK:
         clients = list(_CLIENTS.values())
         _CLIENTS.clear()
     for client in clients:
-        await client.aclose()
+        try:
+            await client.aclose()
+        except RuntimeError as err:
+            # "Event loop is closed" / "got Future <...> attached to a
+            # different loop" — the client outlived its loop. Nothing
+            # we can do at this point that's safer than letting GC
+            # reap the connection pool.
+            _LOG.debug("client.aclose() raised %r; dropping silently", err)

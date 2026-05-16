@@ -388,6 +388,25 @@ The `-c` flag on bandit is required — without it bandit ignores the
 project skip config. When touching the pptx exporter, also run an
 overflow check (see `CLAUDE.md` "Slide Deck Rules").
 
+## Desktop GUI (PySide6)
+
+A native desktop interface ships behind the `[gui]` extra:
+
+```powershell
+pip install autopapertoppt[gui]
+autopapertoppt-gui                 # or: autopapertoppt gui
+```
+
+The window has four tabs — **Search** (functional), **Settings**
+(functional, persists API keys via QSettings), **Enrich**, and
+**Deck** (the latter two land in a follow-up). The Windows release
+`.exe` bundles PySide6, so `autopapertoppt.exe gui` works without
+a separate Python install. UI ships in English and Traditional
+Chinese; deck output language remains 14-language (CLI / GUI both
+consume the same `exporters/i18n.py` table).
+
+Full reference: [`docs/gui.md`](docs/gui.md).
+
 ## Packaging as a standalone executable
 
 Two packagers are documented for shipping a single-file binary that

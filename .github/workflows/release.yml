@@ -232,12 +232,13 @@ jobs:
             nuitka-${{ runner.os }}-
 
       - name: Install runtime + Nuitka
-        # Install the intelligence + mcp extras so the shipped exe
-        # supports --enrich and the MCP entry point too. nuitka is
-        # only needed for the build.
+        # Install the intelligence + mcp + gui extras so the shipped
+        # exe supports --enrich, the MCP entry point, AND the PySide6
+        # desktop UI (`autopapertoppt.exe gui`). nuitka is only needed
+        # for the build.
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[intelligence,mcp]"
+          pip install -e ".[intelligence,mcp,gui]"
           pip install nuitka
 
       - name: Compile with Nuitka
@@ -264,9 +265,12 @@ jobs:
             --include-package=crossref \
             --include-package=openaire \
             --include-package=springer \
+            --include-package=PySide6 \
+            --enable-plugin=pyside6 \
             --include-data-dir=sources=sources \
             --include-package-data=python_pptx \
             --include-package-data=openpyxl \
+            --include-package-data=PySide6 \
             --assume-yes-for-downloads \
             autopapertoppt/__main__.py
 
