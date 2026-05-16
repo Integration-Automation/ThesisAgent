@@ -411,14 +411,26 @@ Two GitHub Actions workflows live under `.github/workflows/`:
 - **`ci.yml`** runs on every push and PR to `main`. Matrix is Ubuntu +
   Windows × Python 3.12 / 3.13 / 3.14 (6 jobs). Each job runs
   `ruff check`, `bandit -c pyproject.toml`, and `pytest`.
-- **`release.yml`** runs on every push to `main`. It diffs
-  `pyproject.toml` against the previous commit; if the `version =
-  "..."` line changed, it builds an sdist + wheel, verifies them with
-  `twine check`, uploads to PyPI, and creates a tagged GitHub release
-  with auto-generated notes. If the version did **not** change, the
-  job exits early — most merges to `main` are no-ops.
+- **`release.yml`** waits for `ci.yml` to complete on `main`
+  (`workflow_run` trigger). It runs only if CI succeeded. It then
+  diffs `pyproject.toml` against the previous commit; if the
+  `version = "..."` line changed, it pipelines:
+  1. **`publish-pypi`** — build sdist + wheel, `twine check`,
+     `twine upload` via `PYPI_API_TOKEN`.
+  2. **`create-draft-release`** — open a *draft* GitHub release at
+     tag `v<version>` with auto-generated notes.
+  3. **`build-nuitka`** — fan out to Linux / Windows / macOS runners,
+     each compiles a Nuitka onefile executable, smoke-tests it,
+     attaches the binary + a `.sha256` checksum to the draft release.
+     Build cache keyed on `pyproject.toml` cuts warm builds from
+     ~15 min to ~3 min.
+  4. **`publish-release`** — unmark the draft once all three Nuitka
+     assets are uploaded, so users never see a half-finished release.
 
-To enable PyPI publishing:
+  If the version did **not** change, every job after `detect-version`
+  is skipped — most merges to `main` are no-ops.
+
+To enable PyPI publishing + release executables:
 
 1. Generate a project-scoped API token at
    <https://pypi.org/manage/account/token/>.
@@ -426,13 +438,15 @@ To enable PyPI publishing:
    New repository secret`. Name it `PYPI_API_TOKEN` and paste the
    token value.
 3. To cut a release: bump `version` in `pyproject.toml` (e.g.
-   `0.1.0` → `0.1.1`), open a PR, and merge it. The merge commit
-   triggers `release.yml`, which uploads the new version and tags
-   it `v<version>` on GitHub.
+   `0.1.0` → `0.1.1`), open a PR, and merge it. CI runs against the
+   merge commit; once green, the release pipeline kicks off. About
+   3–5 minutes later the PyPI version is live; about 10–15 minutes
+   after that (or 3–5 min with a warm Nuitka cache) the three
+   platform binaries are attached and the GitHub release goes public.
 
 A protected `pypi` GitHub Environment is referenced by the publish
-step; create it under `Settings → Environments` if you want to require
-manual approval before each release (optional).
+step; create it under `Settings → Environments` if you want to
+require manual approval before each release (optional).
 
 ## License
 

@@ -1,14 +1,33 @@
-name: Release to PyPI
+name: Release
 
-# Triggered only when commits land on main (i.e. a PR was merged or a
-# direct push happened). The job is a no-op unless pyproject.toml's
-# version actually changed in this push, so re-running CI on main
-# without bumping the version is free.
+# Triggered by CI completing on main. We do NOT trigger on push directly
+# so a release can never ship if the test matrix failed. The job tree:
+#
+#   CI (ci.yml) runs on main push
+#        │
+#        ▼  workflow_run: completed + conclusion == success
+#   detect-version  →  publish-pypi  →  create-draft-release
+#                                                  │
+#                                                  ▼
+#                                       build-nuitka [linux | windows | macos]
+#                                                  │
+#                                                  ▼
+#                                       publish-release (unmark draft)
+#
+# If the version line in pyproject.toml was NOT bumped in this push,
+# detect-version sets changed=false and every downstream job is skipped.
+
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
-# Avoid duplicate concurrent releases for the same ref.
+permissions:
+  # contents:write is needed to create tags, releases, and to upload
+  # release assets (the Nuitka binaries).
+  contents: write
+
 concurrency:
   group: release-main
   cancel-in-progress: false
@@ -16,17 +35,25 @@ concurrency:
 jobs:
   detect-version:
     name: Detect version change
+    # Only run when CI succeeded. workflow_run fires on every CI
+    # completion (success, failure, cancelled), so we have to gate
+    # this explicitly.
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.read.outputs.version }}
       changed: ${{ steps.compare.outputs.changed }}
+      head_sha: ${{ github.event.workflow_run.head_sha }}
     steps:
-      - name: Checkout (with history)
+      - name: Checkout the commit CI verified
         uses: actions/checkout@v4
         with:
-          # Need at least two commits of history to diff pyproject.toml
-          # against the previous state — depth 2 covers the normal case
-          # of one merge commit landing.
+          # workflow_run gives us the SHA that triggered CI — check
+          # THAT out, not the default branch HEAD, so the version we
+          # publish exactly matches the code CI tested.
+          ref: ${{ github.event.workflow_run.head_sha }}
+          # Need >=2 commits of history to diff pyproject.toml against
+          # the previous state.
           fetch-depth: 2
 
       - name: Read current version
@@ -48,8 +75,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # If pyproject.toml didn't change at all between HEAD and HEAD~1,
-          # this push didn't touch the version. Skip.
           if git diff --quiet HEAD~1 HEAD -- pyproject.toml; then
             echo "pyproject.toml unchanged in this push — skipping release"
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -71,21 +96,19 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-  publish:
+  publish-pypi:
     name: Build + publish to PyPI
     needs: detect-version
     if: needs.detect-version.outputs.changed == 'true'
     runs-on: ubuntu-latest
-    # Bind the deployment to a GitHub Environment so the secret access
-    # is auditable and the release shows up in the repo's Deployments
-    # tab. The environment also lets reviewers gate the deploy with a
-    # manual approval if they want to (configure in repo settings).
     environment:
       name: pypi
       url: https://pypi.org/project/autopapertoppt/${{ needs.detect-version.outputs.version }}/
     steps:
-      - name: Checkout
+      - name: Checkout the commit CI verified
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.detect-version.outputs.head_sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -103,8 +126,6 @@ jobs:
         run: python -m build
 
       - name: Verify distribution metadata
-        # `twine check` catches the common publish-time failures:
-        # malformed long description, missing license, wrong classifiers.
         run: python -m twine check dist/*
 
       - name: Publish to PyPI
@@ -113,18 +134,175 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: python -m twine upload --non-interactive dist/*
 
-      - name: Create GitHub release
-        # Auto-generated release notes from the merged PRs. Tagged
-        # v<version> so the GitHub release UI links back to the PyPI
-        # publish above.
+  create-draft-release:
+    name: Create draft GitHub release
+    needs: [detect-version, publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the commit CI verified
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.detect-version.outputs.head_sha }}
+
+      - name: Create draft release
+        # Draft now, attach Nuitka assets in subsequent jobs, unmark
+        # draft once everything's uploaded — so consumers never see a
+        # half-finished release.
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.detect-version.outputs.version }}
           name: v${{ needs.detect-version.outputs.version }}
+          draft: true
           generate_release_notes: true
-          # The tag is created at the current HEAD. The job only runs
-          # when the version was bumped, so HEAD is the merge commit
-          # the user wants to tag.
-          target_commitish: ${{ github.sha }}
+          target_commitish: ${{ needs.detect-version.outputs.head_sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-nuitka:
+    name: Nuitka build (${{ matrix.os }})
+    needs: [detect-version, create-draft-release]
+    runs-on: ${{ matrix.os }}
+    # Nuitka builds 5-15 min cold, 2-3 min warm with cache. The cap
+    # is generous for the cold case + lxml/pymupdf native link.
+    timeout-minutes: 45
+    strategy:
+      # Surface every platform's failure; one OS breaking shouldn't
+      # cancel the other two.
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: autopapertoppt-linux-x86_64
+            exe_suffix: ""
+          - os: windows-latest
+            asset_name: autopapertoppt-windows-x86_64.exe
+            exe_suffix: ".exe"
+          - os: macos-latest
+            asset_name: autopapertoppt-macos-arm64
+            exe_suffix: ""
+    steps:
+      - name: Checkout the commit CI verified
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.detect-version.outputs.head_sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Cache Nuitka build artefacts
+        uses: actions/cache@v4
+        with:
+          # ~/.nuitka holds Nuitka's own caches; *.build holds the
+          # generated C sources from the previous run. Caching both
+          # cuts subsequent builds from ~15 min to ~3 min.
+          path: |
+            ~/.nuitka
+            ~/.cache/Nuitka
+            autopapertoppt.build
+            autopapertoppt.dist
+          key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ needs.detect-version.outputs.version }}
+          restore-keys: |
+            nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-
+            nuitka-${{ runner.os }}-
+
+      - name: Install runtime + Nuitka
+        # Install the intelligence + mcp extras so the shipped exe
+        # supports --enrich and the MCP entry point too. nuitka is
+        # only needed for the build.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[intelligence,mcp]"
+          pip install nuitka
+
+      - name: Compile with Nuitka
+        # All 11 source plugins must be force-included because they
+        # are imported dynamically by name at runtime (see
+        # autopapertoppt/fetchers/base.py::load_fetcher). The
+        # sources/ directory ships as data because the runtime
+        # computes _SOURCES_DIR = parents[2]/"sources".
+        shell: bash
+        run: |
+          python -m nuitka \
+            --standalone \
+            --onefile \
+            --output-filename=autopapertoppt${{ matrix.exe_suffix }} \
+            --include-package=autopapertoppt \
+            --include-package=arxiv \
+            --include-package=semantic_scholar \
+            --include-package=openalex \
+            --include-package=pubmed \
+            --include-package=acm \
+            --include-package=ieee \
+            --include-package=scholar \
+            --include-package=dblp \
+            --include-package=crossref \
+            --include-package=openaire \
+            --include-package=springer \
+            --include-data-dir=sources=sources \
+            --include-package-data=python_pptx \
+            --include-package-data=openpyxl \
+            --assume-yes-for-downloads \
+            autopapertoppt/__main__.py
+
+      - name: Smoke-test the built executable
+        # If the binary fails to load any of its bundled plugins, this
+        # surfaces it immediately rather than at the user's first run.
+        shell: bash
+        run: |
+          ./autopapertoppt${{ matrix.exe_suffix }} --version || true
+          ./autopapertoppt${{ matrix.exe_suffix }} --help > /dev/null
+
+      - name: Rename for the platform-specific asset name
+        shell: bash
+        run: |
+          mv "autopapertoppt${{ matrix.exe_suffix }}" "${{ matrix.asset_name }}"
+
+      - name: Compute SHA-256 checksum
+        # Attach the checksum file alongside each binary so users can
+        # verify what they downloaded matches what CI built.
+        shell: bash
+        run: |
+          if command -v sha256sum >/dev/null; then
+            sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
+          else
+            # macOS doesn't ship sha256sum; shasum -a 256 is the BSD equivalent.
+            shasum -a 256 "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
+          fi
+
+      - name: Attach binary + checksum to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.detect-version.outputs.version }}
+          files: |
+            ${{ matrix.asset_name }}
+            ${{ matrix.asset_name }}.sha256
+          # The release was created as a draft above; uploading does
+          # not unmark it.
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-release:
+    name: Mark release as published
+    needs: [detect-version, build-nuitka]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unmark draft (publish the release)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = "v${{ needs.detect-version.outputs.version }}";
+            const { owner, repo } = context.repo;
+            const release = await github.rest.repos.getReleaseByTag({
+              owner, repo, tag,
+            });
+            await github.rest.repos.updateRelease({
+              owner, repo,
+              release_id: release.data.id,
+              draft: false,
+            });
+            console.log(`Released ${tag} (${release.data.html_url})`);
