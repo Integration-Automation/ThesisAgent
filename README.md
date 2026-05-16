@@ -413,23 +413,31 @@ Two GitHub Actions workflows live under `.github/workflows/`:
   Windows × Python 3.12 / 3.13 / 3.14 (6 jobs). Each job runs
   `ruff check`, `bandit -c pyproject.toml`, and `pytest`.
 - **`release.yml`** waits for `ci.yml` to complete on `main`
-  (`workflow_run` trigger). It runs only if CI succeeded. It then
-  diffs `pyproject.toml` against the previous commit; if the
-  `version = "..."` line changed, it pipelines:
-  1. **`publish-pypi`** — build sdist + wheel, `twine check`,
+  (`workflow_run` trigger). It runs only if CI succeeded. **Every
+  CI-success push to `main` is a release** — the workflow auto-bumps
+  the patch version in `pyproject.toml`, commits the bump back to
+  `main` as `chore: bump version to X.Y.Z`, and pipelines:
+  1. **`bump-version`** — read current `X.Y.Z` from `pyproject.toml`,
+     increment to `X.Y.(Z+1)`, commit + push back to `main` using the
+     workflow `GITHUB_TOKEN`. That push does NOT re-trigger CI (per
+     GitHub's rule that `GITHUB_TOKEN`-driven pushes can't start new
+     workflow runs), so the cycle terminates naturally.
+  2. **`publish-pypi`** — build sdist + wheel, `twine check`,
      `twine upload` via `PYPI_API_TOKEN`.
-  2. **`create-draft-release`** — open a *draft* GitHub release at
+  3. **`create-draft-release`** — open a *draft* GitHub release at
      tag `v<version>` with auto-generated notes.
-  3. **`build-nuitka`** — fan out to Linux / Windows / macOS runners,
+  4. **`build-nuitka`** — fan out to Linux / Windows / macOS runners,
      each compiles a Nuitka onefile executable, smoke-tests it,
      attaches the binary + a `.sha256` checksum to the draft release.
      Build cache keyed on `pyproject.toml` cuts warm builds from
      ~15 min to ~3 min.
-  4. **`publish-release`** — unmark the draft once all three Nuitka
+  5. **`publish-release`** — unmark the draft once all three Nuitka
      assets are uploaded, so users never see a half-finished release.
 
-  If the version did **not** change, every job after `detect-version`
-  is skipped — most merges to `main` are no-ops.
+  **Skipping a release.** Include `[skip release]` anywhere in the
+  commit message and the bump + every downstream job is skipped — use
+  this for docs-only / typo / refactor commits that shouldn't burn a
+  version number.
 
 To enable PyPI publishing + release executables:
 
@@ -438,12 +446,12 @@ To enable PyPI publishing + release executables:
 2. In the GitHub repo: `Settings → Secrets and variables → Actions →
    New repository secret`. Name it `PYPI_API_TOKEN` and paste the
    token value.
-3. To cut a release: bump `version` in `pyproject.toml` (e.g.
-   `0.1.0` → `0.1.1`), open a PR, and merge it. CI runs against the
-   merge commit; once green, the release pipeline kicks off. About
-   3–5 minutes later the PyPI version is live; about 10–15 minutes
-   after that (or 3–5 min with a warm Nuitka cache) the three
-   platform binaries are attached and the GitHub release goes public.
+3. Allow GitHub Actions to push to `main`: `Settings → Actions →
+   General → Workflow permissions → Read and write permissions`. The
+   bump commit is pushed by the workflow's `GITHUB_TOKEN`.
+4. Cut releases by merging PRs into `main`. The pipeline takes
+   ~3–5 min to publish to PyPI and ~10–15 min more (or ~3–5 min with
+   a warm Nuitka cache) for the three platform binaries to attach.
 
 A protected `pypi` GitHub Environment is referenced by the publish
 step; create it under `Settings → Environments` if you want to
