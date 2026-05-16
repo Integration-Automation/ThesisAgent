@@ -1,21 +1,28 @@
 name: Release
 
 # Triggered by CI completing on main. We do NOT trigger on push directly
-# so a release can never ship if the test matrix failed. The job tree:
+# so a release can never ship if the test matrix failed.
 #
-#   CI (ci.yml) runs on main push
+# Auto-bump model: every CI-success push to main increments the patch
+# version (0.1.0 → 0.1.1 → 0.1.2 → …). The bump itself lands as a
+# `chore: bump version to X.Y.Z` commit pushed back to main; that push
+# uses GITHUB_TOKEN, which by GitHub's rules does NOT trigger CI again,
+# so there's no infinite loop. As belt-and-suspenders we also skip the
+# bump if the previous commit was already an auto-bump.
+#
+# Escape hatch: a commit message containing `[skip release]` opts out
+# of bumping AND publishing for that push.
+#
+#   CI (ci.yml) succeeds on main push
 #        │
 #        ▼  workflow_run: completed + conclusion == success
-#   detect-version  →  publish-pypi  →  create-draft-release
-#                                                  │
-#                                                  ▼
-#                                       build-nuitka [linux | windows | macos]
-#                                                  │
-#                                                  ▼
-#                                       publish-release (unmark draft)
-#
-# If the version line in pyproject.toml was NOT bumped in this push,
-# detect-version sets changed=false and every downstream job is skipped.
+#   bump-version  →  publish-pypi  →  create-draft-release
+#                                              │
+#                                              ▼
+#                                   build-nuitka [linux | windows | macos]
+#                                              │
+#                                              ▼
+#                                   publish-release (unmark draft)
 
 on:
   workflow_run:
@@ -24,8 +31,8 @@ on:
     branches: [main]
 
 permissions:
-  # contents:write is needed to create tags, releases, and to upload
-  # release assets (the Nuitka binaries).
+  # contents:write is needed to push the bump commit, create tags +
+  # releases, and upload release assets (the Nuitka binaries).
   contents: write
 
 concurrency:
@@ -33,82 +40,106 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  detect-version:
-    name: Detect version change
+  bump-version:
+    name: Auto-bump patch version
     # Only run when CI succeeded. workflow_run fires on every CI
     # completion (success, failure, cancelled), so we have to gate
     # this explicitly.
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.read.outputs.version }}
-      changed: ${{ steps.compare.outputs.changed }}
-      head_sha: ${{ github.event.workflow_run.head_sha }}
+      version: ${{ steps.bump.outputs.version }}
+      sha: ${{ steps.push.outputs.sha }}
+      skipped: ${{ steps.gate.outputs.skip }}
     steps:
-      - name: Checkout the commit CI verified
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          # workflow_run gives us the SHA that triggered CI — check
-          # THAT out, not the default branch HEAD, so the version we
-          # publish exactly matches the code CI tested.
-          ref: ${{ github.event.workflow_run.head_sha }}
-          # Need >=2 commits of history to diff pyproject.toml against
-          # the previous state.
+          ref: main
+          # Need history to inspect the previous commit message for
+          # loop detection.
           fetch-depth: 2
+          # persist-credentials lets the final `git push` reuse the
+          # GITHUB_TOKEN this job was issued.
+          persist-credentials: true
 
-      - name: Read current version
-        id: read
-        shell: bash
-        run: |
-          VERSION=$(grep -E '^version *= *"' pyproject.toml \
-                    | head -1 \
-                    | sed -E 's/.*"([^"]+)".*/\1/')
-          if [ -z "$VERSION" ]; then
-            echo "::error::could not read version from pyproject.toml"
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "current pyproject.toml version: $VERSION"
-
-      - name: Compare to previous commit
-        id: compare
+      - name: Decide whether to bump
+        id: gate
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet HEAD~1 HEAD -- pyproject.toml; then
-            echo "pyproject.toml unchanged in this push — skipping release"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          PREV=$(git show HEAD~1:pyproject.toml \
-                  | grep -E '^version *= *"' \
-                  | head -1 \
-                  | sed -E 's/.*"([^"]+)".*/\1/' \
-                  || echo "")
-          NEW="${{ steps.read.outputs.version }}"
-          echo "previous version: ${PREV:-<none>}"
-          echo "current version:  $NEW"
-          if [ "$PREV" = "$NEW" ]; then
-            echo "version line edited but value unchanged — skipping release"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          MSG=$(git log -1 --pretty=%B)
+          if echo "$MSG" | grep -q '\[skip release\]'; then
+            echo "Commit carries [skip release]; not bumping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif echo "$MSG" | grep -q '^chore: bump version to '; then
+            # The previous push WAS an auto-bump. GitHub's rule about
+            # GITHUB_TOKEN-pushes not triggering workflows should have
+            # already broken any loop, but this is a safety net.
+            echo "Previous commit was an auto-bump; not re-bumping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "version bumped $PREV → $NEW — proceeding to release"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Configure git author
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump patch version
+        id: bump
+        if: steps.gate.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          OLD=$(grep -E '^version *= *"' pyproject.toml | head -1 \
+                | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$OLD" ]; then
+            echo "::error::could not read current version from pyproject.toml"
+            exit 1
+          fi
+          # Split X.Y.Z and increment Z. If the version has more or
+          # fewer components, fail loudly rather than guess.
+          if ! [[ "$OLD" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::version $OLD is not a plain X.Y.Z — pre-release tags require manual bump"
+            exit 1
+          fi
+          X="${BASH_REMATCH[1]}"
+          Y="${BASH_REMATCH[2]}"
+          Z="${BASH_REMATCH[3]}"
+          NEW="$X.$Y.$((Z+1))"
+          sed -i "s|^version = \"$OLD\"|version = \"$NEW\"|" pyproject.toml
+          echo "Bumped $OLD → $NEW"
+          echo "version=$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: Commit + push bump
+        id: push
+        if: steps.gate.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add pyproject.toml
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.version }}"
+          git push origin HEAD:main
+          # Capture the SHA of the bump commit so downstream jobs build
+          # exactly that revision.
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   publish-pypi:
     name: Build + publish to PyPI
-    needs: detect-version
-    if: needs.detect-version.outputs.changed == 'true'
+    needs: bump-version
+    if: needs.bump-version.outputs.skipped == 'false'
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/autopapertoppt/${{ needs.detect-version.outputs.version }}/
+      url: https://pypi.org/project/autopapertoppt/${{ needs.bump-version.outputs.version }}/
     steps:
-      - name: Checkout the commit CI verified
+      - name: Checkout the bumped commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.detect-version.outputs.head_sha }}
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -136,13 +167,13 @@ jobs:
 
   create-draft-release:
     name: Create draft GitHub release
-    needs: [detect-version, publish-pypi]
+    needs: [bump-version, publish-pypi]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the commit CI verified
+      - name: Checkout the bumped commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.detect-version.outputs.head_sha }}
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Create draft release
         # Draft now, attach Nuitka assets in subsequent jobs, unmark
@@ -150,17 +181,17 @@ jobs:
         # half-finished release.
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.detect-version.outputs.version }}
-          name: v${{ needs.detect-version.outputs.version }}
+          tag_name: v${{ needs.bump-version.outputs.version }}
+          name: v${{ needs.bump-version.outputs.version }}
           draft: true
           generate_release_notes: true
-          target_commitish: ${{ needs.detect-version.outputs.head_sha }}
+          target_commitish: ${{ needs.bump-version.outputs.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-nuitka:
     name: Nuitka build (${{ matrix.os }})
-    needs: [detect-version, create-draft-release]
+    needs: [bump-version, create-draft-release]
     runs-on: ${{ matrix.os }}
     # Nuitka builds 5-15 min cold, 2-3 min warm with cache. The cap
     # is generous for the cold case + lxml/pymupdf native link.
@@ -181,10 +212,10 @@ jobs:
             asset_name: autopapertoppt-macos-arm64
             exe_suffix: ""
     steps:
-      - name: Checkout the commit CI verified
+      - name: Checkout the bumped commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.detect-version.outputs.head_sha }}
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -204,7 +235,7 @@ jobs:
             ~/.cache/Nuitka
             autopapertoppt.build
             autopapertoppt.dist
-          key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ needs.detect-version.outputs.version }}
+          key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ needs.bump-version.outputs.version }}
           restore-keys: |
             nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-
             nuitka-${{ runner.os }}-
@@ -276,7 +307,7 @@ jobs:
       - name: Attach binary + checksum to release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.detect-version.outputs.version }}
+          tag_name: v${{ needs.bump-version.outputs.version }}
           files: |
             ${{ matrix.asset_name }}
             ${{ matrix.asset_name }}.sha256
@@ -288,14 +319,14 @@ jobs:
 
   publish-release:
     name: Mark release as published
-    needs: [detect-version, build-nuitka]
+    needs: [bump-version, build-nuitka]
     runs-on: ubuntu-latest
     steps:
       - name: Unmark draft (publish the release)
         uses: actions/github-script@v7
         with:
           script: |
-            const tag = "v${{ needs.detect-version.outputs.version }}";
+            const tag = "v${{ needs.bump-version.outputs.version }}";
             const { owner, repo } = context.repo;
             const release = await github.rest.repos.getReleaseByTag({
               owner, repo, tag,
