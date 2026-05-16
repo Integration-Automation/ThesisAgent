@@ -1,16 +1,10 @@
 # AutoPaperToPPT
 
-<!--
-Badges below use placeholder `OWNER/REPO` and `autopapertoppt` (PyPI
-package name). After you push this repo to GitHub, replace `OWNER/REPO`
-with your actual GitHub `<user>/<repo>` so the badges resolve.
--->
-
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
-[![Release](https://github.com/OWNER/REPO/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/OWNER/REPO/actions/workflows/release.yml)
+[![CI](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/ci.yml/badge.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/ci.yml)
+[![Release](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/release.yml)
 [![PyPI](https://img.shields.io/pypi/v/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
 [![Python](https://img.shields.io/pypi/pyversions/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/github/license/Integration-Automation/AutoPaperToPPT.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/blob/main/LICENSE)
 [![Docs](https://readthedocs.org/projects/autopapertoppt/badge/?version=latest)](https://autopapertoppt.readthedocs.io/en/latest/)
 
 > **Languages**: **English** · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
@@ -473,9 +467,11 @@ To enable PyPI publishing + release executables:
    ~3–5 min to publish to PyPI and ~10–15 min more (or ~3–5 min with
    a warm Nuitka cache) for the Windows binary to attach.
 
-A protected `pypi` GitHub Environment is referenced by the publish
-step; create it under `Settings → Environments` if you want to
-require manual approval before each release (optional).
+The `publish-pypi` job intentionally does NOT attach a GitHub
+Environment, so each run surfaces as a Release entry (with its
+Nuitka `.exe` attached) rather than as a "Deployment" sidebar
+widget on the repo home — releases get their own dedicated page
+and a Deployment entry on top would just be redundant noise.
 
 ## License
 
