@@ -1,7 +1,7 @@
 # AutoPaperToPPT
 
 > **Idiomas**: [English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · **Español** · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
-> **Documentación**: [Fuente Read the Docs](docs/) (Sphinx)
+> **Documentación**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 Asistente de búsqueda de artículos guiado por palabras clave que recupera resultados de arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (vía Crossref), IEEE Xplore, DBLP, Crossref genérico, OpenAIRE, Springer Nature y Google Scholar; los normaliza a un único formato de registro y exporta el conjunto deduplicado como una **presentación PowerPoint estilo tesis**, un **libro Excel** y un **archivo BibTeX** — todo desde una llamada CLI o una llamada de herramienta MCP. Opcionalmente enriquece cada artículo leyendo su PDF y produciendo un resumen estructurado, ya sea en contexto (flujo LLM-as-agent) o mediante la API de Anthropic (flujo Python pipeline).
 

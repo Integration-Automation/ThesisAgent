@@ -1,7 +1,7 @@
 # AutoPaperToPPT
 
 > **Ngôn ngữ**: [English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · **Tiếng Việt** · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
-> **Tài liệu**: [Mã nguồn Read the Docs](docs/) (Sphinx)
+> **Tài liệu**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 Trợ lý tìm kiếm bài báo theo từ khóa. Lấy kết quả từ arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (qua Crossref), IEEE Xplore, DBLP, Crossref tổng quát, OpenAIRE, Springer Nature và Google Scholar; chuẩn hóa về một định dạng bản ghi duy nhất; và xuất tập đã khử trùng lặp thành **slide PowerPoint phong cách luận văn**, **sổ Excel** và **tệp BibTeX** — tất cả từ một lệnh CLI hoặc một lời gọi công cụ MCP. Có thể làm giàu mỗi bài báo bằng cách đọc PDF và tạo bản tóm tắt có cấu trúc, ngay trong ngữ cảnh (luồng LLM-as-agent) hoặc qua API Anthropic (luồng Python pipeline).
 

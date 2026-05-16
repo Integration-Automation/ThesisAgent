@@ -11,9 +11,10 @@ with your actual GitHub `<user>/<repo>` so the badges resolve.
 [![PyPI](https://img.shields.io/pypi/v/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
 [![Python](https://img.shields.io/pypi/pyversions/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Docs](https://readthedocs.org/projects/autopapertoppt/badge/?version=latest)](https://autopapertoppt.readthedocs.io/en/latest/)
 
 > **Languages**: **English** · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
-> **Documentation**: [Read the Docs source](docs/) (Sphinx)
+> **Documentation**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 A keyword-driven paper search assistant that fetches results from arXiv,
 Semantic Scholar, OpenAlex, PubMed, ACM (via Crossref), IEEE Xplore,

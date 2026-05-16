@@ -1,7 +1,7 @@
 # AutoPaperToPPT
 
 > **Bahasa**: [English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · **Bahasa Indonesia**
-> **Dokumentasi**: [Sumber Read the Docs](docs/) (Sphinx)
+> **Dokumentasi**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 Asisten pencarian makalah berbasis kata kunci. Mengambil hasil dari arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (via Crossref), IEEE Xplore, DBLP, Crossref umum, OpenAIRE, Springer Nature, dan Google Scholar; menormalkannya ke satu format catatan; dan mengekspor kumpulan yang telah dideduplikasi sebagai **slide PowerPoint gaya tesis**, **buku kerja Excel**, dan **berkas BibTeX** — semua dari satu panggilan CLI atau satu panggilan tool MCP. Opsional, dapat memperkaya setiap makalah dengan membaca PDF-nya dan menghasilkan ringkasan terstruktur, baik dalam konteks (alur LLM-as-agent) atau via API Anthropic (alur Python pipeline).
 

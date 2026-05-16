@@ -1,7 +1,7 @@
 # AutoPaperToPPT
 
 > **भाषाएँ**: [English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · **हिन्दी** · [Bahasa Indonesia](README.id.md)
-> **दस्तावेज़ीकरण**: [Read the Docs स्रोत](docs/) (Sphinx)
+> **दस्तावेज़ीकरण**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 कीवर्ड-संचालित शोध-पत्र खोज सहायक। arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (Crossref के माध्यम से), IEEE Xplore, DBLP, सामान्य Crossref, OpenAIRE, Springer Nature और Google Scholar से परिणाम लाता है; उन्हें एकल रिकॉर्ड प्रारूप में सामान्यीकृत करता है; और डुप्लीकेट-मुक्त समूह को **थीसिस-शैली PowerPoint स्लाइड**, **Excel वर्कबुक** और **BibTeX फ़ाइल** के रूप में निर्यात करता है — एक CLI कॉल या एक MCP टूल कॉल से सब कुछ। वैकल्पिक रूप से प्रत्येक शोध-पत्र को उसकी PDF पढ़कर समृद्ध कर सकता है, या तो संदर्भ में (LLM-as-agent पथ) या Anthropic API के माध्यम से (Python pipeline पथ)।
 

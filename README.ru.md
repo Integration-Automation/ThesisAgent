@@ -1,7 +1,7 @@
 # AutoPaperToPPT
 
 > **Языки**: [English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · **Русский** · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
-> **Документация**: [Источник Read the Docs](docs/) (Sphinx)
+> **Документация**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 Поисковый ассистент статей, управляемый ключевыми словами. Получает результаты из arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (через Crossref), IEEE Xplore, DBLP, общего Crossref, OpenAIRE, Springer Nature и Google Scholar; нормализует в единый формат записи; и экспортирует дедуплицированный набор как **слайды PowerPoint в стиле дипломной презентации**, **книгу Excel** и **файл BibTeX** — всё за один CLI-вызов или один вызов MCP-инструмента. Опционально обогащает каждую статью, читая её PDF и порождая структурированную сводку — либо в контексте (поток LLM-as-agent), либо через API Anthropic (Python pipeline).
 
