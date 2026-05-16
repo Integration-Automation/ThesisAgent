@@ -387,6 +387,23 @@ The `-c` flag on bandit is required — without it bandit ignores the
 project skip config. When touching the pptx exporter, also run an
 overflow check (see `CLAUDE.md` "Slide Deck Rules").
 
+## Packaging as a standalone executable
+
+Two packagers are documented for shipping a single-file binary that
+runs without Python installed:
+
+- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+  — fast build (under a minute), 200–300 MB output, 2–4 s startup.
+  Best when you iterate on the build script.
+- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+  slow build (5–15 minutes), 80–150 MB output, sub-second startup,
+  some bytecode protection. Best when end users run the binary
+  many times.
+
+Both docs cover the project-specific gotcha — the dynamic source
+plugins under `sources/<name>/` — and ship a verified command for
+the CLI and the MCP server entry points.
+
 ## Continuous integration & releases
 
 Two GitHub Actions workflows live under `.github/workflows/`:
