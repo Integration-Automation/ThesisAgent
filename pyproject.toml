@@ -8,6 +8,31 @@ version = "0.1.0"
 description = "Keyword-driven paper search assistant that exports slides, summaries, and BibTeX."
 requires-python = ">=3.12"
 readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+authors = [{ name = "JeffreyChen" }]
+keywords = [
+    "academic",
+    "papers",
+    "arxiv",
+    "powerpoint",
+    "bibtex",
+    "mcp",
+    "thesis",
+    "research",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Office/Business",
+    "Topic :: Text Processing :: Markup",
+]
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2.7",

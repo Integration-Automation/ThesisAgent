@@ -1,0 +1,130 @@
+name: Release to PyPI
+
+# Triggered only when commits land on main (i.e. a PR was merged or a
+# direct push happened). The job is a no-op unless pyproject.toml's
+# version actually changed in this push, so re-running CI on main
+# without bumping the version is free.
+on:
+  push:
+    branches: [main]
+
+# Avoid duplicate concurrent releases for the same ref.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  detect-version:
+    name: Detect version change
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - name: Checkout (with history)
+        uses: actions/checkout@v4
+        with:
+          # Need at least two commits of history to diff pyproject.toml
+          # against the previous state — depth 2 covers the normal case
+          # of one merge commit landing.
+          fetch-depth: 2
+
+      - name: Read current version
+        id: read
+        shell: bash
+        run: |
+          VERSION=$(grep -E '^version *= *"' pyproject.toml \
+                    | head -1 \
+                    | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "::error::could not read version from pyproject.toml"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "current pyproject.toml version: $VERSION"
+
+      - name: Compare to previous commit
+        id: compare
+        shell: bash
+        run: |
+          set -euo pipefail
+          # If pyproject.toml didn't change at all between HEAD and HEAD~1,
+          # this push didn't touch the version. Skip.
+          if git diff --quiet HEAD~1 HEAD -- pyproject.toml; then
+            echo "pyproject.toml unchanged in this push — skipping release"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PREV=$(git show HEAD~1:pyproject.toml \
+                  | grep -E '^version *= *"' \
+                  | head -1 \
+                  | sed -E 's/.*"([^"]+)".*/\1/' \
+                  || echo "")
+          NEW="${{ steps.read.outputs.version }}"
+          echo "previous version: ${PREV:-<none>}"
+          echo "current version:  $NEW"
+          if [ "$PREV" = "$NEW" ]; then
+            echo "version line edited but value unchanged — skipping release"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "version bumped $PREV → $NEW — proceeding to release"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    name: Build + publish to PyPI
+    needs: detect-version
+    if: needs.detect-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    # Bind the deployment to a GitHub Environment so the secret access
+    # is auditable and the release shows up in the repo's Deployments
+    # tab. The environment also lets reviewers gate the deploy with a
+    # manual approval if they want to (configure in repo settings).
+    environment:
+      name: pypi
+      url: https://pypi.org/project/autopapertoppt/${{ needs.detect-version.outputs.version }}/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install build backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Verify distribution metadata
+        # `twine check` catches the common publish-time failures:
+        # malformed long description, missing license, wrong classifiers.
+        run: python -m twine check dist/*
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: python -m twine upload --non-interactive dist/*
+
+      - name: Create GitHub release
+        # Auto-generated release notes from the merged PRs. Tagged
+        # v<version> so the GitHub release UI links back to the PyPI
+        # publish above.
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.detect-version.outputs.version }}
+          name: v${{ needs.detect-version.outputs.version }}
+          generate_release_notes: true
+          # The tag is created at the current HEAD. The job only runs
+          # when the version was bumped, so HEAD is the merge commit
+          # the user wants to tag.
+          target_commitish: ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

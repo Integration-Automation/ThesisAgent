@@ -1,5 +1,17 @@
 # AutoPaperToPPT
 
+<!--
+Badges below use placeholder `OWNER/REPO` and `autopapertoppt` (PyPI
+package name). After you push this repo to GitHub, replace `OWNER/REPO`
+with your actual GitHub `<user>/<repo>` so the badges resolve.
+-->
+
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+[![Release](https://github.com/OWNER/REPO/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/OWNER/REPO/actions/workflows/release.yml)
+[![PyPI](https://img.shields.io/pypi/v/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
+[![Python](https://img.shields.io/pypi/pyversions/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > **Languages**: **English** · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **Documentation**: [Read the Docs source](docs/) (Sphinx)
 
@@ -374,6 +386,36 @@ AutoPaperToPPT/
 The `-c` flag on bandit is required — without it bandit ignores the
 project skip config. When touching the pptx exporter, also run an
 overflow check (see `CLAUDE.md` "Slide Deck Rules").
+
+## Continuous integration & releases
+
+Two GitHub Actions workflows live under `.github/workflows/`:
+
+- **`ci.yml`** runs on every push and PR to `main`. Matrix is Ubuntu +
+  Windows × Python 3.12 / 3.13 / 3.14 (6 jobs). Each job runs
+  `ruff check`, `bandit -c pyproject.toml`, and `pytest`.
+- **`release.yml`** runs on every push to `main`. It diffs
+  `pyproject.toml` against the previous commit; if the `version =
+  "..."` line changed, it builds an sdist + wheel, verifies them with
+  `twine check`, uploads to PyPI, and creates a tagged GitHub release
+  with auto-generated notes. If the version did **not** change, the
+  job exits early — most merges to `main` are no-ops.
+
+To enable PyPI publishing:
+
+1. Generate a project-scoped API token at
+   <https://pypi.org/manage/account/token/>.
+2. In the GitHub repo: `Settings → Secrets and variables → Actions →
+   New repository secret`. Name it `PYPI_API_TOKEN` and paste the
+   token value.
+3. To cut a release: bump `version` in `pyproject.toml` (e.g.
+   `0.1.0` → `0.1.1`), open a PR, and merge it. The merge commit
+   triggers `release.yml`, which uploads the new version and tags
+   it `v<version>` on GitHub.
+
+A protected `pypi` GitHub Environment is referenced by the publish
+step; create it under `Settings → Environments` if you want to require
+manual approval before each release (optional).
 
 ## License
 
