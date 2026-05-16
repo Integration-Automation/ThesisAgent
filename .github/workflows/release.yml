@@ -200,9 +200,10 @@ jobs:
     # there just inflates the release page without serving a real
     # use case.
     runs-on: windows-latest
-    # Nuitka builds 5-15 min cold, 2-3 min warm with cache. The cap
-    # is generous for the cold case + lxml native link.
-    timeout-minutes: 45
+    # PySide6 cold builds run ~50-70 min on a fresh runner (Qt is
+    # a huge amount of C++ to link). With cache they're back to 5-10
+    # min. The cap below covers cold + slowest-case parallel link.
+    timeout-minutes: 90
     env:
       ASSET_NAME: autopapertoppt-windows-x86_64.exe
     steps:
@@ -245,8 +246,8 @@ jobs:
           pip install nuitka
 
       - name: Compile with Nuitka
-        # All 11 source plugins must be force-included because they
-        # are imported dynamically by name at runtime (see
+        # All 11 source plugins are force-included because they're
+        # imported dynamically by name at runtime (see
         # autopapertoppt/fetchers/base.py::load_fetcher). The plugins
         # live under sources/<name>/ and are NOT installed as Python
         # packages, so we prepend sources/ to PYTHONPATH to make them
@@ -254,13 +255,20 @@ jobs:
         # equivalent sys.path injection itself.
         #
         # The sources/ directory ALSO ships as data so the runtime can
-        # find the unmodified .py files for its own sys.path lookup
-        # path. --noinclude-data-files= empties Nuitka's "no data
-        # files" warning since the directory IS a Python tree, not
-        # arbitrary assets.
+        # read the unmodified .py files for its own sys.path lookup.
         #
         # python-pptx imports as `pptx` (PyPI name -> module name
         # mismatch is normal); use the module name here.
+        #
+        # PySide6 is handled ENTIRELY by --enable-plugin=pyside6 —
+        # adding --include-package=PySide6 / --include-package-data=
+        # PySide6 on top of the plugin causes redundant inclusions
+        # and roughly doubles the cold build time. The plugin itself
+        # includes the full QML / translations / resources tree by
+        # default, which is what we want — Qt features the GUI does
+        # not use today may still be hit by future tabs (Deck inspect,
+        # rich-text preview, etc.), and the size hit on a single
+        # Windows .exe is acceptable.
         shell: bash
         env:
           PYTHONPATH: sources
@@ -281,12 +289,10 @@ jobs:
             --include-package=crossref \
             --include-package=openaire \
             --include-package=springer \
-            --include-package=PySide6 \
             --enable-plugin=pyside6 \
             --include-data-dir=./sources=sources \
             --include-package-data=pptx \
             --include-package-data=openpyxl \
-            --include-package-data=PySide6 \
             --assume-yes-for-downloads \
             autopapertoppt/__main__.py
 
