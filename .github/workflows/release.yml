@@ -132,9 +132,12 @@ jobs:
     needs: bump-version
     if: needs.bump-version.outputs.skipped == 'false'
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/project/autopapertoppt/${{ needs.bump-version.outputs.version }}/
+    # No `environment:` block on purpose. Attaching one would make
+    # GitHub categorise the publish as a Deployment and surface it
+    # under the repo's "Deployments" sidebar widget. The artefact
+    # of a successful run is a GitHub Release + a PyPI version —
+    # both already have first-class UI in their respective places —
+    # so the Deployment view is redundant noise on the repo home.
     steps:
       - name: Checkout the bumped commit
         uses: actions/checkout@v4

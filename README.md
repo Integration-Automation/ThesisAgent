@@ -467,9 +467,11 @@ To enable PyPI publishing + release executables:
    ~3–5 min to publish to PyPI and ~10–15 min more (or ~3–5 min with
    a warm Nuitka cache) for the Windows binary to attach.
 
-A protected `pypi` GitHub Environment is referenced by the publish
-step; create it under `Settings → Environments` if you want to
-require manual approval before each release (optional).
+The `publish-pypi` job intentionally does NOT attach a GitHub
+Environment, so each run surfaces as a Release entry (with its
+Nuitka `.exe` attached) rather than as a "Deployment" sidebar
+widget on the repo home — releases get their own dedicated page
+and a Deployment entry on top would just be redundant noise.
 
 ## License
 
