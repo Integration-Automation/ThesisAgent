@@ -1,0 +1,18 @@
+{
+  "paperId": "204e3073870fae3d05bcbc2f6a8e263d9b72e776",
+  "title": "Attention Is All You Need",
+  "abstract": "We propose the Transformer, an architecture based solely on attention mechanisms.",
+  "year": 2017,
+  "venue": "Neural Information Processing Systems",
+  "citationCount": 100000,
+  "authors": [
+    {"authorId": "1738948", "name": "Ashish Vaswani"},
+    {"authorId": "1701536", "name": "Noam Shazeer"}
+  ],
+  "externalIds": {
+    "DOI": "10.48550/arXiv.1706.03762",
+    "ArXiv": "1706.03762"
+  },
+  "openAccessPdf": {"url": "https://arxiv.org/pdf/1706.03762"},
+  "url": "https://www.semanticscholar.org/paper/204e3073870fae3d05bcbc2f6a8e263d9b72e776"
+}

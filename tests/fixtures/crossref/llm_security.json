@@ -1,0 +1,44 @@
+{
+  "status": "ok",
+  "message-type": "work-list",
+  "message-version": "1.0.0",
+  "message": {
+    "facets": {},
+    "total-results": 2,
+    "items-per-page": 2,
+    "query": {"start-index": 0, "search-terms": "LLM security"},
+    "items": [
+      {
+        "DOI": "10.1038/s41586-025-00001-x",
+        "title": ["Robustness Evaluation of Large Language Models in Critical Systems"],
+        "author": [
+          {"given": "Dana", "family": "Doe"},
+          {"given": "Eli", "family": "Edwards"}
+        ],
+        "published-online": {"date-parts": [[2025, 4, 1]]},
+        "container-title": ["Nature Machine Intelligence"],
+        "publisher": "Springer Nature",
+        "URL": "https://doi.org/10.1038/s41586-025-00001-x",
+        "abstract": "<jats:p>We evaluate the <jats:italic>robustness</jats:italic> of LLMs against adversarial prompts.</jats:p>",
+        "is-referenced-by-count": 7,
+        "link": [
+          {"URL": "https://www.nature.com/articles/s41586-025-00001-x.pdf", "content-type": "application/pdf", "content-version": "vor", "intended-application": "syndication"},
+          {"URL": "https://www.nature.com/articles/s41586-025-00001-x", "content-type": "text/html", "content-version": "vor", "intended-application": "text-mining"}
+        ]
+      },
+      {
+        "DOI": "10.1109/TIFS.2025.0099",
+        "title": ["Watermarking Schemes for LLM Output Authenticity"],
+        "author": [
+          {"given": "Frank", "family": "Foster"}
+        ],
+        "issued": {"date-parts": [[2025, 6]]},
+        "container-title": ["IEEE Transactions on Information Forensics and Security"],
+        "publisher": "IEEE",
+        "URL": "https://doi.org/10.1109/TIFS.2025.0099",
+        "abstract": "<jats:p>A new watermarking scheme.</jats:p>",
+        "is-referenced-by-count": 3
+      }
+    ]
+  }
+}

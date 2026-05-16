@@ -1,0 +1,41 @@
+{
+  "total_records": 2,
+  "total_searched": 2,
+  "articles": [
+    {
+      "article_number": "10965643",
+      "title": "Securing LLM Workloads at Edge",
+      "abstract": "We discuss LLM workload security at the edge.",
+      "doi": "10.1109/ACCESS.2025.3561235",
+      "authors": {
+        "authors": [
+          {"full_name": "Hassan Karim"},
+          {"first_name": "Deepti", "last_name": "Gupta"},
+          {"preferred_name": "Sai Sitharaman"}
+        ]
+      },
+      "publication_year": "2025",
+      "publication_title": "IEEE Access",
+      "html_url": "https://ieeexplore.ieee.org/document/10965643",
+      "pdf_url": "https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10965643",
+      "citing_paper_count": 4
+    },
+    {
+      "article_number": "10999999",
+      "title": "Hardware Side Channels in LLM Accelerators",
+      "abstract": "Side-channel exfiltration in LLM accelerators.",
+      "doi": "10.1109/HOST.2025.999999",
+      "authors": {
+        "authors": [
+          {"full_name": "Lin Chen"},
+          {"full_name": "Jiwoo Park"}
+        ]
+      },
+      "publication_year": "2025",
+      "publication_title": "IEEE International Symposium on Hardware Oriented Security and Trust",
+      "html_url": "https://ieeexplore.ieee.org/document/10999999",
+      "pdf_url": null,
+      "citing_paper_count": 0
+    }
+  ]
+}

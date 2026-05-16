@@ -1,0 +1,45 @@
+{
+  "status": "ok",
+  "message-type": "work-list",
+  "message-version": "1.0.0",
+  "message": {
+    "items": [
+      {
+        "DOI": "10.1145/3411764.3445005",
+        "title": ["Designing Conversational AI for Older Adults"],
+        "publisher": "Association for Computing Machinery",
+        "container-title": ["CHI 2021"],
+        "author": [
+          {"given": "Alice", "family": "Anderson"},
+          {"given": "Bob", "family": "Brown"}
+        ],
+        "published-print": {"date-parts": [[2021, 5, 6]]},
+        "abstract": "<jats:p>We design a conversational agent for older adults.</jats:p>",
+        "is-referenced-by-count": 87,
+        "URL": "https://doi.org/10.1145/3411764.3445005",
+        "link": [
+          {"URL": "https://dl.acm.org/doi/pdf/10.1145/3411764.3445005", "content-type": "application/pdf", "content-version": "vor", "intended-application": "syndication"}
+        ]
+      },
+      {
+        "DOI": "10.1145/3490099.3511135",
+        "title": ["A Framework for Inclusive AI"],
+        "publisher": "ACM",
+        "container-title": ["IUI 2022"],
+        "author": [{"given": "Carol", "family": "Chen"}],
+        "issued": {"date-parts": [[2022]]},
+        "abstract": "<jats:p>We propose an inclusive AI framework.</jats:p>",
+        "is-referenced-by-count": 15,
+        "URL": "https://doi.org/10.1145/3490099.3511135"
+      },
+      {
+        "DOI": "10.9999/notreally-acm",
+        "title": ["Non-ACM record that slipped through filter"],
+        "publisher": "Springer Nature",
+        "author": [{"given": "Eve", "family": "Erickson"}],
+        "issued": {"date-parts": [[2023]]},
+        "URL": "https://doi.org/10.9999/notreally-acm"
+      }
+    ]
+  }
+}

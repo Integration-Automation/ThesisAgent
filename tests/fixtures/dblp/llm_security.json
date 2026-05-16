@@ -1,0 +1,66 @@
+{
+  "result": {
+    "query": "LLM Security",
+    "status": {"@code": "200", "text": "OK"},
+    "time": {"@unit": "msecs", "text": "12.34"},
+    "hits": {
+      "@total": "3",
+      "@computed": "3",
+      "@sent": "3",
+      "@first": "0",
+      "hit": [
+        {
+          "@score": "12",
+          "@id": "https://dblp.org/rec/conf/sp/AnderssonB25",
+          "info": {
+            "authors": {
+              "author": [
+                {"@pid": "100/9999", "text": "Alice Andersson"},
+                {"@pid": "200/8888", "text": "Bob Bertelsen"}
+              ]
+            },
+            "title": "Adversarial Probes Against Large Language Models.",
+            "venue": "IEEE Symposium on Security and Privacy",
+            "year": "2025",
+            "type": "Conference and Workshop Papers",
+            "key": "conf/sp/AnderssonB25",
+            "doi": "10.1109/SP.2025.0001",
+            "ee": "https://doi.org/10.1109/SP.2025.0001",
+            "url": "https://dblp.org/rec/conf/sp/AnderssonB25.html"
+          }
+        },
+        {
+          "@score": "10",
+          "@id": "https://dblp.org/rec/journals/tdsc/Chen25",
+          "info": {
+            "authors": {
+              "author": {"@pid": "300/7777", "text": "Carol Chen"}
+            },
+            "title": "Auditing Prompt Injection in Production LLM Pipelines.",
+            "venue": "IEEE Transactions on Dependable and Secure Computing",
+            "year": "2025",
+            "type": "Journal Articles",
+            "key": "journals/tdsc/Chen25",
+            "doi": "10.1109/TDSC.2025.0002",
+            "ee": "https://doi.org/10.1109/TDSC.2025.0002"
+          }
+        },
+        {
+          "@score": "5",
+          "@id": "https://dblp.org/rec/conf/old/Z2018",
+          "info": {
+            "authors": {
+              "author": {"@pid": "400/6666", "text": "Zed Zenith"}
+            },
+            "title": "An old paper unrelated to year filter.",
+            "venue": "Some Workshop",
+            "year": "2018",
+            "type": "Conference and Workshop Papers",
+            "key": "conf/old/Z2018",
+            "ee": "https://example.com/old"
+          }
+        }
+      ]
+    }
+  }
+}

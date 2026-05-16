@@ -1,0 +1,59 @@
+{
+  "header": {
+    "numFound": 2,
+    "pageSize": 2,
+    "queryParams": {"search": "LLM security"}
+  },
+  "results": [
+    {
+      "id": "doi_________::abc123",
+      "mainTitle": "Detecting Prompt Injection With Provenance Tracking",
+      "authors": [
+        {"fullName": "Garcia, Helena"},
+        {"fullName": "Ivanov, Ilya"}
+      ],
+      "publicationDate": "2025-03-12",
+      "descriptions": [
+        {"value": "We propose a provenance-tracking middleware."}
+      ],
+      "pids": [
+        {"scheme": "doi", "value": "10.1145/3500000.3500001"}
+      ],
+      "container": {"name": "Communications of the ACM"},
+      "instances": [
+        {
+          "accessRight": "OPEN",
+          "urls": [
+            "https://arxiv.org/abs/2503.01234",
+            "https://arxiv.org/pdf/2503.01234.pdf"
+          ]
+        },
+        {
+          "accessRight": "CLOSED",
+          "urls": ["https://dl.acm.org/doi/10.1145/3500000.3500001"]
+        }
+      ]
+    },
+    {
+      "id": "doi_________::def456",
+      "mainTitle": "Trustworthy Inference for LLM-Backed Agents",
+      "authors": [
+        {"fullName": "Jaeger, Jonas"}
+      ],
+      "publicationDate": "2025-05-01",
+      "descriptions": [
+        {"value": "An inference auditing framework."}
+      ],
+      "pids": [
+        {"scheme": "doi", "value": "10.1038/s42256-025-00007-y"}
+      ],
+      "container": {"name": "Nature Machine Intelligence"},
+      "instances": [
+        {
+          "accessRight": "OPEN",
+          "urls": ["https://eprints.example.edu/agents.pdf"]
+        }
+      ]
+    }
+  ]
+}

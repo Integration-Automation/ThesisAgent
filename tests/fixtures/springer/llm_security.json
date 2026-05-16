@@ -1,0 +1,38 @@
+{
+  "apiMessage": "OK",
+  "query": "LLM security",
+  "result": [{"total": "2", "start": "1", "pageLength": "2"}],
+  "records": [
+    {
+      "identifier": "doi:10.1038/s41586-025-09999-3",
+      "title": "Adversarial Robustness in Foundation Models",
+      "creators": [
+        {"creator": "Kumar, Kavya"},
+        {"creator": "Lin, Lewis"}
+      ],
+      "publicationName": "Nature",
+      "publicationDate": "2025-02-15",
+      "doi": "10.1038/s41586-025-09999-3",
+      "abstract": "<p>We characterise <i>worst-case</i> behaviour of foundation models.</p>",
+      "url": [
+        {"value": "https://link.springer.com/article/10.1038/s41586-025-09999-3", "format": "html", "platform": "web"},
+        {"value": "https://doi.org/10.1038/s41586-025-09999-3", "format": "", "platform": "doi"}
+      ],
+      "openaccess": "true",
+      "citation_count": 4
+    },
+    {
+      "identifier": "doi:10.1007/s10994-025-00077-z",
+      "title": "Differential Privacy in LLM Fine-Tuning",
+      "creators": [{"creator": "Müller, Max"}],
+      "publicationName": "Machine Learning",
+      "publicationDate": "2025-04-22",
+      "doi": "10.1007/s10994-025-00077-z",
+      "abstract": "A practical bound on DP-SGD for transformer fine-tuning.",
+      "url": [
+        {"value": "https://link.springer.com/article/10.1007/s10994-025-00077-z", "format": "html", "platform": "web"}
+      ],
+      "openaccess": "false"
+    }
+  ]
+}

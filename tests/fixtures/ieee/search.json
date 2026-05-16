@@ -1,0 +1,29 @@
+{
+  "totalRecords": 2,
+  "totalPages": 1,
+  "records": [
+    {
+      "articleNumber": "10965643",
+      "articleTitle": "Securing LLM Workloads With NIST AI RMF in the Internet of Robotic Things",
+      "abstract": "The Internet of Robotic Things (IoRT) is revolutionizing industries...",
+      "publicationYear": "2025",
+      "publicationTitle": "IEEE Access",
+      "doi": "10.1109/ACCESS.2025.3561235",
+      "citationCount": "1",
+      "pdfUrl": "/stamp/stamp.jsp?tp=&arnumber=10965643",
+      "authors": [
+        {"preferredName": "Hassan Karim"},
+        {"preferredName": "Deepti Gupta"},
+        {"preferredName": "Sai Sitharaman"}
+      ]
+    },
+    {
+      "articleNumber": "9999999",
+      "articleTitle": "Another paper on <mark>robotics</mark>",
+      "abstract": "Abstract two.",
+      "publicationYear": "2024",
+      "publicationTitle": "IEEE Robotics Letters",
+      "authors": [{"firstName": "Diana", "lastName": "Doe"}]
+    }
+  ]
+}

@@ -1,0 +1,2631 @@
+{
+  "meta": {
+    "count": 38208,
+    "db_response_time_ms": 80,
+    "page": 1,
+    "per_page": 5,
+    "groups_count": null,
+    "cost_usd": 0.001
+  },
+  "results": [
+    {
+      "id": "https://openalex.org/W4411492256",
+      "doi": "https://doi.org/10.2139/ssrn.5258606",
+      "title": "LLM Security and Guardrail Defense Techniques in Web Applications",
+      "display_name": "LLM Security and Guardrail Defense Techniques in Web Applications",
+      "publication_year": 2025,
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5116454517",
+            "display_name": "Sandeep Phanireddy",
+            "orcid": null
+          },
+          "institutions": [],
+          "countries": [],
+          "is_corresponding": true,
+          "raw_author_name": "Sandeep Phanireddy",
+          "raw_affiliation_strings": [],
+          "raw_orcid": null,
+          "affiliations": []
+        }
+      ],
+      "primary_location": {
+        "id": "doi:10.2139/ssrn.5258606",
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.2139/ssrn.5258606",
+        "pdf_url": null,
+        "source": {
+          "id": "https://openalex.org/S4210172589",
+          "display_name": "SSRN Electronic Journal",
+          "issn_l": "1556-5068",
+          "issn": [
+            "1556-5068"
+          ],
+          "is_oa": true,
+          "is_in_doaj": false,
+          "is_core": false,
+          "host_organization": "https://openalex.org/I1318003438",
+          "host_organization_name": "RELX Group (Netherlands)",
+          "host_organization_lineage": [
+            "https://openalex.org/I1318003438"
+          ],
+          "host_organization_lineage_names": [],
+          "type": "repository"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "SSRN Electronic Journal",
+        "raw_type": "journal-article"
+      },
+      "best_oa_location": {
+        "id": "doi:10.2139/ssrn.5258606",
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.2139/ssrn.5258606",
+        "pdf_url": null,
+        "source": {
+          "id": "https://openalex.org/S4210172589",
+          "display_name": "SSRN Electronic Journal",
+          "issn_l": "1556-5068",
+          "issn": [
+            "1556-5068"
+          ],
+          "is_oa": true,
+          "is_in_doaj": false,
+          "is_core": false,
+          "host_organization": "https://openalex.org/I1318003438",
+          "host_organization_name": "RELX Group (Netherlands)",
+          "host_organization_lineage": [
+            "https://openalex.org/I1318003438"
+          ],
+          "host_organization_lineage_names": [],
+          "type": "repository"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "SSRN Electronic Journal",
+        "raw_type": "journal-article"
+      },
+      "open_access": {
+        "is_oa": true,
+        "oa_status": "green",
+        "oa_url": "https://doi.org/10.2139/ssrn.5258606",
+        "any_repository_has_fulltext": true
+      },
+      "abstract_inverted_index": null,
+      "cited_by_count": 2,
+      "ids": {
+        "openalex": "https://openalex.org/W4411492256",
+        "doi": "https://doi.org/10.2139/ssrn.5258606"
+      },
+      "locations": [
+        {
+          "id": "doi:10.2139/ssrn.5258606",
+          "is_oa": true,
+          "landing_page_url": "https://doi.org/10.2139/ssrn.5258606",
+          "pdf_url": null,
+          "source": {
+            "id": "https://openalex.org/S4210172589",
+            "display_name": "SSRN Electronic Journal",
+            "issn_l": "1556-5068",
+            "issn": [
+              "1556-5068"
+            ],
+            "is_oa": true,
+            "is_in_doaj": false,
+            "is_core": false,
+            "host_organization": "https://openalex.org/I1318003438",
+            "host_organization_name": "RELX Group (Netherlands)",
+            "host_organization_lineage": [
+              "https://openalex.org/I1318003438"
+            ],
+            "host_organization_lineage_names": [],
+            "type": "repository"
+          },
+          "license": null,
+          "license_id": null,
+          "version": "publishedVersion",
+          "is_accepted": true,
+          "is_published": true,
+          "raw_source_name": "SSRN Electronic Journal",
+          "raw_type": "journal-article"
+        }
+      ]
+    },
+    {
+      "id": "https://openalex.org/W4414770528",
+      "doi": "https://doi.org/10.48550/arxiv.2505.01177",
+      "title": "LLM Security: Vulnerabilities, Attacks, Defenses, and Countermeasures",
+      "display_name": "LLM Security: Vulnerabilities, Attacks, Defenses, and Countermeasures",
+      "publication_year": 2025,
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5114414370",
+            "display_name": "Francisco Aguilera-Martínez",
+            "orcid": null
+          },
+          "institutions": [],
+          "countries": [],
+          "is_corresponding": true,
+          "raw_author_name": "Aguilera-Martínez, Francisco",
+          "raw_affiliation_strings": [],
+          "affiliations": []
+        },
+        {
+          "author_position": "last",
+          "author": {
+            "id": "https://openalex.org/A5114414371",
+            "display_name": "Fernando Berzal",
+            "orcid": null
+          },
+          "institutions": [],
+          "countries": [],
+          "is_corresponding": false,
+          "raw_author_name": "Berzal, Fernando",
+          "raw_affiliation_strings": [],
+          "affiliations": []
+        }
+      ],
+      "primary_location": {
+        "id": "pmh:oai:arXiv.org:2505.01177",
+        "is_oa": true,
+        "landing_page_url": "http://arxiv.org/abs/2505.01177",
+        "pdf_url": "https://arxiv.org/pdf/2505.01177",
+        "source": {
+          "id": "https://openalex.org/S4393918464",
+          "display_name": "ArXiv.org",
+          "issn_l": "2331-8422",
+          "issn": [
+            "2331-8422"
+          ],
+          "is_oa": true,
+          "is_in_doaj": false,
+          "is_core": false,
+          "host_organization": null,
+          "host_organization_name": null,
+          "host_organization_lineage": [],
+          "host_organization_lineage_names": [],
+          "type": "repository"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "submittedVersion",
+        "is_accepted": false,
+        "is_published": false,
+        "raw_source_name": null,
+        "raw_type": "text"
+      },
+      "best_oa_location": {
+        "id": "pmh:oai:arXiv.org:2505.01177",
+        "is_oa": true,
+        "landing_page_url": "http://arxiv.org/abs/2505.01177",
+        "pdf_url": "https://arxiv.org/pdf/2505.01177",
+        "source": {
+          "id": "https://openalex.org/S4393918464",
+          "display_name": "ArXiv.org",
+          "issn_l": "2331-8422",
+          "issn": [
+            "2331-8422"
+          ],
+          "is_oa": true,
+          "is_in_doaj": false,
+          "is_core": false,
+          "host_organization": null,
+          "host_organization_name": null,
+          "host_organization_lineage": [],
+          "host_organization_lineage_names": [],
+          "type": "repository"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "submittedVersion",
+        "is_accepted": false,
+        "is_published": false,
+        "raw_source_name": null,
+        "raw_type": "text"
+      },
+      "open_access": {
+        "is_oa": true,
+        "oa_status": "green",
+        "oa_url": "https://arxiv.org/pdf/2505.01177",
+        "any_repository_has_fulltext": true
+      },
+      "abstract_inverted_index": {
+        "As": [
+          0
+        ],
+        "large": [
+          1
+        ],
+        "language": [
+          2
+        ],
+        "models": [
+          3,
+          28
+        ],
+        "(LLMs)": [
+          4
+        ],
+        "continue": [
+          5
+        ],
+        "to": [
+          6,
+          11,
+          35,
+          75,
+          122,
+          138
+        ],
+        "evolve,": [
+          7
+        ],
+        "it": [
+          8
+        ],
+        "is": [
+          9,
+          66
+        ],
+        "critical": [
+          10
+        ],
+        "assess": [
+          12
+        ],
+        "the": [
+          13,
+          39,
+          50,
+          107,
+          110,
+          115
+        ],
+        "security": [
+          14,
+          117,
+          145
+        ],
+        "threats": [
+          15
+        ],
+        "and": [
+          16,
+          26,
+          37,
+          53,
+          87,
+          96,
+          140
+        ],
+        "vulnerabilities": [
+          17
+        ],
+        "that": [
+          18,
+          47,
+          55,
+          134
+        ],
+        "may": [
+          19
+        ],
+        "arise": [
+          20
+        ],
+        "both": [
+          21
+        ],
+        "during": [
+          22,
+          49
+        ],
+        "their": [
+          23,
+          97
+        ],
+        "training": [
+          24,
+          51
+        ],
+        "phase": [
+          25,
+          52
+        ],
+        "after": [
+          27
+        ],
+        "have": [
+          29
+        ],
+        "been": [
+          30
+        ],
+        "deployed.": [
+          31
+        ],
+        "This": [
+          32
+        ],
+        "survey": [
+          33,
+          92,
+          120
+        ],
+        "seeks": [
+          34
+        ],
+        "define": [
+          36
+        ],
+        "categorize": [
+          38
+        ],
+        "various": [
+          40
+        ],
+        "attacks": [
+          41,
+          65,
+          95
+        ],
+        "targeting": [
+          42
+        ],
+        "LLMs,": [
+          43,
+          129
+        ],
+        "distinguishing": [
+          44
+        ],
+        "between": [
+          45
+        ],
+        "those": [
+          46,
+          54
+        ],
+        "occur": [
+          48
+        ],
+        "affect": [
+          56
+        ],
+        "already": [
+          57
+        ],
+        "trained": [
+          58
+        ],
+        "models.": [
+          59
+        ],
+        "A": [
+          60
+        ],
+        "thorough": [
+          61
+        ],
+        "analysis": [
+          62
+        ],
+        "of": [
+          63,
+          71,
+          106,
+          109
+        ],
+        "these": [
+          64
+        ],
+        "presented,": [
+          67
+        ],
+        "alongside": [
+          68
+        ],
+        "an": [
+          69,
+          104
+        ],
+        "exploration": [
+          70
+        ],
+        "defense": [
+          72,
+          99,
+          112
+        ],
+        "mechanisms": [
+          73,
+          113
+        ],
+        "designed": [
+          74
+        ],
+        "mitigate": [
+          76
+        ],
+        "such": [
+          77
+        ],
+        "threats.": [
+          78,
+          118
+        ],
+        "Defenses": [
+          79
+        ],
+        "are": [
+          80
+        ],
+        "classified": [
+          81
+        ],
+        "into": [
+          82
+        ],
+        "two": [
+          83
+        ],
+        "primary": [
+          84
+        ],
+        "categories:": [
+          85
+        ],
+        "prevention-based": [
+          86
+        ],
+        "detection-based": [
+          88
+        ],
+        "defenses.": [
+          89
+        ],
+        "Furthermore,": [
+          90
+        ],
+        "our": [
+          91
+        ],
+        "summarizes": [
+          93
+        ],
+        "possible": [
+          94
+        ],
+        "corresponding": [
+          98
+        ],
+        "strategies.": [
+          100
+        ],
+        "It": [
+          101
+        ],
+        "also": [
+          102,
+          131
+        ],
+        "provides": [
+          103
+        ],
+        "evaluation": [
+          105
+        ],
+        "effectiveness": [
+          108
+        ],
+        "known": [
+          111
+        ],
+        "for": [
+          114,
+          127
+        ],
+        "different": [
+          116
+        ],
+        "Our": [
+          119
+        ],
+        "aims": [
+          121
+        ],
+        "offer": [
+          123
+        ],
+        "a": [
+          124
+        ],
+        "structured": [
+          125
+        ],
+        "framework": [
+          126
+        ],
+        "securing": [
+          128
+        ],
+        "while": [
+          130
+        ],
+        "identifying": [
+          132
+        ],
+        "areas": [
+          133
+        ],
+        "require": [
+          135
+        ],
+        "further": [
+          136
+        ],
+        "research": [
+          137
+        ],
+        "improve": [
+          139
+        ],
+        "strengthen": [
+          141
+        ],
+        "defenses": [
+          142
+        ],
+        "against": [
+          143
+        ],
+        "emerging": [
+          144
+        ],
+        "challenges.": [
+          146
+        ]
+      },
+      "cited_by_count": 1,
+      "ids": {
+        "openalex": "https://openalex.org/W4414770528",
+        "doi": "https://doi.org/10.48550/arxiv.2505.01177"
+      },
+      "locations": [
+        {
+          "id": "pmh:oai:arXiv.org:2505.01177",
+          "is_oa": true,
+          "landing_page_url": "http://arxiv.org/abs/2505.01177",
+          "pdf_url": "https://arxiv.org/pdf/2505.01177",
+          "source": {
+            "id": "https://openalex.org/S4393918464",
+            "display_name": "ArXiv.org",
+            "issn_l": "2331-8422",
+            "issn": [
+              "2331-8422"
+            ],
+            "is_oa": true,
+            "is_in_doaj": false,
+            "is_core": false,
+            "host_organization": null,
+            "host_organization_name": null,
+            "host_organization_lineage": [],
+            "host_organization_lineage_names": [],
+            "type": "repository"
+          },
+          "license": null,
+          "license_id": null,
+          "version": "submittedVersion",
+          "is_accepted": false,
+          "is_published": false,
+          "raw_source_name": null,
+          "raw_type": "text"
+        },
+        {
+          "id": "doi:10.48550/arxiv.2505.01177",
+          "is_oa": true,
+          "landing_page_url": "https://doi.org/10.48550/arxiv.2505.01177",
+          "pdf_url": null,
+          "source": {
+            "id": "https://openalex.org/S4306400194",
+            "display_name": "arXiv (Cornell University)",
+            "issn_l": null,
+            "issn": null,
+            "is_oa": true,
+            "is_in_doaj": false,
+            "is_core": false,
+            "host_organization": "https://openalex.org/I205783295",
+            "host_organization_name": "Cornell University",
+            "host_organization_lineage": [
+              "https://openalex.org/I205783295"
+            ],
+            "host_organization_lineage_names": [],
+            "type": "repository"
+          },
+          "license": "cc-by",
+          "license_id": "https://openalex.org/licenses/cc-by",
+          "version": null,
+          "is_accepted": false,
+          "is_published": null,
+          "raw_source_name": null,
+          "raw_type": "article"
+        }
+      ]
+    },
+    {
+      "id": "https://openalex.org/W4412100992",
+      "doi": "https://doi.org/10.3390/bdcc9070184",
+      "title": "LLMs in Cyber Security: Bridging Practice and Education",
+      "display_name": "LLMs in Cyber Security: Bridging Practice and Education",
+      "publication_year": 2025,
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5015475593",
+            "display_name": "Hany F. Atlam",
+            "orcid": "https://orcid.org/0000-0003-4142-6377"
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I39555362",
+              "display_name": "University of Warwick",
+              "ror": "https://ror.org/01a77tt86",
+              "country_code": "GB",
+              "type": "education",
+              "lineage": [
+                "https://openalex.org/I39555362"
+              ]
+            }
+          ],
+          "countries": [
+            "GB"
+          ],
+          "is_corresponding": true,
+          "raw_author_name": "Hany F. Atlam",
+          "raw_affiliation_strings": [
+            "Cyber Security Centre, WMG, University of Warwick, Coventry CV4 7AL, UK"
+          ],
+          "raw_orcid": "https://orcid.org/0000-0003-4142-6377",
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Cyber Security Centre, WMG, University of Warwick, Coventry CV4 7AL, UK",
+              "institution_ids": [
+                "https://openalex.org/I39555362"
+              ]
+            }
+          ]
+        }
+      ],
+      "primary_location": {
+        "id": "doi:10.3390/bdcc9070184",
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.3390/bdcc9070184",
+        "pdf_url": "https://www.mdpi.com/2504-2289/9/7/184/pdf?version=1751954094",
+        "source": {
+          "id": "https://openalex.org/S4210238752",
+          "display_name": "Big Data and Cognitive Computing",
+          "issn_l": "2504-2289",
+          "issn": [
+            "2504-2289"
+          ],
+          "is_oa": true,
+          "is_in_doaj": true,
+          "is_core": true,
+          "host_organization": "https://openalex.org/P4310310987",
+          "host_organization_name": "Multidisciplinary Digital Publishing Institute",
+          "host_organization_lineage": [
+            "https://openalex.org/P4310310987"
+          ],
+          "host_organization_lineage_names": [
+            "Multidisciplinary Digital Publishing Institute"
+          ],
+          "type": "journal"
+        },
+        "license": "cc-by",
+        "license_id": "https://openalex.org/licenses/cc-by",
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Big Data and Cognitive Computing",
+        "raw_type": "journal-article"
+      },
+      "best_oa_location": {
+        "id": "doi:10.3390/bdcc9070184",
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.3390/bdcc9070184",
+        "pdf_url": "https://www.mdpi.com/2504-2289/9/7/184/pdf?version=1751954094",
+        "source": {
+          "id": "https://openalex.org/S4210238752",
+          "display_name": "Big Data and Cognitive Computing",
+          "issn_l": "2504-2289",
+          "issn": [
+            "2504-2289"
+          ],
+          "is_oa": true,
+          "is_in_doaj": true,
+          "is_core": true,
+          "host_organization": "https://openalex.org/P4310310987",
+          "host_organization_name": "Multidisciplinary Digital Publishing Institute",
+          "host_organization_lineage": [
+            "https://openalex.org/P4310310987"
+          ],
+          "host_organization_lineage_names": [
+            "Multidisciplinary Digital Publishing Institute"
+          ],
+          "type": "journal"
+        },
+        "license": "cc-by",
+        "license_id": "https://openalex.org/licenses/cc-by",
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Big Data and Cognitive Computing",
+        "raw_type": "journal-article"
+      },
+      "open_access": {
+        "is_oa": true,
+        "oa_status": "gold",
+        "oa_url": "https://www.mdpi.com/2504-2289/9/7/184/pdf?version=1751954094",
+        "any_repository_has_fulltext": true
+      },
+      "abstract_inverted_index": {
+        "Large": [
+          0
+        ],
+        "Language": [
+          1
+        ],
+        "Models": [
+          2
+        ],
+        "(LLMs)": [
+          3
+        ],
+        "have": [
+          4
+        ],
+        "emerged": [
+          5
+        ],
+        "as": [
+          6,
+          248
+        ],
+        "powerful": [
+          7
+        ],
+        "tools": [
+          8
+        ],
+        "in": [
+          9,
+          79,
+          102,
+          128,
+          176,
+          207,
+          216,
+          239
+        ],
+        "cyber": [
+          10,
+          84,
+          103,
+          123,
+          177,
+          267
+        ],
+        "security,": [
+          11,
+          104
+        ],
+        "enabling": [
+          12,
+          211
+        ],
+        "automation,": [
+          13,
+          135
+        ],
+        "threat": [
+          14
+        ],
+        "detection,": [
+          15
+        ],
+        "and": [
+          16,
+          25,
+          33,
+          58,
+          76,
+          82,
+          93,
+          108,
+          138,
+          154,
+          163,
+          184,
+          194,
+          210,
+          221,
+          230,
+          242,
+          255,
+          263
+        ],
+        "adaptive": [
+          17
+        ],
+        "learning.": [
+          18
+        ],
+        "Their": [
+          19
+        ],
+        "ability": [
+          20
+        ],
+        "to": [
+          21,
+          130,
+          140,
+          150,
+          258
+        ],
+        "process": [
+          22
+        ],
+        "unstructured": [
+          23
+        ],
+        "data": [
+          24
+        ],
+        "generate": [
+          26
+        ],
+        "context-aware": [
+          27,
+          136
+        ],
+        "outputs": [
+          28
+        ],
+        "supports": [
+          29
+        ],
+        "both": [
+          30,
+          80,
+          106,
+          240
+        ],
+        "operational": [
+          31,
+          81,
+          107,
+          152,
+          241
+        ],
+        "tasks": [
+          32,
+          209
+        ],
+        "educational": [
+          34,
+          83,
+          109,
+          155,
+          243
+        ],
+        "initiatives.": [
+          35,
+          196
+        ],
+        "Despite": [
+          36
+        ],
+        "their": [
+          37,
+          132
+        ],
+        "growing": [
+          38
+        ],
+        "adoption,": [
+          39
+        ],
+        "current": [
+          40
+        ],
+        "research": [
+          41,
+          232
+        ],
+        "often": [
+          42
+        ],
+        "focuses": [
+          43
+        ],
+        "on": [
+          44,
+          134
+        ],
+        "isolated": [
+          45
+        ],
+        "applications,": [
+          46
+        ],
+        "lacking": [
+          47
+        ],
+        "a": [
+          48,
+          63,
+          91,
+          113,
+          249
+        ],
+        "systematic": [
+          49
+        ],
+        "understanding": [
+          50
+        ],
+        "of": [
+          51,
+          73,
+          96,
+          100,
+          148,
+          174,
+          237
+        ],
+        "how": [
+          52,
+          186
+        ],
+        "LLMs": [
+          53,
+          101,
+          149,
+          175,
+          203,
+          238
+        ],
+        "align": [
+          54
+        ],
+        "with": [
+          55
+        ],
+        "domain-specific": [
+          56
+        ],
+        "requirements": [
+          57
+        ],
+        "pedagogical": [
+          59
+        ],
+        "effectiveness.": [
+          60
+        ],
+        "This": [
+          61,
+          245
+        ],
+        "highlights": [
+          62,
+          145
+        ],
+        "pressing": [
+          64
+        ],
+        "need": [
+          65
+        ],
+        "for": [
+          66,
+          234,
+          252
+        ],
+        "comprehensive": [
+          67,
+          92
+        ],
+        "evaluations": [
+          68
+        ],
+        "that": [
+          69,
+          116,
+          201
+        ],
+        "address": [
+          70
+        ],
+        "the": [
+          71,
+          97,
+          146,
+          171,
+          225,
+          235
+        ],
+        "challenges": [
+          72,
+          214
+        ],
+        "integration,": [
+          74
+        ],
+        "generalization,": [
+          75,
+          218
+        ],
+        "ethical": [
+          77,
+          219
+        ],
+        "deployment": [
+          78
+        ],
+        "security": [
+          85,
+          124,
+          164,
+          178,
+          268
+        ],
+        "environments.": [
+          86
+        ],
+        "Therefore,": [
+          87
+        ],
+        "this": [
+          88
+        ],
+        "paper": [
+          89,
+          144,
+          167,
+          226,
+          246
+        ],
+        "provides": [
+          90
+        ],
+        "State-of-the-Art": [
+          94
+        ],
+        "review": [
+          95
+        ],
+        "significant": [
+          98,
+          205
+        ],
+        "role": [
+          99
+        ],
+        "addressing": [
+          105
+        ],
+        "dimensions.": [
+          110
+        ],
+        "It": [
+          111
+        ],
+        "introduces": [
+          112
+        ],
+        "holistic": [
+          114
+        ],
+        "framework": [
+          115
+        ],
+        "categorizes": [
+          117
+        ],
+        "LLM": [
+          118
+        ],
+        "applications": [
+          119
+        ],
+        "into": [
+          120
+        ],
+        "six": [
+          121
+        ],
+        "key": [
+          122,
+          198
+        ],
+        "domains,": [
+          125
+        ],
+        "examining": [
+          126
+        ],
+        "each": [
+          127
+        ],
+        "depth": [
+          129
+        ],
+        "demonstrate": [
+          131
+        ],
+        "impact": [
+          133
+        ],
+        "reasoning,": [
+          137
+        ],
+        "adaptability": [
+          139
+        ],
+        "emerging": [
+          141,
+          160
+        ],
+        "threats.": [
+          142
+        ],
+        "The": [
+          143,
+          166,
+          197
+        ],
+        "potential": [
+          147,
+          206
+        ],
+        "enhance": [
+          151
+        ],
+        "performance": [
+          153
+        ],
+        "effectiveness": [
+          156
+        ],
+        "while": [
+          157,
+          202
+        ],
+        "also": [
+          158,
+          168
+        ],
+        "exploring": [
+          159
+        ],
+        "technical,": [
+          161
+        ],
+        "ethical,": [
+          162
+        ],
+        "challenges.": [
+          165
+        ],
+        "uniquely": [
+          169
+        ],
+        "addresses": [
+          170
+        ],
+        "underexamined": [
+          172
+        ],
+        "area": [
+          173
+        ],
+        "education": [
+          179
+        ],
+        "by": [
+          180
+        ],
+        "reviewing": [
+          181
+        ],
+        "recent": [
+          182
+        ],
+        "studies": [
+          183
+        ],
+        "illustrating": [
+          185
+        ],
+        "these": [
+          187
+        ],
+        "models": [
+          188
+        ],
+        "support": [
+          189
+        ],
+        "personalized": [
+          190,
+          212
+        ],
+        "learning,": [
+          191,
+          213
+        ],
+        "hands-on": [
+          192
+        ],
+        "training,": [
+          193
+        ],
+        "awareness": [
+          195
+        ],
+        "findings": [
+          199
+        ],
+        "reveal": [
+          200
+        ],
+        "offer": [
+          204
+        ],
+        "automating": [
+          208
+        ],
+        "remain": [
+          215
+        ],
+        "model": [
+          217
+        ],
+        "deployment,": [
+          220
+        ],
+        "production": [
+          222
+        ],
+        "readiness.": [
+          223
+        ],
+        "Finally,": [
+          224
+        ],
+        "discusses": [
+          227
+        ],
+        "open": [
+          228
+        ],
+        "issues": [
+          229
+        ],
+        "future": [
+          231
+        ],
+        "directions": [
+          233
+        ],
+        "application": [
+          236
+        ],
+        "contexts.": [
+          244
+        ],
+        "serves": [
+          247
+        ],
+        "valuable": [
+          250
+        ],
+        "reference": [
+          251
+        ],
+        "researchers,": [
+          253
+        ],
+        "educators,": [
+          254
+        ],
+        "practitioners": [
+          256
+        ],
+        "aiming": [
+          257
+        ],
+        "develop": [
+          259
+        ],
+        "intelligent,": [
+          260
+        ],
+        "adaptive,": [
+          261
+        ],
+        "scalable,": [
+          262
+        ],
+        "ethically": [
+          264
+        ],
+        "responsible": [
+          265
+        ],
+        "LLM-based": [
+          266
+        ],
+        "solutions.": [
+          269
+        ]
+      },
+      "cited_by_count": 14,
+      "ids": {
+        "openalex": "https://openalex.org/W4412100992",
+        "doi": "https://doi.org/10.3390/bdcc9070184"
+      },
+      "locations": [
+        {
+          "id": "doi:10.3390/bdcc9070184",
+          "is_oa": true,
+          "landing_page_url": "https://doi.org/10.3390/bdcc9070184",
+          "pdf_url": "https://www.mdpi.com/2504-2289/9/7/184/pdf?version=1751954094",
+          "source": {
+            "id": "https://openalex.org/S4210238752",
+            "display_name": "Big Data and Cognitive Computing",
+            "issn_l": "2504-2289",
+            "issn": [
+              "2504-2289"
+            ],
+            "is_oa": true,
+            "is_in_doaj": true,
+            "is_core": true,
+            "host_organization": "https://openalex.org/P4310310987",
+            "host_organization_name": "Multidisciplinary Digital Publishing Institute",
+            "host_organization_lineage": [
+              "https://openalex.org/P4310310987"
+            ],
+            "host_organization_lineage_names": [
+              "Multidisciplinary Digital Publishing Institute"
+            ],
+            "type": "journal"
+          },
+          "license": "cc-by",
+          "license_id": "https://openalex.org/licenses/cc-by",
+          "version": "publishedVersion",
+          "is_accepted": true,
+          "is_published": true,
+          "raw_source_name": "Big Data and Cognitive Computing",
+          "raw_type": "journal-article"
+        },
+        {
+          "id": "pmh:oai:doaj.org/article:32b95ee59da84e49b1910e61ba6f393a",
+          "is_oa": true,
+          "landing_page_url": "https://doaj.org/article/32b95ee59da84e49b1910e61ba6f393a",
+          "pdf_url": null,
+          "source": {
+            "id": "https://openalex.org/S4306401280",
+            "display_name": "DOAJ (DOAJ: Directory of Open Access Journals)",
+            "issn_l": null,
+            "issn": null,
+            "is_oa": false,
+            "is_in_doaj": false,
+            "is_core": false,
+            "host_organization": null,
+            "host_organization_name": null,
+            "host_organization_lineage": [],
+            "host_organization_lineage_names": [],
+            "type": "repository"
+          },
+          "license": "cc-by-sa",
+          "license_id": "https://openalex.org/licenses/cc-by-sa",
+          "version": "submittedVersion",
+          "is_accepted": false,
+          "is_published": false,
+          "raw_source_name": "Big Data and Cognitive Computing, Vol 9, Iss 7, p 184 (2025)",
+          "raw_type": "article"
+        }
+      ]
+    },
+    {
+      "id": "https://openalex.org/W4411213366",
+      "doi": "https://doi.org/10.56472/iccsaiml25-127",
+      "title": "LLM Security And Guardrail Defense Techniques In Web Applications",
+      "display_name": "LLM Security And Guardrail Defense Techniques In Web Applications",
+      "publication_year": 2025,
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5116454517",
+            "display_name": "Sandeep Phanireddy",
+            "orcid": null
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I4210164339",
+              "display_name": "Oldham Council",
+              "ror": "https://ror.org/05cxzzq07",
+              "country_code": "GB",
+              "type": "government",
+              "lineage": [
+                "https://openalex.org/I4210164339"
+              ]
+            }
+          ],
+          "countries": [
+            "GB"
+          ],
+          "is_corresponding": true,
+          "raw_author_name": "Sandeep Phanireddy",
+          "raw_affiliation_strings": [
+            "Independent Researcher from USA"
+          ],
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Independent Researcher from USA",
+              "institution_ids": [
+                "https://openalex.org/I4210164339"
+              ]
+            }
+          ]
+        }
+      ],
+      "primary_location": {
+        "id": "doi:10.56472/iccsaiml25-127",
+        "is_oa": false,
+        "landing_page_url": "https://doi.org/10.56472/iccsaiml25-127",
+        "pdf_url": null,
+        "source": null,
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "International Conference on Computer Science, Artificial Intelligence, Machine Learning [ICCSAIML'25]",
+        "raw_type": "proceedings-article"
+      },
+      "best_oa_location": null,
+      "open_access": {
+        "is_oa": false,
+        "oa_status": "closed",
+        "oa_url": null,
+        "any_repository_has_fulltext": false
+      },
+      "abstract_inverted_index": {
+        "Adversarial": [
+          0,
+          57
+        ],
+        "attacks": [
+          1
+        ],
+        "pose": [
+          2
+        ],
+        "an": [
+          3,
+          121
+        ],
+        "important": [
+          4
+        ],
+        "threat": [
+          5
+        ],
+        "to": [
+          6,
+          20,
+          25,
+          48,
+          91,
+          101,
+          111
+        ],
+        "the": [
+          7,
+          88,
+          99,
+          106,
+          125
+        ],
+        "security": [
+          8,
+          107
+        ],
+        "and": [
+          9,
+          32,
+          60,
+          73,
+          80,
+          130
+        ],
+        "trustworthiness": [
+          10
+        ],
+        "of": [
+          11,
+          82,
+          109,
+          127,
+          138
+        ],
+        "large": [
+          12
+        ],
+        "language": [
+          13
+        ],
+        "models": [
+          14,
+          17,
+          51
+        ],
+        "(LLMs).": [
+          15
+        ],
+        "These": [
+          16
+        ],
+        "are": [
+          18,
+          63
+        ],
+        "vulnerable": [
+          19
+        ],
+        "carefully": [
+          21
+        ],
+        "engineered": [
+          22
+        ],
+        "input": [
+          23
+        ],
+        "designed": [
+          24
+        ],
+        "exploit": [
+          26
+        ],
+        "their": [
+          27
+        ],
+        "weaknesses,": [
+          28
+        ],
+        "degrade": [
+          29
+        ],
+        "system": [
+          30
+        ],
+        "performance,": [
+          31
+        ],
+        "extract": [
+          33
+        ],
+        "private": [
+          34
+        ],
+        "information.": [
+          35
+        ],
+        "Practical": [
+          36
+        ],
+        "countermeasures": [
+          37
+        ],
+        "need": [
+          38,
+          100
+        ],
+        "a": [
+          39,
+          128,
+          132
+        ],
+        "strong": [
+          40
+        ],
+        "offensive": [
+          41
+        ],
+        "strategy": [
+          42
+        ],
+        "that": [
+          43
+        ],
+        "includes": [
+          44
+        ],
+        "adversarial": [
+          45,
+          103
+        ],
+        "scenarios": [
+          46
+        ],
+        "simulation": [
+          47
+        ],
+        "test": [
+          49
+        ],
+        "how": [
+          50
+        ],
+        "hold": [
+          52
+        ],
+        "up": [
+          53
+        ],
+        "in": [
+          54,
+          140
+        ],
+        "various": [
+          55
+        ],
+        "conditions.": [
+          56
+        ],
+        "data": [
+          58
+        ],
+        "poisoning": [
+          59
+        ],
+        "evasion": [
+          61
+        ],
+        "techniques": [
+          62
+        ],
+        "particularly": [
+          64
+        ],
+        "useful": [
+          65
+        ],
+        "as": [
+          66
+        ],
+        "they": [
+          67
+        ],
+        "can": [
+          68,
+          86,
+          123
+        ],
+        "reveal": [
+          69
+        ],
+        "strengths": [
+          70
+        ],
+        "during": [
+          71
+        ],
+        "training": [
+          72
+        ],
+        "inference": [
+          74
+        ],
+        "processes,": [
+          75
+        ],
+        "respectively.": [
+          76
+        ],
+        "Through": [
+          77
+        ],
+        "systematic": [
+          78
+        ],
+        "identification": [
+          79
+        ],
+        "mitigation": [
+          81
+        ],
+        "every": [
+          83
+        ],
+        "vulnerability,": [
+          84
+        ],
+        "organizations": [
+          85
+        ],
+        "strengthen": [
+          87
+        ],
+        "model's": [
+          89
+        ],
+        "robustness": [
+          90,
+          126
+        ],
+        "real-world": [
+          92
+        ],
+        "attacks.": [
+          93
+        ],
+        "This": [
+          94
+        ],
+        "technical": [
+          95
+        ],
+        "framework": [
+          96
+        ],
+        "also": [
+          97
+        ],
+        "emphasizes": [
+          98
+        ],
+        "embed": [
+          102
+        ],
+        "simulations": [
+          104
+        ],
+        "into": [
+          105
+        ],
+        "cycle": [
+          108
+        ],
+        "LLMs": [
+          110,
+          139
+        ],
+        "prevent": [
+          112
+        ],
+        "risks": [
+          113
+        ],
+        "associated": [
+          114
+        ],
+        "with": [
+          115
+        ],
+        "malicious": [
+          116
+        ],
+        "actors.": [
+          117
+        ],
+        "Via": [
+          118
+        ],
+        "iterative": [
+          119
+        ],
+        "analysis,": [
+          120
+        ],
+        "organization": [
+          122
+        ],
+        "increase": [
+          124
+        ],
+        "model": [
+          129
+        ],
+        "build": [
+          131
+        ],
+        "resilient": [
+          133
+        ],
+        "infrastructure": [
+          134
+        ],
+        "for": [
+          135
+        ],
+        "secure": [
+          136
+        ],
+        "implementation": [
+          137
+        ],
+        "sensitive/high-level": [
+          141
+        ],
+        "environments": [
+          142
+        ]
+      },
+      "cited_by_count": 1,
+      "ids": {
+        "openalex": "https://openalex.org/W4411213366",
+        "doi": "https://doi.org/10.56472/iccsaiml25-127"
+      },
+      "locations": [
+        {
+          "id": "doi:10.56472/iccsaiml25-127",
+          "is_oa": false,
+          "landing_page_url": "https://doi.org/10.56472/iccsaiml25-127",
+          "pdf_url": null,
+          "source": null,
+          "license": null,
+          "license_id": null,
+          "version": "publishedVersion",
+          "is_accepted": true,
+          "is_published": true,
+          "raw_source_name": "International Conference on Computer Science, Artificial Intelligence, Machine Learning [ICCSAIML'25]",
+          "raw_type": "proceedings-article"
+        }
+      ]
+    },
+    {
+      "id": "https://openalex.org/W7138229936",
+      "doi": "https://doi.org/10.1609/aaai.v40i5.37389",
+      "title": "Disentangling Adversarial Prompts: A Semantic-Graph Defense for Robust LLM Security",
+      "display_name": "Disentangling Adversarial Prompts: A Semantic-Graph Defense for Robust LLM Security",
+      "publication_year": 2026,
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5129649664",
+            "display_name": "Xiang Fang",
+            "orcid": null
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I47720641",
+              "display_name": "Huazhong University of Science and Technology",
+              "ror": "https://ror.org/00p991c53",
+              "country_code": "CN",
+              "type": "education",
+              "lineage": [
+                "https://openalex.org/I47720641"
+              ]
+            }
+          ],
+          "countries": [
+            "CN"
+          ],
+          "is_corresponding": true,
+          "raw_author_name": "Xiang Fang",
+          "raw_affiliation_strings": [
+            "School of Software Engineering, Huazhong University of Science and Technology"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "School of Software Engineering, Huazhong University of Science and Technology",
+              "institution_ids": [
+                "https://openalex.org/I47720641"
+              ]
+            }
+          ]
+        },
+        {
+          "author_position": "last",
+          "author": {
+            "id": "https://openalex.org/A5113067511",
+            "display_name": "Wanlong Fang",
+            "orcid": "https://orcid.org/0000-0003-4480-3107"
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I172675005",
+              "display_name": "Nanyang Technological University",
+              "ror": "https://ror.org/02e7b5302",
+              "country_code": "SG",
+              "type": "education",
+              "lineage": [
+                "https://openalex.org/I172675005"
+              ]
+            }
+          ],
+          "countries": [
+            "SG"
+          ],
+          "is_corresponding": false,
+          "raw_author_name": "Wanlong Fang",
+          "raw_affiliation_strings": [
+            "Nanyang Technological University"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Nanyang Technological University",
+              "institution_ids": [
+                "https://openalex.org/I172675005"
+              ]
+            }
+          ]
+        }
+      ],
+      "primary_location": {
+        "id": "doi:10.1609/aaai.v40i5.37389",
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.1609/aaai.v40i5.37389",
+        "pdf_url": null,
+        "source": {
+          "id": "https://openalex.org/S4210191458",
+          "display_name": "Proceedings of the AAAI Conference on Artificial Intelligence",
+          "issn_l": "2159-5399",
+          "issn": [
+            "2159-5399",
+            "2374-3468"
+          ],
+          "is_oa": true,
+          "is_in_doaj": false,
+          "is_core": false,
+          "host_organization": "https://openalex.org/P4310320058",
+          "host_organization_name": "Association for the Advancement of Artificial Intelligence",
+          "host_organization_lineage": [
+            "https://openalex.org/P4310320058"
+          ],
+          "host_organization_lineage_names": [
+            "Association for the Advancement of Artificial Intelligence"
+          ],
+          "type": "conference"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Proceedings of the AAAI Conference on Artificial Intelligence",
+        "raw_type": "journal-article"
+      },
+      "best_oa_location": {
+        "id": "doi:10.1609/aaai.v40i5.37389",
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.1609/aaai.v40i5.37389",
+        "pdf_url": null,
+        "source": {
+          "id": "https://openalex.org/S4210191458",
+          "display_name": "Proceedings of the AAAI Conference on Artificial Intelligence",
+          "issn_l": "2159-5399",
+          "issn": [
+            "2159-5399",
+            "2374-3468"
+          ],
+          "is_oa": true,
+          "is_in_doaj": false,
+          "is_core": false,
+          "host_organization": "https://openalex.org/P4310320058",
+          "host_organization_name": "Association for the Advancement of Artificial Intelligence",
+          "host_organization_lineage": [
+            "https://openalex.org/P4310320058"
+          ],
+          "host_organization_lineage_names": [
+            "Association for the Advancement of Artificial Intelligence"
+          ],
+          "type": "conference"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Proceedings of the AAAI Conference on Artificial Intelligence",
+        "raw_type": "journal-article"
+      },
+      "open_access": {
+        "is_oa": true,
+        "oa_status": "diamond",
+        "oa_url": "https://doi.org/10.1609/aaai.v40i5.37389",
+        "any_repository_has_fulltext": false
+      },
+      "abstract_inverted_index": {
+        "Large": [
+          0
+        ],
+        "Language": [
+          1
+        ],
+        "Models": [
+          2
+        ],
+        "(LLMs)": [
+          3
+        ],
+        "are": [
+          4,
+          69
+        ],
+        "increasingly": [
+          5
+        ],
+        "vulnerable": [
+          6
+        ],
+        "to": [
+          7,
+          14,
+          34,
+          89,
+          110
+        ],
+        "adversarial": [
+          8,
+          91,
+          136,
+          144,
+          207
+        ],
+        "prompts": [
+          9,
+          66
+        ],
+        "that": [
+          10,
+          57,
+          106
+        ],
+        "exploit": [
+          11
+        ],
+        "semantic": [
+          12,
+          86
+        ],
+        "ambiguities": [
+          13
+        ],
+        "bypass": [
+          15
+        ],
+        "safety": [
+          16
+        ],
+        "mechanisms,": [
+          17
+        ],
+        "resulting": [
+          18
+        ],
+        "in": [
+          19,
+          41,
+          64,
+          114,
+          185
+        ],
+        "harmful": [
+          20,
+          151
+        ],
+        "or": [
+          21
+        ],
+        "inappropriate": [
+          22
+        ],
+        "outputs.": [
+          23
+        ],
+        "Such": [
+          24
+        ],
+        "attacks,": [
+          25
+        ],
+        "including": [
+          26
+        ],
+        "jailbreaking": [
+          27,
+          130
+        ],
+        "and": [
+          28,
+          37,
+          60,
+          92,
+          117,
+          129,
+          134,
+          192,
+          198
+        ],
+        "prompt": [
+          29,
+          94,
+          115
+        ],
+        "injection,": [
+          30
+        ],
+        "pose": [
+          31
+        ],
+        "significant": [
+          32
+        ],
+        "risks": [
+          33
+        ],
+        "the": [
+          35,
+          47,
+          72
+        ],
+        "integrity": [
+          36,
+          193
+        ],
+        "availability": [
+          38
+        ],
+        "of": [
+          39,
+          127
+        ],
+        "LLMs": [
+          40
+        ],
+        "security-critical": [
+          42
+        ],
+        "applications.": [
+          43
+        ],
+        "This": [
+          44
+        ],
+        "paper": [
+          45
+        ],
+        "proposes": [
+          46
+        ],
+        "Adversarial": [
+          48
+        ],
+        "Prompt": [
+          49
+        ],
+        "Disentanglement": [
+          50
+        ],
+        "(APD)": [
+          51
+        ],
+        "framework,": [
+          52
+        ],
+        "a": [
+          53,
+          82,
+          101,
+          119,
+          174,
+          200
+        ],
+        "novel": [
+          54,
+          190
+        ],
+        "defense": [
+          55,
+          204
+        ],
+        "mechanism": [
+          56
+        ],
+        "proactively": [
+          58
+        ],
+        "identifies": [
+          59
+        ],
+        "neutralizes": [
+          61
+        ],
+        "malicious": [
+          62,
+          112
+        ],
+        "components": [
+          63
+        ],
+        "input": [
+          65
+        ],
+        "before": [
+          67
+        ],
+        "they": [
+          68
+        ],
+        "processed": [
+          70
+        ],
+        "by": [
+          71,
+          154
+        ],
+        "LLM.": [
+          73
+        ],
+        "The": [
+          74,
+          164
+        ],
+        "APD": [
+          75,
+          146
+        ],
+        "framework": [
+          76
+        ],
+        "integrates": [
+          77
+        ],
+        "three": [
+          78
+        ],
+        "key": [
+          79
+        ],
+        "innovations:": [
+          80
+        ],
+        "(1)": [
+          81
+        ],
+        "mutual": [
+          83
+        ],
+        "information-": [
+          84
+        ],
+        "based": [
+          85
+        ],
+        "decomposition": [
+          87
+        ],
+        "method": [
+          88
+        ],
+        "isolate": [
+          90
+        ],
+        "benign": [
+          93
+        ],
+        "components,": [
+          95
+        ],
+        "ensuring": [
+          96
+        ],
+        "statistical": [
+          97
+        ],
+        "in-": [
+          98
+        ],
+        "dependence;": [
+          99
+        ],
+        "(2)": [
+          100
+        ],
+        "graph-based": [
+          102
+        ],
+        "intent": [
+          103,
+          137
+        ],
+        "classification": [
+          104
+        ],
+        "approach": [
+          105
+        ],
+        "leverages": [
+          107
+        ],
+        "spectral": [
+          108
+        ],
+        "analysis": [
+          109
+        ],
+        "detect": [
+          111
+        ],
+        "patterns": [
+          113
+        ],
+        "semantics;": [
+          116
+        ],
+        "(3)": [
+          118
+        ],
+        "lightweight": [
+          120
+        ],
+        "transformer-based": [
+          121
+        ],
+        "classifier": [
+          122
+        ],
+        "trained": [
+          123
+        ],
+        "on": [
+          124,
+          140,
+          161,
+          189
+        ],
+        "real-world": [
+          125
+        ],
+        "datasets": [
+          126,
+          142
+        ],
+        "toxic": [
+          128
+        ],
+        "prompts,": [
+          131,
+          145
+        ],
+        "enabling": [
+          132
+        ],
+        "efficient": [
+          133
+        ],
+        "accurate": [
+          135
+        ],
+        "detection.": [
+          138
+        ],
+        "Evaluated": [
+          139
+        ],
+        "diverse": [
+          141
+        ],
+        "containing": [
+          143
+        ],
+        "demonstrates": [
+          147
+        ],
+        "superior": [
+          148
+        ],
+        "robustness,": [
+          149
+        ],
+        "reducing": [
+          150
+        ],
+        "output": [
+          152
+        ],
+        "generation": [
+          153
+        ],
+        "over": [
+          155
+        ],
+        "85%": [
+          156
+        ],
+        "while": [
+          157
+        ],
+        "maintaining": [
+          158
+        ],
+        "negligible": [
+          159
+        ],
+        "impact": [
+          160
+        ],
+        "model": [
+          162
+        ],
+        "performance.": [
+          163
+        ],
+        "framework’s": [
+          165
+        ],
+        "computational": [
+          166
+        ],
+        "efficiency": [
+          167
+        ],
+        "supports": [
+          168
+        ],
+        "real-time": [
+          169
+        ],
+        "deploy-": [
+          170
+        ],
+        "ment,": [
+          171
+        ],
+        "making": [
+          172
+        ],
+        "it": [
+          173
+        ],
+        "practical": [
+          175
+        ],
+        "solution": [
+          176
+        ],
+        "for": [
+          177,
+          195
+        ],
+        "securing": [
+          178
+        ],
+        "LLMs.": [
+          179
+        ],
+        "Our": [
+          180
+        ],
+        "work": [
+          181
+        ],
+        "addresses": [
+          182
+        ],
+        "critical": [
+          183
+        ],
+        "challenges": [
+          184
+        ],
+        "machine": [
+          186
+        ],
+        "learning": [
+          187
+        ],
+        "security": [
+          188
+        ],
+        "attacks": [
+          191
+        ],
+        "methods": [
+          194
+        ],
+        "ML": [
+          196
+        ],
+        "systems,": [
+          197
+        ],
+        "offers": [
+          199
+        ],
+        "scalable,": [
+          201
+        ],
+        "ethically": [
+          202
+        ],
+        "grounded": [
+          203
+        ],
+        "against": [
+          205
+        ],
+        "prompt-based": [
+          206
+        ],
+        "threats.": [
+          208
+        ]
+      },
+      "cited_by_count": 1,
+      "ids": {
+        "openalex": "https://openalex.org/W7138229936",
+        "doi": "https://doi.org/10.1609/aaai.v40i5.37389"
+      },
+      "locations": [
+        {
+          "id": "doi:10.1609/aaai.v40i5.37389",
+          "is_oa": true,
+          "landing_page_url": "https://doi.org/10.1609/aaai.v40i5.37389",
+          "pdf_url": null,
+          "source": {
+            "id": "https://openalex.org/S4210191458",
+            "display_name": "Proceedings of the AAAI Conference on Artificial Intelligence",
+            "issn_l": "2159-5399",
+            "issn": [
+              "2159-5399",
+              "2374-3468"
+            ],
+            "is_oa": true,
+            "is_in_doaj": false,
+            "is_core": false,
+            "host_organization": "https://openalex.org/P4310320058",
+            "host_organization_name": "Association for the Advancement of Artificial Intelligence",
+            "host_organization_lineage": [
+              "https://openalex.org/P4310320058"
+            ],
+            "host_organization_lineage_names": [
+              "Association for the Advancement of Artificial Intelligence"
+            ],
+            "type": "conference"
+          },
+          "license": null,
+          "license_id": null,
+          "version": "publishedVersion",
+          "is_accepted": true,
+          "is_published": true,
+          "raw_source_name": "Proceedings of the AAAI Conference on Artificial Intelligence",
+          "raw_type": "journal-article"
+        }
+      ]
+    }
+  ],
+  "group_by": []
+}

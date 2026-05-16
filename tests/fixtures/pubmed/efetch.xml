@@ -1,0 +1,66 @@
+<?xml version="1.0" ?>
+<!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2024//EN" "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_240101.dtd">
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation Status="PubMed-not-MEDLINE">
+      <PMID Version="1">34567890</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <JournalIssue CitedMedium="Internet">
+            <PubDate>
+              <Year>2022</Year>
+              <Month>Mar</Month>
+            </PubDate>
+          </JournalIssue>
+          <Title>Nature Biotechnology</Title>
+        </Journal>
+        <ArticleTitle>A CRISPR screen identifies essential genes.</ArticleTitle>
+        <Abstract>
+          <AbstractText Label="BACKGROUND">CRISPR is widely used.</AbstractText>
+          <AbstractText Label="RESULTS">We identify 124 essential genes.</AbstractText>
+        </Abstract>
+        <AuthorList CompleteYN="Y">
+          <Author ValidYN="Y">
+            <LastName>Doe</LastName>
+            <ForeName>Alice</ForeName>
+          </Author>
+          <Author ValidYN="Y">
+            <LastName>Roe</LastName>
+            <ForeName>Bob</ForeName>
+          </Author>
+        </AuthorList>
+        <ELocationID EIdType="doi" ValidYN="Y">10.1038/s41587-022-01234-5</ELocationID>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">34567890</ArticleId>
+        <ArticleId IdType="doi">10.1038/s41587-022-01234-5</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+  <PubmedArticle>
+    <MedlineCitation Status="PubMed-not-MEDLINE">
+      <PMID Version="1">34567891</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <JournalIssue CitedMedium="Internet">
+            <PubDate>
+              <MedlineDate>2023 Summer</MedlineDate>
+            </PubDate>
+          </JournalIssue>
+          <Title>Cell Reports</Title>
+        </Journal>
+        <ArticleTitle>Single-cell atlas of immune response.</ArticleTitle>
+        <Abstract>
+          <AbstractText>We profile 1.2 million cells.</AbstractText>
+        </Abstract>
+        <AuthorList CompleteYN="Y">
+          <Author ValidYN="Y">
+            <CollectiveName>Human Cell Atlas Consortium</CollectiveName>
+          </Author>
+        </AuthorList>
+      </Article>
+    </MedlineCitation>
+  </PubmedArticle>
+</PubmedArticleSet>

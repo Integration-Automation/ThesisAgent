@@ -1,0 +1,19 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message-version": "1.0.0",
+  "message": {
+    "DOI": "10.1145/3411764.3445005",
+    "title": ["Designing Conversational AI for Older Adults"],
+    "publisher": "Association for Computing Machinery",
+    "container-title": ["CHI 2021"],
+    "author": [
+      {"given": "Alice", "family": "Anderson"},
+      {"given": "Bob", "family": "Brown"}
+    ],
+    "published-print": {"date-parts": [[2021, 5, 6]]},
+    "abstract": "<jats:p>We design a conversational agent for older adults.</jats:p>",
+    "is-referenced-by-count": 87,
+    "URL": "https://doi.org/10.1145/3411764.3445005"
+  }
+}

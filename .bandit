@@ -1,0 +1,7 @@
+exclude_dirs:
+  - tests
+  - .venv
+  - build
+skips:
+  # No project-wide skips yet. Add here with a one-line reason when needed,
+  # e.g. "# B101: assert allowed in tests" (already excluded via exclude_dirs).

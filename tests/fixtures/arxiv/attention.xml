@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <title type="html">arXiv Query: search_query=all:attention&amp;start=0&amp;max_results=2</title>
+  <id>http://arxiv.org/api/example</id>
+  <updated>2024-06-01T00:00:00-04:00</updated>
+  <opensearch:totalResults xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">2</opensearch:totalResults>
+  <entry>
+    <id>http://arxiv.org/abs/1706.03762v5</id>
+    <updated>2017-12-06T18:31:34Z</updated>
+    <published>2017-06-12T17:57:34Z</published>
+    <title>Attention Is All You Need</title>
+    <summary>The dominant sequence transduction models are based on complex recurrent or convolutional neural networks. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.</summary>
+    <author><name>Ashish Vaswani</name></author>
+    <author><name>Noam Shazeer</name></author>
+    <author><name>Niki Parmar</name></author>
+    <link href="http://arxiv.org/abs/1706.03762v5" rel="alternate" type="text/html"/>
+    <link title="pdf" href="http://arxiv.org/pdf/1706.03762v5" rel="related" type="application/pdf"/>
+    <arxiv:primary_category xmlns:arxiv="http://arxiv.org/schemas/atom" term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2401.04088v2</id>
+    <updated>2024-02-01T10:00:00Z</updated>
+    <published>2024-01-08T15:30:00Z</published>
+    <title>A Survey of Efficient Attention Methods</title>
+    <summary>We survey efficient attention mechanisms developed since the original Transformer, covering sparse, linear, and memory-augmented variants.</summary>
+    <author><name>Diana Doe</name></author>
+    <author><name>Erik Eriksson</name></author>
+    <arxiv:doi>10.1234/example.04088</arxiv:doi>
+    <arxiv:journal_ref>Example Journal of ML</arxiv:journal_ref>
+    <link href="http://arxiv.org/abs/2401.04088v2" rel="alternate" type="text/html"/>
+    <link title="pdf" href="http://arxiv.org/pdf/2401.04088v2" rel="related" type="application/pdf"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+</feed>
