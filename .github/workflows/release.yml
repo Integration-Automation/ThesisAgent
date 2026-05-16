@@ -263,10 +263,12 @@ jobs:
         # PySide6 is handled ENTIRELY by --enable-plugin=pyside6 —
         # adding --include-package=PySide6 / --include-package-data=
         # PySide6 on top of the plugin causes redundant inclusions
-        # and roughly doubles the cold build time. The noinclude-data-
-        # files flags drop the QML and QtQuick3D trees we never load
-        # (the GUI is QtWidgets-only) and the per-locale .qm files
-        # that English-default Qt does not need.
+        # and roughly doubles the cold build time. The plugin itself
+        # includes the full QML / translations / resources tree by
+        # default, which is what we want — Qt features the GUI does
+        # not use today may still be hit by future tabs (Deck inspect,
+        # rich-text preview, etc.), and the size hit on a single
+        # Windows .exe is acceptable.
         shell: bash
         env:
           PYTHONPATH: sources
@@ -288,9 +290,6 @@ jobs:
             --include-package=openaire \
             --include-package=springer \
             --enable-plugin=pyside6 \
-            --noinclude-data-files=PySide6/qml/* \
-            --noinclude-data-files=PySide6/translations/* \
-            --noinclude-data-files=PySide6/resources/* \
             --include-data-dir=./sources=sources \
             --include-package-data=pptx \
             --include-package-data=openpyxl \
