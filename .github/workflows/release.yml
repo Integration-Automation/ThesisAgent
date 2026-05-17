@@ -287,6 +287,7 @@ jobs:
             --standalone \
             --python-flag=-m \
             --output-filename=autopapertoppt.exe \
+            --windows-icon-from-ico=assets/icon.ico \
             --include-package=autopapertoppt \
             --include-package=arxiv \
             --include-package=semantic_scholar \

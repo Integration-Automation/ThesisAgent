@@ -6,12 +6,20 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from autopapertoppt.gui.pages.settings import apply_saved_env, saved_ui_language
 
 if TYPE_CHECKING:
-    from PySide6.QtGui import QFont
+    from PySide6.QtGui import QFont, QIcon
+
+
+# Repo root → assets/icon.ico. parents[2] = autopapertoppt/gui/app.py
+# → autopapertoppt/gui → autopapertoppt → repo. Resolved lazily so the
+# import-time path lookup doesn't run when the package is imported by
+# the CLI only.
+_ICON_PATH = Path(__file__).resolve().parents[2] / "assets" / "icon.ico"
 
 
 def _configure_hidpi_env() -> None:
@@ -60,6 +68,12 @@ def main(argv: list[str] | None = None) -> int:
     app_argv = list(sys.argv if argv is None else [sys.argv[0], *argv])
     app = QApplication.instance() or QApplication(app_argv)
 
+    # Window / taskbar / Alt-Tab icon. Setting on QApplication first
+    # propagates to every top-level window automatically.
+    icon = _load_app_icon()
+    if icon is not None:
+        app.setWindowIcon(icon)
+
     # Default to a slightly larger point-size than Qt's platform default
     # so text stays readable across HiDPI screens without per-widget
     # font overrides. Point-sized fonts let Qt's HiDPI scaling do the
@@ -77,6 +91,21 @@ def main(argv: list[str] | None = None) -> int:
     window = MainWindow(ui_language=language)
     window.show()
     return app.exec()
+
+
+def _load_app_icon() -> QIcon | None:
+    """Return the bundled QIcon, or None when the .ico isn't reachable.
+
+    Soft-fails because the icon ships outside the importable package
+    tree; a future repackaging that flattens the layout could break
+    parents[2] and we'd rather show the default Qt icon than crash.
+    """
+    if not _ICON_PATH.is_file():
+        return None
+    # Imported lazily to avoid pulling PySide6 in at module import time.
+    from PySide6.QtGui import QIcon
+
+    return QIcon(str(_ICON_PATH))
 
 
 def _with_unicode_fallback(font: QFont) -> QFont:
