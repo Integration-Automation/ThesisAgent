@@ -394,10 +394,17 @@ autopapertoppt-gui                 # or: autopapertoppt gui
 The window has four tabs — **Search** (functional), **Settings**
 (functional, persists API keys via QSettings), **Enrich**, and
 **Deck** (the latter two land in a follow-up). The Windows release
-`.exe` bundles PySide6, so `autopapertoppt.exe gui` works without
-a separate Python install. UI ships in English and Traditional
-Chinese; deck output language remains 14-language (CLI / GUI both
-consume the same `exporters/i18n.py` table).
+zip ships the Nuitka-compiled bundle with PySide6 included, so
+`autopapertoppt.exe gui` works without a separate Python install.
+**UI ships in all 14 languages** (English, 繁體中文, 简体中文,
+日本語, Español, Français, Deutsch, 한국어, Português, Русский,
+Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — first run picks
+the language from your OS locale, then **Settings → Interface
+language** lets you change it. The deck output language is a
+separate dropdown so you can run the UI in one language and emit
+slides in another. The layout is responsive: every form sits in
+a `QScrollArea` and the window resizes down to 900×600 (still fits
+720p), with HiDPI scaling on by default.
 
 Full reference: [`docs/gui.md`](docs/gui.md).
 
