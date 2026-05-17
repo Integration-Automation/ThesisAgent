@@ -370,12 +370,26 @@ jobs:
           script: |
             const tag = "v${{ needs.bump-version.outputs.version }}";
             const { owner, repo } = context.repo;
-            const release = await github.rest.repos.getReleaseByTag({
-              owner, repo, tag,
-            });
+
+            // getReleaseByTag returns 404 for DRAFT releases — per
+            // https://docs.github.com/rest/releases/releases#get-a-release-by-tag-name
+            // "You cannot get a draft release by its tag name."
+            // Enumerate via listReleases (which DOES include drafts)
+            // and filter by tag name instead.
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner, repo, per_page: 100 },
+            );
+            const release = releases.find(r => r.tag_name === tag);
+            if (!release) {
+              throw new Error(
+                `No release found with tag ${tag}. Existing: ` +
+                releases.map(r => r.tag_name).join(", "),
+              );
+            }
             await github.rest.repos.updateRelease({
               owner, repo,
-              release_id: release.data.id,
+              release_id: release.id,
               draft: false,
             });
-            console.log(`Released ${tag} (${release.data.html_url})`);
+            console.log(`Released ${tag} (${release.html_url})`);
