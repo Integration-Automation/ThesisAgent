@@ -439,12 +439,16 @@ Two GitHub Actions workflows live under `.github/workflows/`:
      `twine upload` via `PYPI_API_TOKEN`.
   3. **`create-draft-release`** — open a *draft* GitHub release at
      tag `v<version>` with auto-generated notes.
-  4. **`build-nuitka`** — compile a Nuitka onefile `.exe` on a
-     Windows runner, smoke-test it, and attach the binary + a
-     `.sha256` checksum to the draft release. Windows-only by design:
-     Linux / macOS users install from PyPI, so shipping native
-     binaries there just inflates the release page. Build cache keyed
-     on `pyproject.toml` cuts warm builds from ~15 min to ~3 min.
+  4. **`build-nuitka`** — compile a Nuitka standalone bundle on a
+     Windows runner (entry point: `python -m autopapertoppt` via
+     `--python-flag=-m`), smoke-test it, zip the resulting
+     `autopapertoppt.dist/` folder, and attach the zip + a `.sha256`
+     checksum to the draft release. Standalone (not onefile) by
+     design: onefile self-extracts to `%TEMP%` on every launch,
+     adding startup latency and tripping antivirus heuristics on
+     locked-down machines. Windows-only by design too: Linux / macOS
+     users install from PyPI. Build cache keyed on `pyproject.toml`
+     cuts warm builds from ~70 min cold to ~5–10 min.
   5. **`publish-release`** — unmark the draft once the Nuitka asset
      is uploaded, so users never see a half-finished release.
 
@@ -464,8 +468,8 @@ To enable PyPI publishing + release executables:
    General → Workflow permissions → Read and write permissions`. The
    bump commit is pushed by the workflow's `GITHUB_TOKEN`.
 4. Cut releases by merging PRs into `main`. The pipeline takes
-   ~3–5 min to publish to PyPI and ~10–15 min more (or ~3–5 min with
-   a warm Nuitka cache) for the Windows binary to attach.
+   ~3–5 min to publish to PyPI and ~50–70 min more (cold) or ~5–10 min
+   (warm Nuitka cache) for the Windows zip to attach.
 
 The `publish-pypi` job intentionally does NOT attach a GitHub
 Environment, so each run surfaces as a Release entry (with its

@@ -205,7 +205,7 @@ jobs:
     # min. The cap below covers cold + slowest-case parallel link.
     timeout-minutes: 90
     env:
-      ASSET_NAME: autopapertoppt-windows-x86_64.exe
+      ASSET_NAME: autopapertoppt-windows-x86_64.zip
     steps:
       - name: Checkout the bumped commit
         uses: actions/checkout@v4
@@ -261,21 +261,31 @@ jobs:
         # mismatch is normal); use the module name here.
         #
         # PySide6 is handled ENTIRELY by --enable-plugin=pyside6 —
-        # adding --include-package=PySide6 / --include-package-data=
-        # PySide6 on top of the plugin causes redundant inclusions
-        # and roughly doubles the cold build time. The plugin itself
-        # includes the full QML / translations / resources tree by
-        # default, which is what we want — Qt features the GUI does
-        # not use today may still be hit by future tabs (Deck inspect,
-        # rich-text preview, etc.), and the size hit on a single
-        # Windows .exe is acceptable.
+        # the plugin includes the full QML / translations / resources
+        # tree by default, which is what we want (future tabs may
+        # use Qt features the current QtWidgets-only Search/Settings
+        # do not).
+        #
+        # Entry point: --python-flag=-m + bare 'autopapertoppt' tells
+        # Nuitka to treat the build like `python -m autopapertoppt`.
+        # Passing autopapertoppt/__main__.py directly used to trip
+        # the "specify its containing directory" warning and made
+        # sub-imports inside the package resolve oddly.
+        #
+        # Distribution model: --standalone produces an
+        # `autopapertoppt.dist/` folder containing the exe + every
+        # DLL/SO it needs; we then zip the folder and attach the
+        # zip to the release. Onefile mode is intentionally NOT
+        # used — it self-extracts to %TEMP% on every launch, which
+        # adds startup latency and trips antivirus heuristics on
+        # locked-down corporate machines.
         shell: bash
         env:
           PYTHONPATH: sources
         run: |
           python -m nuitka \
             --standalone \
-            --onefile \
+            --python-flag=-m \
             --output-filename=autopapertoppt.exe \
             --include-package=autopapertoppt \
             --include-package=arxiv \
@@ -294,22 +304,30 @@ jobs:
             --include-package-data=pptx \
             --include-package-data=openpyxl \
             --assume-yes-for-downloads \
-            autopapertoppt/__main__.py
+            autopapertoppt
 
       - name: Smoke-test the built executable
         # If the binary fails to load any of its bundled plugins, this
         # surfaces it immediately rather than at the user's first run.
         shell: bash
         run: |
-          ./autopapertoppt.exe --version || true
-          ./autopapertoppt.exe --help > /dev/null
+          ./autopapertoppt.dist/autopapertoppt.exe --version || true
+          ./autopapertoppt.dist/autopapertoppt.exe --help > /dev/null
 
-      - name: Rename for the platform-specific asset name
-        shell: bash
-        run: mv autopapertoppt.exe "$ASSET_NAME"
+      - name: Zip the dist folder
+        # Compress-Archive ships with PowerShell on every Windows
+        # runner and produces a deterministic zip. We zip the
+        # CONTENTS of autopapertoppt.dist/ rather than the folder
+        # itself so unzipping does not nest the binary under an
+        # extra directory layer.
+        shell: pwsh
+        run: |
+          Compress-Archive -Path autopapertoppt.dist\* `
+                           -DestinationPath $env:ASSET_NAME `
+                           -CompressionLevel Optimal
 
       - name: Compute SHA-256 checksum
-        # Attach the checksum file alongside the binary so users can
+        # Attach the checksum file alongside the zip so users can
         # verify what they downloaded matches what CI built.
         shell: bash
         run: sha256sum "$ASSET_NAME" > "$ASSET_NAME.sha256"
