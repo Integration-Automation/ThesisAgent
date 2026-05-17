@@ -236,13 +236,17 @@ jobs:
             nuitka-${{ runner.os }}-
 
       - name: Install runtime + Nuitka
-        # Install the intelligence + mcp + gui extras so the shipped
-        # exe supports --enrich, the MCP entry point, AND the PySide6
-        # desktop UI (`autopapertoppt.exe gui`). nuitka is only needed
-        # for the build.
+        # Install the mcp + gui extras + the parts of intelligence
+        # that compile cleanly under Nuitka. pymupdf is EXCLUDED from
+        # the build venv because its Cython binding for MuPDF generates
+        # a 2.2M-line C file that trips MSVC's per-file heap cap
+        # (C1002 in pass 2). pypdf alone covers the runtime PDF-text
+        # path inside the bundle; users who want pymupdf can still
+        # `pip install autopapertoppt[intelligence]` from PyPI.
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[intelligence,mcp,gui]"
+          pip install -e ".[mcp,gui]"
+          pip install pypdf anthropic
           pip install nuitka
 
       - name: Compile with Nuitka
@@ -301,6 +305,15 @@ jobs:
             --include-package=openaire \
             --include-package=springer \
             --enable-plugin=pyside6 \
+            --nofollow-import-to=pymupdf \
+            --nofollow-import-to=uvicorn \
+            --nofollow-import-to=fastapi \
+            --nofollow-import-to=starlette \
+            --nofollow-import-to=websockets \
+            --nofollow-import-to=streamlit \
+            --nofollow-import-to=tornado \
+            --lto=no \
+            --jobs=2 \
             --include-data-dir=./sources=sources \
             --include-package-data=pptx \
             --include-package-data=openpyxl \
