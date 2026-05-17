@@ -41,7 +41,7 @@ from autopapertoppt.core.query import normalize_query
 from autopapertoppt.exporters import export_collection
 from autopapertoppt.exporters.i18n import SUPPORTED_LANGUAGES as DECK_LANGUAGES
 from autopapertoppt.fetchers.http import shutdown_clients
-from autopapertoppt.gui.i18n import t
+from autopapertoppt.gui.i18n import LANGUAGE_DISPLAY_NAMES, t
 from autopapertoppt.gui.models.papers_table_model import PapersTableModel
 from autopapertoppt.gui.widgets.source_multiselect import SourceMultiselect
 from autopapertoppt.gui.workers import AsyncWorker, BlockingWorker
@@ -77,7 +77,10 @@ class SearchPage(QWidget):
 
         self._language_combo = QComboBox(self)
         for code in DECK_LANGUAGES:
-            self._language_combo.addItem(code, code)
+            display = LANGUAGE_DISPLAY_NAMES.get(code, code)
+            # Suffix the BCP-47 code in dim parens so power users can
+            # tell which slide-deck locale they are about to ship.
+            self._language_combo.addItem(f"{display} ({code})", code)
         form.addRow(
             t("search.language_label", self._ui_language), self._language_combo
         )

@@ -105,20 +105,50 @@ behind a Qt list view + form panel.
 
 ## i18n
 
-The UI labels ship in **English** and **Traditional Chinese**.
-Pick the language under **Settings → Interface language**;
-re-launch to apply.
+The UI ships in **all 14 languages** that the slide-deck exporter
+supports: English, 繁體中文, 简体中文, 日本語, Español, Français,
+Deutsch, 한국어, Português, Русский, Italiano, Tiếng Việt, हिन्दी,
+Bahasa Indonesia.
 
-Adding a new language is a single-file change to
-`autopapertoppt/gui/i18n.py` — extend each `_LABELS` entry with a
-new code, then `tests/gui/test_i18n.py` will tell you which keys
-are still missing.
+Pick the language under **Settings → Interface language** (the
+dropdown shows each language in its own script). Restart the app
+to apply.
 
-The slide-deck output language (the strings that render *inside*
-the generated `.pptx`) is a separate 14-language table at
-`autopapertoppt/exporters/i18n.py`. Decoupling the two lets the
-UI ship with fewer translations while still emitting decks in any
-of the supported deck languages.
+First-run behaviour: if no language is saved yet, the app reads
+the OS locale via `QLocale().name()` and maps it to the closest
+supported code (e.g. `zh_TW` → `zh-tw`, `es_ES` → `es`,
+`zh-Hant-TW` → `zh-tw`). Unsupported locales fall back to English.
+
+Two separate i18n tables live in the repo:
+
+- `autopapertoppt/gui/i18n.py` — UI labels (this page).
+- `autopapertoppt/exporters/i18n.py` — slide-deck output strings.
+
+They're kept in lockstep by `tests/gui/test_i18n.py::test_supported
+_languages_match_deck_table`. Adding a key is a single-file change;
+the per-key, per-language coverage test catches any missing entry
+at PR time.
+
+## Responsive layout & HiDPI
+
+- The window has a minimum size of 900×600 (still fits a 720p
+  laptop) and a default of 1280×800.
+- Each tab page lives inside a `QScrollArea` with
+  `widgetResizable=True`, so the form widgets stretch horizontally
+  with the window width and reveal a vertical scrollbar when the
+  window shrinks below the form's natural height.
+- HiDPI scaling is enabled at boot via
+  `QT_ENABLE_HIGHDPI_SCALING=1` and
+  `QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`. Both are set
+  *before* `QApplication` is constructed, which is the only safe
+  time to pin them.
+- The default font is bumped to point size 10 (Qt's platform
+  default is 8 on some Windows machines) so CJK glyphs stay
+  readable on dense screens. The font family list includes
+  Windows-shipped CJK / Devanagari fallbacks (Microsoft JhengHei
+  UI, Yu Gothic UI, Malgun Gothic, Nirmala UI) so a missing glyph
+  in the primary font cascades cleanly rather than rendering a
+  tofu box.
 
 ## Threading model
 
@@ -158,6 +188,3 @@ round-trip through QSettings).
 - The window does not yet remember its size / position between
   runs. Add `QMainWindow.saveGeometry` / `restoreGeometry` if you
   want that.
-- High-DPI scaling follows Qt's defaults; on Windows you may want
-  to set `QT_ENABLE_HIGHDPI_SCALING=1` before launching for
-  blurry-text fixes on fractional scale factors.

@@ -31,7 +31,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from autopapertoppt.gui.i18n import SUPPORTED_LANGUAGES, t
+from autopapertoppt.gui.i18n import (
+    LANGUAGE_DISPLAY_NAMES,
+    SUPPORTED_LANGUAGES,
+    t,
+)
 
 # QSettings key (under organization/app) → env var name. The page reads
 # both directions: load() pulls from QSettings into the form fields,
@@ -124,8 +128,12 @@ class SettingsPage(QWidget):
         ui_group = QGroupBox(t("settings.title", self._ui_language), self)
         ui_form = QFormLayout(ui_group)
         self._ui_lang_combo = QComboBox(self)
+        # Show the language's own native name (繁體中文, Español, …)
+        # but store the code as the item data so save() reads back a
+        # clean BCP-47 token.
         for code in SUPPORTED_LANGUAGES:
-            self._ui_lang_combo.addItem(code, code)
+            display = LANGUAGE_DISPLAY_NAMES.get(code, code)
+            self._ui_lang_combo.addItem(display, code)
         ui_form.addRow(
             t("settings.ui_language", self._ui_language), self._ui_lang_combo
         )
