@@ -47,6 +47,7 @@ autopapertoppt (--query KEYWORDS | --paper IDENTIFIER)
 | `--lightweight` | off | Force the abstract-only deck even when `ANTHROPIC_API_KEY` is set. Useful for unattended runs where you do not want to spend tokens. |
 | `--llm-model` | `claude-opus-4-7` | Override the default model used when `--enrich` is on. Also reads `AUTOPAPERTOPPT_LLM_MODEL`. |
 | `--all-venues` | off | Disable the top-tier whitelist. By default the search keeps only flagship CS conferences / journals + Nature / Science / PNAS / CACM / LNCS. arXiv passes through unconditionally. |
+| `--no-oa-resolve` | off | Skip the open-access PDF resolver step that runs after dedup. By default the pipeline looks up every paper without `pdf_url` in Unpaywall (needs `AUTOPAPERTOPPT_CONTACT_EMAIL`) and falls back to an arXiv title search — typical lift of 40-70% for IEEE / ACM / Springer / Elsevier paywalled papers. Use this flag if you want raw source output without OA enrichment, or to skip the extra HTTP round-trips on a tight latency budget. |
 | `--paywall-threshold` | `0.30` | Fraction of paywalled results above which the search-mode pipeline asks the user before generating per-paper PPTs. |
 | `--yes` | off | Auto-accept the paywall prompt. |
 | `--max-slides` | `25` | Per-paper slide cap. Pass `0` for unlimited. |

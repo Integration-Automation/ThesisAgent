@@ -43,7 +43,7 @@ def _stub_download_pdfs(monkeypatch, tmp_path):
 
 @pytest.fixture()
 def patched_pipeline(monkeypatch, sample_papers):
-    async def fake_run_search(query: Query) -> PaperCollection:
+    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
     async def fake_shutdown() -> None:
@@ -92,7 +92,7 @@ def test_cli_rejects_unknown_export(tmp_path, patched_pipeline):
 
 
 def test_cli_no_results_returns_one(tmp_path, monkeypatch):
-    async def empty_pipeline(query: Query) -> PaperCollection:
+    async def empty_pipeline(query: Query, **_kwargs) -> PaperCollection:
         return PaperCollection(query=query, papers=())
 
     async def fake_shutdown() -> None:
@@ -221,7 +221,7 @@ def test_cli_source_default_is_multi_source(tmp_path, monkeypatch, sample_papers
 
     captured: dict[str, Query] = {}
 
-    async def fake_run_search(query: Query) -> PaperCollection:
+    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
         captured["query"] = query
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
@@ -242,7 +242,7 @@ def test_cli_top_tier_filter_on_by_default(tmp_path, monkeypatch, sample_papers)
     """The CLI must turn on top_tier_only by default; --all-venues disables."""
     captured: dict[str, Query] = {}
 
-    async def fake_run_search(query: Query) -> PaperCollection:
+    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
         captured["query"] = query
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
@@ -270,7 +270,7 @@ def test_cli_default_triggers_pdf_download(tmp_path, monkeypatch, sample_papers)
     """Default flag set should invoke download_pdfs; --no-pdf disables it."""
     calls: list[str] = []
 
-    async def fake_run_search(query: Query) -> PaperCollection:
+    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
     async def fake_shutdown() -> None:
@@ -299,7 +299,7 @@ def test_cli_default_triggers_pdf_download(tmp_path, monkeypatch, sample_papers)
 def test_cli_no_pdf_flag_skips_download(tmp_path, monkeypatch, sample_papers):
     calls: list[str] = []
 
-    async def fake_run_search(query: Query) -> PaperCollection:
+    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
     async def fake_shutdown() -> None:
@@ -351,7 +351,7 @@ def _build_paper(source_id: str, *, pdf_url: str | None):
 def _patch_search(monkeypatch, papers):
     from autopapertoppt.core.models import PaperCollection
 
-    async def fake_run_search(query):
+    async def fake_run_search(query, **_kwargs):
         return PaperCollection(query=query, papers=tuple(papers))
 
     async def fake_shutdown():
@@ -648,7 +648,7 @@ def _stub_enrich_collection(monkeypatch) -> list[str]:
 
 
 def _fake_search_with_papers(monkeypatch, sample_papers):
-    async def fake_run_search(query):
+    async def fake_run_search(query, **_kwargs):
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
     async def fake_shutdown():

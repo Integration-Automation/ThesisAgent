@@ -36,7 +36,7 @@ def _first_text(result):
 
 
 def test_search_tool(monkeypatch, server, sample_papers):
-    async def fake_run_search(query):
+    async def fake_run_search(query, **_kwargs):
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
     async def fake_shutdown():
@@ -180,7 +180,7 @@ def test_search_passes_top_tier_and_min_citations(monkeypatch, server, sample_pa
     """top_tier_only + min_citations flow from the MCP tool into the Query."""
     captured = {}
 
-    async def fake_run_search(query):
+    async def fake_run_search(query, **_kwargs):
         captured["query"] = query
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
@@ -210,7 +210,7 @@ def test_search_defaults_to_full_source_mix(monkeypatch, server, sample_papers):
 
     captured = {}
 
-    async def fake_run_search(query):
+    async def fake_run_search(query, **_kwargs):
         captured["query"] = query
         return PaperCollection(query=query, papers=tuple(sample_papers))
 

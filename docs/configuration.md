@@ -31,7 +31,7 @@ each value into `os.environ` before any fetcher initialises.
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | unset | Free key from <https://dev.springernature.com/>. **Required** for the Springer plugin — it raises `ConfigError` at construction without a key, which the pipeline silently skips. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | unset | Crossref Plus subscriber token. Attached to requests as `Crossref-Plus-API-Token: Bearer <token>`. Raises rate limits and improves cache freshness on the `acm` and `crossref` plugins. |
 | `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | unset | Must be `=1` to enable the Google Scholar plugin. Scholar's terms of use forbid scraping — off by default. |
-| `AUTOPAPERTOPPT_CONTACT_EMAIL` | unset | Sent to Crossref / OpenAlex as the `mailto=` parameter (entry into their polite pool) and to NCBI as `tool` / `email` headers. Set this for any non-trivial workload. |
+| `AUTOPAPERTOPPT_CONTACT_EMAIL` | unset | Sent to Crossref / OpenAlex as the `mailto=` parameter (entry into their polite pool), to NCBI as `tool` / `email` headers, **and to Unpaywall as `email=`** for the post-dedup OA PDF resolver. Highly recommended — without it the resolver skips Unpaywall lookups entirely, which is the single biggest PDF coverage win for IEEE / ACM / Springer / Elsevier paywalled papers (typical lift 40-70%). |
 
 ### PDF download
 

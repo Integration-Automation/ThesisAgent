@@ -35,7 +35,7 @@ def test_search_button_runs_and_populates_table(qtbot, monkeypatch):
     page = SearchPage(ui_language="en")
     qtbot.addWidget(page)
 
-    async def fake_run_search(_query):
+    async def fake_run_search(_query, **_kwargs):
         return _canned_collection()
 
     async def fake_shutdown():
