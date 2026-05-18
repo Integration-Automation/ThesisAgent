@@ -142,12 +142,13 @@ def test_pptx_inspect_and_update_via_mcp(server, sample_papers, tmp_path):
 
 def test_list_sources_tool(server, monkeypatch):
     """list_sources reports every plugin + reflects current env-var state."""
-    # Ensure the opt-in plugins are disabled in this test process.
+    # Clear every gating var so the default-on / opt-in semantics are
+    # exercised without contamination from the host shell.
     for var in (
         "AUTOPAPERTOPPT_IEEE_API_KEY",
-        "AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING",
+        "AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING",
         "AUTOPAPERTOPPT_SPRINGER_API_KEY",
-        "AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING",
+        "AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING",
     ):
         monkeypatch.delenv(var, raising=False)
     payload = asyncio.run(_call(server, "list_sources"))
@@ -162,11 +163,18 @@ def test_list_sources_tool(server, monkeypatch):
     # Plugins that need no env var must be enabled.
     assert names["arxiv"]["enabled"] is True
     assert names["dblp"]["enabled"] is True
-    # Plugins gated by env vars must be disabled when those vars are unset.
+    # IEEE + Scholar are now default-ON (no opt-out env var set).
+    assert names["ieee"]["enabled"] is True
+    assert names["ieee"]["opt_out_env_var"] == ["AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING"]
+    assert names["scholar"]["enabled"] is True
+    assert names["scholar"]["opt_out_env_var"] == ["AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING"]
+    # Springer still opt-IN — without the API key it is disabled.
     assert names["springer"]["enabled"] is False
-    assert names["springer"]["needs_env_var"] == ["AUTOPAPERTOPPT_SPRINGER_API_KEY"]
-    assert names["scholar"]["enabled"] is False
+    assert names["springer"]["opt_in_env_var"] == ["AUTOPAPERTOPPT_SPRINGER_API_KEY"]
     assert "default_sources" in payload
+    # Default mix now includes scholar (alongside ieee + the others).
+    assert "scholar" in payload["default_sources"]
+    assert "ieee" in payload["default_sources"]
 
 
 def test_list_sources_reflects_springer_key(server, monkeypatch):

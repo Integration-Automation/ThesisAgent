@@ -41,7 +41,7 @@ _SOURCE_NAME = "ieee"
 _SEARCH_URL = "https://ieeexplore.ieee.org/rest/search"
 _DOCUMENT_URL = "https://ieeexplore.ieee.org/document/{arnumber}"
 _API_SEARCH_URL = "https://ieeexploreapi.ieee.org/api/v1/search/articles"
-_OPT_IN_ENV = "AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING"
+_OPT_OUT_ENV = "AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING"
 _API_KEY_ENV = "AUTOPAPERTOPPT_IEEE_API_KEY"
 _REFERER = "https://ieeexplore.ieee.org/search/searchresult.jsp"
 
@@ -53,17 +53,20 @@ class IeeeFetcher(Fetcher):
         name=_SOURCE_NAME,
         rate_limit=RateLimit(requests_per_second=0.5, burst=1, jitter_seconds=0.4),
         requires_api_key=False,
-        enabled_by_default=False,
-        opt_in_env_var=_OPT_IN_ENV,
+        enabled_by_default=True,
+        opt_out_env_var=_OPT_OUT_ENV,
     )
 
     def __init__(self) -> None:
         super().__init__()
         self._api_key = (os.environ.get(_API_KEY_ENV) or "").strip() or None
-        if self._api_key is None and os.environ.get(_OPT_IN_ENV) != "1":
+        # IEEE is default-on; flip off via AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1.
+        # Subscribers should set AUTOPAPERTOPPT_IEEE_API_KEY for the official
+        # API path (better metadata + pdf_url for subscription papers); without
+        # the key the plugin falls back to the scrape path.
+        if os.environ.get(_OPT_OUT_ENV) == "1":
             raise ConfigError(
-                f"IEEE access is disabled. Set {_API_KEY_ENV} for the "
-                f"official API, or {_OPT_IN_ENV}=1 to opt into scraping."
+                f"IEEE plugin disabled via {_OPT_OUT_ENV}=1"
             )
 
     async def search(self, query: Query) -> list[Paper]:

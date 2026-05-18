@@ -27,10 +27,11 @@ each value into `os.environ` before any fetcher initialises.
 | `AUTOPAPERTOPPT_S2_API_KEY` | unset | Higher rate limit on the Semantic Scholar plugin (1/s anonymous → 10/s with key). |
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | unset | Raises PubMed's anonymous limit from 3 req/s to 10 req/s. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | unset | Switches the IEEE plugin from the scrape fallback to the official Xplore API (`ieeexploreapi.ieee.org`). Surfaces `pdf_url` for papers in your subscription scope. Apply at <https://developer.ieee.org/>. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | unset | Must be `=1` to enable the IEEE scrape fallback. Not needed when `AUTOPAPERTOPPT_IEEE_API_KEY` is set. IEEE Xplore terms of use are grey on automated traffic — opt in deliberately. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | unset | **IEEE plugin is now default-ON.** Set `=1` to opt out of the scrape fallback. IEEE Xplore ToS are grey on automated traffic — set this if you don't want the scrape path running. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | unset | Free key from <https://dev.springernature.com/>. **Required** for the Springer plugin — it raises `ConfigError` at construction without a key, which the pipeline silently skips. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | unset | Crossref Plus subscriber token. Attached to requests as `Crossref-Plus-API-Token: Bearer <token>`. Raises rate limits and improves cache freshness on the `acm` and `crossref` plugins. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | unset | Must be `=1` to enable the Google Scholar plugin. Scholar's terms of use forbid scraping — off by default. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | unset | **Scholar plugin is now default-ON.** Set `=1` to opt out. Google's ToS forbids automated access; default-on for coverage, opt-out if you'd rather not take the captcha / IP-block risk. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | unset | Free key from <https://core.ac.uk/services/api>. Enables the OA resolver's CORE.ac.uk lookup step (200M+ institutional / regional OA repository items). Skipped silently when unset (the other OA strategies — Unpaywall, Semantic Scholar, arXiv — still run). |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | unset | Sent to Crossref / OpenAlex as the `mailto=` parameter (entry into their polite pool), to NCBI as `tool` / `email` headers, **and to Unpaywall as `email=`** for the post-dedup OA PDF resolver. Highly recommended — without it the resolver skips Unpaywall lookups entirely, which is the single biggest PDF coverage win for IEEE / ACM / Springer / Elsevier paywalled papers (typical lift 40-70%). |
 
 ### PDF download

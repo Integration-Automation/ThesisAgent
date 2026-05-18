@@ -28,10 +28,87 @@ def _paper(**overrides) -> Paper:
 
 @pytest.fixture(autouse=True)
 def _reset_warning_flag():
-    """The email-missing warning is one-shot per process; reset between tests."""
+    """One-shot warning flags reset between tests."""
     oa_resolver._email_warning_emitted = False  # noqa: SLF001
+    oa_resolver._core_warning_emitted = False  # noqa: SLF001
     yield
     oa_resolver._email_warning_emitted = False  # noqa: SLF001
+    oa_resolver._core_warning_emitted = False  # noqa: SLF001
+
+
+def test_arxiv_id_to_pdf_strips_version_suffix():
+    assert oa_resolver._arxiv_id_to_pdf("1706.03762") == "https://arxiv.org/pdf/1706.03762.pdf"  # noqa: SLF001
+    assert oa_resolver._arxiv_id_to_pdf("1706.03762v2") == "https://arxiv.org/pdf/1706.03762.pdf"  # noqa: SLF001
+    assert oa_resolver._arxiv_id_to_pdf("cs.LG/0001001v1") == "https://arxiv.org/pdf/cs.LG/0001001.pdf"  # noqa: SLF001
+    assert oa_resolver._arxiv_id_to_pdf("") is None  # noqa: SLF001
+    assert oa_resolver._arxiv_id_to_pdf("   ") is None  # noqa: SLF001
+
+
+async def test_resolve_uses_arxiv_id_direct_before_unpaywall(monkeypatch):
+    """If arxiv_id is set, derive the PDF URL directly with no HTTP call."""
+    unpaywall_calls: list[str] = []
+
+    async def fake_unpaywall(doi):
+        unpaywall_calls.append(doi)
+        return
+
+    monkeypatch.setattr(oa_resolver, "_query_unpaywall", fake_unpaywall)
+
+    paper = _paper(arxiv_id="1706.03762")
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("openalex",)),
+        papers=(paper,),
+    )
+    result = await oa_resolver.resolve_oa_pdfs(collection)
+    assert result.papers[0].pdf_url == "https://arxiv.org/pdf/1706.03762.pdf"
+    # Unpaywall should NOT have been called — arxiv_id short-circuited.
+    assert unpaywall_calls == []
+
+
+async def test_resolve_falls_back_to_s2_when_unpaywall_misses(monkeypatch):
+    async def fake_unpaywall(_doi):
+        return None
+
+    async def fake_s2(doi):
+        assert doi == "10.5555/example"
+        return "https://semantic-scholar-oa.example/p.pdf"
+
+    monkeypatch.setattr(oa_resolver, "_query_unpaywall", fake_unpaywall)
+    monkeypatch.setattr(oa_resolver, "_query_semantic_scholar", fake_s2)
+
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("openalex",)),
+        papers=(_paper(),),
+    )
+    result = await oa_resolver.resolve_oa_pdfs(collection)
+    assert result.papers[0].pdf_url == "https://semantic-scholar-oa.example/p.pdf"
+
+
+async def test_resolve_falls_back_to_core_when_s2_misses(monkeypatch):
+    async def miss(_doi):
+        return None
+
+    async def fake_core(doi):
+        assert doi == "10.5555/example"
+        return "https://institutional-repo.example/p.pdf"
+
+    monkeypatch.setattr(oa_resolver, "_query_unpaywall", miss)
+    monkeypatch.setattr(oa_resolver, "_query_semantic_scholar", miss)
+    monkeypatch.setattr(oa_resolver, "_query_core", fake_core)
+
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("openalex",)),
+        papers=(_paper(),),
+    )
+    result = await oa_resolver.resolve_oa_pdfs(collection)
+    assert result.papers[0].pdf_url == "https://institutional-repo.example/p.pdf"
+
+
+async def test_core_skipped_silently_when_key_unset(monkeypatch):
+    monkeypatch.delenv("AUTOPAPERTOPPT_CORE_API_KEY", raising=False)
+    result = await oa_resolver._query_core("10.x/y")  # noqa: SLF001
+    assert result is None
+    assert oa_resolver._core_warning_emitted is True  # noqa: SLF001
 
 
 async def test_resolve_returns_unchanged_when_all_papers_have_pdf_url():

@@ -238,8 +238,9 @@ def test_cli_source_default_is_multi_source(tmp_path, monkeypatch, sample_papers
     assert captured["query"].sources == DEFAULT_SOURCES
 
 
-def test_cli_top_tier_filter_on_by_default(tmp_path, monkeypatch, sample_papers):
-    """The CLI must turn on top_tier_only by default; --all-venues disables."""
+def test_cli_top_tier_filter_off_by_default(tmp_path, monkeypatch, sample_papers):
+    """top_tier_only is OFF by default (broader coverage including IEEE / ACM
+    workshops); --top-tier-only flips it on."""
     captured: dict[str, Query] = {}
 
     async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
@@ -256,14 +257,14 @@ def test_cli_top_tier_filter_on_by_default(tmp_path, monkeypatch, sample_papers)
         ["--query", "x", "--out", str(tmp_path), "--export", "bib"]
     )
     assert code == 0
-    assert captured["query"].top_tier_only is True
+    assert captured["query"].top_tier_only is False
 
     captured.clear()
     code = cli_module.main(
-        ["--query", "x", "--all-venues", "--out", str(tmp_path), "--export", "bib"]
+        ["--query", "x", "--top-tier-only", "--out", str(tmp_path), "--export", "bib"]
     )
     assert code == 0
-    assert captured["query"].top_tier_only is False
+    assert captured["query"].top_tier_only is True
 
 
 def test_cli_default_triggers_pdf_download(tmp_path, monkeypatch, sample_papers):

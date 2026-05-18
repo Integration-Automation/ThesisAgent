@@ -22,8 +22,9 @@ def _fixture(name: str) -> str:
 
 
 @pytest.fixture(autouse=True)
-def _enable_scholar(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING", "1")
+def _isolate_scholar_env(monkeypatch):
+    """Scholar is now default-on. Make sure no DISABLE flag leaks from host env."""
+    monkeypatch.delenv("AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING", raising=False)
 
 
 def _new_fetcher():
@@ -32,8 +33,10 @@ def _new_fetcher():
     return ScholarFetcher()
 
 
-async def test_opt_in_required(monkeypatch):
-    monkeypatch.delenv("AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING", raising=False)
+async def test_opt_out_disables_plugin(monkeypatch):
+    """AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1 raises ConfigError so the
+    pipeline silently skips Scholar for users who explicitly opted out."""
+    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING", "1")
     from scholar.fetcher import ScholarFetcher
 
     with pytest.raises(ConfigError):

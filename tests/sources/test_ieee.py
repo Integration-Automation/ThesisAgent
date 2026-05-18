@@ -19,8 +19,9 @@ def _fixture(name: str) -> str:
 
 
 @pytest.fixture(autouse=True)
-def _enable_ieee(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING", "1")
+def _isolate_ieee_env(monkeypatch):
+    """IEEE is now default-on. Make sure no DISABLE flag leaks from host env."""
+    monkeypatch.delenv("AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING", raising=False)
 
 
 def _new_fetcher():
@@ -29,8 +30,10 @@ def _new_fetcher():
     return IeeeFetcher()
 
 
-async def test_opt_in_required(monkeypatch):
-    monkeypatch.delenv("AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING", raising=False)
+async def test_opt_out_disables_plugin(monkeypatch):
+    """AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1 raises ConfigError so the
+    pipeline silently skips IEEE for users who explicitly opted out."""
+    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING", "1")
     from ieee.fetcher import IeeeFetcher
 
     with pytest.raises(ConfigError):
@@ -115,9 +118,8 @@ async def test_search_sends_referer_and_origin(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-async def test_api_key_bypasses_scraping_opt_in(monkeypatch):
-    """When the API key is set the scraping env var is no longer required."""
-    monkeypatch.delenv("AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING", raising=False)
+async def test_api_key_takes_official_path(monkeypatch):
+    """When the API key is set the plugin uses the official Xplore API."""
     monkeypatch.setenv("AUTOPAPERTOPPT_IEEE_API_KEY", "test-key")
     from ieee.fetcher import IeeeFetcher
 
@@ -171,9 +173,8 @@ async def test_api_fetch_by_id_uses_article_number_param(monkeypatch):
 
 
 async def test_api_mode_no_api_key_falls_back_to_scrape(monkeypatch):
-    """Without the API key the existing scraping path is used."""
+    """Without the API key the existing scraping path is used (default-on)."""
     monkeypatch.delenv("AUTOPAPERTOPPT_IEEE_API_KEY", raising=False)
-    monkeypatch.setenv("AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING", "1")
     transport = MockTransport(200, _fixture("search.json"))
     install_mock(monkeypatch, "ieee.fetcher", transport)
     await _new_fetcher().search(

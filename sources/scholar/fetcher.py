@@ -28,7 +28,7 @@ from scholar.parser import parse_serp
 _LOG = get_logger(__name__)
 _SOURCE_NAME = "scholar"
 _SEARCH_URL = "https://scholar.google.com/scholar"
-_OPT_IN_ENV = "AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING"
+_OPT_OUT_ENV = "AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING"
 
 
 class ScholarFetcher(Fetcher):
@@ -38,15 +38,19 @@ class ScholarFetcher(Fetcher):
         name=_SOURCE_NAME,
         rate_limit=RateLimit(requests_per_second=1 / 10, burst=1, jitter_seconds=2.5),
         requires_api_key=False,
-        enabled_by_default=False,
-        opt_in_env_var=_OPT_IN_ENV,
+        enabled_by_default=True,
+        opt_out_env_var=_OPT_OUT_ENV,
     )
 
     def __init__(self) -> None:
         super().__init__()
-        if os.environ.get(_OPT_IN_ENV) != "1":
+        # Scholar is default-on; flip off via AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1.
+        # Google's ToS forbids automated access — heavy use risks captcha
+        # / IP blocks. We default-on for coverage; users who prefer not
+        # to take the risk can opt out.
+        if os.environ.get(_OPT_OUT_ENV) == "1":
             raise ConfigError(
-                f"Google Scholar scraping is disabled. Set {_OPT_IN_ENV}=1 to enable."
+                f"Scholar plugin disabled via {_OPT_OUT_ENV}=1"
             )
 
     async def search(self, query: Query) -> list[Paper]:

@@ -6,27 +6,39 @@ Most IEEE / ACM / Springer / Elsevier papers come back from their
 respective source plugins with ``pdf_url=None`` because the publisher
 sites are paywalled even when the paper itself is open access. The OA
 copy almost always exists somewhere else — the author's institutional
-repository, an arXiv preprint, ResearchGate, etc. — and Unpaywall
-indexes ~50M of them keyed by DOI.
+repository, an arXiv preprint, ResearchGate, etc.
 
-This module runs after dedup and tries two strategies in order for
+This module runs after dedup and tries four strategies in order for
 every paper that still lacks a pdf_url:
 
-1. **Unpaywall** (https://unpaywall.org/products/api). Free, no API
-   key required, but needs an email in the query string per their
-   politeness contract. Pulled from ``AUTOPAPERTOPPT_CONTACT_EMAIL``
-   (same env var Crossref / OpenAlex use); skipped silently when
-   unset, with a one-time WARNING log so the user knows what they're
-   missing.
+1. **arXiv-ID direct**. If the paper carries ``arxiv_id`` (set by
+   the openalex / pubmed / crossref / semantic_scholar parsers when
+   the upstream identified an arXiv preprint), turn it into
+   ``https://arxiv.org/pdf/{arxiv_id}.pdf`` directly. Zero network
+   round-trip; highest precision; fastest.
 
-2. **arXiv title search**. For papers without a DOI (or where
-   Unpaywall returned no hit), search arXiv with the paper's title
-   and accept the first result whose normalised title matches
-   exactly. Covers the many CS papers that have an arXiv preprint
-   but reach the pipeline via OpenAlex / Crossref / DBLP without
-   the arXiv ID populated.
+2. **Unpaywall** (https://api.unpaywall.org/v2). Free, no API key,
+   ~50M papers. Needs ``AUTOPAPERTOPPT_CONTACT_EMAIL`` for politeness
+   (skipped silently when unset).
 
-Both lookups are best-effort: any failure logs at DEBUG and the
+3. **Semantic Scholar OA index** (https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}).
+   S2's ``openAccessPdf`` index is partially disjoint from Unpaywall;
+   when one misses the other often hits. Free, no API key required
+   (rate-limited to ~1 req/s anonymous; an
+   ``AUTOPAPERTOPPT_S2_API_KEY`` raises that).
+
+4. **CORE.ac.uk** (https://api.core.ac.uk/v3/search/works). Aggregator
+   of 200M+ OA repository items — institutional repos, regional
+   preprint servers, OA journals. Needs ``AUTOPAPERTOPPT_CORE_API_KEY``
+   (free at https://core.ac.uk/services/api); skipped silently when
+   unset.
+
+5. **arXiv title search**. For papers without DOI / arxiv_id, search
+   arXiv with the paper's title. Exact-match on the normalised title
+   (alphanumeric + lowercase) so loosely-similar titles do not get
+   adopted by accident.
+
+Every lookup is best-effort: any failure logs at DEBUG and the
 paper passes through unchanged. The resolver never raises.
 """
 
@@ -48,11 +60,16 @@ _LOG = get_logger(__name__)
 
 _UNPAYWALL_ENDPOINT = "https://api.unpaywall.org/v2"
 _UNPAYWALL_SOURCE = "unpaywall"
+_S2_ENDPOINT = "https://api.semanticscholar.org/graph/v1/paper"
+_S2_SOURCE = "semantic_scholar_oa"
+_CORE_ENDPOINT = "https://api.core.ac.uk/v3/search/works"
+_CORE_SOURCE = "core_ac_uk"
 _LOOKUP_TIMEOUT_SECONDS = 10.0
 _CONCURRENCY = 5
 
-# One-shot warning so we don't spam logs for every paper in a large run.
+# One-shot warnings so we don't spam logs for every paper in a large run.
 _email_warning_emitted = False
+_core_warning_emitted = False
 
 
 async def resolve_oa_pdfs(collection: PaperCollection) -> PaperCollection:
@@ -90,23 +107,63 @@ async def resolve_oa_pdfs(collection: PaperCollection) -> PaperCollection:
     return PaperCollection(query=collection.query, papers=tuple(resolved))
 
 
+#: DOI-keyed OA lookup strategies, tried in order until one returns a URL.
+_DOI_STRATEGIES = (
+    ("Unpaywall", lambda doi: _query_unpaywall(doi)),
+    ("S2 OA", lambda doi: _query_semantic_scholar(doi)),
+    ("CORE", lambda doi: _query_core(doi)),
+)
+
+
 async def _resolve_one(paper: Paper, semaphore: asyncio.Semaphore) -> Paper:
     if paper.pdf_url:
         return paper
     async with semaphore:
-        # 1. Unpaywall by DOI — fastest path, highest precision.
-        if paper.doi:
-            pdf = await _query_unpaywall(paper.doi)
-            if pdf:
-                _LOG.debug("Unpaywall hit for %s: %s", paper.bibtex_key(), pdf)
-                return dataclasses.replace(paper, pdf_url=pdf)
-        # 2. arXiv title search — covers DOI-less papers + DOIs missed
-        # by Unpaywall.
-        pdf = await _query_arxiv_title(paper)
-        if pdf:
-            _LOG.debug("arXiv title hit for %s: %s", paper.bibtex_key(), pdf)
-            return dataclasses.replace(paper, pdf_url=pdf)
+        pdf = await _try_all_strategies(paper)
+    if pdf:
+        return dataclasses.replace(paper, pdf_url=pdf)
     return paper
+
+
+async def _try_all_strategies(paper: Paper) -> str | None:
+    """Run every OA strategy in priority order, returning the first hit."""
+    key = paper.bibtex_key()
+    # 1. arXiv-ID direct — no round-trip, highest precision.
+    if paper.arxiv_id:
+        pdf = _arxiv_id_to_pdf(paper.arxiv_id)
+        if pdf:
+            _LOG.debug("arxiv_id direct hit for %s: %s", key, pdf)
+            return pdf
+    # 2-4. DOI-keyed external aggregators.
+    if paper.doi:
+        for label, query in _DOI_STRATEGIES:
+            pdf = await query(paper.doi)
+            if pdf:
+                _LOG.debug("%s hit for %s: %s", label, key, pdf)
+                return pdf
+    # 5. arXiv title search — last resort for DOI-less papers.
+    pdf = await _query_arxiv_title(paper)
+    if pdf:
+        _LOG.debug("arXiv title hit for %s: %s", key, pdf)
+        return pdf
+    return None
+
+
+def _arxiv_id_to_pdf(arxiv_id: str) -> str | None:
+    """Derive the canonical arXiv PDF URL from an arXiv ID.
+
+    Strips any trailing ``v<N>`` version suffix because arXiv resolves
+    bare IDs to the latest version automatically.
+    """
+    cleaned = arxiv_id.strip()
+    if not cleaned:
+        return None
+    # 1706.03762v2 → 1706.03762; cs.LG/0001001v1 → cs.LG/0001001
+    if "v" in cleaned:
+        base, _, tail = cleaned.rpartition("v")
+        if tail.isdigit() and base:
+            cleaned = base
+    return f"https://arxiv.org/pdf/{cleaned}.pdf"
 
 
 async def _query_unpaywall(doi: str) -> str | None:
@@ -143,6 +200,84 @@ async def _query_unpaywall(doi: str) -> str | None:
     candidate = (best_oa.get("url_for_pdf") or "").strip()
     if candidate.startswith("https://"):
         return candidate
+    return None
+
+
+async def _query_semantic_scholar(doi: str) -> str | None:
+    """Look up a DOI in Semantic Scholar's OA index."""
+    client = await get_client(_S2_SOURCE)
+    try:
+        response = await asyncio.wait_for(
+            client.get(
+                f"{_S2_ENDPOINT}/DOI:{doi}",
+                params={"fields": "openAccessPdf"},
+            ),
+            timeout=_LOOKUP_TIMEOUT_SECONDS,
+        )
+    except (TimeoutError, httpx.HTTPError, FetchError) as err:
+        _LOG.debug("S2 OA lookup failed for %s: %s", doi, err)
+        return None
+    if response.status_code == 404:
+        return None
+    if response.status_code != 200:
+        _LOG.debug(
+            "S2 returned %s for %s: %s",
+            response.status_code, doi, response.text[:128],
+        )
+        return None
+    try:
+        data: dict[str, Any] = response.json()
+    except ValueError:
+        return None
+    pdf_obj = data.get("openAccessPdf") or {}
+    candidate = (pdf_obj.get("url") or "").strip() if isinstance(pdf_obj, dict) else ""
+    if candidate.startswith("https://"):
+        return candidate
+    return None
+
+
+async def _query_core(doi: str) -> str | None:
+    """Look up a DOI on CORE.ac.uk for OA repository copies."""
+    api_key = os.environ.get("AUTOPAPERTOPPT_CORE_API_KEY", "").strip()
+    if not api_key:
+        _warn_once_about_core()
+        return None
+    client = await get_client(_CORE_SOURCE)
+    try:
+        response = await asyncio.wait_for(
+            client.get(
+                _CORE_ENDPOINT,
+                params={"q": f'doi:"{doi}"', "limit": "1"},
+                headers={"Authorization": f"Bearer {api_key}"},
+            ),
+            timeout=_LOOKUP_TIMEOUT_SECONDS,
+        )
+    except (TimeoutError, httpx.HTTPError, FetchError) as err:
+        _LOG.debug("CORE lookup failed for %s: %s", doi, err)
+        return None
+    if response.status_code != 200:
+        _LOG.debug(
+            "CORE returned %s for %s: %s",
+            response.status_code, doi, response.text[:128],
+        )
+        return None
+    try:
+        data: dict[str, Any] = response.json()
+    except ValueError:
+        return None
+    results = data.get("results") or []
+    if not results:
+        return None
+    first = results[0]
+    # CORE's `downloadUrl` is the direct PDF; fall back to `fullTextLinks`
+    # otherwise.
+    candidate = (first.get("downloadUrl") or "").strip()
+    if candidate.startswith("https://"):
+        return candidate
+    for link in first.get("fullTextLinks") or []:
+        url = (link.get("url") or "").strip() if isinstance(link, dict) else ""
+        if url.startswith("https://"):
+            return url
     return None
 
 
@@ -200,12 +335,7 @@ def _normalise_title(text: str) -> str:
 
 
 def _warn_once_about_email() -> None:
-    """Log a single WARNING line when CONTACT_EMAIL is unset.
-
-    Module-global flag rather than logging-stdlib filter because we
-    want the warning per-process, not per-logger-handler, and the
-    fewer moving parts the better.
-    """
+    """Log a single WARNING line when CONTACT_EMAIL is unset."""
     global _email_warning_emitted  # noqa: PLW0603 — intentional one-shot flag
     if _email_warning_emitted:
         return
@@ -215,4 +345,22 @@ def _warn_once_about_email() -> None:
         "Unpaywall lookups (the biggest PDF coverage win for IEEE / "
         "ACM / Springer / Elsevier papers) will be skipped. Set the "
         "env var to your email to enable them."
+    )
+
+
+def _warn_once_about_core() -> None:
+    """Log a single WARNING line when CORE_API_KEY is unset.
+
+    CORE is an optional layer on top of Unpaywall + S2 + arXiv; the
+    warning is INFO-level rather than WARNING because most users
+    will be fine without it.
+    """
+    global _core_warning_emitted  # noqa: PLW0603 — intentional one-shot flag
+    if _core_warning_emitted:
+        return
+    _core_warning_emitted = True
+    _LOG.info(
+        "OA resolver: AUTOPAPERTOPPT_CORE_API_KEY is not set; CORE.ac.uk "
+        "lookups (institutional / regional OA repos) will be skipped. "
+        "Get a free key at https://core.ac.uk/services/api to enable."
     )
