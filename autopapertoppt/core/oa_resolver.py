@@ -71,6 +71,11 @@ _CONCURRENCY = 5
 _email_warning_emitted = False
 _core_warning_emitted = False
 
+#: In-process cache for S2 OA lookups, keyed by DOI. Prevents the
+#: resolver from re-hitting S2 for the same paper across multiple
+#: searches in one CLI run.
+_S2_CACHE: dict[str, str | None] = {}
+
 
 async def resolve_oa_pdfs(collection: PaperCollection) -> PaperCollection:
     """Try to fill ``pdf_url`` for every paper currently missing one.
@@ -204,13 +209,27 @@ async def _query_unpaywall(doi: str) -> str | None:
 
 
 async def _query_semantic_scholar(doi: str) -> str | None:
-    """Look up a DOI in Semantic Scholar's OA index."""
+    """Look up a DOI in Semantic Scholar's OA index.
+
+    Honours ``AUTOPAPERTOPPT_S2_API_KEY`` (sent as the ``x-api-key``
+    header) for the higher rate limit. Without the key the anonymous
+    tier (~1 req/s) is fragile under burst; the resolver is rate-limit
+    tolerant (it falls back to other strategies on any non-200) but
+    you'll see a lot more 429s.
+    """
+    if doi in _S2_CACHE:
+        return _S2_CACHE[doi]
     client = await get_client(_S2_SOURCE)
+    headers: dict[str, str] = {}
+    api_key = os.environ.get("AUTOPAPERTOPPT_S2_API_KEY", "").strip()
+    if api_key:
+        headers["x-api-key"] = api_key
     try:
         response = await asyncio.wait_for(
             client.get(
                 f"{_S2_ENDPOINT}/DOI:{doi}",
                 params={"fields": "openAccessPdf"},
+                headers=headers or None,
             ),
             timeout=_LOOKUP_TIMEOUT_SECONDS,
         )
@@ -218,6 +237,13 @@ async def _query_semantic_scholar(doi: str) -> str | None:
         _LOG.debug("S2 OA lookup failed for %s: %s", doi, err)
         return None
     if response.status_code == 404:
+        _S2_CACHE[doi] = None
+        return None
+    if response.status_code == 429:
+        # Anonymous rate-limit. Don't cache — try again in a future
+        # resolver pass (e.g. if user retries the search after setting
+        # AUTOPAPERTOPPT_S2_API_KEY).
+        _LOG.debug("S2 rate-limited for %s; not caching", doi)
         return None
     if response.status_code != 200:
         _LOG.debug(
@@ -232,7 +258,9 @@ async def _query_semantic_scholar(doi: str) -> str | None:
     pdf_obj = data.get("openAccessPdf") or {}
     candidate = (pdf_obj.get("url") or "").strip() if isinstance(pdf_obj, dict) else ""
     if candidate.startswith("https://"):
+        _S2_CACHE[doi] = candidate
         return candidate
+    _S2_CACHE[doi] = None
     return None
 
 

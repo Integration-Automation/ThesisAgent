@@ -43,6 +43,68 @@ async def test_opt_out_disables_plugin(monkeypatch):
         ScholarFetcher()
 
 
+def test_captcha_detection_matches_known_markers():
+    from scholar.fetcher import _is_captcha_response
+
+    # /sorry/ URL is the canonical lockout endpoint.
+    assert _is_captcha_response(
+        "https://www.google.com/sorry/index?continue=...", ""
+    ) is True
+    # Body markers also trigger.
+    assert _is_captcha_response(
+        "https://scholar.google.com/scholar?q=x",
+        "<html><body>Our systems have detected unusual traffic...</body></html>",
+    ) is True
+    assert _is_captcha_response(
+        "https://scholar.google.com/scholar?q=x",
+        '<form id="captcha-form">',
+    ) is True
+    # Real SERP HTML does not.
+    assert _is_captcha_response(
+        "https://scholar.google.com/scholar?q=attention",
+        "<html><div class='gs_r'>...</div></html>",
+    ) is False
+
+
+async def test_captcha_cooldown_engages_after_captcha_response(monkeypatch):
+    """After one captcha hit, subsequent calls raise immediately."""
+    import scholar.fetcher as scholar_mod
+
+    from autopapertoppt.core.exceptions import SourceUnavailableError
+
+    # Reset the process-level flag in case a prior test set it.
+    scholar_mod._captcha_locked_until = 0.0
+
+    class CaptchaResponse:
+        url = "https://www.google.com/sorry/index"
+        status_code = 200
+        text = ""
+
+    class CaptchaClient:
+        async def get(self, *_args, **_kwargs):
+            return CaptchaResponse()
+
+    async def fake_get_client(_name):
+        return CaptchaClient()
+
+    monkeypatch.setattr(scholar_mod, "get_client", fake_get_client)
+    fetcher = _new_fetcher()
+
+    with pytest.raises(SourceUnavailableError, match="captcha"):
+        await fetcher.search(
+            Query(keywords="x", sources=("scholar",), max_results=1)
+        )
+    # Cooldown is now set. A second call should raise immediately
+    # WITHOUT issuing an HTTP request.
+    assert scholar_mod._captcha_locked_until > 0
+    with pytest.raises(SourceUnavailableError, match="cooldown"):
+        await fetcher.search(
+            Query(keywords="y", sources=("scholar",), max_results=1)
+        )
+    # Reset so other tests aren't affected.
+    scholar_mod._captcha_locked_until = 0.0
+
+
 async def test_search_parses_serp(monkeypatch):
     transport = MockTransport(200, _fixture("serp.html"))
     install_mock(monkeypatch, "scholar.fetcher", transport)

@@ -24,7 +24,7 @@ each value into `os.environ` before any fetcher initialises.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `AUTOPAPERTOPPT_S2_API_KEY` | unset | Higher rate limit on the Semantic Scholar plugin (1/s anonymous → 10/s with key). |
+| `AUTOPAPERTOPPT_S2_API_KEY` | unset | Higher rate limit on the Semantic Scholar plugin (1/s anonymous → 10/s with key). **Also used by the OA resolver's S2 `openAccessPdf` lookup step** — without the key the resolver's S2 calls hit the anonymous tier and rate-limit fast. Free key at <https://www.semanticscholar.org/product/api>. |
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | unset | Raises PubMed's anonymous limit from 3 req/s to 10 req/s. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | unset | Switches the IEEE plugin from the scrape fallback to the official Xplore API (`ieeexploreapi.ieee.org`). Surfaces `pdf_url` for papers in your subscription scope. Apply at <https://developer.ieee.org/>. |
 | `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | unset | **IEEE plugin is now default-ON.** Set `=1` to opt out of the scrape fallback. IEEE Xplore ToS are grey on automated traffic — set this if you don't want the scrape path running. |

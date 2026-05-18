@@ -111,6 +111,41 @@ async def test_core_skipped_silently_when_key_unset(monkeypatch):
     assert oa_resolver._core_warning_emitted is True  # noqa: SLF001
 
 
+async def test_s2_cache_skips_repeat_lookups(monkeypatch):
+    """A DOI looked up once is served from in-process cache the second time."""
+    monkeypatch.setattr(oa_resolver, "_S2_CACHE", {"10.x/cached": "https://oa.example/p.pdf"})
+    result = await oa_resolver._query_semantic_scholar("10.x/cached")  # noqa: SLF001
+    assert result == "https://oa.example/p.pdf"
+
+
+async def test_s2_api_key_sent_when_set(monkeypatch):
+    """When AUTOPAPERTOPPT_S2_API_KEY is set, the resolver attaches x-api-key."""
+    monkeypatch.setattr(oa_resolver, "_S2_CACHE", {})
+    monkeypatch.setenv("AUTOPAPERTOPPT_S2_API_KEY", "test-key")
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"openAccessPdf": {"url": "https://s2.example/p.pdf"}}
+
+    class FakeClient:
+        async def get(self, url, params=None, headers=None):
+            captured["headers"] = headers
+            return FakeResponse()
+
+    async def fake_get_client(_name):
+        return FakeClient()
+
+    monkeypatch.setattr(oa_resolver, "get_client", fake_get_client)
+
+    result = await oa_resolver._query_semantic_scholar("10.x/with-key")  # noqa: SLF001
+    assert result == "https://s2.example/p.pdf"
+    assert captured["headers"] == {"x-api-key": "test-key"}
+
+
 async def test_resolve_returns_unchanged_when_all_papers_have_pdf_url():
     collection = PaperCollection(
         query=Query(keywords="x", sources=("openalex",)),
