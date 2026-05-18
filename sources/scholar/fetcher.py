@@ -76,8 +76,7 @@ class ScholarFetcher(Fetcher):
             )
 
     async def search(self, query: Query) -> list[Paper]:
-        params = self._build_params(query)
-        html_text = await self._get_text(_SEARCH_URL, params=params)
+        html_text = await self._fetch_serp(query)
         papers = parse_serp(html_text)
         _LOG.info(
             "Scholar returned %d papers for query=%r (max=%d)",
@@ -86,6 +85,28 @@ class ScholarFetcher(Fetcher):
             query.max_results,
         )
         return papers[: query.max_results]
+
+    async def _fetch_serp(self, query: Query) -> str:
+        """Pick the WebRunner (real browser) path when available, fall
+        back to the httpx scrape path otherwise.
+
+        WebRunner survives Google's standard bot-detection because it
+        drives a real Chrome with the auto-control flag disabled; the
+        httpx path gets captcha'd within a few requests. We prefer
+        WebRunner whenever ``je_web_runner`` is importable and
+        ``AUTOPAPERTOPPT_DISABLE_WEBRUNNER`` is not set.
+        """
+        from scholar import webrunner_backend
+
+        if webrunner_backend.is_available():
+            try:
+                return await webrunner_backend.fetch_serp_html(query)
+            except RuntimeError as err:
+                _LOG.warning(
+                    "WebRunner backend failed (%s); falling back to httpx", err,
+                )
+        params = self._build_params(query)
+        return await self._get_text(_SEARCH_URL, params=params)
 
     async def fetch_by_id(self, identifier: str) -> Paper:
         raise ParseError(

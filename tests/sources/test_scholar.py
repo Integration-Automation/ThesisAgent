@@ -23,8 +23,21 @@ def _fixture(name: str) -> str:
 
 @pytest.fixture(autouse=True)
 def _isolate_scholar_env(monkeypatch):
-    """Scholar is now default-on. Make sure no DISABLE flag leaks from host env."""
+    """Scholar is now default-on; make sure no DISABLE flag leaks from
+    the host env. Also force WebRunner off by default so tests that
+    install a MockTransport on the httpx client exercise that path —
+    tests that specifically want the WebRunner path opt in by setting
+    is_available themselves.
+
+    Also reset the process-level captcha cooldown between tests so a
+    previous test's lockout doesn't bleed into the next.
+    """
     monkeypatch.delenv("AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING", raising=False)
+    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
+    import scholar.fetcher as scholar_mod
+    scholar_mod._captcha_locked_until = 0.0  # noqa: SLF001
+    yield
+    scholar_mod._captcha_locked_until = 0.0  # noqa: SLF001
 
 
 def _new_fetcher():
@@ -142,3 +155,53 @@ async def test_search_403_surfaces_unavailable(monkeypatch):
         await _new_fetcher().search(
             Query(keywords="x", sources=("scholar",), max_results=1)
         )
+
+
+async def test_webrunner_backend_used_when_available(monkeypatch):
+    """When je_web_runner is importable, search() uses the real-browser
+    backend instead of httpx."""
+    from scholar import webrunner_backend
+
+    monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
+
+    captured: dict[str, object] = {}
+
+    async def fake_fetch(query):
+        captured["query"] = query
+        return _fixture("serp.html")
+
+    monkeypatch.setattr(webrunner_backend, "fetch_serp_html", fake_fetch)
+    papers = await _new_fetcher().search(
+        Query(keywords="attention", sources=("scholar",), max_results=10)
+    )
+    assert captured["query"].keywords == "attention"
+    assert papers and papers[0].title == "Attention Is All You Need"
+
+
+async def test_webrunner_failure_falls_back_to_httpx(monkeypatch):
+    """If WebRunner crashes (Chrome unavailable etc.), the httpx path runs."""
+    from scholar import webrunner_backend
+
+    monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
+
+    async def explode(_query):
+        raise RuntimeError("Chrome did not start")
+
+    monkeypatch.setattr(webrunner_backend, "fetch_serp_html", explode)
+
+    transport = MockTransport(200, _fixture("serp.html"))
+    install_mock(monkeypatch, "scholar.fetcher", transport)
+    papers = await _new_fetcher().search(
+        Query(keywords="attention", sources=("scholar",), max_results=1)
+    )
+    # httpx fallback succeeded.
+    assert papers and papers[0].title
+
+
+def test_webrunner_is_available_respects_disable_env(monkeypatch):
+    """AUTOPAPERTOPPT_DISABLE_WEBRUNNER=1 forces the httpx path even
+    when je_web_runner is installed."""
+    from scholar import webrunner_backend
+
+    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
+    assert webrunner_backend.is_available() is False
