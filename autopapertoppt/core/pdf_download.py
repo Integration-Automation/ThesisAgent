@@ -76,6 +76,20 @@ async def _download_one(paper: Paper, pdf_dir: Path) -> PdfDownloadResult:
     if target.exists() and target.stat().st_size > 0:
         _LOG.info("pdf already on disk for %s: %s", key, target)
         return PdfDownloadResult(paper_key=key, path=target, skipped_reason=None)
+    # For paywalled publisher CDNs (IEEE, ACM, Springer, Elsevier, ...)
+    # httpx-style requests reliably 403. Route those through WebRunner
+    # (real visible Chrome) so the session cookie / TLS handshake / JS
+    # fingerprint match what the publisher expects.
+    from autopapertoppt.fetchers import webrunner_pdf
+
+    if webrunner_pdf.is_available() and webrunner_pdf.should_use_webrunner(paper.pdf_url):
+        _LOG.info("pdf via WebRunner for %s: %s", key, paper.pdf_url)
+        ok = await webrunner_pdf.download_via_browser(paper.pdf_url, target)
+        if ok:
+            return PdfDownloadResult(paper_key=key, path=target, skipped_reason=None)
+        _LOG.info(
+            "pdf WebRunner failed for %s; falling back to httpx", key,
+        )
     return await _fetch_and_validate(paper, target, key)
 
 
