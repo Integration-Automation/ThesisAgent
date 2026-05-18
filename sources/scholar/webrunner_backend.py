@@ -114,12 +114,29 @@ def _drive_chrome_sync(url: str) -> str:
             _LOG.warning(
                 "Chrome opened in interactive mode for %.0fs — sign into "
                 "Google in the window now. Session cookies will persist "
-                "in the profile dir for subsequent headless runs.",
+                "in the profile dir for subsequent headless runs. You may "
+                "close the window once logged in; an empty result set "
+                "from this run is expected.",
                 wait,
             )
         import time
         time.sleep(wait)
-        return webdriver_wrapper_instance.current_webdriver.page_source
+        # User closing the window during the wait makes page_source raise
+        # or return None — treat that as "interactive seed succeeded,
+        # nothing to scrape" and return an empty SERP shell. The cookie
+        # store under --user-data-dir is already on disk.
+        try:
+            html = webdriver_wrapper_instance.current_webdriver.page_source
+        except Exception as err:  # noqa: BLE001 — session may be gone
+            _LOG.info("Scholar page_source unavailable (%s); returning empty SERP", err)
+            return _EMPTY_SERP_HTML
+        if html is None:
+            _LOG.info(
+                "Scholar page_source is None (user likely closed the "
+                "interactive window); returning empty SERP",
+            )
+            return _EMPTY_SERP_HTML
+        return html
     except Exception as err:  # noqa: BLE001 — best-effort
         raise RuntimeError(f"WebRunner page-load failed: {err}") from err
     finally:
@@ -127,6 +144,14 @@ def _drive_chrome_sync(url: str) -> str:
             webdriver_wrapper_instance.quit()
         except Exception as err:  # noqa: BLE001  # nosec B110 — best-effort cleanup
             _LOG.debug("WebRunner cleanup failed: %s", err)
+
+
+# Minimal HTML the SERP parser will treat as "valid but empty" — the
+# wrapper div is what the parser checks before bailing out as a
+# malformed page.
+_EMPTY_SERP_HTML = (
+    "<html><body><div id='gs_res_ccl'></div></body></html>"
+)
 
 
 def _build_chrome_args() -> tuple[list[str], bool]:
