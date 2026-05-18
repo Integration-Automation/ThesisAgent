@@ -1,60 +1,37 @@
 """Scholar SERP fetching via WebRunner (real visible Chrome browser).
 
-Why
----
-Google's bot-detection flags httpx-style scrapes within a few requests
-(captcha + 30-min cooldown, see ``scholar/fetcher.py``). Driving a
-real visible Chrome session via Selenium with the
-``--disable-blink-features=AutomationControlled`` flag survives
-Google's standard detection heuristics. Headless mode is intentionally
-NOT supported because Google's detection is more aggressive against
-headless signatures.
+Uses the shared helper at ``autopapertoppt.fetchers.webrunner_browser``
+which bypasses ``je_web_runner``'s module-level singleton (it crashes
+when multiple WebRunner sources fan out in parallel) by spinning a
+fresh ``selenium.webdriver.Chrome`` per call.
 
-``je_web_runner`` is a default dependency, so this backend is the
-default Scholar path on every install. Set
-``AUTOPAPERTOPPT_DISABLE_WEBRUNNER=1`` to fall back to the httpx
-scrape path (useful for CI / Docker without a Chrome binary, or when
-you'd rather skip the visible Chrome window popping up).
-
-The actual Selenium calls run inside ``asyncio.to_thread`` so the
-async pipeline isn't blocked while Chrome boots.
+When Google serves a captcha / 'unusual traffic' page, the backend
+waits up to 5 minutes for the user to solve it in the visible Chrome
+window. After the user clicks through, the SERP loads naturally and
+we grab ``page_source`` once it's no longer a captcha page.
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
+import contextlib
 from urllib.parse import urlencode
 
 from autopapertoppt.core.models import Query
+from autopapertoppt.fetchers import webrunner_browser
 from autopapertoppt.utils.logging import get_logger
 
 _LOG = get_logger(__name__)
 _SEARCH_URL_BASE = "https://scholar.google.com/scholar"
-_DISABLE_ENV = "AUTOPAPERTOPPT_DISABLE_WEBRUNNER"
-#: Chrome user-data directory to persist between runs. When set the
-#: session cookies (captcha clearance, any consent acks) survive
-#: across CLI invocations.
-_PROFILE_DIR_ENV = "AUTOPAPERTOPPT_CHROME_PROFILE_DIR"
-#: Page-load wait per Chrome navigation. Generous so the user has a
-#: chance to interact (close consent banner, solve captcha) when the
-#: window pops up.
-_PAGE_LOAD_WAIT_SECONDS = 15.0
+_INITIAL_RENDER_WAIT_SECONDS = 4.0
+_CAPTCHA_MAX_WAIT_SECONDS = 300.0
 
-# Minimal HTML the SERP parser treats as "valid but empty" — the
-# wrapper div is what the parser checks before bailing out as malformed.
 _EMPTY_SERP_HTML = "<html><body><div id='gs_res_ccl'></div></body></html>"
 
 
 def is_available() -> bool:
-    """True when WebRunner is importable AND not explicitly disabled."""
-    if os.environ.get(_DISABLE_ENV) == "1":
-        return False
-    try:
-        import je_web_runner  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    """Re-exported from the shared browser helper."""
+    return webrunner_browser.is_available()
 
 
 async def fetch_serp_html(query: Query) -> str:
@@ -78,35 +55,34 @@ def _build_url(query: Query) -> str:
 
 
 def _drive_chrome_sync(url: str) -> str:
-    """Boot a visible Chrome, navigate, capture HTML, quit."""
-    from je_web_runner import webdriver_wrapper_instance
-
-    chrome_args = _build_chrome_args()
+    """Boot a fresh Chrome, navigate, wait for any captcha to clear,
+    capture HTML, quit. Runs in a worker thread (Selenium is sync).
+    """
     try:
-        webdriver_wrapper_instance.set_driver("chrome", options=chrome_args)
-    except Exception as err:  # noqa: BLE001
+        driver = webrunner_browser.make_driver()
+    except Exception as err:  # noqa: BLE001 — Selenium raises many types
         raise RuntimeError(f"WebRunner cannot start chrome: {err}") from err
 
     try:
-        webdriver_wrapper_instance.to_url(url)
-        _LOG.info(
-            "Chrome opened (visible) for %.0fs — close the window early "
-            "if the page is ready, otherwise it will close itself.",
-            _PAGE_LOAD_WAIT_SECONDS,
-        )
+        driver.get(url)
         import time
-        time.sleep(_PAGE_LOAD_WAIT_SECONDS)
+        time.sleep(_INITIAL_RENDER_WAIT_SECONDS)
+        # If Google served a captcha / 'unusual traffic' page, wait for
+        # the user to solve it manually before reading page_source.
+        webrunner_browser.wait_for_captcha_solved(
+            driver, max_wait_seconds=_CAPTCHA_MAX_WAIT_SECONDS,
+        )
         try:
-            html = webdriver_wrapper_instance.current_webdriver.page_source
-        except Exception as err:  # noqa: BLE001
+            html = driver.page_source
+        except Exception as err:  # noqa: BLE001 — session may be gone
             _LOG.info(
                 "Scholar page_source unavailable (%s); returning empty SERP",
                 err,
             )
             return _EMPTY_SERP_HTML
-        if html is None:
+        if not html:
             _LOG.info(
-                "Scholar page_source is None (window likely closed); "
+                "Scholar page_source is empty (window likely closed); "
                 "returning empty SERP",
             )
             return _EMPTY_SERP_HTML
@@ -114,23 +90,25 @@ def _drive_chrome_sync(url: str) -> str:
     except Exception as err:  # noqa: BLE001
         raise RuntimeError(f"WebRunner page-load failed: {err}") from err
     finally:
-        try:
-            webdriver_wrapper_instance.quit()
-        except Exception as err:  # noqa: BLE001  # nosec B110 — best-effort cleanup
-            _LOG.debug("WebRunner cleanup failed: %s", err)
+        with contextlib.suppress(Exception):
+            driver.quit()
 
 
+# Backward-compat alias for tests that monkeypatch _build_chrome_args.
 def _build_chrome_args() -> list[str]:
-    """Build the Chrome CLI flag list. Always visible (no headless)."""
-    chrome_args = [
+    """Return the Chrome args list (used by tests; the actual driver
+    is built by ``webrunner_browser.make_driver``)."""
+    args = [
         "--disable-blink-features=AutomationControlled",
         "--lang=en-US",
         "--disable-gpu",
         "--no-sandbox",
         "--window-size=1280,720",
     ]
-    profile_dir = os.environ.get(_PROFILE_DIR_ENV, "").strip()
+    import os
+    profile_dir = os.environ.get(
+        "AUTOPAPERTOPPT_CHROME_PROFILE_DIR", ""
+    ).strip()
     if profile_dir:
-        chrome_args.append(f"--user-data-dir={profile_dir}")
-        _LOG.info("Chrome using persistent profile at %s", profile_dir)
-    return chrome_args
+        args.append(f"--user-data-dir={profile_dir}")
+    return args

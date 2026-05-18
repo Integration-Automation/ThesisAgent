@@ -100,15 +100,12 @@ async def download_via_browser(url: str, target: Path) -> bool:
 
 def _download_sync(url: str, target: Path) -> bool:
     """Boot Chrome → navigate to PDF URL → wait for file → copy to target."""
-    # Imports inside the function so this module imports cleanly when
-    # selenium isn't installed.
-    from selenium import webdriver
+    from autopapertoppt.fetchers import webrunner_browser
 
     tmpdir = Path(tempfile.mkdtemp(prefix="autopapertoppt_pdf_"))
     try:
-        options = _build_chrome_options(tmpdir)
         try:
-            driver = webdriver.Chrome(options=options)
+            driver = webrunner_browser.make_driver(download_dir=str(tmpdir))
         except Exception as err:  # noqa: BLE001 — Selenium raises many types
             _LOG.warning("WebRunner PDF: cannot start Chrome: %s", err)
             return False
@@ -119,34 +116,6 @@ def _download_sync(url: str, target: Path) -> bool:
                 driver.quit()
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
-
-
-def _build_chrome_options(download_dir: Path):
-    """Build Selenium ChromeOptions for a visible browser that saves
-    PDFs to ``download_dir`` instead of rendering them in the viewer.
-    """
-    from selenium.webdriver.chrome.options import Options
-
-    options = Options()
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--lang=en-US")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--window-size=1280,720")
-    profile_dir = os.environ.get(_PROFILE_DIR_ENV, "").strip()
-    if profile_dir:
-        options.add_argument(f"--user-data-dir={profile_dir}")
-    # Send PDFs straight to disk; otherwise Chrome opens its built-in
-    # viewer and we have no way to grab the bytes.
-    prefs = {
-        "download.default_directory": str(download_dir),
-        "download.prompt_for_download": False,
-        "download.directory_upgrade": True,
-        "plugins.always_open_pdf_externally": True,
-        "safebrowsing.enabled": False,
-    }
-    options.add_experimental_option("prefs", prefs)
-    return options
 
 
 def _navigate_and_collect(driver, url: str, tmpdir: Path, target: Path) -> bool:
