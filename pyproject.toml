@@ -44,6 +44,11 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "lxml>=5.2",
     "markdown-it-py>=3.0",
+    # Real-browser backend for the Google Scholar plugin. Default-on so
+    # the out-of-box `pip install autopapertoppt` gets the captcha-resilient
+    # Scholar path. Users who don't have Chrome on PATH automatically
+    # fall through to the httpx scrape path with no breakage.
+    "je_web_runner>=0.0.60",
 ]
 
 [project.optional-dependencies]
@@ -63,13 +68,6 @@ intelligence = [
 gui = [
     "PySide6>=6.7",
 ]
-scholar = [
-    # Real-browser backend for the Google Scholar plugin, used when
-    # available so httpx-style bot-detection captcha hits become rare.
-    # Pulls in Selenium + the WebRunner wrapper. Falls back to the
-    # httpx scrape path when not installed.
-    "je_web_runner>=0.0.60",
-]
 dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
@@ -82,7 +80,6 @@ dev = [
     "anthropic>=0.40",
     "pymupdf>=1.24",
     "PySide6>=6.7",
-    "je_web_runner>=0.0.60",
 ]
 
 [project.scripts]

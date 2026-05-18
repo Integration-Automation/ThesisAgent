@@ -9,16 +9,17 @@ Chrome session via Selenium with the
 Google's standard detection heuristics — same idea Google's own
 testing tools use.
 
-This backend is **optional**. It's only used when the user has
-``je_web_runner`` installed (``pip install je_web_runner`` or the
-``[scholar]`` extra). Otherwise the Scholar plugin falls back to the
-httpx-based scrape path, which is faster but more easily detected.
+``je_web_runner`` is a **default dependency** as of the current
+release, so this backend is the default Scholar path on every install.
+Users who don't have Chrome on PATH (or who set
+``AUTOPAPERTOPPT_DISABLE_WEBRUNNER=1``) automatically fall through to
+the httpx scrape path with no breakage.
 
 Auto-detect rule: ``is_available()`` returns True iff
 ``je_web_runner`` imports cleanly AND ``AUTOPAPERTOPPT_DISABLE_WEBRUNNER``
-is not set. Setting the env var lets users force the httpx path even
-when WebRunner is installed (useful for CI runs where launching Chrome
-adds 5-10 s of overhead).
+is not set. Setting the env var forces the httpx path (useful for CI
+runs where launching Chrome adds 5-10 s of overhead, or for containers
+without a browser binary).
 
 The actual Selenium calls run inside ``asyncio.to_thread`` so the
 async pipeline isn't blocked while Chrome boots.
