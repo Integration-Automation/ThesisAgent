@@ -20,8 +20,12 @@ def _fixture(name: str) -> str:
 
 @pytest.fixture(autouse=True)
 def _isolate_ieee_env(monkeypatch):
-    """IEEE is now default-on. Make sure no DISABLE flag leaks from host env."""
+    """IEEE is now default-on; make sure no DISABLE flag leaks. Also
+    force WebRunner off so the existing tests that monkeypatch the
+    httpx transport stay valid — the few tests that specifically want
+    to exercise the WebRunner path opt in by setting is_available."""
     monkeypatch.delenv("AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING", raising=False)
+    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
 
 
 def _new_fetcher():
@@ -183,3 +187,44 @@ async def test_api_mode_no_api_key_falls_back_to_scrape(monkeypatch):
     # Scraping POSTs to /rest/search, not the API endpoint
     assert transport.received_method == "POST"
     assert "ieeexploreapi.ieee.org" not in str(transport.received_url)
+
+
+async def test_webrunner_search_used_when_available(monkeypatch):
+    """When WebRunner is enabled, _scrape_search routes through it
+    instead of the httpx POST."""
+    from ieee import webrunner_backend
+
+    monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
+
+    captured: dict[str, object] = {}
+
+    async def fake_fetch(body):
+        captured["body"] = body
+        return {"records": [], "totalRecords": 0}
+
+    monkeypatch.setattr(webrunner_backend, "fetch_search_json", fake_fetch)
+    papers = await _new_fetcher().search(
+        Query(keywords="webrunner test", sources=("ieee",), max_results=5)
+    )
+    assert papers == []
+    assert captured["body"]["queryText"] == "webrunner test"
+
+
+async def test_webrunner_search_failure_falls_back_to_httpx(monkeypatch):
+    """RuntimeError from the WebRunner backend triggers the httpx fallback."""
+    from ieee import webrunner_backend
+
+    monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
+
+    async def explode(_body):
+        raise RuntimeError("Chrome did not start")
+
+    monkeypatch.setattr(webrunner_backend, "fetch_search_json", explode)
+
+    transport = MockTransport(200, _fixture("search.json"))
+    install_mock(monkeypatch, "ieee.fetcher", transport)
+    papers = await _new_fetcher().search(
+        Query(keywords="x", sources=("ieee",), max_results=10)
+    )
+    # httpx fallback worked → got the fixture's records.
+    assert len(papers) > 0

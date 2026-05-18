@@ -73,7 +73,7 @@ class IeeeFetcher(Fetcher):
         if self._api_key:
             return await self._api_search(query)
         body = self._build_search_body(query)
-        data = await self._post_json(_SEARCH_URL, body=body)
+        data = await self._scrape_search(body)
         records = data.get("records") or []
         papers = [parse_search_record(r) for r in records]
         _LOG.info(
@@ -84,17 +84,46 @@ class IeeeFetcher(Fetcher):
         )
         return papers[: query.max_results]
 
+    async def _scrape_search(self, body: dict[str, object]) -> dict:
+        """Try the WebRunner backend first (real browser via je_web_runner)
+        because IEEE's REST endpoint blocks httpx-style POSTs. Fall back
+        to httpx only when WebRunner is unavailable or fails (so the
+        plugin still degrades cleanly when Chrome isn't installed).
+        """
+        from ieee import webrunner_backend
+
+        if webrunner_backend.is_available():
+            try:
+                return await webrunner_backend.fetch_search_json(body)
+            except RuntimeError as err:
+                _LOG.warning(
+                    "IEEE WebRunner search failed (%s); falling back to httpx", err,
+                )
+        return await self._post_json(_SEARCH_URL, body=body)
+
     async def fetch_by_id(self, identifier: str) -> Paper:
         arnumber = identifier.strip()
         if not arnumber.isdigit():
             raise ParseError(_SOURCE_NAME, f"invalid IEEE arnumber: {identifier!r}")
         if self._api_key:
             return await self._api_fetch_by_id(arnumber)
-        url = _DOCUMENT_URL.format(arnumber=arnumber)
-        html_text = await self._get_text(url)
+        html_text = await self._scrape_document(arnumber)
         paper = parse_metadata_blob(html_text)
         _LOG.info("IEEE resolved arnumber=%s (scrape)", arnumber)
         return paper
+
+    async def _scrape_document(self, arnumber: str) -> str:
+        from ieee import webrunner_backend
+
+        if webrunner_backend.is_available():
+            try:
+                return await webrunner_backend.fetch_document_html(arnumber)
+            except RuntimeError as err:
+                _LOG.warning(
+                    "IEEE WebRunner document fetch failed (%s); falling back to httpx",
+                    err,
+                )
+        return await self._get_text(_DOCUMENT_URL.format(arnumber=arnumber))
 
     async def _api_search(self, query: Query) -> list[Paper]:
         params = self._build_api_params(query)
