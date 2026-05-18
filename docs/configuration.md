@@ -32,6 +32,8 @@ each value into `os.environ` before any fetcher initialises.
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | unset | Crossref Plus subscriber token. Attached to requests as `Crossref-Plus-API-Token: Bearer <token>`. Raises rate limits and improves cache freshness on the `acm` and `crossref` plugins. |
 | `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | unset | **Scholar plugin is now default-ON.** Set `=1` to opt out. Google's ToS forbids automated access; default-on for coverage, opt-out if you'd rather not take the captcha / IP-block risk. |
 | `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | unset | The Scholar plugin defaults to driving a real Chrome through **WebRunner** (`je_web_runner` is a default dependency) — Google's bot-detection is far less aggressive on real browsers. Set `=1` to force the httpx scrape path even when WebRunner is available (useful for CI / Docker containers without a Chrome binary, or latency-sensitive runs where Chrome's 5-10 s boot isn't worth it). When set, the plugin's existing captcha-cooldown logic kicks in for the httpx path. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | unset | When set, passes `--user-data-dir=<path>` to Chrome so cookies / login state / captcha clearance survive across CLI invocations. A one-time interactive Google sign-in seeded into this profile dir reliably suppresses Scholar captchas on subsequent headless runs. See the **Suppressing Scholar captchas with a persistent profile** recipe below. |
+| `AUTOPAPERTOPPT_CHROME_HEADLESS` | `1` (headless) | Set `=0` to open Chrome visibly. Used ONLY for the one-time interactive Google sign-in that seeds `AUTOPAPERTOPPT_CHROME_PROFILE_DIR`. Subsequent runs should drop this env var so Chrome stays headless. |
 | `AUTOPAPERTOPPT_CORE_API_KEY` | unset | Free key from <https://core.ac.uk/services/api>. Enables the OA resolver's CORE.ac.uk lookup step (200M+ institutional / regional OA repository items). Skipped silently when unset (the other OA strategies — Unpaywall, Semantic Scholar, arXiv — still run). |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | unset | Sent to Crossref / OpenAlex as the `mailto=` parameter (entry into their polite pool), to NCBI as `tool` / `email` headers, **and to Unpaywall as `email=`** for the post-dedup OA PDF resolver. Highly recommended — without it the resolver skips Unpaywall lookups entirely, which is the single biggest PDF coverage win for IEEE / ACM / Springer / Elsevier paywalled papers (typical lift 40-70%). |
 
@@ -163,6 +165,50 @@ Override via:
 
 Clear the cache by deleting the directory; AutoPaperToPPT
 re-creates it on demand.
+
+## Suppressing Scholar captchas with a persistent Chrome profile
+
+Google flags an IP after a few automated Scholar requests even with
+WebRunner's real-browser path. The reliable workaround is to seed a
+persistent Chrome profile with a real Google sign-in once; subsequent
+headless runs reuse the same session cookies, which Google trusts.
+
+**One-time setup:**
+
+```powershell
+# 1. Pick a directory anywhere on disk
+$env:AUTOPAPERTOPPT_CHROME_PROFILE_DIR = "D:\autopapertoppt-scholar-profile"
+
+# 2. Open Chrome visibly and trigger one Scholar request
+$env:AUTOPAPERTOPPT_CHROME_HEADLESS = "0"
+autopapertoppt --query "any keywords" --source scholar --max 1 --out .\tmp\
+
+# Chrome opens. Sign into your Google account, accept any consent
+# banners, complete any captcha. The window holds open for 60s.
+```
+
+**Every run after that:**
+
+```powershell
+$env:AUTOPAPERTOPPT_CHROME_PROFILE_DIR = "D:\autopapertoppt-scholar-profile"
+Remove-Item Env:\AUTOPAPERTOPPT_CHROME_HEADLESS   # back to headless
+autopapertoppt --query "..." --out .\exports\
+```
+
+Chrome boots headless but loads the same profile dir, sends your
+authenticated Google session cookie, and Scholar serves real results
+instead of a captcha page.
+
+**Caveats:**
+
+- Only one Chrome process can hold the profile dir at a time. If you
+  have a regular Chrome open on the same profile path, the
+  WebRunner instance will fail to start. Use a dedicated path.
+- The session cookie is a real authentication credential. Treat the
+  profile directory like a secret — back it up if you re-image the
+  machine, restrict file permissions.
+- Cookie eventually expires (~1-2 months for Google). Re-do the
+  interactive sign-in then.
 
 ## Settings the project explicitly does NOT have
 

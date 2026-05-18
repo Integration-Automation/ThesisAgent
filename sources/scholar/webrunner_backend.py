@@ -37,7 +37,19 @@ from autopapertoppt.utils.logging import get_logger
 _LOG = get_logger(__name__)
 _SEARCH_URL_BASE = "https://scholar.google.com/scholar"
 _DISABLE_ENV = "AUTOPAPERTOPPT_DISABLE_WEBRUNNER"
+#: Chrome user-data directory to persist between runs. When set, the
+#: session cookies from any prior login (Google account, captcha
+#: clearance, etc.) survive across CLI invocations — a one-time
+#: interactive login in this profile dramatically reduces captcha hits.
+_PROFILE_DIR_ENV = "AUTOPAPERTOPPT_CHROME_PROFILE_DIR"
+#: Set to ``0`` to disable headless mode (needed for the one-time
+#: interactive login into Google when seeding the profile dir).
+_HEADLESS_ENV = "AUTOPAPERTOPPT_CHROME_HEADLESS"
 _PAGE_LOAD_WAIT_SECONDS = 3.0
+#: When the headless flag is OFF (interactive login mode) we hold the
+#: window open longer so the user has time to complete the Google
+#: sign-in flow before the search returns.
+_INTERACTIVE_WAIT_SECONDS = 60.0
 
 
 def is_available() -> bool:
@@ -86,17 +98,7 @@ def _drive_chrome_sync(url: str) -> str:
     # path before it ever runs.
     from je_web_runner import webdriver_wrapper_instance
 
-    chrome_args = [
-        "--disable-blink-features=AutomationControlled",
-        "--lang=en-US",
-        # Headless new mode passes more of Google's automation
-        # detection than the legacy --headless flag.
-        "--headless=new",
-        # Reduce fingerprint surface.
-        "--disable-gpu",
-        "--no-sandbox",
-        "--window-size=1280,720",
-    ]
+    chrome_args, headless = _build_chrome_args()
     try:
         webdriver_wrapper_instance.set_driver("chrome", options=chrome_args)
     except Exception as err:  # noqa: BLE001 — Selenium raises many types
@@ -104,11 +106,19 @@ def _drive_chrome_sync(url: str) -> str:
 
     try:
         webdriver_wrapper_instance.to_url(url)
-        # Page needs a beat to render results client-side. We don't use
-        # a smart-wait helper here because the SERP layout has no single
-        # stable readiness signal that survives captcha vs. real results.
+        # Headless: tight wait, only need the SERP HTML. Non-headless
+        # (interactive login mode): hold the window open so the user
+        # has time to complete the Google sign-in flow.
+        wait = _PAGE_LOAD_WAIT_SECONDS if headless else _INTERACTIVE_WAIT_SECONDS
+        if not headless:
+            _LOG.warning(
+                "Chrome opened in interactive mode for %.0fs — sign into "
+                "Google in the window now. Session cookies will persist "
+                "in the profile dir for subsequent headless runs.",
+                wait,
+            )
         import time
-        time.sleep(_PAGE_LOAD_WAIT_SECONDS)
+        time.sleep(wait)
         return webdriver_wrapper_instance.current_webdriver.page_source
     except Exception as err:  # noqa: BLE001 — best-effort
         raise RuntimeError(f"WebRunner page-load failed: {err}") from err
@@ -117,3 +127,35 @@ def _drive_chrome_sync(url: str) -> str:
             webdriver_wrapper_instance.quit()
         except Exception as err:  # noqa: BLE001  # nosec B110 — best-effort cleanup
             _LOG.debug("WebRunner cleanup failed: %s", err)
+
+
+def _build_chrome_args() -> tuple[list[str], bool]:
+    """Return ``(chrome_args, is_headless)`` based on env-var overrides.
+
+    Layered on top of the always-applied anti-detection flags:
+
+    - ``AUTOPAPERTOPPT_CHROME_PROFILE_DIR=<path>``: pass
+      ``--user-data-dir=<path>`` so cookies / login state persist.
+    - ``AUTOPAPERTOPPT_CHROME_HEADLESS=0``: drop ``--headless=new`` so
+      the user can interact with the Chrome window (required for the
+      one-time Google sign-in that seeds the profile dir).
+    """
+    chrome_args = [
+        "--disable-blink-features=AutomationControlled",
+        "--lang=en-US",
+        # Reduce fingerprint surface; safe in both headless and visible
+        # modes.
+        "--disable-gpu",
+        "--no-sandbox",
+        "--window-size=1280,720",
+    ]
+    headless = os.environ.get(_HEADLESS_ENV, "1") != "0"
+    if headless:
+        # Headless 'new' passes more of Google's automation detection
+        # than legacy --headless.
+        chrome_args.append("--headless=new")
+    profile_dir = os.environ.get(_PROFILE_DIR_ENV, "").strip()
+    if profile_dir:
+        chrome_args.append(f"--user-data-dir={profile_dir}")
+        _LOG.info("Chrome using persistent profile at %s", profile_dir)
+    return chrome_args, headless

@@ -205,3 +205,36 @@ def test_webrunner_is_available_respects_disable_env(monkeypatch):
 
     monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
     assert webrunner_backend.is_available() is False
+
+
+def test_chrome_args_default_headless_with_no_profile(monkeypatch):
+    """No env vars → headless + anti-detection flags, no profile dir."""
+    from scholar import webrunner_backend
+
+    for var in ("AUTOPAPERTOPPT_CHROME_PROFILE_DIR", "AUTOPAPERTOPPT_CHROME_HEADLESS"):
+        monkeypatch.delenv(var, raising=False)
+    args, headless = webrunner_backend._build_chrome_args()  # noqa: SLF001
+    assert headless is True
+    assert "--headless=new" in args
+    assert "--disable-blink-features=AutomationControlled" in args
+    assert not any(a.startswith("--user-data-dir=") for a in args)
+
+
+def test_chrome_args_with_profile_dir_passes_user_data_dir(monkeypatch):
+    from scholar import webrunner_backend
+
+    monkeypatch.setenv("AUTOPAPERTOPPT_CHROME_PROFILE_DIR", "D:/scholar-profile")
+    monkeypatch.delenv("AUTOPAPERTOPPT_CHROME_HEADLESS", raising=False)
+    args, headless = webrunner_backend._build_chrome_args()  # noqa: SLF001
+    assert headless is True
+    assert "--user-data-dir=D:/scholar-profile" in args
+
+
+def test_chrome_args_headless_zero_drops_headless_flag(monkeypatch):
+    """AUTOPAPERTOPPT_CHROME_HEADLESS=0 enables the interactive-login mode."""
+    from scholar import webrunner_backend
+
+    monkeypatch.setenv("AUTOPAPERTOPPT_CHROME_HEADLESS", "0")
+    args, headless = webrunner_backend._build_chrome_args()  # noqa: SLF001
+    assert headless is False
+    assert "--headless=new" not in args
