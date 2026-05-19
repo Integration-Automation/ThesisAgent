@@ -184,6 +184,18 @@ The search is keyword-based, so off-topic papers slip in:
 2. No key but you (an LLM agent) drive the session? → **you write the rich summary yourself.** The per-paper lightweight `.pptx` the CLI just emitted is an intermediate artefact, not the deliverable. Read each PDF, hand-author a `PaperSummary` with rich-tier fields, drop a `scripts/regen_<query>.py`, run it. Worked example: `scripts/regen_llm_security_batch.py` ships 7 hand-authored rich summaries built exactly this way.
 3. No LLM in the loop (CI / cron / unattended) → lightweight is acceptable.
 
+### Default CLI invocation (when the user asks for a deck)
+
+Canonical command shape:
+
+```
+python -m autopapertoppt -q "<query>" --max <N> --lang <lang> --export pptx,xlsx,bib --yes
+```
+
+**Do NOT add `--lightweight` or `--no-pdf` "to make the demo faster".** Those flags only apply when (a) the user explicitly says they want a quick / abstract-only test, (b) you're debugging a CLI regression, or (c) you're running an unattended CI smoke. Default behaviour for a real deliverable: full source mix (gated by [[feedback-vpn-check-before-search]]), every paper's PDF downloaded into `exports/<run>/pdfs/`, and rich-tier authoring on top.
+
+When PDF download would be obviously wasteful (e.g. the user already said no VPN and the entire result set is IEEE), say so and offer the user a choice; don't unilaterally degrade to lightweight.
+
 ## Anti-patterns (HARD)
 
 - Do NOT tell the user "set ANTHROPIC_API_KEY for a rich deck." You ARE the LLM that could write the summaries (and from the test's perspective, "you yourself are the LLM that could write the summaries"). Offloading is failing the task.
@@ -193,6 +205,7 @@ The search is keyword-based, so off-topic papers slip in:
 - Do NOT fabricate `url` / `doi` / `arxiv_id` from memory. Always copy from the xlsx.
 - Do NOT add `-rich` to filenames. Overwrite the lightweight emit at the canonical `<key>.pptx`.
 - Do NOT exceed 4 entries in `contributions_detailed`. The slide overshoots the footer guard above that.
+- Do NOT add `--lightweight` or `--no-pdf` to the CLI invocation "for speed" when the user asked for a deck. Those flags produce a non-deliverable. See "Default CLI invocation" above.
 - Do NOT leave irrelevant downloads in the run directory. The search engine is keyword-based, so off-topic papers will slip in. Once you classify a paper as off-topic, delete its `exports/<run>/pdfs/<key>.pdf` and `exports/<run>/<key>.pptx`. Keep the aggregate xlsx / bib intact — they are the **honest record** of what the search returned. See "Pruning irrelevant downloads" below.
 
 ## Pruning irrelevant downloads (mandatory before handing the deck back)
