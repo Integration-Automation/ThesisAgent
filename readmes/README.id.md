@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Menaikkan limit anonim NCBI (3/s) ke 10/s. Opsional. |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Menempatkan permintaan ke polite pool Crossref. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (jalur API) | API resmi IEEE Xplore; mengekspos `pdf_url` untuk makalah dalam cakupan. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (jalur scraping) | `=1` mengaktifkan scraping. Tidak perlu saat API key sudah diset. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (jalur scraping) | `=1` mengaktifkan scraping. Tidak perlu saat API key sudah diset. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Token pelanggan Crossref Plus (header Bearer). Opsional. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Wajib; kunci gratis di <https://dev.springernature.com/>. Tanpa kunci, plugin dilewati diam-diam. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` mengaktifkan scraping. Default mati — ToS Scholar melarang scraping. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` mengaktifkan scraping. Default mati — ToS Scholar melarang scraping. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | Pengunduh PDF | `cookies.txt` format Netscape. Default mati. Gunakan hanya dengan penerbit yang Anda miliki hak institusi. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | Default `INFO`; `DEBUG` untuk jejak verbose. |
 

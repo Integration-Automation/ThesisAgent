@@ -62,6 +62,11 @@ _SETTINGS_FIELDS: Final[tuple[tuple[str, str, str], ...]] = (
         "settings.crossref_token",
     ),
     (
+        "api/core",
+        "AUTOPAPERTOPPT_CORE_API_KEY",
+        "settings.core_key",
+    ),
+    (
         "contact/email",
         "AUTOPAPERTOPPT_CONTACT_EMAIL",
         "settings.contact_email",
@@ -70,6 +75,8 @@ _SETTINGS_FIELDS: Final[tuple[tuple[str, str, str], ...]] = (
 
 _COOKIES_KEY: Final[str] = "pdf/cookies_file"
 _COOKIES_ENV: Final[str] = "AUTOPAPERTOPPT_PDF_COOKIES_FILE"
+_CHROME_PROFILE_KEY: Final[str] = "browser/chrome_profile_dir"
+_CHROME_PROFILE_ENV: Final[str] = "AUTOPAPERTOPPT_CHROME_PROFILE_DIR"
 _UI_LANG_KEY: Final[str] = "ui/language"
 
 _ORG: Final[str] = "AutoPaperToPPT"
@@ -103,6 +110,11 @@ def apply_saved_env() -> None:
         os.environ[_COOKIES_ENV] = cookies
     else:
         os.environ.pop(_COOKIES_ENV, None)
+    chrome_profile = store.value(_CHROME_PROFILE_KEY, "", type=str)
+    if chrome_profile:
+        os.environ[_CHROME_PROFILE_ENV] = chrome_profile
+    else:
+        os.environ.pop(_CHROME_PROFILE_ENV, None)
 
 
 def saved_ui_language(default: str = "en") -> str:
@@ -164,6 +176,22 @@ class SettingsPage(QWidget):
         cookies_layout.addWidget(browse)
         outer.addWidget(cookies_row)
 
+        chrome_row = QWidget(self)
+        chrome_layout = QHBoxLayout(chrome_row)
+        chrome_layout.setContentsMargins(0, 0, 0, 0)
+        self._chrome_profile_input = QLineEdit(self)
+        self._chrome_profile_input.setReadOnly(True)
+        chrome_browse = QPushButton(
+            t("settings.browse_button", self._ui_language), self,
+        )
+        chrome_browse.clicked.connect(self._on_browse_chrome_profile)
+        chrome_layout.addWidget(
+            QLabel(t("settings.chrome_profile_dir", self._ui_language)),
+        )
+        chrome_layout.addWidget(self._chrome_profile_input, stretch=1)
+        chrome_layout.addWidget(chrome_browse)
+        outer.addWidget(chrome_row)
+
         save_row = QHBoxLayout()
         save_row.addStretch(1)
         save_button = QPushButton(t("settings.save_button", self._ui_language), self)
@@ -186,6 +214,16 @@ class SettingsPage(QWidget):
         if path:
             self._cookies_input.setText(path)
 
+    def _on_browse_chrome_profile(self) -> None:
+        start = self._chrome_profile_input.text() or str(Path.home())
+        path = QFileDialog.getExistingDirectory(
+            self,
+            t("settings.chrome_profile_dialog_title", self._ui_language),
+            start,
+        )
+        if path:
+            self._chrome_profile_input.setText(path)
+
     def _on_save(self) -> None:
         store = settings_store()
         for key, env_var, _label in _SETTINGS_FIELDS:
@@ -201,6 +239,12 @@ class SettingsPage(QWidget):
             os.environ[_COOKIES_ENV] = cookies
         else:
             os.environ.pop(_COOKIES_ENV, None)
+        chrome_profile = self._chrome_profile_input.text().strip()
+        store.setValue(_CHROME_PROFILE_KEY, chrome_profile)
+        if chrome_profile:
+            os.environ[_CHROME_PROFILE_ENV] = chrome_profile
+        else:
+            os.environ.pop(_CHROME_PROFILE_ENV, None)
         lang = self._ui_lang_combo.currentData() or "en"
         store.setValue(_UI_LANG_KEY, lang)
         store.sync()
@@ -213,6 +257,9 @@ class SettingsPage(QWidget):
         for key, _env_var, _label in _SETTINGS_FIELDS:
             self._field_inputs[key].setText(store.value(key, "", type=str))
         self._cookies_input.setText(store.value(_COOKIES_KEY, "", type=str))
+        self._chrome_profile_input.setText(
+            store.value(_CHROME_PROFILE_KEY, "", type=str),
+        )
         saved_lang = store.value(_UI_LANG_KEY, self._ui_language, type=str)
         for idx in range(self._ui_lang_combo.count()):
             if self._ui_lang_combo.itemData(idx) == saved_lang:
@@ -226,6 +273,9 @@ class SettingsPage(QWidget):
 
     def cookies_input(self) -> QLineEdit:
         return self._cookies_input
+
+    def chrome_profile_input(self) -> QLineEdit:
+        return self._chrome_profile_input
 
     def status_text(self) -> str:
         return self._status_label.text()

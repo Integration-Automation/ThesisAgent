@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Nâng giới hạn ẩn danh NCBI (3/s) lên 10/s. Tùy chọn. |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Đưa request vào polite pool của Crossref. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (đường API) | API chính thức IEEE Xplore; phơi `pdf_url` cho bài thuộc phạm vi đăng ký. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (đường scraping) | `=1` bật scraping. Không cần khi đã có API key. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (đường scraping) | `=1` bật scraping. Không cần khi đã có API key. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Token thuê bao Crossref Plus (header Bearer). Tùy chọn. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Bắt buộc; key miễn phí tại <https://dev.springernature.com/>. Plugin bị bỏ qua âm thầm nếu thiếu. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` bật scraping. Mặc định tắt — ToS Scholar cấm scraping. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` bật scraping. Mặc định tắt — ToS Scholar cấm scraping. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | Trình tải PDF | `cookies.txt` định dạng Netscape. Mặc định tắt. Chỉ dùng với nhà xuất bản bạn có quyền truy cập tổ chức. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | Mặc định `INFO`; `DEBUG` cho trace chi tiết. |
 

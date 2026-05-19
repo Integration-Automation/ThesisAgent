@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Erhöht NCBIs anonymes Limit (3/s) auf 10/s. Optional. |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Setzt Anfragen in Crossrefs „Polite Pool". |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (API-Pfad) | Offizielle IEEE-Xplore-API; legt `pdf_url` für abgedeckte Paper offen. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (Scraping-Pfad) | `=1` aktiviert Scraping. Nicht nötig, wenn der API-Schlüssel gesetzt ist. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (Scraping-Pfad) | `=1` aktiviert Scraping. Nicht nötig, wenn der API-Schlüssel gesetzt ist. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref-Plus-Abonnement-Token (Bearer-Header). Optional. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Pflicht; kostenloser Schlüssel über <https://dev.springernature.com/>. Ohne Schlüssel wird das Plugin still übersprungen. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` aktiviert Scraping. Default aus — Scholars ToS verbietet Scraping. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` aktiviert Scraping. Default aus — Scholars ToS verbietet Scraping. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF-Downloader | `cookies.txt` im Netscape-Format. Default aus. Nur bei Verlagen verwenden, für die Sie institutionelle Zugriffsrechte haben. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | Logger | `INFO` als Default; `DEBUG` für verbose Traces. |
 

@@ -155,11 +155,12 @@ the template for any multi-paper search. The zh-tw companion is at
 
 - **Eleven pluggable sources**: `arxiv`, `semantic_scholar`, `openalex`,
   `pubmed`, `acm` (Crossref-scoped), `dblp`, `crossref` (unscoped),
-  `openaire`, `springer` (needs API key), `ieee` (API key or opt-in
-  scrape), `scholar` (opt-in scrape). Each lives in `sources/<name>/`
-  behind a `Fetcher` adapter. A top-tier-venue whitelist filters results
-  to flagship CS conferences/journals plus Nature/Science/PNAS by
-  default; pass `--all-venues` to disable.
+  `openaire`, `springer` (needs API key), `ieee` (default-on via visible
+  Chrome; API key adds official Xplore API), `scholar` (default-on via
+  visible Chrome). Each lives in `sources/<name>/` behind a `Fetcher`
+  adapter. A top-tier-venue whitelist filters results to flagship CS
+  conferences/journals plus Nature/Science/PNAS by default; pass
+  `--all-venues` to disable.
 - **Single-paper mode**: paste an arXiv ID, arXiv URL, DOI, PMID, or IEEE
   document URL — AutoPaperToPPT resolves it via the right source and
   emits the same export bundle. Useful for paper reading notes and thesis
@@ -204,11 +205,27 @@ the template for any multi-paper search. The zh-tw companion is at
     and passes it to `export`.
   - **Python pipeline (`--enrich`)** — the CLI calls Anthropic's API
     itself; default model `claude-opus-4-7`.
+- **Visible-Chrome publisher flows**: Scholar SERP, IEEE `/rest/search`,
+  and every paywalled-PDF download (ieeexplore / dl.acm / link.springer
+  / sciencedirect / wiley / oup / nature / science / …) run inside a
+  real visible Chrome session via `selenium`. The user solves captcha
+  / completes SSO in the live window once; `AUTOPAPERTOPPT_CHROME_PROFILE_DIR`
+  persists the cookies across runs.
+- **LLM-as-agent flow** (`scripts/llm_*.py`): when the LLM in your editor
+  wants to drive the browser itself (rather than let `asyncio.gather` do
+  it), `scripts/llm_driven_search.py` opens Chrome on Scholar + IEEE,
+  `scripts/llm_download_pdfs.py` walks an xlsx and downloads every paper
+  in one Chrome session (IEEE / ACM / Springer / arXiv / ACL Anthology /
+  NeurIPS / OpenReview), and `scripts/regen_*.py` shows the worked
+  pattern for hand-authoring a rich `PaperSummary` per paper.
+- **OA PDF resolver**: post-dedup, every paper without `pdf_url`
+  goes through Unpaywall → S2 `openAccessPdf` → arXiv title search →
+  CORE.ac.uk (when keys are set). Typical lift on IEEE / ACM / Springer
+  / Elsevier-heavy queries: 40-70 percentage points.
 - **Safety by default**: HTTPS-only HTTP transport, per-source rate
   limit (token bucket), `defusedxml` for any XML payload,
   path-traversal-safe export paths, no `eval` / `exec` / `pickle` on
-  user input. Scholar and IEEE scraping are off by default (env-var
-  opt-in).
+  user input.
 
 ## Quick start
 
@@ -268,10 +285,12 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `--filename-stem` | Override the generated filename stem. |
 | `--no-abstract` | Omit abstract content from exports. |
 | `--lang` / `-l` | Deck language: one of 14 — `en`, `zh-tw`, `zh-cn`, `ja`, `es`, `fr`, `de`, `ko`, `pt`, `ru`, `it`, `vi`, `hi`, `id`. Default `en`. |
-| `--enrich` | Download PDF + Anthropic-summarise. Needs `ANTHROPIC_API_KEY` and `[intelligence]` extra. |
-| `--lightweight` | Force the abstract-only deck even when `ANTHROPIC_API_KEY` is set. |
+| `--enrich` | Fail-loud variant of auto-enrich. Needs `ANTHROPIC_API_KEY` and `[intelligence]` extra. (Auto-enrich is default when the key is set.) |
+| `--lightweight` | Skip enrichment + force the abstract-only deck. Use only for quick / unattended runs; **when an LLM agent is driving, prefer the LLM-as-agent flow** below. |
 | `--llm-model` | Override default `claude-opus-4-7` for enrichment. |
-| `--all-venues` | Disable the top-tier whitelist (default keeps flagship CS venues + Nature / Science / PNAS / CACM / LNCS). |
+| `--no-pdf` | Skip the automatic PDF download. Also disables the per-paper PPT gate (no PDF → no full content). |
+| `--no-oa-resolve` | Skip the post-dedup OA PDF resolver (Unpaywall + S2 + arXiv + CORE.ac.uk). |
+| `--top-tier-only` | Restrict results to arXiv + a curated CS-flagship whitelist (S&P, CCS, NDSS, USENIX Security, NeurIPS, ICML, ICSE, …). Off by default. |
 | `--paywall-threshold` | Fraction of paywalled results that triggers the confirmation prompt. Default 0.30. |
 | `--yes` | Skip the paywall prompt and proceed. |
 | `--max-slides` | Per-paper slide cap (default 25; pass 0 for unlimited). |
@@ -283,19 +302,41 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 |---|---|---|
 | `ANTHROPIC_API_KEY` | `--enrich` | LLM auth. Not needed for the LLM-as-agent path over MCP. |
 | `AUTOPAPERTOPPT_LLM_MODEL` | `--enrich` | Override the default `claude-opus-4-7`. |
-| `AUTOPAPERTOPPT_S2_API_KEY` | Semantic Scholar | Higher rate limit. Optional. |
+| `AUTOPAPERTOPPT_S2_API_KEY` | Semantic Scholar + OA resolver | Higher rate limit; also used by the OA resolver's S2 `openAccessPdf` step. Free key at <https://www.semanticscholar.org/product/api>. |
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Raises NCBI's anonymous limit (3/s) to 10/s. Optional. |
-| `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Puts requests into Crossref's polite pool. |
+| `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex, **Unpaywall** | Polite-pool tag + enables the OA resolver's Unpaywall step (biggest PDF-coverage win for IEEE / ACM / Springer / Elsevier-paywalled papers; typical lift 40-70 pp). |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (API path) | Official IEEE Xplore API; surfaces `pdf_url` for in-scope papers. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (scrape path) | `=1` opts into scraping. Not needed when the API key is set. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE is default-ON via visible Chrome.** Set `=1` to opt out (e.g. CI without Chrome). The httpx scrape branch only runs as a fallback when WebRunner is unavailable. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref Plus subscriber token (Bearer header). Optional. |
-| `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Required; free key from <https://dev.springernature.com/>. Plugin is silently skipped without it. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` opts into scraping. Off by default — Scholar ToS forbids scraping. |
+| `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Required; free key from <https://dev.springernature.com/>. Plugin raises `ConfigError` without it. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar is default-ON via visible Chrome.** Set `=1` to opt out (Google's ToS forbids automated access — default-on for coverage, opt-out to avoid captcha / IP-block risk). |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO / Google sign-in once; subsequent runs inherit the cookies so IEEE returns paywalled metadata and Scholar serves un-throttled SERPs. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. Useful for CI / Docker without a Chrome binary; otherwise leave unset. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step (200M+ institutional / regional OA items). Other OA strategies (Unpaywall, S2, arXiv) still run without it. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF downloader | Netscape `cookies.txt`. Off by default. Use only with publishers you have institutional rights to. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | `INFO` default; `DEBUG` for verbose tracing. |
 
 Defaults: `--query` → `pptx,xlsx,bib`. `--paper` → `pptx,bib`. Always
 overridable with explicit `--export`.
+
+## LLM-as-agent flow
+
+When an LLM in your editor (Claude Code, Cursor, Aider, Codex CLI, …)
+wants to drive the publisher browser itself — pick URLs, inspect the
+returned DOM, decide which papers to dig into — five scripts under
+`scripts/` cover the canonical path:
+
+| Script | What it does |
+|---|---|
+| `scripts/llm_driven_search.py "<query>"` | Boots visible Chrome, navigates Scholar SERP for the query, JS-fetches IEEE `/rest/search` from inside the IEEE origin, dumps SERP HTML + IEEE JSON to `exports/_llm_scratch/`. |
+| `scripts/llm_parse_results.py` | Reads the dumped artefacts, runs the project's parsers, dedups + ranks + exports `.xlsx` + `.md` for the LLM to inspect. |
+| `scripts/llm_download_pdfs.py <xlsx>` | Walks the xlsx, dispatches each row to the right per-publisher downloader (IEEE / ACM / Springer / arXiv / ACL Anthology / NeurIPS / OpenReview) in ONE Chrome session. Idempotent: papers with a valid `<id>.pdf` already on disk skip immediately. |
+| `scripts/llm_download_{ieee,acm,springer}_pdf.py <id>` | Single-paper variants for iterating on selectors / debugging one entry. |
+| `scripts/regen_*.py` | Worked example of hand-authored rich `PaperSummary` per paper → rich-tier `.pptx`. Look at `scripts/regen_speculative_decoding_zh_tw.py` for the canonical shape. |
+
+Full end-to-end runbook (search → rich deck) lives in
+`.claude/agents/paper-summary-author.md` — open it before starting a
+new query so the LLM can run the flow without pausing for user input.
 
 ## MCP server
 

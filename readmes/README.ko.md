@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | NCBI 익명 한도 (3/s) 를 10/s 로 상향. 선택. |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | 요청을 Crossref polite pool 에 넣음. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (API 경로) | 공식 IEEE Xplore API; 구독 범위 논문에 `pdf_url` 노출. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (스크래핑 경로) | `=1` 로 스크래핑 활성. API 키가 설정된 경우 불필요. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (스크래핑 경로) | `=1` 로 스크래핑 활성. API 키가 설정된 경우 불필요. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref Plus 구독자 토큰 (Bearer 헤더). 선택. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | 필수; <https://dev.springernature.com/> 에서 무료 키. 없으면 플러그인이 조용히 건너뜀. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` 로 스크래핑 활성. 기본 비활성 — Scholar ToS 가 스크래핑 금지. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` 로 스크래핑 활성. 기본 비활성 — Scholar ToS 가 스크래핑 금지. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF 다운로더 | Netscape 형식 `cookies.txt`. 기본 비활성. 기관 접근 권한이 있는 출판사에만 사용하세요. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | 기본 `INFO`; verbose 추적은 `DEBUG`. |
 

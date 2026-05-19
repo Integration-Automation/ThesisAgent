@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Alza il limite anonimo NCBI (3/s) a 10/s. Opzionale. |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Mette le richieste nel polite pool di Crossref. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (via API) | API ufficiale IEEE Xplore; espone `pdf_url` per articoli coperti. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (via scraping) | `=1` abilita scraping. Non serve se la API key è impostata. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (via scraping) | `=1` abilita scraping. Non serve se la API key è impostata. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Token abbonato Crossref Plus (header Bearer). Opzionale. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Obbligatoria; chiave gratuita su <https://dev.springernature.com/>. Senza chiave il plugin viene saltato silenziosamente. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` abilita scraping. Default disabilitato — i ToS di Scholar lo vietano. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` abilita scraping. Default disabilitato — i ToS di Scholar lo vietano. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | Downloader PDF | `cookies.txt` formato Netscape. Default disabilitato. Usa solo con editori per cui hai diritti istituzionali. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | `INFO` di default; `DEBUG` per trace verbose. |
 

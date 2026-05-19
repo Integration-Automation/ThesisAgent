@@ -112,11 +112,11 @@ Returns:
      "enabled": true},
     {"name": "springer",         "in_default_mix": true,  "enabled": false,
      "needs_env_var": ["AUTOPAPERTOPPT_SPRINGER_API_KEY"]},
-    {"name": "ieee",             "in_default_mix": true,  "enabled": false,
-     "needs_env_var": ["AUTOPAPERTOPPT_IEEE_API_KEY",
-                       "AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING"]},
-    {"name": "scholar",          "in_default_mix": false, "enabled": false,
-     "needs_env_var": ["AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING"]}
+    {"name": "ieee",             "in_default_mix": true,  "enabled": true,
+     "opt_out_env_var": "AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING",
+     "needs_env_var":   ["AUTOPAPERTOPPT_IEEE_API_KEY"]},
+    {"name": "scholar",          "in_default_mix": true,  "enabled": true,
+     "opt_out_env_var": "AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING"}
   ]
 }
 ```

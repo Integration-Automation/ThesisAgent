@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Поднимает анонимный лимит NCBI (3/с) до 10/с. Опционально. |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Помещает запросы в polite pool Crossref. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (API-путь) | Официальное API IEEE Xplore; выдаёт `pdf_url` для статей в области подписки. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (scraping-путь) | `=1` включает scraping. Не нужна, когда задан API-ключ. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (scraping-путь) | `=1` включает scraping. Не нужна, когда задан API-ключ. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Токен подписчика Crossref Plus (Bearer-заголовок). Опционально. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Обязательна; бесплатный ключ на <https://dev.springernature.com/>. Без неё плагин тихо пропускается. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` включает scraping. По умолчанию выключен — ToS Scholar запрещают scraping. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` включает scraping. По умолчанию выключен — ToS Scholar запрещают scraping. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF-загрузчик | `cookies.txt` в формате Netscape. По умолчанию выключен. Используйте только с теми издателями, к которым имеете институциональные права. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | `INFO` по умолчанию; `DEBUG` для подробных трасс. |
 

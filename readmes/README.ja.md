@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | NCBI の匿名上限(3/s)を 10/s に引き上げ。任意。 |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed、ACM、Crossref、OpenAlex | リクエストを Crossref の polite プールに入れる。 |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE(API パス) | 公式 IEEE Xplore API、対象論文の `pdf_url` を公開。 |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE(スクレイピングパス) | `=1` でスクレイピング有効。API キー設定時は不要。 |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE(スクレイピングパス) | `=1` でスクレイピング有効。API キー設定時は不要。 |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM、Crossref | Crossref Plus 加入者トークン(Bearer ヘッダ)。任意。 |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | 必須。<https://dev.springernature.com/> から無料キー。未設定だとプラグインは沈黙してスキップされる。 |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` でスクレイピング有効。デフォルト無効 — Scholar ToS がスクレイピングを禁止。 |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` でスクレイピング有効。デフォルト無効 — Scholar ToS がスクレイピングを禁止。 |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF ダウンローダ | Netscape 形式 `cookies.txt`。デフォルト無効。所属機関アクセス権を持つ出版社にのみ使用してください。 |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | デフォルト `INFO`、詳細ログは `DEBUG`。 |
 
