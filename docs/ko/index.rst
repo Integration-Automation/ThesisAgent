@@ -146,7 +146,7 @@ CLI 플래그 전체 표: :doc:`/cli`.
 * CLI 플래그 + 환경 변수: :doc:`/cli`
 * 11 개 MCP 서버 도구: :doc:`/mcp`
 * PPTX 편집 툴킷: :doc:`/pptx_editing`
-* repo 루트의 ``README.ko.md`` 에 기능 전체 목록이 있습니다.
+* repo 루트의 ``readmes/README.ko.md`` 에 기능 전체 목록이 있습니다.
 * 깊이 있는 기술 참조 (플러그인 아키텍처, 보안 정책, Definition of
   Done, SonarQube 규칙 등) 는 영어 가이드에 집중되어 있습니다:
   :doc:`/en/index`.

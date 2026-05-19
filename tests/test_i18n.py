@@ -88,21 +88,21 @@ def test_every_supported_language_has_readme_and_sphinx_tree():
     from drifting apart — if a new language is added to one, the test
     fails loudly until the other is filled in too.
 
-    File-name convention: English is the canonical README.md; every other
-    language uses README.<lang>.md and docs/<lang>/index.rst. The zh-TW
-    README file uses the historical mixed-case ``zh-TW`` to match the
-    Languages: navigation links across the repo; everywhere else the
-    folder/code is lowercase.
+    File-name convention: English is the canonical ``README.md`` at the
+    repo root; every other language lives under ``readmes/README.<lang>.md``
+    plus its own ``docs/<lang>/index.rst``. The zh-TW README file uses the
+    historical mixed-case ``zh-TW`` to match the Languages: navigation
+    links across the repo; everywhere else the folder/code is lowercase.
     """
     readme_overrides = {
         "en": "README.md",
-        "zh-tw": "README.zh-TW.md",
-        "zh-cn": "README.zh-CN.md",
+        "zh-tw": "readmes/README.zh-TW.md",
+        "zh-cn": "readmes/README.zh-CN.md",
     }
     missing_readme: list[str] = []
     missing_sphinx: list[str] = []
     for lang in SUPPORTED_LANGUAGES:
-        readme_name = readme_overrides.get(lang, f"README.{lang}.md")
+        readme_name = readme_overrides.get(lang, f"readmes/README.{lang}.md")
         if not (_REPO_ROOT / readme_name).is_file():
             missing_readme.append(f"{lang} (expected {readme_name})")
         sphinx_index = _REPO_ROOT / "docs" / lang / "index.rst"
@@ -157,12 +157,12 @@ def test_prune_irrelevant_downloads_rule_in_all_14_languages():
     }
     readme_overrides = {
         "en": "README.md",
-        "zh-tw": "README.zh-TW.md",
-        "zh-cn": "README.zh-CN.md",
+        "zh-tw": "readmes/README.zh-TW.md",
+        "zh-cn": "readmes/README.zh-CN.md",
     }
     missing: list[str] = []
     for lang, marker in markers.items():
-        readme_path = _REPO_ROOT / readme_overrides.get(lang, f"README.{lang}.md")
+        readme_path = _REPO_ROOT / readme_overrides.get(lang, f"readmes/README.{lang}.md")
         sphinx_path = _REPO_ROOT / "docs" / lang / "index.rst"
         if not re.search(marker, readme_path.read_text(encoding="utf-8")):
             missing.append(f"README {lang}: missing prune-irrelevant marker")
@@ -210,7 +210,7 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
     ]
     zh_tw_paths = [
         _REPO_ROOT / "scripts" / "regen_llm_security_batch_zh_tw.py",
-        _REPO_ROOT / "README.zh-TW.md",
+        _REPO_ROOT / "readmes" / "README.zh-TW.md",
         _REPO_ROOT / "docs" / "zh-tw" / "index.rst",
     ]
     offenders: list[str] = []

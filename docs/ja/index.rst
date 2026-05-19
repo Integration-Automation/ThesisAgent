@@ -148,7 +148,7 @@ CLI フラグの完全な表は :doc:`/cli` を参照してください。
 * CLI フラグの完全な一覧と環境変数: :doc:`/cli`
 * MCP サーバーの 11 ツール: :doc:`/mcp`
 * PPTX 編集ツールキット: :doc:`/pptx_editing`
-* このリポジトリ言語別の README ファイル(``README.ja.md``\ など)に
+* このリポジトリ言語別の README ファイル(``readmes/README.ja.md``\ など)に
   プロジェクトの全機能リストがあります
 * より詳しい技術リファレンス(プラグインアーキテクチャ、安全性ポリシー、
   Definition of Done、SonarQube ルールなど)は英語版ガイド

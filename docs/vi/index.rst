@@ -147,7 +147,7 @@ Tìm hiểu thêm
 * Cờ CLI và biến môi trường: :doc:`/cli`
 * 11 công cụ máy chủ MCP: :doc:`/mcp`
 * Toolkit chỉnh sửa PPTX: :doc:`/pptx_editing`
-* Tệp ``README.vi.md`` ở gốc repo có danh sách đầy đủ tính năng.
+* Tệp ``readmes/README.vi.md`` ở gốc repo có danh sách đầy đủ tính năng.
 * Tham chiếu kỹ thuật sâu (kiến trúc plugin, chính sách bảo mật,
   Definition of Done, luật SonarQube, …) được tập trung trong hướng
   dẫn tiếng Anh: :doc:`/en/index`.
