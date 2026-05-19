@@ -276,6 +276,176 @@ def download_springer(driver: Any, doi: str, out_dir: Path) -> Path | None:
 
 
 # ---------------------------------------------------------------------------
+# arXiv (open access, no VPN required)
+# ---------------------------------------------------------------------------
+
+_ARXIV_ID_RE = re.compile(r"arxiv\.org/(?:abs|pdf)/(\d{4}\.\d{4,6}(?:v\d+)?)")
+_ARXIV_PDF_URL = "https://arxiv.org/pdf/{arxiv_id}.pdf"
+
+
+def arxiv_id_from_url(url: str) -> str | None:
+    """Pull the arXiv ID out of `arxiv.org/abs/<id>` or `arxiv.org/pdf/<id>`."""
+    if not url:
+        return None
+    m = _ARXIV_ID_RE.search(url)
+    return m.group(1) if m else None
+
+
+def download_arxiv(driver: Any, arxiv_id: str, out_dir: Path) -> Path | None:
+    """Drive Chrome to download an arXiv PDF. arXiv is open-access — no VPN.
+
+    arXiv allows anonymous direct downloads of `/pdf/<id>.pdf`. We use the
+    same visible-Chrome path as the paywalled publishers (rather than httpx)
+    so the rest of the batch flow stays consistent — one driver, one log,
+    same `*.crdownload` polling.
+    """
+    canonical = f"arxiv-{arxiv_id.replace('.', '_').replace('/', '_')}.pdf"
+    target = out_dir / canonical
+    if target.exists() and _is_valid_pdf(target):
+        print(f"[arx]  cached {target.name}", flush=True)
+        return target
+    _clear_pending(out_dir)
+    baseline = _snapshot_pdfs(out_dir)
+
+    pdf_url = _ARXIV_PDF_URL.format(arxiv_id=arxiv_id)
+    print(f"[arx]  pdf {pdf_url}", flush=True)
+    driver.get(pdf_url)
+    time.sleep(_STAMP_RENDER_WAIT)
+
+    deadline = time.monotonic() + _DOWNLOAD_MAX_WAIT
+    pdf = _wait_for_new_pdf(out_dir, baseline, deadline)
+    if pdf is None:
+        print(f"[arx]  no PDF appeared for {arxiv_id}", flush=True)
+        return None
+    return _finalise(pdf, canonical)
+
+
+# ---------------------------------------------------------------------------
+# ACL Anthology (open access, no VPN required)
+# ---------------------------------------------------------------------------
+
+_ACL_ID_RE = re.compile(r"aclanthology\.org/([^/?#]+?)(?:/|\.pdf)?$")
+_ACL_PDF_URL = "https://aclanthology.org/{anthology_id}.pdf"
+
+
+def acl_id_from_url(url: str) -> str | None:
+    """Pull the ACL Anthology ID out of `aclanthology.org/<id>/`."""
+    if not url:
+        return None
+    m = _ACL_ID_RE.search(url.rstrip("/") + "/")
+    if m:
+        ident = m.group(1)
+        # Drop trailing `.pdf` / index suffix if matched.
+        if ident.endswith(".pdf"):
+            ident = ident[:-4]
+        return ident
+    return None
+
+
+def download_aclanthology(driver: Any, anthology_id: str, out_dir: Path) -> Path | None:
+    """Drive Chrome to download an ACL Anthology PDF. Open access, no VPN."""
+    canonical = f"acl-{anthology_id.replace('.', '_').replace('/', '_')}.pdf"
+    target = out_dir / canonical
+    if target.exists() and _is_valid_pdf(target):
+        print(f"[acl]  cached {target.name}", flush=True)
+        return target
+    _clear_pending(out_dir)
+    baseline = _snapshot_pdfs(out_dir)
+
+    pdf_url = _ACL_PDF_URL.format(anthology_id=anthology_id)
+    print(f"[acl]  pdf {pdf_url}", flush=True)
+    driver.get(pdf_url)
+    time.sleep(_STAMP_RENDER_WAIT)
+
+    deadline = time.monotonic() + _DOWNLOAD_MAX_WAIT
+    pdf = _wait_for_new_pdf(out_dir, baseline, deadline)
+    if pdf is None:
+        print(f"[acl]  no PDF appeared for {anthology_id}", flush=True)
+        return None
+    return _finalise(pdf, canonical)
+
+
+# ---------------------------------------------------------------------------
+# NeurIPS / OpenReview proceedings (open access, no VPN required)
+# ---------------------------------------------------------------------------
+
+_NEURIPS_HASH_RE = re.compile(
+    r"proceedings\.neurips\.cc/paper(?:_files)?/paper/(\d{4})/hash/([0-9a-f]+)-Abstract"
+)
+
+
+def neurips_paper_from_url(url: str) -> tuple[str, str] | None:
+    """Return ``(year, hash)`` for a NeurIPS proceedings landing URL."""
+    if not url:
+        return None
+    m = _NEURIPS_HASH_RE.search(url)
+    return (m.group(1), m.group(2)) if m else None
+
+
+def download_neurips(
+    driver: Any, year: str, paper_hash: str, out_dir: Path,
+) -> Path | None:
+    """NeurIPS swaps ``hash/<id>-Abstract-Conference.html`` for
+    ``file/<id>-Paper-Conference.pdf`` to expose the PDF directly."""
+    canonical = f"neurips-{year}-{paper_hash[:12]}.pdf"
+    target = out_dir / canonical
+    if target.exists() and _is_valid_pdf(target):
+        print(f"[nips] cached {target.name}", flush=True)
+        return target
+    _clear_pending(out_dir)
+    baseline = _snapshot_pdfs(out_dir)
+
+    pdf_url = (
+        f"https://proceedings.neurips.cc/paper_files/paper/{year}/file/"
+        f"{paper_hash}-Paper-Conference.pdf"
+    )
+    print(f"[nips] pdf {pdf_url}", flush=True)
+    driver.get(pdf_url)
+    time.sleep(_STAMP_RENDER_WAIT)
+
+    deadline = time.monotonic() + _DOWNLOAD_MAX_WAIT
+    pdf = _wait_for_new_pdf(out_dir, baseline, deadline)
+    if pdf is None:
+        print(f"[nips] no PDF appeared for {year}/{paper_hash[:12]}", flush=True)
+        return None
+    return _finalise(pdf, canonical)
+
+
+_OPENREVIEW_ID_RE = re.compile(r"openreview\.net/(?:forum|pdf)\?id=([A-Za-z0-9]+)")
+
+
+def openreview_id_from_url(url: str) -> str | None:
+    """Pull the OpenReview paper ID out of `forum?id=…` or `pdf?id=…`."""
+    if not url:
+        return None
+    m = _OPENREVIEW_ID_RE.search(url)
+    return m.group(1) if m else None
+
+
+def download_openreview(driver: Any, openreview_id: str, out_dir: Path) -> Path | None:
+    """OpenReview exposes the PDF at `/pdf?id=<id>` directly. Open access."""
+    canonical = f"openreview-{openreview_id}.pdf"
+    target = out_dir / canonical
+    if target.exists() and _is_valid_pdf(target):
+        print(f"[orev] cached {target.name}", flush=True)
+        return target
+    _clear_pending(out_dir)
+    baseline = _snapshot_pdfs(out_dir)
+
+    pdf_url = f"https://openreview.net/pdf?id={openreview_id}"
+    print(f"[orev] pdf {pdf_url}", flush=True)
+    driver.get(pdf_url)
+    time.sleep(_STAMP_RENDER_WAIT)
+
+    deadline = time.monotonic() + _DOWNLOAD_MAX_WAIT
+    pdf = _wait_for_new_pdf(out_dir, baseline, deadline)
+    if pdf is None:
+        print(f"[orev] no PDF appeared for {openreview_id}", flush=True)
+        return None
+    return _finalise(pdf, canonical)
+
+
+# ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
 
@@ -297,30 +467,89 @@ def _springer_doi_from_url(url: str) -> str | None:
     return m.group(1) if m else None
 
 
-def dispatch_for_url(url: str, doi: str | None) -> tuple[str, str] | None:
-    """Pick the right downloader for a paper's landing URL.
+def _doi_prefix_to_publisher(doi: str) -> str | None:
+    """Map a DOI prefix to a publisher when the URL host is opaque.
 
-    Returns ``(publisher, identifier)`` where publisher is one of
-    ``"ieee" / "acm" / "springer"`` and identifier is whatever the
-    matching ``download_<publisher>`` function expects (arnumber for
-    IEEE, DOI for ACM / Springer). Falls back to extracting the DOI
-    from the URL when the caller-supplied ``doi`` is empty (Scholar's
-    parser frequently leaves it blank even when the URL contains it).
-    Returns ``None`` when the URL is not one we know how to download.
+    Useful for openalex.org / semanticscholar.org / api.crossref.org URLs
+    where the host doesn't tell us anything but the DOI does. Covers the
+    high-volume prefixes — anything else returns None so we don't fake
+    confidence in publishers we haven't written a downloader for.
     """
-    if not url:
-        return None
-    host = url.split("/", 3)[2].lower() if "://" in url else ""
-    clean_doi = (doi or "").strip() or None
+    prefix = doi.split("/", 1)[0]
+    return {
+        "10.1109": "ieee",        # IEEE journals + conferences (DOI -> arnumber not directly resolvable; needs search)
+        "10.1145": "acm",
+        "10.1007": "springer",    # bulk of Springer journals + LNCS
+        "10.1038": "springer",    # Nature family (Springer-published)
+    }.get(prefix)
+
+
+def _dispatch_paywalled(host: str, url: str, clean_doi: str | None) -> tuple[str, ...] | None:
+    """VPN-gated publishers — IEEE / ACM / Springer."""
     if "ieeexplore.ieee.org" in host:
         arn = arnumber_from_url(url)
-        if arn:
-            return ("ieee", arn)
-        return None
+        return ("ieee", arn) if arn else None
     if "dl.acm.org" in host:
         resolved = clean_doi or _acm_doi_from_url(url)
         return ("acm", resolved) if resolved else None
     if "link.springer.com" in host:
         resolved = clean_doi or _springer_doi_from_url(url)
         return ("springer", resolved) if resolved else None
+    return None
+
+
+def _dispatch_open_access(host: str, url: str) -> tuple[str, ...] | None:
+    """Open-access hosts — arXiv, ACL Anthology, NeurIPS, OpenReview."""
+    if "arxiv.org" in host:
+        aid = arxiv_id_from_url(url)
+        return ("arxiv", aid) if aid else None
+    if "aclanthology.org" in host:
+        aid = acl_id_from_url(url)
+        return ("acl", aid) if aid else None
+    if "proceedings.neurips.cc" in host:
+        pair = neurips_paper_from_url(url)
+        return ("neurips", pair[0], pair[1]) if pair else None
+    if "openreview.net" in host:
+        oid = openreview_id_from_url(url)
+        return ("openreview", oid) if oid else None
+    return None
+
+
+def _dispatch_by_doi_prefix(clean_doi: str) -> tuple[str, ...] | None:
+    """Opaque host (openalex / semanticscholar) — pivot to DOI prefix.
+
+    IEEE DOIs (10.1109/...) don't yield an arnumber directly so we return
+    None — the caller has to resolve via Crossref + IEEE search first.
+    """
+    publisher = _doi_prefix_to_publisher(clean_doi)
+    if publisher in {"acm", "springer"}:
+        return (publisher, clean_doi)
+    return None
+
+
+def dispatch_for_url(url: str, doi: str | None) -> tuple[str, ...] | None:
+    """Pick the right downloader for a paper's landing URL.
+
+    Returns ``(publisher, *identifier_parts)`` where publisher is one of
+    ``"ieee" / "acm" / "springer" / "arxiv" / "acl" / "neurips" /
+    "openreview"`` and the trailing tuple is whatever the matching
+    ``download_<publisher>`` function expects (arnumber for IEEE, DOI
+    for ACM / Springer, arXiv ID for arXiv, anthology ID for ACL,
+    ``(year, hash)`` for NeurIPS, forum ID for OpenReview). Falls back
+    to extracting the DOI from the URL when the caller-supplied ``doi``
+    is empty. Returns ``None`` when the URL is not routable.
+    """
+    if not url:
+        return None
+    host = url.split("/", 3)[2].lower() if "://" in url else ""
+    clean_doi = (doi or "").strip() or None
+
+    paywalled = _dispatch_paywalled(host, url, clean_doi)
+    if paywalled is not None:
+        return paywalled
+    open_access = _dispatch_open_access(host, url)
+    if open_access is not None:
+        return open_access
+    if clean_doi:
+        return _dispatch_by_doi_prefix(clean_doi)
     return None

@@ -31,25 +31,43 @@ import argparse
 import contextlib
 import sys
 from pathlib import Path
+from typing import Any
 
 from openpyxl import load_workbook
 
 from autopapertoppt.fetchers import webrunner_browser
 from scripts._pdf_downloaders import (
     dispatch_for_url,
+    download_aclanthology,
     download_acm,
+    download_arxiv,
     download_ieee,
+    download_neurips,
+    download_openreview,
     download_springer,
 )
 
 OUT_DIR = Path(r"D:\Codes\AutoPaperToPPT\exports\_llm_scratch\pdfs")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-_HANDLERS = {
-    "ieee": download_ieee,
-    "acm": download_acm,
-    "springer": download_springer,
-}
+
+def _invoke(publisher: str, args: tuple, driver: Any, out_dir: Path) -> Path | None:
+    """Route ``(publisher, *args)`` to its downloader."""
+    if publisher == "ieee":
+        return download_ieee(driver, args[0], out_dir)
+    if publisher == "acm":
+        return download_acm(driver, args[0], out_dir)
+    if publisher == "springer":
+        return download_springer(driver, args[0], out_dir)
+    if publisher == "arxiv":
+        return download_arxiv(driver, args[0], out_dir)
+    if publisher == "acl":
+        return download_aclanthology(driver, args[0], out_dir)
+    if publisher == "neurips":
+        return download_neurips(driver, args[0], args[1], out_dir)
+    if publisher == "openreview":
+        return download_openreview(driver, args[0], out_dir)
+    raise ValueError(f"unknown publisher: {publisher!r}")
 
 
 def _load_papers(xlsx_path: Path) -> list[dict[str, str]]:
@@ -69,25 +87,32 @@ def _load_papers(xlsx_path: Path) -> list[dict[str, str]]:
     return out
 
 
-def _plan(papers: list[dict[str, str]], publisher_filter: set[str]) -> list[tuple[str, str, str]]:
-    """Pick rows we can download. Returns (publisher, identifier, title_preview)."""
-    plan: list[tuple[str, str, str]] = []
-    seen: set[tuple[str, str]] = set()
+def _plan(
+    papers: list[dict[str, str]], publisher_filter: set[str],
+) -> list[tuple[str, tuple[str, ...], str]]:
+    """Pick rows we can download. Returns ``(publisher, identifier_parts, title_preview)``.
+
+    ``identifier_parts`` is a tuple so multi-part identifiers (NeurIPS uses
+    ``(year, hash)``) ride through the planner without special casing.
+    """
+    plan: list[tuple[str, tuple[str, ...], str]] = []
+    seen: set[tuple] = set()
     for row in papers:
         url = row.get("URL", "") or row.get("Url", "")
         doi = row.get("DOI", "") or row.get("Doi", "")
         dispatch = dispatch_for_url(url, doi or None)
         if dispatch is None:
             continue
-        publisher, ident = dispatch
+        publisher, *identifier_parts = dispatch
+        ident_tuple = tuple(identifier_parts)
         if publisher_filter and publisher not in publisher_filter:
             continue
-        key = (publisher, ident)
+        key = (publisher, *ident_tuple)
         if key in seen:
             continue
         seen.add(key)
         title = (row.get("Title") or "")[:60]
-        plan.append((publisher, ident, title))
+        plan.append((publisher, ident_tuple, title))
     return plan
 
 
@@ -99,8 +124,8 @@ def _run(xlsx_path: Path, publisher_filter: set[str]) -> int:
         return 0
 
     by_pub: dict[str, list[tuple[str, str]]] = {}
-    for publisher, ident, title in plan:
-        by_pub.setdefault(publisher, []).append((ident, title))
+    for publisher, ident_tuple, title in plan:
+        by_pub.setdefault(publisher, []).append(("/".join(ident_tuple), title))
     print(
         "[plan] " + ", ".join(
             f"{p}={len(rows)}" for p, rows in sorted(by_pub.items())
@@ -113,22 +138,22 @@ def _run(xlsx_path: Path, publisher_filter: set[str]) -> int:
     failures: list[tuple[str, str, str]] = []
     successes: list[tuple[str, str, Path]] = []
     try:
-        for publisher, ident, title in plan:
-            handler = _HANDLERS[publisher]
+        for publisher, ident_tuple, title in plan:
+            ident_str = "/".join(ident_tuple)
             print(
-                f"\n=== {publisher} :: {ident} :: {title!r} ===",
+                f"\n=== {publisher} :: {ident_str} :: {title!r} ===",
                 flush=True,
             )
             try:
-                saved = handler(driver, ident, OUT_DIR)
+                saved = _invoke(publisher, ident_tuple, driver, OUT_DIR)
             except Exception as err:  # noqa: BLE001 — selenium raises many types
-                print(f"[err]  {publisher} {ident} raised: {err}", flush=True)
-                failures.append((publisher, ident, f"exception: {err}"))
+                print(f"[err]  {publisher} {ident_str} raised: {err}", flush=True)
+                failures.append((publisher, ident_str, f"exception: {err}"))
                 continue
             if saved is None:
-                failures.append((publisher, ident, "no PDF produced"))
+                failures.append((publisher, ident_str, "no PDF produced"))
             else:
-                successes.append((publisher, ident, saved))
+                successes.append((publisher, ident_str, saved))
     finally:
         with contextlib.suppress(Exception):
             driver.quit()

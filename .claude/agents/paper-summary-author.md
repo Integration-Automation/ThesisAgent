@@ -196,6 +196,52 @@ python -m autopapertoppt -q "<query>" --max <N> --lang <lang> --export pptx,xlsx
 
 When PDF download would be obviously wasteful (e.g. the user already said no VPN and the entire result set is IEEE), say so and offer the user a choice; don't unilaterally degrade to lightweight.
 
+### End-to-end runbook (search → rich deck) — DO NOT ASK MID-FLIGHT
+
+When the user says "search X and make a [lang] PPT", run the runbook below straight through. Stop only on a step that genuinely needs the user (VPN unknown, missing API key, ambiguous query). Do not pause to ask "should I keep going?" — keep going.
+
+**Phase 1 — Discovery + CLI primary attempt**
+1. Confirm VPN status per [[feedback-vpn-check-before-search]]. If unknown → AskUserQuestion once; if known → skip.
+2. Run the canonical CLI command (above). `--export pptx,xlsx,bib --yes`. Wait for it to finish (5–15 min depending on size).
+3. **Three CLI outcomes:**
+   - **(a) Wrote: pptx/xlsx/bib lines printed.** Great — PDFs are in `exports/<run>/pdfs/`, the lightweight `.pptx` exists at `exports/<run>/<key>.pptx`. Jump to Phase 3 (rich authoring).
+   - **(b) Hard error: `no paper in the result set exposes a PDF URL; nothing to generate`.** Means the result set was entirely Scholar / OpenAlex-without-DOI / similar. **Do not abandon.** Go to Phase 2.
+   - **(c) Other CLI error.** Diagnose. If it's a transient source rate limit, re-run once. If it's a config error (missing API key for Springer, etc.), surface that specific blocker.
+
+**Phase 2 — Fallback when CLI refused (no pdf_url path)**
+1. Re-run the CLI with `--no-pdf --no-oa-resolve` added so it skips the PDF gate and writes just the xlsx + bib + lightweight pptx. Yes, `--no-pdf` is normally an anti-pattern, but in this fallback context it is the recovery step. Document why in the run report.
+2. The xlsx is now on disk at `exports/<slug>-<timestamp>.xlsx`. Run `python -m scripts.llm_download_pdfs <xlsx_path>` to drive a single visible Chrome over every row.
+3. The batch dispatcher routes by URL host: `ieeexplore.ieee.org` → IEEE (VPN-gated), `dl.acm.org` → ACM, `link.springer.com` → Springer, `arxiv.org` → arXiv (open), `aclanthology.org` → ACL (open), `proceedings.neurips.cc` → NeurIPS (open), `openreview.net` → OpenReview (open). Opaque hosts (`openalex.org`, `semanticscholar.org`) pivot to DOI prefix (10.1145 → ACM, 10.1007/10.1038 → Springer). IEEE DOIs (10.1109/...) cannot recover an arnumber from the DOI alone — those rows are flagged.
+4. The PDFs land at `exports/_llm_scratch/pdfs/<canonical-name>.pdf`. Move them into the canonical run dir: `cp exports/_llm_scratch/pdfs/*.pdf exports/<run>/pdfs/` (rename to `<bibtex_key>.pdf` where you can).
+
+**Phase 3 — Rich authoring**
+1. For each downloaded PDF in `exports/<run>/pdfs/`, read it (use the Read tool; large PDFs go through `autopapertoppt.intelligence.pdf._extract_text`).
+2. Classify off-topic — see "Off-topic papers" below. Off-topic PDFs get deleted along with their lightweight `.pptx`, BUT stay in the xlsx + bib (honest record).
+3. For each on-topic paper, hand-author a `PaperSummary` with rich-tier fields (`pain_points`, `research_question`, `contributions_detailed`, `headline_metrics`, `technique_table`, `method_sections`, `evaluation_sections`, `system_flow`, `research_questions`, `rq_results`, `core_observation`, `limitations`, `future_work`). All in the user's requested language.
+4. Drop `scripts/regen_<slug>.py` modelled on `scripts/regen_llm_security_batch.py`. Each entry: `Paper(...summary=PaperSummary(...))`. Export with `filename_stem=paper.bibtex_key()` (NO `-rich` suffix) and `language=<lang>`.
+5. Run the regen. It overwrites the lightweight `<key>.pptx` at the canonical path with the rich-tier deck.
+
+**Phase 4 — Audits**
+1. Delegate to `post-author-audit` (URL/DOI verification against the xlsx + off-topic prune classification).
+2. Delegate to `slide-overflow-check` against each rich `.pptx`.
+3. Report final status: `N papers authored / M rich decks / off-topic pruned: K / overflow: PASS`.
+
+**Phase 5 — Commit (optional, only when user asks)**
+- Two-commit split is typical: (i) per-publisher downloader / runbook / agent doc changes; (ii) the per-query regen script. Per CLAUDE.md: no Co-Authored-By, no AI-tool mentions.
+
+### Decision rules (no-ask defaults)
+
+| Situation | Default action |
+|---|---|
+| VPN status unknown | AskUserQuestion ONCE, then proceed |
+| VPN confirmed, query returns ≥1 paywalled paper | Include `ieee` in source mix; expect Chrome to boot for `/rest/search` |
+| No VPN, query is paywalled-heavy | Restrict to `arxiv,openalex,pubmed,crossref,dblp,openaire,scholar`; proceed |
+| CLI hard-errors "no pdf_url" | Re-run with `--no-pdf --no-oa-resolve` → Phase 2 fallback |
+| arXiv source rate-limited / failed | Retry once. If still failing, drop arXiv from `--source` and use `scripts/llm_download_pdfs.py` for the arXiv rows from the xlsx |
+| Single paper fails PDF download | Continue to other papers; lightweight tier for that one, surface in report |
+| Off-topic match (search false positive) | Delete its `pdfs/<key>.pdf` + `<key>.pptx`, keep in xlsx/bib |
+| Large run, 10+ papers | Use the batch downloader (one Chrome session). Don't loop the single-paper CLIs |
+
 ## Anti-patterns (HARD)
 
 - Do NOT tell the user "set ANTHROPIC_API_KEY for a rich deck." You ARE the LLM that could write the summaries (and from the test's perspective, "you yourself are the LLM that could write the summaries"). Offloading is failing the task.
