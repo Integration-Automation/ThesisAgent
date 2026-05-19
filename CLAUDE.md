@@ -69,6 +69,19 @@ later" is not allowed.
 
 ## IEEE / Publisher CDN: Browser Automation Is Mandatory (HARD RULE)
 
+**Before triggering ANY search that involves IEEE / Scholar / paywalled
+publishers, the LLM in this session MUST confirm the user's VPN /
+institutional access status first** — either by recalling a recent
+statement, or by asking via `AskUserQuestion` ("Do you have VPN for
+IEEE / ACM / Springer for this topic?"). Without VPN, Scholar gets
+captcha'd quickly and IEEE returns abstract-only / 403 PDFs, so the
+run wastes the user's time watching a useless Chrome window. When the
+user says no VPN, restrict the search to open sources
+(`arxiv,openalex,pubmed,crossref,dblp,openaire`) and skip
+`ieee,scholar`. This gate applies BEFORE running `python -m
+autopapertoppt -q …`, before `scripts/llm_driven_search.py`, and
+before any `scripts/llm_download_*pdf*.py` invocation.
+
 IEEE search, IEEE document fetch, Google Scholar search, and any paywalled-PDF
 download from publisher CDNs (ieeexplore.ieee.org, dl.acm.org, link.springer.com,
 sciencedirect.com, wiley/oup/nature/science/…) MUST go through **visible Chrome**.

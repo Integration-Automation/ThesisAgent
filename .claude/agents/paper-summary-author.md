@@ -23,6 +23,18 @@ The xlsx has columns `# | Title | Authors | Year | Source | Indexed via | DOI | 
 
 ## Source-level browser-automation rule (read before anything else)
 
+**VPN gate (applies to SEARCH, not just PDF download).** Before invoking
+any search that includes IEEE / Scholar / paywalled-publisher domains
+— including the parent agent's `python -m autopapertoppt -q ...` or
+`scripts/llm_driven_search.py` — confirm the user's VPN / institutional
+access status. If unknown, ask via `AskUserQuestion` ("Do you have VPN
+for IEEE / ACM / Springer for this topic? Affects whether I include
+them."). Without VPN: Scholar gets captcha'd quickly and IEEE returns
+abstract-only / 403 PDFs, making the run a waste of the user's time
+watching Chrome boot. When the user confirms NO VPN, restrict the
+search to open sources (`arxiv,openalex,pubmed,crossref,dblp,openaire`)
+and skip `ieee,scholar`.
+
 Even before you touch a PDF: if the user's run included IEEE (default on),
 Scholar (opt-in), or any paywalled publisher CDN, the canonical path is
 **visible Chrome via WebRunner**, never direct httpx. The IEEE plugin's
@@ -31,8 +43,8 @@ branch is only a safety net for machines without Chrome. If you reviewed
 a previous run and IEEE returned a result set in under ~5 seconds without
 a Chrome window appearing, WebRunner silently fell through to httpx —
 flag this to the user, do not treat those results as authoritative for
-summary authoring. (Full rule in `CLAUDE.md` "Browser Automation Is
-Mandatory for Publisher Domains".)
+summary authoring. (Full rule in `CLAUDE.md` "IEEE / Publisher CDN:
+Browser Automation Is Mandatory".)
 
 ## When the CLI couldn't download a paywalled PDF (LLM-driven Bash + Selenium)
 
