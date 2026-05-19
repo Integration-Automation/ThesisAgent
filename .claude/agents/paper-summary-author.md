@@ -24,16 +24,19 @@ The xlsx has columns `# | Title | Authors | Year | Source | Indexed via | DOI | 
 ## Source-level browser-automation rule (read before anything else)
 
 **VPN gate (applies to SEARCH, not just PDF download).** Before invoking
-any search that includes IEEE / Scholar / paywalled-publisher domains
-— including the parent agent's `python -m autopapertoppt -q ...` or
-`scripts/llm_driven_search.py` — confirm the user's VPN / institutional
-access status. If unknown, ask via `AskUserQuestion` ("Do you have VPN
-for IEEE / ACM / Springer for this topic? Affects whether I include
-them."). Without VPN: Scholar gets captcha'd quickly and IEEE returns
-abstract-only / 403 PDFs, making the run a waste of the user's time
-watching Chrome boot. When the user confirms NO VPN, restrict the
-search to open sources (`arxiv,openalex,pubmed,crossref,dblp,openaire`)
-and skip `ieee,scholar`.
+any search that includes paywalled-publisher domains (IEEE / ACM /
+Springer / etc.) — including the parent agent's
+`python -m autopapertoppt -q ...` or `scripts/llm_driven_search.py` —
+confirm the user's VPN / institutional access status. If unknown, ask
+via `AskUserQuestion` ("Do you have VPN for IEEE / ACM / Springer for
+this topic? Affects whether I include `ieee` and whether per-paper
+PDF download will work."). Without VPN: IEEE returns abstract-only /
+403 for the PDF stage; the run produces metadata but no readable
+papers. When the user confirms NO VPN, restrict the search to
+`arxiv,openalex,pubmed,crossref,dblp,openaire,scholar` — skip ONLY
+`ieee`. Google Scholar is publicly accessible and stays in the mix
+even without VPN (Chrome still boots for it because of captcha
+resilience, but the SERP itself works).
 
 Even before you touch a PDF: if the user's run included IEEE (default on),
 Scholar (opt-in), or any paywalled publisher CDN, the canonical path is
