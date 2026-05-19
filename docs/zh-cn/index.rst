@@ -183,7 +183,7 @@ CLI
                 --out ./exports/
 
    # IEEE document URL(需 opt-in env var)
-   AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1 \
+   AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1 \
    autopapertoppt --paper "https://ieeexplore.ieee.org/document/10965643" \
                 --out ./exports/
 
@@ -204,7 +204,7 @@ plugin 也会加入:
      - 备注
    * - ``ieee``
      - ``AUTOPAPERTOPPT_IEEE_API_KEY``\ (建议)**或**\
-       ``AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1``
+       ``AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1``
      - 官方 Xplore API 在订阅范围内会带 ``pdf_url``;没 key 时可用
        fallback 爬取路径。
    * - ``springer``
@@ -214,7 +214,7 @@ plugin 也会加入:
        没 key 时 plugin 会在构造时抛 ``ConfigError``,被 pipeline
        静默跳过。
    * - ``scholar``
-     - ``AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING=1``
+     - ``AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1``
      - Google Scholar ToS 禁止爬取,默认关闭。
 
 搜索流水线默认套用「顶级期刊白名单」(旗舰级 CS 会议 + Nature / Science /

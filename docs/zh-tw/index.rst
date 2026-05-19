@@ -183,7 +183,7 @@ CLI
                 --out ./exports/
 
    # IEEE document URL(需 opt-in env var)
-   AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1 \
+   AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1 \
    autopapertoppt --paper "https://ieeexplore.ieee.org/document/10965643" \
                 --out ./exports/
 
@@ -204,7 +204,7 @@ plugin 也會加進來:
      - 備註
    * - ``ieee``
      - ``AUTOPAPERTOPPT_IEEE_API_KEY``\ (建議)**或**\
-       ``AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1``
+       ``AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1``
      - 官方 Xplore API 在訂閱範圍內會帶 ``pdf_url``;沒 key 時可用
        fallback 爬取路徑。
    * - ``springer``
@@ -214,7 +214,7 @@ plugin 也會加進來:
        沒 key 時 plugin 會在建構時拋 ``ConfigError``,被 pipeline
        靜默跳過。
    * - ``scholar``
-     - ``AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING=1``
+     - ``AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1``
      - Google Scholar ToS 禁止爬取,預設關閉。
 
 搜尋管線預設套用「頂級期刊白名單」(旗艦級 CS 會議 + Nature / Science /

@@ -35,7 +35,7 @@ autopapertoppt (--query KEYWORDS | --paper IDENTIFIER)
 |---|---|---|
 | `--query` / `-q` | — | Keywords; mutually exclusive with `--paper`. |
 | `--paper` / `-p` | — | arXiv (`2401.08741` / `https://arxiv.org/abs/...`), DOI (`10.x/y`), PMID (`12345678` or `https://pubmed.ncbi.nlm.nih.gov/...`), or IEEE document URL (`https://ieeexplore.ieee.org/document/...`). |
-| `--source` / `-s` | default mix | Comma-separated. Available: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm`, `dblp`, `crossref`, `openaire`, `ieee`, `springer`, `scholar`. The default mix is every plugin that needs no API key (the first 8); `ieee` joins when `AUTOPAPERTOPPT_IEEE_API_KEY` or `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1` is set, `springer` joins when `AUTOPAPERTOPPT_SPRINGER_API_KEY` is set, `scholar` joins when `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING=1` is set. |
+| `--source` / `-s` | default mix | Comma-separated. Available: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm`, `dblp`, `crossref`, `openaire`, `ieee`, `springer`, `scholar`. **Default-on**: the first 8 + `ieee` + `scholar` (the latter two run visible Chrome via WebRunner; opt out with `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1` / `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1`). `springer` joins only when `AUTOPAPERTOPPT_SPRINGER_API_KEY` is set. `AUTOPAPERTOPPT_IEEE_API_KEY` switches IEEE to the official Xplore API (anonymous-safe, no Chrome needed). |
 | `--max` / `-n` | `25` | Range 1..200. |
 | `--year-from`, `--year-to` | — | Inclusive year filter. |
 | `--export` / `-e` | mode-specific | Any of `pptx`, `xlsx`, `md`, `bib`, `json`. **Default with `--query` is `pptx,xlsx,bib`; default with `--paper` is `pptx,bib`** (one-row Excel is busy work). Explicit `--export` always wins. |
@@ -44,7 +44,7 @@ autopapertoppt (--query KEYWORDS | --paper IDENTIFIER)
 | `--no-abstract` | off | Drops abstracts and any LLM summary content; the deck shows only title / author / link slides. |
 | `--lang` / `-l` | `en` | Slide-deck template language. Supported: `en`, `zh-tw`, `zh-cn`, `ja`, `es`, `fr`, `de`, `ko`, `pt`, `ru`, `it`, `vi`, `hi`, `id` (14 in total). When combined with `--enrich`, also instructs the LLM to write its bullets in this language. |
 | `--enrich` | auto-on when `ANTHROPIC_API_KEY` is set | Fetch each paper's PDF and have the Anthropic API write a structured summary; the deck switches to thesis-style layout. Requires `ANTHROPIC_API_KEY` and the `[intelligence]` extra. **Not needed when running over MCP** — an LLM agent can call `fetch_pdf_text` + `export` directly with a hand-crafted summary. |
-| `--lightweight` | off | Force the abstract-only deck even when `ANTHROPIC_API_KEY` is set. Useful for unattended runs where you do not want to spend tokens. |
+| `--lightweight` | off | Force the abstract-only deck even when `ANTHROPIC_API_KEY` is set. Useful for unattended runs where you do not want to spend tokens. **When an LLM agent is in the editor session**, prefer the LLM-as-agent flow under `scripts/llm_*.py` (the LLM authors a rich `PaperSummary` per paper) over `--lightweight`. |
 | `--llm-model` | `claude-opus-4-7` | Override the default model used when `--enrich` is on. Also reads `AUTOPAPERTOPPT_LLM_MODEL`. |
 | `--top-tier-only` | off | Restrict results to the curated top-tier CS venue whitelist (S&P / CCS / NDSS / USENIX Security / NeurIPS / ICML / ICSE / SIGMOD / SIGCOMM / CHI / etc.) + arXiv pass-through. **Off by default** so IEEE / ACM workshop papers (which dominate "LLM × security" / "LLM × X" topics) survive. |
 | `--no-oa-resolve` | off | Skip the open-access PDF resolver step that runs after dedup. By default the pipeline looks up every paper without `pdf_url` in Unpaywall (needs `AUTOPAPERTOPPT_CONTACT_EMAIL`) and falls back to an arXiv title search — typical lift of 40-70% for IEEE / ACM / Springer / Elsevier paywalled papers. Use this flag if you want raw source output without OA enrichment, or to skip the extra HTTP round-trips on a tight latency budget. |
@@ -157,21 +157,26 @@ automated traffic, or because the upstream service needs an API key
 that we cannot ship in the repo:
 
 ```bash
-# IEEE — official API path (preferred)
+# IEEE — official API path (anonymous-safe, no Chrome needed)
 export AUTOPAPERTOPPT_IEEE_API_KEY=...
 autopapertoppt --paper "https://ieeexplore.ieee.org/document/10965643" --out ./exports/
 
-# IEEE — fallback scrape path
-export AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1
+# IEEE — default visible-Chrome path (no key needed; works if you have VPN/subscription)
+# IEEE is default-ON; opt out only on CI / no-Chrome:
+# export AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1
 autopapertoppt --paper "https://ieeexplore.ieee.org/document/10965643" --out ./exports/
 
 # Springer Nature — free API key from https://dev.springernature.com/
 export AUTOPAPERTOPPT_SPRINGER_API_KEY=...
 autopapertoppt --query "diffusion models" --source springer --out ./exports/
 
-# Google Scholar — ToS forbids scraping; off by default
-export AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING=1
+# Google Scholar — default-ON via visible Chrome
+# Opt out (e.g. on CI) with: export AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1
 autopapertoppt --query "attention mechanism" --source scholar --out ./exports/
+
+# Persistent Chrome profile — set once, VPN/SSO + Google sign-in survive across runs
+export AUTOPAPERTOPPT_CHROME_PROFILE_DIR=~/.cache/autopapertoppt-chrome
+autopapertoppt --query "speculative decoding" --out ./exports/
 ```
 
 Other source-related env vars (all optional):

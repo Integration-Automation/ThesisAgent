@@ -196,8 +196,8 @@ Single-paper mode
    autopapertoppt --paper "https://pubmed.ncbi.nlm.nih.gov/34567890/" \
                 --out ./exports/
 
-   # IEEE document URL (requires opt-in env var)
-   AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1 \
+   # IEEE document URL (default-on via visible Chrome; opt out with
+   # AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1 if you have no Chrome binary)
    autopapertoppt --paper "https://ieeexplore.ieee.org/document/10965643" \
                 --out ./exports/
 
@@ -205,9 +205,10 @@ Available source plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 The default mix used when ``--source`` is omitted is every plugin that
-needs no API key: ``arxiv``, ``semantic_scholar``, ``openalex``,
-``pubmed``, ``acm``, ``dblp``, ``crossref``, ``openaire``. Three more
-plugins join when their env var is set:
+needs no paid API key plus ``ieee`` + ``scholar`` (both default-on via
+visible Chrome): ``arxiv``, ``semantic_scholar``, ``openalex``,
+``pubmed``, ``acm``, ``dblp``, ``crossref``, ``openaire``, ``ieee``,
+``scholar``. One more plugin joins when its env var is set:
 
 .. list-table::
    :header-rows: 1
@@ -217,10 +218,12 @@ plugins join when their env var is set:
      - Env var
      - Notes
    * - ``ieee``
-     - ``AUTOPAPERTOPPT_IEEE_API_KEY`` (preferred) **or**
-       ``AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1``
-     - Official Xplore API surfaces ``pdf_url`` for in-scope papers;
-       the scrape path is a fallback when no key is available.
+     - default-on; ``AUTOPAPERTOPPT_IEEE_API_KEY`` switches to the
+       official Xplore API; ``AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1``
+       opts out entirely
+     - Without the API key, the search + document fetch run through
+       visible Chrome (selenium). The httpx fallback is a CI / no-Chrome
+       safety net.
    * - ``springer``
      - ``AUTOPAPERTOPPT_SPRINGER_API_KEY``
      - Free key from https://dev.springernature.com/. Covers Nature,
@@ -228,12 +231,16 @@ plugins join when their env var is set:
        The plugin raises ``ConfigError`` at construction without a key,
        which the pipeline silently skips.
    * - ``scholar``
-     - ``AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING=1``
-     - Google Scholar ToS forbids scraping — off by default.
+     - default-on; ``AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1`` opts out
+     - SERP fetch runs in visible Chrome. Google ToS forbids automation;
+       opt out to avoid captcha / IP-block risk.
 
-The search pipeline filters results to a curated top-tier venue
-whitelist (flagship CS conferences + Nature / Science / PNAS / CACM /
-LNCS); pass ``--all-venues`` to disable.
+Set ``AUTOPAPERTOPPT_CHROME_PROFILE_DIR`` to a persistent path so
+VPN / institutional SSO / Google sign-in survive across runs.
+
+The search pipeline can optionally restrict results to a curated
+top-tier venue whitelist (flagship CS conferences + arXiv pass-through);
+pass ``--top-tier-only`` to enable it (off by default).
 
 Localised deck + LLM enrichment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
