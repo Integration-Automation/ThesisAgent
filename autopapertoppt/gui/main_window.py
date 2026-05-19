@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (
 )
 
 from autopapertoppt.gui.i18n import t
-from autopapertoppt.gui.pages.placeholder import PlaceholderPage
+from autopapertoppt.gui.pages.deck import DeckPage
+from autopapertoppt.gui.pages.enrich import EnrichPage
 from autopapertoppt.gui.pages.search import SearchPage
 from autopapertoppt.gui.pages.settings import SettingsPage
 
@@ -47,15 +48,24 @@ class MainWindow(QMainWindow):
             t("nav.search", ui_language),
         )
 
-        self._enrich_page = PlaceholderPage(
-            body_key="placeholder.enrich_body", ui_language=ui_language
+        self._enrich_page = EnrichPage(ui_language=ui_language)
+        tabs.addTab(
+            self._wrap_scrollable(self._enrich_page),
+            t("nav.enrich", ui_language),
         )
-        tabs.addTab(self._enrich_page, t("nav.enrich", ui_language))
 
-        self._deck_page = PlaceholderPage(
-            body_key="placeholder.deck_body", ui_language=ui_language
+        self._deck_page = DeckPage(ui_language=ui_language)
+        tabs.addTab(
+            self._wrap_scrollable(self._deck_page),
+            t("nav.deck", ui_language),
         )
-        tabs.addTab(self._deck_page, t("nav.deck", ui_language))
+
+        # Wire the inter-tab data flow: Search → Enrich (raw collection)
+        # and Search → Deck (so the user can skip enrichment), plus
+        # Enrich → Deck (so the enriched collection takes precedence).
+        self._search_page.collection_ready.connect(self._enrich_page.set_collection)
+        self._search_page.collection_ready.connect(self._deck_page.set_collection)
+        self._enrich_page.collection_ready.connect(self._deck_page.set_collection)
 
         self._settings_page = SettingsPage(ui_language=ui_language)
         tabs.addTab(
@@ -86,6 +96,12 @@ class MainWindow(QMainWindow):
 
     def settings_page(self) -> SettingsPage:
         return self._settings_page
+
+    def enrich_page(self) -> EnrichPage:
+        return self._enrich_page
+
+    def deck_page(self) -> DeckPage:
+        return self._deck_page
 
     def tab_count(self) -> int:
         return self._tabs.count()

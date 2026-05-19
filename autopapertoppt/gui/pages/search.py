@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThreadPool
+from PySide6.QtCore import Qt, QThreadPool, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -52,6 +52,12 @@ _MAX_YEAR = 2100
 
 class SearchPage(QWidget):
     """Search + export page."""
+
+    # Emitted whenever a fresh search completes (or the cached collection
+    # is cleared). Receivers should use ``isinstance(obj, PaperCollection)``
+    # because Signal(object) is the only typed-Python way to ship a
+    # frozen dataclass across threads.
+    collection_ready = Signal(object)
 
     def __init__(self, ui_language: str = "en", parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -196,6 +202,9 @@ class SearchPage(QWidget):
         self._papers_model.set_collection(collection)
         self._search_button.setEnabled(True)
         self._export_button.setEnabled(bool(collection.papers))
+        # Tell downstream tabs (Enrich, Deck) about the fresh results
+        # so they enable their own actions without polling.
+        self.collection_ready.emit(collection)
         self._set_status(
             t(
                 "search.status_done",
