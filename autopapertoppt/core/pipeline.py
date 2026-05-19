@@ -23,6 +23,7 @@ from autopapertoppt.core.exceptions import (
 )
 from autopapertoppt.core.identifiers import PaperIdentifier
 from autopapertoppt.core.models import Paper, PaperCollection, Query
+from autopapertoppt.core.oa_resolver import resolve_oa_pdfs
 from autopapertoppt.core.ranking import rank
 from autopapertoppt.core.top_venues import is_top_tier
 from autopapertoppt.fetchers.base import load_fetcher
@@ -31,11 +32,19 @@ from autopapertoppt.utils.logging import get_logger
 _LOG = get_logger(__name__)
 
 
-async def run_search(query: Query) -> PaperCollection:
+async def run_search(
+    query: Query, *, resolve_oa: bool = True
+) -> PaperCollection:
     """Run `query` across its sources concurrently and produce a collection.
 
     Source plugins that fail to load (e.g. an opt-in plugin whose env var
     is unset) are skipped with a warning so the rest of the mix still runs.
+
+    ``resolve_oa`` (default True) runs the OA PDF resolver after dedup +
+    rank + top-tier filter so papers whose source returned no ``pdf_url``
+    (typical for IEEE / ACM / Springer / Elsevier) get a chance to pick
+    up an open-access mirror from Unpaywall or an arXiv preprint.
+    Pass ``False`` from tests or CLI flags that want raw source output.
     """
     fetchers = [
         loaded
@@ -58,7 +67,12 @@ async def run_search(query: Query) -> PaperCollection:
         _LOG.info(
             "top-tier filter kept %d / %d papers", len(ordered), before
         )
-    return PaperCollection(query=query, papers=tuple(ordered[: query.max_results]))
+    collection = PaperCollection(
+        query=query, papers=tuple(ordered[: query.max_results])
+    )
+    if resolve_oa:
+        collection = await resolve_oa_pdfs(collection)
+    return collection
 
 
 def _load_fetcher_safe(name: str):

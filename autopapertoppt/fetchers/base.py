@@ -24,7 +24,13 @@ class FetcherConfig:
     rate_limit: RateLimit
     requires_api_key: bool = False
     enabled_by_default: bool = True
+    # Env var the plugin checks to enable itself (e.g. Springer needs an
+    # API key; without it the plugin raises ConfigError at construction).
     opt_in_env_var: str | None = None
+    # Env var the plugin checks to disable itself when it is otherwise
+    # default-ON. Used by IEEE / Scholar — both scrape paths are
+    # default-on but the user can flip them off via this env var.
+    opt_out_env_var: str | None = None
 
 
 class Fetcher(ABC):

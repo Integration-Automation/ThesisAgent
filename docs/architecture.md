@@ -126,6 +126,14 @@ came back.
             └──────────┘
                   │
                   ▼
+        (optional) top-tier filter
+                  │
+                  ▼
+          ┌────────────────┐
+          │ oa_resolver    │  Unpaywall + arXiv title fallback —
+          └────────────────┘  fills pdf_url for paywalled-source papers
+                  │
+                  ▼
         (optional) enrich      PDF → PaperSummary
                   │
                   ▼
@@ -136,6 +144,37 @@ came back.
           │ Exporter      │  pptx, xlsx, bibtex, md, json
           └───────────────┘
 ```
+
+### OA PDF resolution
+
+`autopapertoppt.core.oa_resolver` runs after dedup + rank + top-tier
+filter. For every paper still missing `pdf_url`, five strategies fire
+in order, returning the first hit:
+
+1. **arXiv-ID direct** — if the paper carries `arxiv_id` (set by the
+   openalex / pubmed / crossref / semantic_scholar parsers when the
+   upstream identified an arXiv preprint), derive
+   `https://arxiv.org/pdf/{arxiv_id}.pdf` directly. Zero network
+   round-trip; highest precision; fastest.
+2. **Unpaywall** (https://api.unpaywall.org/v2/{doi}) — free, no API
+   key; needs `AUTOPAPERTOPPT_CONTACT_EMAIL` for politeness. ~50M
+   papers indexed.
+3. **Semantic Scholar OA index** — S2's `openAccessPdf` field is
+   partially disjoint from Unpaywall; when one misses, the other
+   often hits. Free, no API key required (rate-limited).
+4. **CORE.ac.uk** — aggregator of 200M+ OA repository items
+   (institutional repos, regional preprint servers, OA journals).
+   Needs `AUTOPAPERTOPPT_CORE_API_KEY` (free); skipped silently when
+   unset.
+5. **arXiv title search** — for papers without a DOI / arxiv_id, search
+   arXiv by the paper's title. Exact-match on the normalised title.
+
+Every lookup is best-effort and never raises; a paper that resists
+all five passes through with `pdf_url=None` and the downstream
+paywall gate / per-paper renderer falls back to the lightweight tier.
+
+Disabled per-run via the CLI's `--no-oa-resolve` flag or
+`run_search(query, resolve_oa=False)` from Python.
 
 ### Dedup
 

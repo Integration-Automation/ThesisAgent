@@ -153,7 +153,7 @@ Weiterführende Quellen
 * CLI-Flags und Umgebungsvariablen: :doc:`/cli`
 * 11 MCP-Server-Tools: :doc:`/mcp`
 * PPTX-Edit-Toolkit: :doc:`/pptx_editing`
-* Die Datei ``README.de.md`` im Repo-Root enthält die vollständige
+* Die Datei ``readmes/README.de.md`` im Repo-Root enthält die vollständige
   Feature-Liste.
 * Die tiefe technische Referenz (Plugin-Architektur,
   Sicherheitsrichtlinien, Definition of Done, SonarQube-Regeln, …)

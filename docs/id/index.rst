@@ -149,7 +149,7 @@ Bacaan lebih lanjut
 * Flag CLI dan variabel lingkungan: :doc:`/cli`
 * 11 tool server MCP: :doc:`/mcp`
 * Toolkit edit PPTX: :doc:`/pptx_editing`
-* Berkas ``README.id.md`` di akar repo berisi daftar fitur lengkap.
+* Berkas ``readmes/README.id.md`` di akar repo berisi daftar fitur lengkap.
 * Referensi teknis mendalam (arsitektur plugin, kebijakan keamanan,
   Definition of Done, aturan SonarQube, …) terkonsolidasi di panduan
   Inggris: :doc:`/en/index`.

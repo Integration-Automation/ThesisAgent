@@ -205,13 +205,19 @@ Default mix (no env vars required): `arxiv`, `semantic_scholar`, `openalex`,
 `openaire`. Pulled in automatically when `--source` is not given.
 
 Opt-in plugins (need an env var or explicit flag):
-- `ieee` — set `AUTOPAPERTOPPT_IEEE_API_KEY` (official API) or
-  `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1` (ToS-grey fallback).
+- `ieee` — **on by default**, search and document fetch go through
+  **visible Chrome via WebRunner** (`sources/ieee/webrunner_backend.py`).
+  See "IEEE / paywalled domains use WebRunner" below — this is a hard
+  rule, not a perf hint. Set `AUTOPAPERTOPPT_IEEE_API_KEY` to switch
+  to the official Xplore API path; set
+  `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1` to opt out entirely
+  (CI / no-Chrome environments only).
 - `springer` — set `AUTOPAPERTOPPT_SPRINGER_API_KEY` (free key from
   https://dev.springernature.com/). Required — the plugin raises
   `ConfigError` without it.
 - `scholar` — set `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING=1`. Google
-  Scholar ToS forbids scraping; off by default.
+  Scholar ToS forbids scraping; off by default. When on, also goes
+  through WebRunner (visible Chrome), not httpx.
 
 For top-tier-only searches (the default), the filter in
 `autopapertoppt/core/top_venues.py` accepts arXiv passthrough plus a
@@ -232,6 +238,18 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   generation, a paywall ratio above 30 percent prompts the user before
   any slides are produced. `--yes` skips the prompt. Single-paper
   `--paper` mode aborts with exit 1 if the PDF can't be retrieved.
+- **IEEE / paywalled domains use WebRunner, not httpx.** IEEE search,
+  IEEE document fetch, Google Scholar search, and any paywalled-PDF
+  download from publisher CDNs (ieeexplore.ieee.org, dl.acm.org,
+  link.springer.com, sciencedirect.com, wiley/oup/nature/science/…)
+  MUST go through visible Chrome — the IEEE plugin's WebRunner backend,
+  the Scholar plugin's WebRunner backend, or `mcp__webrunner__*` tools
+  from the LLM-as-agent session. The httpx branch in those plugins is
+  a CI safety net for environments without Chrome; on a user machine
+  with VPN access, a silent fall-through to httpx is a bug, not an
+  acceptable degradation. If you don't see a Chrome window open for an
+  IEEE search, treat the result set as suspect. Full rule + audit
+  checklist: `.claude/agents/compliance-auditor.md`.
 - **Slide-deck guards.** 16:9 widescreen, body between 1.5" and 7.0",
   `FOOTER_GUARD = 7.05"`. Every textbox runs through `_truncate(...)`
   with the per-layout cap. Don't add slides that balance "stacks + tail
@@ -247,11 +265,20 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
 
 ## Where to look for the rest
 
-- Full project guide, fetcher plugin contract, exporter rules,
-  Definition of Done gates, lint / bandit / SonarQube rule list:
-  **`CLAUDE.md`**.
+- Slim overview + Git Commit hygiene + Browser-Automation hard rule:
+  **`CLAUDE.md`** (top-level, always loaded).
+- Code-quality / SOLID / linter / SonarQube rule list:
+  `.claude/agents/code-quality-reviewer.md`.
+- Network safety, core-vs-source-plugin boundary, browser-automation
+  audit checklist, path-safety, suppression conventions, bandit-skip
+  config: `.claude/agents/compliance-auditor.md`.
+- pptx rendering tiers, truncation caps, semantic shape names, i18n,
+  enrichment dispatch: `.claude/agents/slide-deck-rules.md`.
+- Env vars + Python / `.venv` toolchain reference:
+  `.claude/agents/env-vars.md`.
+- DoD gate runner: `.claude/agents/dod-verify.md`.
+- LLM-as-agent thesis-style authoring: `.claude/agents/paper-summary-author.md`
+  + `post-author-audit.md` + `slide-overflow-check.md`.
 - Per-source plugin contract and recorded fixtures: `sources/<name>/`
   + `tests/fixtures/<name>/`.
-- Slide-deck rendering: `autopapertoppt/exporters/pptx.py` and
-  `autopapertoppt/exporters/i18n.py`.
 - LLM-as-agent flow examples: `scripts/regen_*.py`.

@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/github/license/Integration-Automation/AutoPaperToPPT.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/blob/main/LICENSE)
 [![Docs](https://readthedocs.org/projects/autopapertoppt/badge/?version=latest)](https://autopapertoppt.readthedocs.io/en/latest/)
 
-> **言語**: [English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · **日本語** · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
+> **言語**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · **日本語** · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **ドキュメント**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 キーワード駆動の論文検索アシスタント。arXiv、Semantic Scholar、OpenAlex、PubMed、ACM(Crossref 経由)、IEEE Xplore、DBLP、汎用 Crossref、OpenAIRE、Springer Nature、Google Scholar から論文を取得し、統一されたレコード形式に正規化、重複排除後の結果集合を **論文発表用 PowerPoint スライド**、**Excel ワークブック**、**BibTeX ファイル** として出力します — CLI 1 回または MCP ツール呼び出し 1 回で完結。各論文の PDF を読んで構造化サマリを生成することも可能で、LLM-as-agent パスまたは Anthropic API パスから選べます。

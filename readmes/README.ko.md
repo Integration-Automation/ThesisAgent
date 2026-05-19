@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/github/license/Integration-Automation/AutoPaperToPPT.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/blob/main/LICENSE)
 [![Docs](https://readthedocs.org/projects/autopapertoppt/badge/?version=latest)](https://autopapertoppt.readthedocs.io/en/latest/)
 
-> **언어**: [English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · **한국어** · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
+> **언어**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · **한국어** · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **문서**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
 
 키워드 기반 논문 검색 어시스턴트. arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (Crossref 경유), IEEE Xplore, DBLP, 일반 Crossref, OpenAIRE, Springer Nature, Google Scholar 에서 결과를 가져와 단일 레코드 형식으로 정규화하고, 중복 제거된 결과를 **논문 발표용 PowerPoint 슬라이드**, **Excel 워크북**, **BibTeX 파일** 로 내보냅니다 — CLI 호출 한 번 또는 MCP 도구 호출 한 번으로 끝납니다. 각 논문의 PDF 를 읽고 구조화된 요약을 생성할 수도 있으며 (LLM-as-agent 경로), 또는 Anthropic API 경유 (Python 파이프라인 경로) 가능합니다.

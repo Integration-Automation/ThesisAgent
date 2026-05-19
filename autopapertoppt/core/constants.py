@@ -48,15 +48,13 @@ PLUGIN_SOURCES: tuple[str, ...] = (
     SOURCE_SPRINGER,
 )
 ALL_SOURCES: tuple[str, ...] = CORE_SOURCES + PLUGIN_SOURCES
-# Sources tried by default when --source is not given. Mixes the open / free
-# endpoints. OpenAlex sits in the default mix because it surfaces direct
-# ``pdf_url`` for many papers whose publisher pages are paywalled (IEEE,
-# ACM, Elsevier), via author / institutional OA mirrors. DBLP + Crossref +
-# OpenAIRE join the default mix because they need no API key and broaden
-# coverage to CS bibliography (DBLP), every Crossref-indexed publisher, and
-# European OA repositories (OpenAIRE). Opt-in plugins (ieee, scholar,
-# springer) join only when their env var is set; the pipeline skips them
-# silently otherwise so this list stays safe as a default.
+# Sources tried by default when --source is not given. The full source mix
+# is on by default for maximum coverage. ieee and scholar are now also
+# default-on (their scrape paths gated by AUTOPAPERTOPPT_DISABLE_*_SCRAPING
+# opt-out env vars instead of the previous opt-in vars). springer still
+# raises ConfigError at construction without an API key, so the pipeline
+# silently skips it — leaving it in the list is harmless and keeps it
+# easy to enable by setting AUTOPAPERTOPPT_SPRINGER_API_KEY.
 DEFAULT_SOURCES: tuple[str, ...] = (
     SOURCE_ARXIV,
     SOURCE_SEMANTIC_SCHOLAR,
@@ -68,6 +66,7 @@ DEFAULT_SOURCES: tuple[str, ...] = (
     SOURCE_CROSSREF,
     SOURCE_OPENAIRE,
     SOURCE_SPRINGER,
+    SOURCE_SCHOLAR,
 )
 
 EXPORT_BIBTEX: str = "bib"

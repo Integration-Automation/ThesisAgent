@@ -185,6 +185,23 @@ cython_debug/
 # re-generated; committing them would bloat history.
 exports/
 
+# WebRunner artifacts — Chrome user-data dirs (when AUTOPAPERTOPPT_CHROME_PROFILE_DIR
+# is set to a repo-local path) and partial PDF downloads. Selenium / je_web_runner
+# state and screenshots are user-machine-specific and must never be committed.
+chrome_profile/
+chrome-profile/
+chrome_profiles/
+selenium-debug.log
+*.crdownload
+
 # Local agent / IDE settings — user-specific, not part of the project.
-.claude/
+# Exception: .claude/agents/ ships project-scoped subagent definitions (the
+# four task agents — dod-verify, paper-summary-author, post-author-audit,
+# slide-overflow-check — plus the four reference agents split out from
+# CLAUDE.md: code-quality-reviewer, compliance-auditor, slide-deck-rules,
+# env-vars). Use ".claude/*" (not ".claude/") so the directory itself is
+# not ignored — otherwise git would refuse to re-include any child path
+# via "!".
+.claude/*
+!.claude/agents/
 .idea/

@@ -152,7 +152,7 @@ Dónde buscar más
 * Flags CLI y variables de entorno: :doc:`/cli`
 * 11 herramientas del servidor MCP: :doc:`/mcp`
 * Kit de edición PPTX: :doc:`/pptx_editing`
-* El archivo ``README.es.md`` en la raíz del repo tiene la lista
+* El archivo ``readmes/README.es.md`` en la raíz del repo tiene la lista
   completa de funcionalidades del proyecto.
 * La referencia técnica profunda (arquitectura de plugins, políticas
   de seguridad, Definition of Done, reglas SonarQube, …) está

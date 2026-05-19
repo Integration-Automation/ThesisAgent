@@ -19,8 +19,13 @@ def _fixture(name: str) -> str:
 
 
 @pytest.fixture(autouse=True)
-def _enable_ieee(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING", "1")
+def _isolate_ieee_env(monkeypatch):
+    """IEEE is now default-on; make sure no DISABLE flag leaks. Also
+    force WebRunner off so the existing tests that monkeypatch the
+    httpx transport stay valid — the few tests that specifically want
+    to exercise the WebRunner path opt in by setting is_available."""
+    monkeypatch.delenv("AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING", raising=False)
+    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
 
 
 def _new_fetcher():
@@ -29,8 +34,10 @@ def _new_fetcher():
     return IeeeFetcher()
 
 
-async def test_opt_in_required(monkeypatch):
-    monkeypatch.delenv("AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING", raising=False)
+async def test_opt_out_disables_plugin(monkeypatch):
+    """AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1 raises ConfigError so the
+    pipeline silently skips IEEE for users who explicitly opted out."""
+    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING", "1")
     from ieee.fetcher import IeeeFetcher
 
     with pytest.raises(ConfigError):
@@ -115,9 +122,8 @@ async def test_search_sends_referer_and_origin(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-async def test_api_key_bypasses_scraping_opt_in(monkeypatch):
-    """When the API key is set the scraping env var is no longer required."""
-    monkeypatch.delenv("AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING", raising=False)
+async def test_api_key_takes_official_path(monkeypatch):
+    """When the API key is set the plugin uses the official Xplore API."""
     monkeypatch.setenv("AUTOPAPERTOPPT_IEEE_API_KEY", "test-key")
     from ieee.fetcher import IeeeFetcher
 
@@ -171,9 +177,8 @@ async def test_api_fetch_by_id_uses_article_number_param(monkeypatch):
 
 
 async def test_api_mode_no_api_key_falls_back_to_scrape(monkeypatch):
-    """Without the API key the existing scraping path is used."""
+    """Without the API key the existing scraping path is used (default-on)."""
     monkeypatch.delenv("AUTOPAPERTOPPT_IEEE_API_KEY", raising=False)
-    monkeypatch.setenv("AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING", "1")
     transport = MockTransport(200, _fixture("search.json"))
     install_mock(monkeypatch, "ieee.fetcher", transport)
     await _new_fetcher().search(
@@ -182,3 +187,44 @@ async def test_api_mode_no_api_key_falls_back_to_scrape(monkeypatch):
     # Scraping POSTs to /rest/search, not the API endpoint
     assert transport.received_method == "POST"
     assert "ieeexploreapi.ieee.org" not in str(transport.received_url)
+
+
+async def test_webrunner_search_used_when_available(monkeypatch):
+    """When WebRunner is enabled, _scrape_search routes through it
+    instead of the httpx POST."""
+    from ieee import webrunner_backend
+
+    monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
+
+    captured: dict[str, object] = {}
+
+    async def fake_fetch(body):
+        captured["body"] = body
+        return {"records": [], "totalRecords": 0}
+
+    monkeypatch.setattr(webrunner_backend, "fetch_search_json", fake_fetch)
+    papers = await _new_fetcher().search(
+        Query(keywords="webrunner test", sources=("ieee",), max_results=5)
+    )
+    assert papers == []
+    assert captured["body"]["queryText"] == "webrunner test"
+
+
+async def test_webrunner_search_failure_falls_back_to_httpx(monkeypatch):
+    """RuntimeError from the WebRunner backend triggers the httpx fallback."""
+    from ieee import webrunner_backend
+
+    monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
+
+    async def explode(_body):
+        raise RuntimeError("Chrome did not start")
+
+    monkeypatch.setattr(webrunner_backend, "fetch_search_json", explode)
+
+    transport = MockTransport(200, _fixture("search.json"))
+    install_mock(monkeypatch, "ieee.fetcher", transport)
+    papers = await _new_fetcher().search(
+        Query(keywords="x", sources=("ieee",), max_results=10)
+    )
+    # httpx fallback worked → got the fixture's records.
+    assert len(papers) > 0

@@ -243,18 +243,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.set_defaults(download_pdf=True)
     parser.add_argument(
-        "--all-venues",
+        "--top-tier-only",
         dest="top_tier_only",
-        action="store_false",
+        action="store_true",
         help=(
-            "Disable the top-tier CS venue filter. By default the search "
-            "keeps only papers from arXiv or from a curated whitelist of "
-            "top-tier conferences / journals (S&P, CCS, NDSS, USENIX "
-            "Security, NeurIPS, ICML, ICSE, SIGMOD, SIGCOMM, CHI, etc.). "
-            "Pass --all-venues to keep every result regardless of venue."
+            "Restrict results to papers from arXiv or from the curated "
+            "top-tier CS venue whitelist (S&P, CCS, NDSS, USENIX Security, "
+            "NeurIPS, ICML, ICSE, SIGMOD, SIGCOMM, CHI, etc.). Off by "
+            "default — most IEEE / ACM workshop papers live outside the "
+            "whitelist and would be filtered out otherwise."
         ),
     )
-    parser.set_defaults(top_tier_only=True)
+    parser.set_defaults(top_tier_only=False)
+    parser.add_argument(
+        "--no-oa-resolve",
+        dest="resolve_oa",
+        action="store_false",
+        help=(
+            "Skip the open-access PDF resolver step that runs after dedup. "
+            "By default the pipeline looks up every paper without pdf_url "
+            "in Unpaywall (needs AUTOPAPERTOPPT_CONTACT_EMAIL) and falls "
+            "back to an arXiv title search — typical lift of 40-70 percent "
+            "for IEEE / ACM / Springer / Elsevier paywalled papers."
+        ),
+    )
+    parser.set_defaults(resolve_oa=True)
     parser.add_argument(
         "--paywall-threshold",
         type=float,
@@ -540,7 +553,7 @@ async def _collect(args: argparse.Namespace):
         top_tier_only=args.top_tier_only,
     )
     _LOG.info("Running search: %s across %s", keywords, ", ".join(sources))
-    return await run_search(query)
+    return await run_search(query, resolve_oa=args.resolve_oa)
 
 
 def _resolve_enrich_mode(args: argparse.Namespace) -> str:

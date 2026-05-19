@@ -55,14 +55,20 @@ from autopapertoppt.utils.logging import get_logger
 
 _LOG = get_logger(__name__)
 
-# Plugins that refuse to load without an env var. Mirrors the in-fetcher
-# ConfigError checks (ieee/__init__.py + springer/fetcher.py + scholar/...)
-# so list_sources can report enablement without round-tripping through
+# Plugins gated by an env var.
+#  - ``"opt_in"`` plugins refuse to load WITHOUT the env var (e.g. Springer
+#    needs an API key).
+#  - ``"opt_out"`` plugins refuse to load WITH the env var set (e.g. IEEE
+#    and Scholar are default-on; their respective DISABLE env vars flip
+#    them off).
+# list_sources reports enablement without round-tripping through
 # load_fetcher (which would raise on disabled plugins).
-_PLUGIN_ENV_REQUIREMENTS: dict[str, tuple[str, ...]] = {
-    "ieee": ("AUTOPAPERTOPPT_IEEE_API_KEY", "AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING"),
+_PLUGIN_OPT_IN_ENV: dict[str, tuple[str, ...]] = {
     "springer": ("AUTOPAPERTOPPT_SPRINGER_API_KEY",),
-    "scholar": ("AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING",),
+}
+_PLUGIN_OPT_OUT_ENV: dict[str, tuple[str, ...]] = {
+    "ieee": ("AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING",),
+    "scholar": ("AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING",),
 }
 
 
@@ -83,12 +89,16 @@ def _register_discovery_tools(server: FastMCP) -> None:
     def list_sources() -> dict[str, Any]:
         """Report every available source plugin and whether it is currently enabled.
 
-        A plugin is *enabled* when no env var is required, or when one of
-        its required env vars is set (the scholar plugin needs
-        ``AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING=1``; the springer plugin
-        needs ``AUTOPAPERTOPPT_SPRINGER_API_KEY``; the ieee plugin needs
-        either ``AUTOPAPERTOPPT_IEEE_API_KEY`` or
-        ``AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING=1``).
+        Plugin gating today:
+
+        - **ieee** — default-ON. Set ``AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1``
+          to opt out, or ``AUTOPAPERTOPPT_IEEE_API_KEY`` for the official
+          Xplore API (better metadata + pdf_url for subscribers).
+        - **scholar** — default-ON. Set ``AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1``
+          to opt out (Google's ToS forbids automated access; default-on
+          for coverage, accept the risk).
+        - **springer** — opt-IN via ``AUTOPAPERTOPPT_SPRINGER_API_KEY``.
+          Free key from https://dev.springernature.com/.
 
         Agents should call this once before ``search`` so they pass only
         enabled sources — disabled plugins are silently skipped by the
@@ -96,15 +106,19 @@ def _register_discovery_tools(server: FastMCP) -> None:
         """
         entries: list[dict[str, Any]] = []
         for name in ALL_SOURCES:
-            env_vars = _PLUGIN_ENV_REQUIREMENTS.get(name, ())
-            enabled = (not env_vars) or any(
-                _env_var_truthy(var) for var in env_vars
+            opt_in_vars = _PLUGIN_OPT_IN_ENV.get(name, ())
+            opt_out_vars = _PLUGIN_OPT_OUT_ENV.get(name, ())
+            opted_in = (not opt_in_vars) or any(
+                _env_var_set(var) for var in opt_in_vars
             )
+            opted_out = any(_env_var_truthy(var) for var in opt_out_vars)
+            enabled = opted_in and not opted_out
             entries.append(
                 {
                     "name": name,
                     "in_default_mix": name in DEFAULT_SOURCES,
-                    "needs_env_var": list(env_vars),
+                    "opt_in_env_var": list(opt_in_vars),
+                    "opt_out_env_var": list(opt_out_vars),
                     "enabled": enabled,
                 }
             )
@@ -114,13 +128,17 @@ def _register_discovery_tools(server: FastMCP) -> None:
         }
 
 
+def _env_var_set(name: str) -> bool:
+    """True when the env var has any non-empty value."""
+    return bool((os.environ.get(name) or "").strip())
+
+
 def _env_var_truthy(name: str) -> bool:
-    value = (os.environ.get(name) or "").strip()
-    if not value:
-        return False
-    if name.endswith("ENABLE_IEEE_SCRAPING") or name.endswith("ENABLE_SCHOLAR_SCRAPING"):
-        return value == "1"
-    return True
+    """True when the env var is set to exactly ``"1"`` — the convention
+    for DISABLE flags. Loose values like ``"true"`` are intentionally
+    NOT honoured so a user has to be deliberate about flipping a default
+    off."""
+    return (os.environ.get(name) or "").strip() == "1"
 
 
 def _register_pdf_tool(server: FastMCP) -> None:
