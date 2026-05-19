@@ -56,6 +56,12 @@ def build_parser() -> argparse.ArgumentParser:
             "Search papers by keywords across multiple sources and export them "
             "to slides, summaries, and BibTeX."
         ),
+        epilog=(
+            "Launching the desktop GUI: run `autopapertoppt` with no arguments, "
+            "or `autopapertoppt gui`, or the standalone `autopapertoppt-gui` entry "
+            "point. The GUI extras must be installed: pip install "
+            "autopapertoppt[gui]."
+        ),
     )
     parser.add_argument(
         "--version", action="version", version=f"autopapertoppt {__version__}"
@@ -868,13 +874,16 @@ def _dispatch_gui(gui_argv: list[str]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     _configure_stdio_for_unicode()
-    # Pre-parse for the ``gui`` subcommand. argparse can't host it
-    # cleanly because the existing query/paper/pdf mode is a required
-    # mutually-exclusive group, and forcing one of those flags just to
-    # open the GUI would be silly.
+    # Pre-parse for the ``gui`` subcommand and the bare-invocation case.
+    # argparse can't host either cleanly because the existing
+    # query / paper / pdf mode is a required mutually-exclusive group;
+    # without this shim, ``autopapertoppt`` (no args, the obvious
+    # "just open the app" gesture) errors with the mutex requirement
+    # instead of launching the GUI.
     raw_argv = list(sys.argv[1:] if argv is None else argv)
-    if raw_argv and raw_argv[0] == "gui":
-        return _dispatch_gui(raw_argv[1:])
+    if not raw_argv or raw_argv[0] == "gui":
+        gui_extra_argv = raw_argv[1:] if raw_argv else []
+        return _dispatch_gui(gui_extra_argv)
     parser = build_parser()
     args = parser.parse_args(raw_argv)
     try:

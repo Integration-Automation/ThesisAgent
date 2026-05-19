@@ -207,6 +207,40 @@ def test_cli_rejects_both_query_and_paper(tmp_path):
         )
 
 
+def test_cli_bare_invocation_dispatches_gui(monkeypatch):
+    """`autopapertoppt` with no args MUST route to the GUI dispatcher.
+
+    Regression: the bare command used to crash with `one of the arguments
+    --query/-q --paper/-p --pdf is required` because the mutex group is
+    `required=True`. Users expected a "just open the app" gesture, and
+    the GUI extras' own entry point already does that — so the bare
+    CLI now mirrors `autopapertoppt gui`.
+    """
+    called: dict[str, list[str]] = {}
+
+    def fake_dispatch_gui(argv: list[str]) -> int:
+        called["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(cli_module, "_dispatch_gui", fake_dispatch_gui)
+    assert cli_module.main([]) == 0
+    assert called == {"argv": []}
+
+
+def test_cli_gui_subcommand_dispatches_gui(monkeypatch):
+    """`autopapertoppt gui` still routes to the GUI dispatcher, with any
+    trailing tokens forwarded to the GUI's own argv parser."""
+    called: dict[str, list[str]] = {}
+
+    def fake_dispatch_gui(argv: list[str]) -> int:
+        called["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(cli_module, "_dispatch_gui", fake_dispatch_gui)
+    assert cli_module.main(["gui", "--debug"]) == 0
+    assert called == {"argv": ["--debug"]}
+
+
 def test_cli_rejects_doi_identifier_until_resolver_lands(tmp_path):
     code = cli_module.main(
         ["--paper", "10.1234/example", "--out", str(tmp_path)]
