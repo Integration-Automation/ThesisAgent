@@ -13,6 +13,25 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
 _AGENTS_MD = _ROOT / "AGENTS.md"
+_CLAUDE_MD = _ROOT / "CLAUDE.md"
+_SUBAGENTS_DIR = _ROOT / ".claude" / "agents"
+
+
+def _claude_rules_text() -> str:
+    """Concatenate CLAUDE.md + every project-scoped subagent doc.
+
+    The Claude-side rule set is split across ``CLAUDE.md`` (always-loaded
+    overview + must-knows) and the per-topic subagent docs under
+    ``.claude/agents/`` (loaded on demand when the relevant agent runs).
+    From the perspective of "do future Claude sessions see this rule," the
+    combined text is what counts — so the mirror-with-AGENTS.md tests
+    treat both as one Claude-rules document.
+    """
+    parts = [_CLAUDE_MD.read_text(encoding="utf-8")]
+    if _SUBAGENTS_DIR.is_dir():
+        for path in sorted(_SUBAGENTS_DIR.glob("*.md")):
+            parts.append(path.read_text(encoding="utf-8"))
+    return "\n\n".join(parts)
 
 
 def test_agents_md_exists():
@@ -72,13 +91,11 @@ def test_agents_md_pins_rich_first_anti_patterns():
 
 
 def test_claude_md_mirrors_anti_patterns():
-    claude_md = _normalise_whitespace(
-        (_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    )
+    claude_md = _normalise_whitespace(_claude_rules_text())
     assert "Rich thesis-style PPT is the default deliverable" in claude_md
     assert "Decision tree" in claude_md
     assert "Anti-patterns" in claude_md
-    assert "you yourself are the LLM" in claude_md
+    assert "you yourself are the LLM" in claude_md or "you ARE the LLM" in claude_md
     assert "regen_llm_security_batch.py" in claude_md
 
 
@@ -87,10 +104,8 @@ def test_canonical_filename_rule_documented():
     lightweight emit (no -rich suffix), so the user ends up with exactly
     one deck per paper. Both docs must say so."""
     agents = _normalise_whitespace(_AGENTS_MD.read_text(encoding="utf-8"))
-    claude = _normalise_whitespace(
-        (_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    )
-    for text, label in ((agents, "AGENTS.md"), (claude, "CLAUDE.md")):
+    claude = _normalise_whitespace(_claude_rules_text())
+    for text, label in ((agents, "AGENTS.md"), (claude, "CLAUDE.md+subagents")):
         assert "Canonical filename" in text, (
             f"{label} lost the canonical-filename rule"
         )
@@ -129,9 +144,7 @@ def test_agents_md_and_claude_md_rules_aligned():
     keyword appears in BOTH files. Add a rule? Add a new check here.
     """
     agents = _normalise_whitespace(_AGENTS_MD.read_text(encoding="utf-8"))
-    claude = _normalise_whitespace(
-        (_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    )
+    claude = _normalise_whitespace(_claude_rules_text())
 
     # (description, list of keywords that must appear in BOTH files)
     rules = [
@@ -165,11 +178,14 @@ def test_agents_md_and_claude_md_rules_aligned():
     missing: list[str] = []
     for description, keywords in rules:
         for kw in keywords:
-            for text, label in ((agents, "AGENTS.md"), (claude, "CLAUDE.md")):
+            for text, label in (
+                (agents, "AGENTS.md"),
+                (claude, "CLAUDE.md+subagents"),
+            ):
                 if kw.lower() not in text.lower():
                     missing.append(f"{label}: {description} — missing {kw!r}")
     assert not missing, (
-        "AGENTS.md and CLAUDE.md drifted out of alignment:\n  "
+        "AGENTS.md and CLAUDE.md+subagents drifted out of alignment:\n  "
         + "\n  ".join(missing)
     )
 
@@ -184,10 +200,8 @@ def test_pruning_irrelevant_downloads_rule_documented():
     the per-paper PDF + lightweight pptx, keep the aggregate xlsx/bib.
     """
     agents = _normalise_whitespace(_AGENTS_MD.read_text(encoding="utf-8"))
-    claude = _normalise_whitespace(
-        (_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    )
-    for text, label in ((agents, "AGENTS.md"), (claude, "CLAUDE.md")):
+    claude = _normalise_whitespace(_claude_rules_text())
+    for text, label in ((agents, "AGENTS.md"), (claude, "CLAUDE.md+subagents")):
         # The anti-pattern bullet that introduces the rule.
         assert "irrelevant downloads" in text.lower(), (
             f"{label} lost the 'irrelevant downloads' anti-pattern"
@@ -196,13 +210,13 @@ def test_pruning_irrelevant_downloads_rule_documented():
         assert "pdfs/" in text and ".pptx" in text, (
             f"{label} lost the concrete pdfs/<key>.pdf + <key>.pptx paths"
         )
-    # The CLAUDE.md canonical reference must also carry the
+    # The Claude-side canonical reference must also carry the
     # "Pruning irrelevant downloads" sub-heading + the keep-xlsx note.
     assert "Pruning irrelevant downloads" in claude, (
-        "CLAUDE.md lost the 'Pruning irrelevant downloads' sub-heading"
+        "CLAUDE.md+subagents lost the 'Pruning irrelevant downloads' sub-heading"
     )
     assert "honest record" in claude, (
-        "CLAUDE.md lost the 'keep the aggregate xlsx/bib' rationale"
+        "CLAUDE.md+subagents lost the 'keep the aggregate xlsx/bib' rationale"
     )
 
 
@@ -215,10 +229,8 @@ def test_url_doi_verification_rule_documented():
     see the rule and the concrete audit snippet so the lesson sticks.
     """
     agents = _normalise_whitespace(_AGENTS_MD.read_text(encoding="utf-8"))
-    claude = _normalise_whitespace(
-        (_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    )
-    for text, label in ((agents, "AGENTS.md"), (claude, "CLAUDE.md")):
+    claude = _normalise_whitespace(_claude_rules_text())
+    for text, label in ((agents, "AGENTS.md"), (claude, "CLAUDE.md+subagents")):
         # Rule heading
         assert "URL / DOI verification" in text, (
             f"{label} lost the URL/DOI verification rule heading"
