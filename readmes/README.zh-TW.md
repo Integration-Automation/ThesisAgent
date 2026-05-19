@@ -186,10 +186,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | 把 NCBI 匿名限額(3/s)拉到 10/s,選用。 |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed、ACM、Crossref、OpenAlex | 讓 Crossref 等把請求放進「客氣池」。 |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE(API 路徑) | 切換到官方 Xplore API,訂閱範圍內會帶 `pdf_url`。 |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE(爬取路徑) | 設 `=1` 才會啟用爬取。若已設 API key,此變數不需要。 |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE(爬取路徑) | 設 `=1` 才會啟用爬取。若已設 API key,此變數不需要。 |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM、Crossref | Crossref Plus 訂閱 token(Bearer header),選用。 |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | 必填;免費 key 申請 <https://dev.springernature.com/>。沒設則該 plugin 會被靜默跳過。 |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | 設 `=1` 才會啟用。預設關閉(Scholar ToS 禁止爬取)。 |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | 設 `=1` 才會啟用。預設關閉(Scholar ToS 禁止爬取)。 |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF 下載器 | Netscape `cookies.txt`,預設關閉。請只用在你有合法存取權的出版商。 |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | 預設 `INFO`;`DEBUG` 可看更詳細。 |
 

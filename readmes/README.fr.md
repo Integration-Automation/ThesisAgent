@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Élève la limite anonyme de NCBI (3/s) à 10/s. Optionnel. |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Place les requêtes dans le pool poli de Crossref. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (voie API) | API officielle IEEE Xplore ; expose `pdf_url` pour les articles couverts. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (voie scraping) | `=1` active le scraping. Inutile quand la clé API est définie. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (voie scraping) | `=1` active le scraping. Inutile quand la clé API est définie. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Jeton abonné Crossref Plus (en-tête Bearer). Optionnel. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Obligatoire ; clé gratuite sur <https://dev.springernature.com/>. Le plugin est silencieusement ignoré sinon. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` active le scraping. Désactivé par défaut — les CGU de Scholar interdisent le scraping. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` active le scraping. Désactivé par défaut — les CGU de Scholar interdisent le scraping. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | Téléchargeur PDF | `cookies.txt` au format Netscape. Désactivé par défaut. Utilisez uniquement avec des éditeurs pour lesquels vous avez des droits institutionnels. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | `INFO` par défaut ; `DEBUG` pour traces verbeuses. |
 

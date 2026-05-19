@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | NCBI की अनाम सीमा (3/s) को 10/s तक बढ़ाता है। वैकल्पिक। |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | अनुरोधों को Crossref के polite pool में रखता है। |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (API पथ) | आधिकारिक IEEE Xplore API; दायरे में आने वाले शोध-पत्रों के लिए `pdf_url` उजागर करता है। |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (स्क्रैपिंग पथ) | `=1` स्क्रैपिंग सक्षम करता है। API key सेट होने पर आवश्यक नहीं। |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (स्क्रैपिंग पथ) | `=1` स्क्रैपिंग सक्षम करता है। API key सेट होने पर आवश्यक नहीं। |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref Plus ग्राहक टोकन (Bearer हेडर)। वैकल्पिक। |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | अनिवार्य; मुफ्त कुंजी <https://dev.springernature.com/> से। इसके बिना plugin चुपचाप छोड़ दिया जाता है। |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` स्क्रैपिंग सक्षम करता है। डिफ़ॉल्ट बंद — Scholar ToS स्क्रैपिंग निषेध। |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` स्क्रैपिंग सक्षम करता है। डिफ़ॉल्ट बंद — Scholar ToS स्क्रैपिंग निषेध। |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF डाउनलोडर | Netscape-स्वरूप `cookies.txt`। डिफ़ॉल्ट बंद। केवल उन प्रकाशकों के साथ उपयोग करें जिनके लिए आपके पास संस्थागत अधिकार हैं। |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | डिफ़ॉल्ट `INFO`; विस्तृत ट्रेस के लिए `DEBUG`। |
 

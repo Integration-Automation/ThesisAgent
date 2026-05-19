@@ -168,10 +168,13 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Eleva o limite anônimo do NCBI (3/s) para 10/s. Opcional. |
 | `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Coloca requisições no polite pool do Crossref. |
 | `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (rota API) | API oficial IEEE Xplore; expõe `pdf_url` para artigos no escopo. |
-| `AUTOPAPERTOPPT_ENABLE_IEEE_SCRAPING` | IEEE (rota scraping) | `=1` ativa scraping. Desnecessário quando a chave API está configurada. |
+| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (rota scraping) | `=1` ativa scraping. Desnecessário quando a chave API está configurada. |
 | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Token de assinante Crossref Plus (header Bearer). Opcional. |
 | `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Obrigatório; chave gratuita em <https://dev.springernature.com/>. Plugin é silenciosamente pulado sem ele. |
-| `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` ativa scraping. Padrão desligado — ToS do Scholar proíbe scraping. |
+| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` ativa scraping. Padrão desligado — ToS do Scholar proíbe scraping. |
 | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | Downloader PDF | `cookies.txt` formato Netscape. Padrão desligado. Use apenas com editoras nas quais você tem direitos institucionais. |
 | `AUTOPAPERTOPPT_LOG_LEVEL` | logger | `INFO` padrão; `DEBUG` para rastreamento verboso. |
 
