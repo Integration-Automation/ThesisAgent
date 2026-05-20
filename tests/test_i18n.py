@@ -188,6 +188,8 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
     import re
 
     s_only_patterns = [
+        # Character-level (Simplified hanzi). Most of these are caught by
+        # any orthography pass — bare 信息 / 网络 / 算法 / 实现 etc.
         (re.compile(r"互?信息"), "信息 → 資訊 (or 互信息 → 互資訊)"),
         (re.compile(r"(?<!演)算法"), "算法 → 演算法"),
         (re.compile(r"软件|软体"), "軟體"),
@@ -207,6 +209,44 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
         (re.compile(r"实验"), "实验 → 實驗"),
         (re.compile(r"攻击"), "攻击 → 攻擊"),
         (re.compile(r"防御"), "防御 → 防禦"),
+        # Lexicon-level — these use Traditional characters but are
+        # Simplified-Chinese vocabulary calques. The plain
+        # T-vs-S-hanzi check does NOT catch them; this layer is the
+        # whole reason language-vocabulary-check exists.
+        (re.compile(r"內存"), "內存 → 記憶體"),
+        (re.compile(r"魯棒"), "魯棒(性) → 穩健(性)"),
+        (re.compile(r"視頻"), "視頻 → 影片"),
+        (re.compile(r"屏幕"), "屏幕 → 螢幕"),
+        (re.compile(r"鼠標"), "鼠標 → 滑鼠"),
+        (re.compile(r"(?<![駭])黑客"), "黑客 → 駭客"),
+        (re.compile(r"服務器"), "服務器 → 伺服器"),
+        (re.compile(r"數據庫"), "數據庫 → 資料庫"),
+        (re.compile(r"操作系統"), "操作系統 → 作業系統"),
+        (re.compile(r"應用程序"), "應用程序 → 應用程式"),
+        (re.compile(r"(?<![電一程])計算機(?![ 視程])"), "計算機 → 電腦"),
+        (re.compile(r"字符串"), "字符串 → 字串"),
+        (re.compile(r"(?<![字])字符(?![元串集])"), "字符 → 字元"),
+        (re.compile(r"線程"), "線程 → 執行緒"),
+        (re.compile(r"(?<![行])進程(?![師])"), "進程 → 行程 / 處理程序"),
+        (re.compile(r"隊列"), "隊列 → 佇列"),
+        (re.compile(r"帶寬"), "帶寬 → 頻寬"),
+        (re.compile(r"(?<![核])內核"), "內核 → 核心"),
+        (re.compile(r"內置"), "內置 → 內建"),
+        (re.compile(r"鏈接"), "鏈接 → 連結"),
+        (re.compile(r"加載"), "加載 → 載入"),
+        (re.compile(r"(?<![預])設置"), "設置 → 設定"),
+        (re.compile(r"集群"), "集群 → 叢集"),
+        (re.compile(r"模塊"), "模塊 → 模組"),
+        (re.compile(r"集成"), "集成 → 整合"),
+        (re.compile(r"重定向"), "重定向 → 重新導向"),
+        (re.compile(r"主頁"), "主頁 → 首頁"),
+        (re.compile(r"(?<![組])編程"), "編程 → 程式設計"),
+        (re.compile(r"賬戶"), "賬戶 → 帳戶"),
+        (re.compile(r"賬號"), "賬號 → 帳號"),
+        (re.compile(r"菜單"), "菜單 → 選單"),
+        (re.compile(r"對話框"), "對話框 → 對話方塊"),
+        (re.compile(r"句柄"), "句柄 → 控制代碼"),
+        (re.compile(r"(?<![異])異常(?![案的快只新終難艱])"), "異常 → 例外"),
     ]
     zh_tw_paths = [
         _REPO_ROOT / "scripts" / "regen_llm_security_batch_zh_tw.py",

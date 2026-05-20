@@ -1252,7 +1252,7 @@ NIU = Paper(
             )),
             ("防禦設計受裝置限制", (
                 "電池 / 計算 / 記憶體限制排除強加密",
-                "病患差異使異常偵測難以普適",
+                "病患差異使例外偵測難以普適",
                 "缺即時顯示，靠病患監看不切實際",
             )),
         ),
@@ -1384,7 +1384,7 @@ NIU = Paper(
         ),
         future_work=(
             "為電池受限裝置設計的資源感知防禦",
-            "可持續適應的個人化異常模型",
+            "可持續適應的個人化例外模型",
             "標準化 AID 安全認證 (延伸 DTSec)",
             "可信賴 + 隱私保護的 ML-based AID 控制器",
         ),
@@ -1470,7 +1470,7 @@ FANG = Paper(
              "I(za;zb|Ep),透過 Data Processing Inequality(DPI)保證分離。"),
             ("2. 基於語意圖的意圖分類",
              "在 za 的語意鄰域建圖,以譜分析(Fiedler 向量 + 高階特徵值)抓出對抗模式, "
-             "對 surface-level 改述具備強魯棒性。"),
+             "對 surface-level 改述具備強穩健性。"),
             ("3. 知識蒸餾的輕量偵測器(AID)",
              "Transformer-based 對抗意圖偵測器,經知識蒸餾後每筆 12.3 ms — "
              "比未蒸餾版本(28.4 ms)快 2.3 倍,精度幾乎無損。"),
@@ -1490,7 +1490,7 @@ FANG = Paper(
             ("規則式過濾", "關鍵字 pattern;65.4% ADA / 10.8 ms"),
             ("Post-Output Moderation", "RoBERTa 掃輸出;84.1% / 45.6 ms"),
             ("對抗訓練(AT)", "LLM fine-tune adv+benign;86.7% / 38.2 ms"),
-            ("Embedding Clustering", "embedding 異常偵測;78.6% / 15.6 ms"),
+            ("Embedding Clustering", "embedding 例外偵測;78.6% / 15.6 ms"),
             ("APD(本論文)", "VAE + 譜圖 + 蒸餾 AID;92.3% / 12.3 ms"),
         ),
         method_sections=(
@@ -1543,7 +1543,7 @@ FANG = Paper(
         research_questions=(
             ("RQ1", "APD 的主動式偵測在多樣越獄資料集上能否勝過反應式防禦?"),
             ("RQ2", "APD 在精度與計算成本之間的取捨如何?"),
-            ("RQ3", "APD 各組件對魯棒性的貢獻(ablation)?"),
+            ("RQ3", "APD 各組件對穩健性的貢獻(ablation)?"),
             ("RQ4", "APD 是否能泛化到訓練分佈外的新型攻擊變體?"),
         ),
         rq_results=(

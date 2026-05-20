@@ -4,8 +4,9 @@
 > recent Aider, and several other tools auto-load `AGENTS.md`; keep them in
 > sync when you change rules. Detailed rules now live in `.claude/agents/`
 > as subagents (`code-quality-reviewer`, `compliance-auditor`,
-> `slide-deck-rules`, `env-vars`, plus the task-running agents `dod-verify`,
-> `paper-summary-author`, `post-author-audit`, `slide-overflow-check`).
+> `slide-deck-rules`, `env-vars`, `language-vocabulary-check`, plus the
+> task-running agents `dod-verify`, `paper-summary-author`,
+> `post-author-audit`, `slide-overflow-check`).
 
 ## Project Overview
 
@@ -118,3 +119,4 @@ window open during an IEEE / Scholar / paywalled-PDF step, the path is broken
 | LLM-as-agent thesis-style authoring (PDF → rich PaperSummary) | `paper-summary-author` |
 | URL-fabrication / off-topic audits after authoring | `post-author-audit` |
 | Slide-overflow regression check | `slide-overflow-check` |
+| Language-correct vocabulary (no S-Chinese loan words in zh-tw, no T-Chinese in zh-cn, etc.) | `language-vocabulary-check` |
