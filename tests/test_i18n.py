@@ -417,6 +417,43 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
         (re.compile(r"系統托盤"), "系統托盤 → 系統匣"),
         # Security.
         (re.compile(r"殺毒"), "殺毒 → 防毒"),
+        # Round 6 — T-char-S-vocab cache, GPU memory, segfault, mobile,
+        # social, web headers, connections, stats, security, ownership,
+        # quality, CLI / CI.
+        # The bare T-char `緩存` was missed by the existing 缓存 (S-char)
+        # pattern, parallel to round 5's 軟件 → 軟體 catch.
+        (re.compile(r"緩存"), "緩存 → 快取"),
+        (re.compile(r"顯存"), "顯存 → 顯示記憶體 / VRAM"),
+        (re.compile(r"段錯誤"), "段錯誤 → 區段錯誤"),
+        # Mobile / social.
+        (re.compile(r"應用商店"), "應用商店 → 應用程式商店"),
+        (re.compile(r"彩信"), "彩信 → 多媒體簡訊 (MMS)"),
+        (re.compile(r"手機卡"), "手機卡 → SIM 卡"),
+        (re.compile(r"鎖屏"), "鎖屏 → 鎖定螢幕"),
+        (re.compile(r"屏保"), "屏保 → 螢幕保護"),
+        (re.compile(r"點贊"), "點贊 → 按讚"),
+        # HTTP / network connections.
+        (re.compile(r"請求頭"), "請求頭 → 請求標頭"),
+        (re.compile(r"響應頭"), "響應頭 → 回應標頭"),
+        (re.compile(r"長連接"), "長連接 → 長連線"),
+        (re.compile(r"短連接"), "短連接 → 短連線"),
+        (re.compile(r"連接池"), "連接池 → 連線池"),
+        # Statistics + ML.
+        (re.compile(r"步長"), "步長 → 步幅"),
+        (re.compile(r"置信區間"), "置信區間 → 信賴區間"),
+        (re.compile(r"置信度"), "置信度 → 信賴度"),
+        (re.compile(r"顯著水平"), "顯著水平 → 顯著水準"),
+        # Security continued.
+        (re.compile(r"入侵檢測"), "入侵檢測 → 入侵偵測"),
+        (re.compile(r"防病毒"), "防病毒 → 防毒"),
+        (re.compile(r"數字證書"), "數字證書 → 數位憑證"),
+        # Filesystem ownership.
+        (re.compile(r"屬主"), "屬主 → 擁有者 / 所有者"),
+        (re.compile(r"屬組"), "屬組 → 群組 / 所屬群組"),
+        # Quality / pipelines / CLI.
+        (re.compile(r"服務質量"), "服務質量 → 服務品質 (QoS)"),
+        (re.compile(r"命令行"), "命令行 → 命令列 (CLI)"),
+        (re.compile(r"流水線"), "流水線 → 管線 (CI/CD pipeline)"),
     ]
     zh_tw_paths = [
         _REPO_ROOT / "scripts" / "regen_llm_security_batch_zh_tw.py",

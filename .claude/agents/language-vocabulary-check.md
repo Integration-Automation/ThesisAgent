@@ -356,6 +356,66 @@ right bucket.
 | 報警 | 警報 / 告警 | alarm / alert |
 | 殺毒 (軟件) | 防毒 (軟體) | antivirus |
 
+#### Cache / GPU memory / runtime errors (T-char S-vocab, easy to miss)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 緩存 (T-char S-vocab) | 快取 | cache (S `缓存` form is also S-vocab; both flagged) |
+| 顯存 | 顯示記憶體 / VRAM | GPU memory |
+| 段錯誤 | 區段錯誤 / 分段錯誤 | segmentation fault |
+
+#### Mobile + social interactions
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 應用商店 | 應用程式商店 | app store |
+| 彩信 | 多媒體簡訊 (MMS) | MMS / picture message |
+| 手機卡 | SIM 卡 | SIM card |
+| 鎖屏 | 鎖定螢幕 | lock screen |
+| 屏保 | 螢幕保護 | screen saver |
+| 點贊 | 按讚 | give a "like" |
+
+#### HTTP / connections
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 請求頭 | 請求標頭 | HTTP request header |
+| 響應頭 | 回應標頭 | HTTP response header |
+| 長連接 / 短連接 | 長連線 / 短連線 | long / short connection |
+| 連接池 | 連線池 | connection pool |
+
+#### Statistics + ML (continued)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 步長 | 步幅 | step size / stride |
+| 置信區間 | 信賴區間 | confidence interval |
+| 置信度 | 信賴度 | confidence level |
+| 顯著水平 | 顯著水準 | significance level (`水平` ↔ `水準`) |
+
+#### Security (continued)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 入侵檢測 | 入侵偵測 | intrusion detection |
+| 防病毒 | 防毒 | anti-virus |
+| 數字證書 | 數位憑證 | digital certificate |
+
+#### Filesystem ownership
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 屬主 | 擁有者 / 所有者 | file owner (POSIX) |
+| 屬組 | 群組 / 所屬群組 | file group (POSIX) |
+
+#### Quality / CLI / CI-CD
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 服務質量 | 服務品質 (QoS) | quality of service |
+| 命令行 | 命令列 (CLI) | command line |
+| 流水線 | 管線 | CI/CD pipeline |
+
 ### Simplified Chinese (zh-cn) — avoid Traditional vocabulary
 
 Same idea in reverse. Common offenders that occasionally leak from
