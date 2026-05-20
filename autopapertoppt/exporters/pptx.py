@@ -166,6 +166,11 @@ _LIGHT_TO_DARK_FILL: dict[tuple[int, int, int], tuple[int, int, int]] = {
     (0xFF, 0xFF, 0xFF): (0x16, 0x1A, 0x22),
     # _TABLE_DIVIDER → muted grey-blue rule
     (0xD0, 0xD7, 0xE2): (0x3D, 0x44, 0x52),
+    # _RQ_BOX_FILL (research-question callout box) → dark navy tint.
+    # Without this swap the box stays near-white while the text inside
+    # is re-coloured to near-white = white-on-white = invisible. This
+    # specific bug is what the dark-mode contrast contract guards.
+    (0xF3, 0xF6, 0xFA): (0x1E, 0x26, 0x38),
 }
 _BRAND_RULE = RGBColor(0xCC, 0xCC, 0xCC)
 _RQ_BOX_FILL = RGBColor(0xF3, 0xF6, 0xFA)

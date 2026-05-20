@@ -129,6 +129,15 @@ explicit non-black colour. Full rule + the audit script + the
 two-layer defence rationale live in `.claude/agents/deck-design.md`
 "Dark-mode contract".
 
+**Mirror rule — light-on-light contrast.** Any new light-fill RGB
+introduced in `pptx.py` (e.g. a callout / KPI / RQ-box background)
+MUST also have an entry in `_LIGHT_TO_DARK_FILL`; otherwise the fill
+stays near-white in dark mode while its text gets re-coloured to
+near-white → invisible. Regression test
+`test_pptx_dark_mode_no_light_text_on_light_fill` walks every shape
+and fails when both fill and text luminance are > 0.7 of 255 in a
+default-dark-mode render.
+
 ## Where the detailed rules live
 
 | Topic | Subagent (in `.claude/agents/`) |

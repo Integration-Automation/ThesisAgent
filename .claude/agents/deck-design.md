@@ -131,6 +131,38 @@ if any non-empty run has ``rgb is None`` or ``rgb == (0,0,0)``. A
 companion debug script lives at ``scripts/_audit_dark_text.py`` for
 manual inspection of a single rendered deck.
 
+#### Light-on-light contrast contract (the OTHER invisibility bug)
+
+A near-black bug is "text rgb=None → black on dark = invisible". The
+mirror failure mode is **"near-white text inside a near-white-fill
+shape"** — happens when a callout / KPI box keeps its light fill in
+dark mode while the text inside gets re-coloured to ``#E5E7EB``.
+The text disappears INTO the box, even though both colours are
+"correct" individually.
+
+The first instance was ``_RQ_BOX_FILL`` (= ``#F3F6FA``): the
+``_add_rq_callout`` builder filled the box with that light off-white
+and the text with ``_BRAND_DARK``; the dark-mode pass swapped the text
+but ``_RQ_BOX_FILL`` wasn't in ``_LIGHT_TO_DARK_FILL`` so the fill
+stayed light. White-on-white. Fixed by adding the mapping
+``(0xF3, 0xF6, 0xFA) → (0x1E, 0x26, 0x38)`` (dark navy tint).
+
+**Rule for any future light-fill callout / box / KPI surface:**
+
+1. **Every light-fill RGB you introduce must have an entry in
+   ``_LIGHT_TO_DARK_FILL``.** If you add a ``_FOO_BOX_FILL = RGBColor(...)``
+   constant near the top of ``pptx.py``, also add its dark equivalent
+   in the mapping dict in the same commit. Pick a dark tint in the
+   ``#15..#25`` luminance range so ``#E5E7EB`` near-white text reads.
+2. **The regression test** ``test_pptx_dark_mode_no_light_text_on_light_fill``
+   walks every shape, computes luminance of fill and of each run's
+   text colour, and fails when both > 0.7 × 255 (= 178). Adding a new
+   light-fill shape without a corresponding dark mapping will fail
+   this test.
+3. **The audit script** ``scripts/_audit_dark_text.py`` now also
+   reports failure-mode B — run it on a rendered deck during manual
+   inspection.
+
 Exposure surfaces (dark is default; the toggles flip to LIGHT):
 - CLI: `--light-mode` opt-out flag (when absent → dark)
 - GUI: Deck tab `deck.light_mode_label` checkbox (unchecked → dark)

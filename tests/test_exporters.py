@@ -222,6 +222,84 @@ def test_pptx_dark_mode_has_no_invisible_runs(sample_papers, tmp_path):
     )
 
 
+def _luminance_255(rgb_tuple: tuple[int, int, int]) -> float:
+    return 0.2126 * rgb_tuple[0] + 0.7152 * rgb_tuple[1] + 0.0722 * rgb_tuple[2]
+
+
+_LIGHT_LUMINANCE_THRESHOLD = 0.7 * 255  # > 178
+
+
+def _shape_fill_rgb(shape) -> tuple[int, int, int] | None:
+    try:
+        fill_rgb = shape.fill.fore_color.rgb
+    except (AttributeError, ValueError, TypeError):
+        return None
+    if fill_rgb is None:
+        return None
+    return (int(fill_rgb[0]), int(fill_rgb[1]), int(fill_rgb[2]))
+
+
+def _scan_shape_for_light_on_light(s_idx, shape, fill_tuple, bad) -> None:
+    tf = getattr(shape, "text_frame", None)
+    if tf is None:
+        return
+    for para in tf.paragraphs:
+        for run in para.runs:
+            if not (run.text or "").strip():
+                continue
+            try:
+                text_rgb = run.font.color.rgb
+            except (AttributeError, ValueError, TypeError):
+                continue
+            if text_rgb is None:
+                continue
+            text_tuple = (int(text_rgb[0]), int(text_rgb[1]), int(text_rgb[2]))
+            if _luminance_255(text_tuple) > _LIGHT_LUMINANCE_THRESHOLD:
+                bad.append(
+                    f"slide {s_idx} shape {shape.name!r}: "
+                    f"fill={fill_tuple} text={text_tuple} text={run.text[:30]!r}"
+                )
+
+
+def test_pptx_dark_mode_no_light_text_on_light_fill(sample_papers, tmp_path):
+    """Dark-mode regression guard — failure mode B (light-on-light).
+
+    The previous regression caught text runs with no explicit colour
+    (rgb=None, render as black on dark slide bg). This test catches
+    the OTHER failure mode: a shape whose fill is light (luminance >
+    ~0.7 × 255) but contains text whose colour is ALSO light → text
+    disappears INTO the box. The `_RQ_BOX_FILL` (#F3F6FA near-white)
+    bug was the cautionary tale: the box stayed near-white in dark
+    mode while its text got swapped to near-white via the post-pass.
+    """
+    from pptx import Presentation
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="dark-contrast",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+
+    bad: list[str] = []
+    for s_idx, slide in enumerate(prs.slides, 1):
+        for shape in slide.shapes:
+            fill_tuple = _shape_fill_rgb(shape)
+            if fill_tuple is None:
+                continue
+            if _luminance_255(fill_tuple) <= _LIGHT_LUMINANCE_THRESHOLD:
+                continue
+            _scan_shape_for_light_on_light(s_idx, shape, fill_tuple, bad)
+    assert not bad, (
+        "dark-mode deck has light-on-light text that disappears into "
+        "the shape fill (extend _LIGHT_TO_DARK_FILL to recolour the "
+        "fill, OR don't use a near-white fill in light mode):\n  "
+        + "\n  ".join(bad[:10])
+    )
+
+
 def test_pptx_light_mode_keeps_navy_text(sample_papers, tmp_path):
     """``dark_mode=False`` opt-out skips the post-build recolour pass.
 

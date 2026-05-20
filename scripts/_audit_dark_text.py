@@ -1,11 +1,19 @@
-"""Find every text run in a dark-mode deck whose colour is missing or
-too dark to read against the #12151B slide background.
+"""Find dark-mode readability bugs in a rendered .pptx.
 
-A run is flagged when:
-- ``run.font.color.rgb is None`` (inherits theme default → renders as black)
-- ``rgb == (0,0,0)`` (explicit black)
-- ``rgb`` luminance below 60 (Rec.709 weights) AND not in the dark
-  palette's accepted text set
+Two failure modes flagged:
+
+A) "Black on dark slide bg" — text run whose colour is missing or too
+   dark to read against the #12151B slide background:
+   - ``run.font.color.rgb is None`` (inherits theme default → black)
+   - ``rgb == (0,0,0)`` (explicit black)
+   - ``rgb`` luminance below 60 AND not in the accepted text set
+
+B) "White text inside white-fill box" — text whose run colour is
+   light (luminance > 0.7 of 255) but the SHAPE FILL behind it is
+   also light (luminance > 0.7) → text disappears into the box.
+   Catches the `_RQ_BOX_FILL` class of bug where a near-white callout
+   stays near-white after the dark-mode pass while the text it
+   contains gets re-coloured to near-white.
 
 Usage:
     .venv\\Scripts\\python.exe -m scripts._audit_dark_text <pptx_path>
@@ -59,9 +67,61 @@ def _shape_runs(slide_idx: int, shape_or_cell, where_hint: str):
             yield (slide_idx, name, p_idx, r_idx, rgb, text)
 
 
+def _read_shape_fill_rgb(shape_or_cell) -> tuple[int, int, int] | None:
+    fill = getattr(shape_or_cell, "fill", None)
+    if fill is None:
+        return None
+    try:
+        rgb = fill.fore_color.rgb
+    except (AttributeError, ValueError, TypeError):
+        return None
+    if rgb is None:
+        return None
+    return (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+
+
+_LIGHT_LUMINANCE_THRESHOLD = 0.7 * 255  # > 178
+
+
+def _check_contrast(prs, bad: list[str]) -> None:
+    """Failure mode B: light text inside light-fill shape (= invisible)."""
+    for slide_idx, slide in enumerate(prs.slides, 1):
+        for shape in slide.shapes:
+            fill_rgb = _read_shape_fill_rgb(shape)
+            if fill_rgb is None or _luminance(fill_rgb) <= _LIGHT_LUMINANCE_THRESHOLD:
+                continue
+            _check_shape_text_against_light_fill(slide_idx, shape, fill_rgb, bad)
+
+
+def _check_shape_text_against_light_fill(slide_idx, shape, fill_rgb, bad) -> None:
+    tf = getattr(shape, "text_frame", None)
+    if tf is None:
+        return
+    for p_idx, paragraph in enumerate(tf.paragraphs):
+        for r_idx, run in enumerate(paragraph.runs):
+            text = (run.text or "").strip()
+            if not text:
+                continue
+            try:
+                rgb = run.font.color.rgb
+            except (AttributeError, ValueError, TypeError):
+                continue
+            if rgb is None:
+                continue
+            text_rgb = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+            if _luminance(text_rgb) <= _LIGHT_LUMINANCE_THRESHOLD:
+                continue
+            bad.append(
+                f"slide {slide_idx} {shape.name!r} p{p_idx}r{r_idx}  "
+                f"LIGHT-ON-LIGHT  fill={fill_rgb} text-rgb={text_rgb}  "
+                f"text={text[:40]!r}"
+            )
+
+
 def main(pptx_path: Path) -> int:
     prs = Presentation(pptx_path)
     bad: list[str] = []
+    # Failure mode A — dark / unset text on dark slide bg.
     for slide_idx, name, p_idx, r_idx, rgb, text in _iter_runs(prs):
         if not text.strip():
             continue
@@ -78,6 +138,9 @@ def main(pptx_path: Path) -> int:
                 f"slide {slide_idx} {name!r} p{p_idx}r{r_idx}  "
                 f"rgb={rgb_tuple}  lum={_luminance(rgb_tuple):.0f}  text={text!r}"
             )
+    # Failure mode B — light text inside light-fill shape.
+    _check_contrast(prs, bad)
+
     print(f"audit: {pptx_path.name}")
     print(f"runs flagged: {len(bad)}")
     for line in bad[:40]:
