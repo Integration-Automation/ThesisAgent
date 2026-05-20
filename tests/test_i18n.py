@@ -335,6 +335,54 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
         # Verbs.
         (re.compile(r"搜索"), "搜索 → 搜尋"),
         (re.compile(r"查找"), "查找 → 尋找"),
+        # Round 4 — more OOP / type-system / language-construct terms.
+        (re.compile(r"多態"), "多態 → 多型"),
+        (re.compile(r"重定義"), "重定義 → 重新定義 / 覆寫"),
+        (re.compile(r"解引用"), "解引用 → 解參考"),
+        (re.compile(r"標識符"), "標識符 → 識別字"),
+        (re.compile(r"動態庫"), "動態庫 → 動態函式庫"),
+        (re.compile(r"靜態庫"), "靜態庫 → 靜態函式庫"),
+        (re.compile(r"共享庫"), "共享庫 → 共用函式庫"),
+        # Mobile / touch / screen specifics.
+        (re.compile(r"觸屏"), "觸屏 → 觸控螢幕"),
+        (re.compile(r"觸摸"), "觸摸 → 觸控"),
+        (re.compile(r"全屏"), "全屏 → 全螢幕"),
+        (re.compile(r"截屏"), "截屏 → 螢幕擷取 / 截圖"),
+        (re.compile(r"顯示屏"), "顯示屏 → 螢幕 / 顯示器"),
+        # Audio / video.
+        (re.compile(r"音頻"), "音頻 → 音訊"),
+        (re.compile(r"音視頻"), "音視頻 → 影音"),
+        (re.compile(r"視頻會議"), "視頻會議 → 視訊會議"),
+        # Storage compounds.
+        (re.compile(r"U盤"), "U盤 → 隨身碟"),
+        (re.compile(r"雲盤"), "雲盤 → 雲端硬碟"),
+        (re.compile(r"網盤"), "網盤 → 網路硬碟"),
+        (re.compile(r"系統盤"), "系統盤 → 系統碟"),
+        (re.compile(r"啟動盤"), "啟動盤 → 開機磁碟"),
+        # Networking.
+        (re.compile(r"組播"), "組播 → 多播"),
+        (re.compile(r"廣域網"), "廣域網 → 廣域網路 (WAN)"),
+        (re.compile(r"局域網"), "局域網 → 區域網路 (LAN)"),
+        # Data structures.
+        (re.compile(r"鏈表"), "鏈表 → 鏈結串列 / 連結串列"),
+        (re.compile(r"二叉樹"), "二叉樹 → 二元樹"),
+        (re.compile(r"散列表"), "散列表 → 雜湊表"),
+        # Math.
+        (re.compile(r"素數"), "素數 → 質數"),
+        (re.compile(r"整型"), "整型 → 整數 / 整數型別"),
+        (re.compile(r"均值"), "均值 → 平均值"),
+        # ML / DB / DevOps.
+        (re.compile(r"激活"), "激活 → 啟用"),
+        (re.compile(r"存儲過程"), "存儲過程 → 預存程序"),
+        (re.compile(r"灰度發布"), "灰度發布 → 灰階發布"),
+        # UI / desktop / interaction.
+        (re.compile(r"進度條"), "進度條 → 進度列"),
+        (re.compile(r"復選"), "復選 → 核取"),
+        (re.compile(r"單擊"), "單擊 → 點擊 / 按一下"),
+        (re.compile(r"拖拽"), "拖拽 → 拖曳"),
+        (re.compile(r"任務管理器"), "任務管理器 → 工作管理員"),
+        (re.compile(r"文件管理器"), "文件管理器 → 檔案管理員 / 檔案總管"),
+        (re.compile(r"注冊表"), "注冊表 → 登錄檔"),
     ]
     zh_tw_paths = [
         _REPO_ROOT / "scripts" / "regen_llm_security_batch_zh_tw.py",

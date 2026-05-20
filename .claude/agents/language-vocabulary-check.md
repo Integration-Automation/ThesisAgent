@@ -230,6 +230,87 @@ right bucket.
 | 啟動 | 啟動 (same) | start |
 | 重啟 | 重新啟動 / 重啟 (both) | restart |
 | 卸載 | 解除安裝 / 卸載 (both) | uninstall |
+| 激活 | 啟用 | activate |
+| 拖拽 | 拖曳 | drag |
+| 單擊 | 點擊 / 按一下 | single-click |
+| 復選 | 核取 | check (a checkbox) |
+
+#### Type system / OOP (continued)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 多態 | 多型 | polymorphism |
+| 重定義 | 重新定義 / 覆寫 | redefine / override |
+| 解引用 | 解參考 | dereference |
+| 標識符 | 識別字 / 識別碼 | identifier |
+| 動態庫 | 動態函式庫 | dynamic library (`.so` / `.dll`) |
+| 靜態庫 | 靜態函式庫 | static library |
+| 共享庫 | 共用函式庫 | shared library |
+| 整型 | 整數 / 整數型別 | integer type |
+| 素數 | 質數 | prime number |
+| 均值 | 平均值 | mean |
+
+#### Touch / screen (mobile)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 觸屏 / 觸摸屏 | 觸控螢幕 | touch screen |
+| 觸摸 | 觸控 | touch |
+| 全屏 | 全螢幕 | fullscreen |
+| 截屏 | 螢幕擷取 / 截圖 | screenshot |
+| 顯示屏 | 螢幕 / 顯示器 | display |
+
+#### Audio / video
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 音頻 | 音訊 | audio |
+| 音視頻 | 影音 | audio + video |
+| 視頻會議 | 視訊會議 | video conference |
+
+#### Storage compounds
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| U盤 | 隨身碟 | USB flash drive |
+| 雲盤 | 雲端硬碟 | cloud drive |
+| 網盤 | 網路硬碟 | network drive |
+| 系統盤 | 系統碟 | system drive |
+| 啟動盤 | 開機磁碟 | boot disk |
+| 內存卡 | 記憶卡 | memory card |
+
+#### More networking
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 組播 | 多播 | multicast |
+| 廣域網 | 廣域網路 | WAN |
+| 局域網 | 區域網路 | LAN |
+| 城域網 | 都會網路 | MAN |
+
+#### More data structures
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 鏈表 | 鏈結串列 / 連結串列 | linked list |
+| 二叉樹 | 二元樹 | binary tree |
+| 散列表 | 雜湊表 | hash table |
+
+#### Cloud / DevOps (continued)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 存儲過程 | 預存程序 | stored procedure (DB) |
+| 灰度發布 | 灰階發布 / 漸進式發布 | canary release |
+
+#### Desktop OS surfaces
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 進度條 | 進度列 | progress bar |
+| 任務管理器 | 工作管理員 | task manager |
+| 文件管理器 | 檔案管理員 / 檔案總管 | file manager |
+| 注冊表 | 登錄檔 | Windows registry |
 
 ### Simplified Chinese (zh-cn) — avoid Traditional vocabulary
 
