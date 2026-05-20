@@ -221,6 +221,14 @@ XIA = Paper(
         ),
         figures=(
             (
+                "Speculative Decoding 發展時間軸 (Figure 2)",
+                _fig("xia2024speculative", "p02-01-Figure-on-page-2.png"),
+                (
+                    "從 2018 Blockwise Decoding 起源,2022.03 SpecDec 正式提出範式名稱。",
+                    "2023 H2 起 Medusa / EAGLE / SpecInfer / Lookahead 等大量方法湧現。",
+                ),
+            ),
+            (
                 "Speculative Decoding 分類體系 (Figure 3)",
                 _fig("xia2024speculative", "p04-02-Taxonomy-of-Speculative-Decoding.png"),
                 (
@@ -229,11 +237,19 @@ XIA = Paper(
                 ),
             ),
             (
-                "Spec-Bench 跨方法加速比較 (Figure 4)",
+                "Spec-Bench 加速比較 — 不同硬體 (Figure 7)",
                 _fig("xia2024speculative", "p08-04-Speedup-comparison-of-various-Speculative.png"),
                 (
-                    "Vicuna-7B 為 target,跨 6 個任務 (MT-Bench / CNN-DM / WMT / CoT / QA / 程式碼) 量化 wall-clock speedup。",
-                    "Token-tree 類方法 (Medusa / EAGLE) 在大 batch 拉開最大領先。",
+                    "Medusa 在 A100 上達 2.39×,但在 RTX 3090 只 1.48× — 顯示方法的硬體敏感性。",
+                    "Lookahead / REST 在不同硬體上速比差異最大,EAGLE / SpS 較穩定。",
+                ),
+            ),
+            (
+                "Spec-Bench 任務雷達圖 + 模型大小擴展 (Figures 8 & 9)",
+                _fig("xia2024speculative", "p16-06-Speedup-comparison-of-various-Speculative.png"),
+                (
+                    "左:雷達圖展示同一方法在 6 種任務 (Translation / Multi-turn / RAG / Math / QA / Summarisation) 的速比分布。",
+                    "右:同方法在 Vicuna-7B/13B/33B 三個模型大小的速比比較,Medusa 在 7B 達 2.37× 但在 33B 縮到 1.65×。",
                 ),
             ),
         ),
@@ -639,6 +655,29 @@ XU_EDGELLM = Paper(
         ),
         figures=(
             (
+                "LLM 在 mobile 上撞 memory wall (Figure 1)",
+                _fig(
+                    "xu2024edgellm",
+                    "p01-00-The-memory-wall-hinders-LLMs-scaling-law-on-mobile-devices.png",
+                ),
+                (
+                    "(a) 模型超過 10B 才有明顯 emergent ability(Math / NLU / Mode / GM)。",
+                    "(b) 同一 LLM 越過記憶體上限後,latency 在 Jetson TX2 / Xiaomi 10 / Jetson Orin 各跳幾十倍。",
+                    "結論:scaling law 在 edge 撞牆 — 需要超出記憶體仍能即時的方案。",
+                ),
+            ),
+            (
+                "Decoder-only LLM 推論架構 (Figure 2)",
+                _fig(
+                    "xu2024edgellm",
+                    "p03-01-InferencedelaybreakdownofdifferentLLMvariantsinoneautoregres.png",
+                ),
+                (
+                    "左:GPT-3 風格的 N 層 decoder (Masked self-attention + LayerNorm + FFN)。",
+                    "右:autoregressive 推論一次生成一個 token,大量 weight 在 iter 之間反覆換入晶片 cache。",
+                ),
+            ),
+            (
                 "EdgeLLM 整體工作流 (Figure 5)",
                 _fig("xu2024edgellm", "p05-03-The-workﬂow-of-EdgeLLM.png"),
                 (
@@ -660,6 +699,39 @@ XU_EDGELLM = Paper(
                 (
                     "Target LLM 一次 forward 同時驗證整棵 token tree。",
                     "比逐分支序列化驗證減少數倍 latency。",
+                ),
+            ),
+            (
+                "Fallback 門檻消融研究 (Figure 8)",
+                _fig(
+                    "xu2024edgellm",
+                    "p08-06-Comparison-of-different-initial-thresholds-and-updating-para.png",
+                ),
+                (
+                    "(a) 初始 threshold 對 speedup 影響在 0.005-0.1 區間穩定 — 對 cold-start 不敏感。",
+                    "(b) Update rule 的 η 參數:η=0.5 在大資料集上給出最佳 speedup。",
+                ),
+            ),
+            (
+                "Per-token 延遲 vs baselines (Figure 11)",
+                _fig(
+                    "xu2024edgellm",
+                    "p11-08-Average-per-token-generation-latency-of-EdgeLLM-and-baseline.png",
+                ),
+                (
+                    "跨 mT5 / T5 / Bart / GPT2 四種模型,EdgeLLM (Ours) 與 SPL / STI / SP / BLD / SI 五條 baseline 對比。",
+                    "EdgeLLM 在 gpt2-wikitext 達最大 speedup (8.00→1.79 秒);在 t5-CNN_Daily 最小 (7.10→1.34)。",
+                ),
+            ),
+            (
+                "不同記憶體預算下的生成速度 (Figure 13)",
+                _fig(
+                    "xu2024edgellm",
+                    "p13-13-Generation-speed-under-different-memory-budgets-Y--axis-Gene.png",
+                ),
+                (
+                    "Jetson TX2 (4-5.6 GB) 與 Xiaomi 10 (4-8 GB) 上,EdgeLLM(Ours) 在所有預算下都領先 BLD / SP / STI。",
+                    "右側表:能耗對比,EdgeLLM 在 LLaMA2-summarization 上達 3.2× 能耗節省。",
                 ),
             ),
         ),
@@ -906,6 +978,10 @@ def main() -> None:
             filename_stem=f"{paper.bibtex_key()}-zh-tw",
             include_abstract=True,
             language="zh-tw",
+            # Disable the 25-slides-per-paper cap so every curated
+            # figure makes it into the deck even when the rich-tier
+            # body content already consumes most of the budget.
+            max_slides_per_paper=0,
         )
         written = export_collection(collection, options)
         for fmt, path in written.items():

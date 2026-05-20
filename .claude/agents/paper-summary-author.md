@@ -162,15 +162,29 @@ For each paper that is on-topic for the user's actual intent (see "Off-topic pap
    ```
 
    **Curate the output** — `extract_figures` is greedy (renders every figure-
-   sized region of every page). Inspect the PNGs and pick the 2-3 most
-   meaningful per paper:
-   - System overview / pipeline diagram (almost always Fig 1 or 2)
-   - Key result chart (the one in the abstract claims as headline)
-   - Optionally: a representative ablation chart or qualitative example
+   sized region of every page). Inspect the PNGs and **include every figure
+   that meaningfully advances the paper's story**, not just 2-3 token ones.
+   A thesis-style deck has room for the full visual narrative:
+   - Motivation chart (the wall / gap / scaling problem)
+   - Background diagram (architecture / pipeline context)
+   - System overview / workflow (almost always Fig 1 or 2 of the paper)
+   - Worked example / illustrative diagram
+   - Key technique diagram (verification, attention, etc.)
+   - Headline result chart
+   - Ablation / parameter sweep
+   - Per-device or per-task result chart
+   - Optional: timeline / taxonomy / qualitative example
 
    Skip noise — placeholder logo regions, tiny header strips, low-resolution
-   thumbnails, duplicated charts. The exporter renders one slide per figure
-   so > 4 figures per paper bloats the deck past the typical 25-slide cap.
+   thumbnails, exact duplicates that appear twice in the paper. **Quantity
+   alone isn't quality; relevance is.**
+
+   When the curated figure count plus the rich-tier body content will exceed
+   the default 25-slide cap (`ExportOptions.max_slides_per_paper`), set the
+   cap to `0` in your regen script's `ExportOptions(...)` call so the cap is
+   disabled — figures are part of the deliverable, not optional polish.
+   `scripts/regen_speculative_decoding_zh_tw.py` does this (Xu's EdgeLLM
+   deck ends up at 27 slides with 8 curated figures).
 
    Worked example: `scripts/_extract_speculative_figures.py` extracts every
    figure from 4 PDFs into `exports/speculative-decoding-zh-tw/figures/<key>/`;
