@@ -383,6 +383,40 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
         (re.compile(r"任務管理器"), "任務管理器 → 工作管理員"),
         (re.compile(r"文件管理器"), "文件管理器 → 檔案管理員 / 檔案總管"),
         (re.compile(r"注冊表"), "注冊表 → 登錄檔"),
+        # Round 5 — overflow / escape / punctuation / pixels / images.
+        (re.compile(r"溢出"), "溢出 → 溢位 (overflow / under-)"),
+        (re.compile(r"內聯"), "內聯 → 內嵌 / 行內"),
+        (re.compile(r"轉義"), "轉義 → 跳脫 (escape char)"),
+        (re.compile(r"反斜杠"), "反斜杠 → 反斜線"),
+        (re.compile(r"(?<!反)斜杠"), "斜杠 → 斜線"),
+        (re.compile(r"方括號"), "方括號 → 中括號"),
+        (re.compile(r"數字化"), "數字化 → 數位化"),
+        (re.compile(r"數字簽名"), "數字簽名 → 數位簽名"),
+        (re.compile(r"分辨率"), "分辨率 → 解析度"),
+        (re.compile(r"矢量"), "矢量 → 向量"),
+        (re.compile(r"響應"), "響應 → 回應"),
+        # T-char Simplified-vocab — the standalone form 軟件 that the
+        # existing char-level 软件 pattern misses. CRITICAL.
+        (re.compile(r"軟件"), "軟件 → 軟體"),
+        # Documents.
+        (re.compile(r"文檔"), "文檔 → 文件 / 說明文件 (S `文檔` = document)"),
+        (re.compile(r"文本框"), "文本框 → 文字方塊"),
+        (re.compile(r"縮略圖"), "縮略圖 → 縮圖"),
+        (re.compile(r"二維碼"), "二維碼 → 二維條碼 / QR code"),
+        # Addresses / IPs.
+        (re.compile(r"IP\s*地址"), "IP地址 → IP 位址"),
+        (re.compile(r"物理地址"), "物理地址 → 實體位址"),
+        (re.compile(r"MAC\s*地址"), "MAC 地址 → MAC 位址"),
+        # Alerts / errors.
+        (re.compile(r"報警"), "報警 → 警報"),
+        # Source / footnotes.
+        (re.compile(r"源代碼"), "源代碼 → 原始碼"),
+        (re.compile(r"腳注"), "腳注 → 腳註"),
+        # UI shortcuts / tray.
+        (re.compile(r"快捷方式"), "快捷方式 → 捷徑"),
+        (re.compile(r"系統托盤"), "系統托盤 → 系統匣"),
+        # Security.
+        (re.compile(r"殺毒"), "殺毒 → 防毒"),
     ]
     zh_tw_paths = [
         _REPO_ROOT / "scripts" / "regen_llm_security_batch_zh_tw.py",

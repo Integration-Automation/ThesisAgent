@@ -311,6 +311,50 @@ right bucket.
 | 任務管理器 | 工作管理員 | task manager |
 | 文件管理器 | 檔案管理員 / 檔案總管 | file manager |
 | 注冊表 | 登錄檔 | Windows registry |
+| 快捷方式 | 捷徑 | shortcut (Windows `.lnk`) |
+| 系統托盤 | 系統匣 | system tray |
+
+#### Punctuation / escapes / numeric formatting
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 反斜杠 / 斜杠 | 反斜線 / 斜線 | backslash / slash |
+| 方括號 | 中括號 | `[ ]` brackets |
+| 轉義 | 跳脫 | escape character |
+| 數字化 | 數位化 | digitisation |
+| 數字簽名 | 數位簽名 | digital signature |
+| 分辨率 | 解析度 | resolution (image / display) |
+| 矢量 | 向量 | vector (math / graphics) |
+| 內聯 | 內嵌 / 行內 | inline (code / function) |
+| 溢出 | 溢位 | overflow / underflow |
+
+#### Software / documents
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 軟件 (T-char S-word) | 軟體 | software (the bare-char `软件` form is also S, both flagged) |
+| 文檔 | 文件 / 說明文件 | document (S `文檔`; TW `文件` in document context) |
+| 文本框 | 文字方塊 | text box |
+| 源代碼 | 原始碼 | source code |
+| 腳注 | 腳註 | footnote |
+
+#### Image / media (continued)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 縮略圖 | 縮圖 | thumbnail |
+| 二維碼 | 二維條碼 / QR code | QR code |
+| 響應 | 回應 / 回覆 | response (HTTP / event) |
+
+#### Addresses / network identifiers
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| IP 地址 | IP 位址 | IP address |
+| 物理地址 | 實體位址 | physical address |
+| MAC 地址 | MAC 位址 | MAC address |
+| 報警 | 警報 / 告警 | alarm / alert |
+| 殺毒 (軟件) | 防毒 (軟體) | antivirus |
 
 ### Simplified Chinese (zh-cn) — avoid Traditional vocabulary
 
