@@ -247,6 +247,41 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
         (re.compile(r"對話框"), "對話框 → 對話方塊"),
         (re.compile(r"句柄"), "句柄 → 控制代碼"),
         (re.compile(r"(?<![異])異常(?![案的快只新終難艱])"), "異常 → 例外"),
+        # Hardware vocabulary — Traditional chars, Simplified words.
+        (re.compile(r"硬件"), "硬件 → 硬體"),
+        (re.compile(r"主板"), "主板 → 主機板"),
+        (re.compile(r"顯卡"), "顯卡 → 顯示卡"),
+        (re.compile(r"硬盤"), "硬盤 → 硬碟"),
+        (re.compile(r"軟盤"), "軟盤 → 軟碟"),
+        (re.compile(r"光盤"), "光盤 → 光碟"),
+        # Printing / output devices.
+        (re.compile(r"打印"), "打印(機) → 列印(機 → 印表機)"),
+        # Crypto / data structures / variables.
+        (re.compile(r"密鑰"), "密鑰 → 金鑰"),
+        (re.compile(r"數組"), "數組 → 陣列"),
+        # `不變量` (invariant, math / formal-verification context) is
+        # accepted in TW, so exclude it. Bare `變量` (= variable) is S-only.
+        (re.compile(r"(?<![不])變量"), "變量 → 變數"),
+        (re.compile(r"字節"), "字節 → 位元組 (or just 'byte')"),
+        # `比特` IS legit inside `比特幣` (bitcoin, accepted in TW), so
+        # exclude that one compound with a negative-lookahead.
+        (re.compile(r"比特(?!幣)"), "比特 → 位元 (or just 'bit')"),
+        # Comments / templates / tracking / async.
+        (re.compile(r"注釋"), "注釋 → 註解 (or 註釋 with 註)"),
+        (re.compile(r"模板"), "模板 → 範本"),
+        (re.compile(r"跟蹤"), "跟蹤 → 追蹤"),
+        (re.compile(r"異步"), "異步 → 非同步"),
+        # Ports + UI elements.
+        (re.compile(r"串口"), "串口 → 序列埠"),
+        (re.compile(r"圖標"), "圖標 → 圖示"),
+        # Display / media.
+        (re.compile(r"高清"), "高清 → 高畫質"),
+        (re.compile(r"寬屏"), "寬屏 → 寬螢幕"),
+        # Filesystem / messaging.
+        (re.compile(r"信道"), "信道 → 通道 / 頻道"),
+        (re.compile(r"鏡像文件"), "鏡像文件 → 映像檔"),
+        (re.compile(r"文件夾"), "文件夾 → 資料夾"),
+        (re.compile(r"短信"), "短信 → 簡訊"),
     ]
     zh_tw_paths = [
         _REPO_ROOT / "scripts" / "regen_llm_security_batch_zh_tw.py",

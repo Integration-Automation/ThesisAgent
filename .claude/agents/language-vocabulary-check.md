@@ -71,6 +71,30 @@ A simplified-vs-traditional character checker WILL NOT catch them.
 | 注釋 | 註解 | comment / annotation |
 | 信號 | 訊號 | signal |
 | 互信息 | 互資訊 | mutual information |
+| 硬件 | 硬體 | hardware |
+| 主板 | 主機板 | motherboard |
+| 顯卡 | 顯示卡 | graphics card |
+| 硬盤 | 硬碟 | hard disk |
+| 軟盤 | 軟碟 | floppy disk |
+| 光盤 | 光碟 | optical disc |
+| 打印 / 打印機 | 列印 / 印表機 | print(er) |
+| 密鑰 | 金鑰 | crypto key |
+| 數組 | 陣列 | array |
+| 變量 (≠ 不變量) | 變數 | variable (`不變量` = invariant is fine in TW) |
+| 字節 | 位元組 | byte |
+| 比特 (≠ 比特幣) | 位元 | bit (`比特幣` = bitcoin is accepted in TW) |
+| 注釋 | 註解 / 註釋 | comment / annotation (the form starting with `注` is S; TW uses `註`) |
+| 模板 | 範本 | template |
+| 跟蹤 | 追蹤 | track / trace |
+| 異步 | 非同步 | async |
+| 串口 | 序列埠 | serial port |
+| 圖標 | 圖示 | icon |
+| 高清 | 高畫質 | high definition |
+| 寬屏 | 寬螢幕 | widescreen |
+| 信道 | 通道 / 頻道 | channel |
+| 鏡像文件 | 映像檔 | disk image |
+| 文件夾 | 資料夾 | folder |
+| 短信 | 簡訊 | SMS / text message |
 
 ### Simplified Chinese (zh-cn) — avoid Traditional vocabulary
 
