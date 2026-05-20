@@ -56,6 +56,39 @@ Do NOT introduce new brand colours casually — every additional colour
 fights for attention. Reuse the four above unless the user explicitly
 adds one.
 
+### Table styling (the second-biggest "AI-generated" tell after Calibri)
+
+PowerPoint's default table style draws a heavy black grid on every cell.
+Combined with a small font + default vertical-top alignment, the result
+looks like a quick screenshot from Excel, not a thesis-defence visual.
+
+The exporter ships an academic-style replacement in
+`autopapertoppt/exporters/pptx.py::_add_table` → `_style_table_cell`.
+The rules:
+
+| Element | Spec |
+|---|---|
+| Default grid | All four cell borders set to `<a:noFill>` (`_clear_cell_borders`) |
+| Header row | Solid navy fill (`_TABLE_HEADER_FILL`), white bold text (`_TABLE_HEADER_FG`) |
+| Header rule | 1.5pt navy bottom line, drawn as the data row's TOP border (`_TABLE_HEADER_RULE`) — sits flush, no double-line stacking |
+| Data row dividers | 0.5pt soft grey-blue (`_TABLE_DIVIDER`) top border between adjacent data rows |
+| Alternating fills | Even rows `_TABLE_ROW_ALT` (light blue tint); odd rows pure white |
+| Cell vertical alignment | `MSO_ANCHOR.MIDDLE` — short labels share baseline with longer descriptions |
+| Row-label column | First column of body rows is **bold** so row labels read as headers |
+| Cell padding | 0.1" horizontal, 0.05" vertical (tighter than PowerPoint default) |
+| Body font | `_TABLE_PT` (14pt) brand-dark navy |
+
+Helpers:
+- `_clear_cell_borders(cell)` — sets `<a:lnX>/<a:noFill>` on L/R/T/B
+- `_set_cell_border(cell, edge, width, colour)` — replaces an edge with a `<a:solidFill>` rule (`a:prstDash val="solid"` + `a:round`)
+
+When the table style needs tweaking (a new colour, thicker header rule,
+different row-stripe), update the palette constants at the top of
+`pptx.py` and the rule lookup inside `_style_table_cell` — every table
+in the project (`technique_table`, `literature_table`, `rq_results`,
+the contributions table, the references list when rendered as table)
+flows through this single helper, so the change applies uniformly.
+
 ### Accent geometry (the "this is a designed deck" tell)
 
 Every content slide gets a thin top accent bar:
@@ -85,6 +118,19 @@ provided every slide ends up with:
    positions across slides.
 3. Page numbers in `_BRAND_GREY` (already set).
 4. The semantic shape names listed in `slide-deck-rules.md`.
+
+### Tables — additional anti-patterns
+
+- Default PowerPoint `add_table` style left intact (heavy black grid on
+  every cell). Always run through `_style_table_cell` so the grid is
+  stripped and replaced with the header-rule + row-divider pattern above.
+- Cell vertical alignment left at default (top). Short labels float
+  above long-description rows in the same row, creating ragged baselines.
+- Row stripe colours brighter than `_TABLE_ROW_ALT`. Stripe should be
+  the lightest possible tint that still reads as alternating.
+- Numeric-column right-alignment skipped. (Currently optional — when a
+  column is clearly numeric values, prefer right-align so units / digits
+  line up. Out of scope for the v1 ship.)
 
 ## Anti-patterns (instant "AI-generated" tells)
 

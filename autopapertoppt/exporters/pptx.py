@@ -36,7 +36,7 @@ from pathlib import Path
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
-from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
@@ -145,6 +145,8 @@ _RQ_BOX_BORDER = RGBColor(0x1F, 0x3A, 0x66)
 _TABLE_HEADER_FILL = RGBColor(0x1F, 0x3A, 0x66)
 _TABLE_HEADER_FG = RGBColor(0xFF, 0xFF, 0xFF)
 _TABLE_ROW_ALT = RGBColor(0xF4, 0xF6, 0xF9)
+_TABLE_DIVIDER = RGBColor(0xD0, 0xD7, 0xE2)  # row divider — soft grey-blue
+_TABLE_HEADER_RULE = RGBColor(0x1F, 0x3A, 0x66)  # heavy nav rule under header
 
 # ---------------------------------------------------------------------------
 # Abstract segmentation (fallback when summary is absent / lightweight only)
@@ -1435,6 +1437,23 @@ def _add_kpi_lines(
 def _add_table(
     slide, *, rows, left, top, width, height, col_widths,
 ) -> None:
+    """Render a clean academic-style table.
+
+    Styling rules (mirror published thesis-defence decks, not the default
+    PowerPoint table look):
+
+    * No default black grid lines — every cell border is set to noFill
+      first, then specific rules are added back where they help readability.
+    * Header row: navy fill, white bold text, with a thick (1.5pt) navy
+      bottom rule below it for emphasis (the rule sits in the data row's
+      top edge, not the header's bottom, so it doesn't double up).
+    * Data rows: alternate very-light-blue / white background; thin
+      (0.5pt) grey-blue rule between adjacent data rows.
+    * Cell vertical alignment: middle, so short labels and longer
+      descriptions in the same row sit on a shared baseline.
+    * First column of body rows: bold, slightly emphasised — most tables
+      in this project use the leftmost cell as a row label.
+    """
     if not rows:
         return
     row_count = len(rows)
@@ -1447,31 +1466,94 @@ def _add_table(
         table.columns[col_index].width = w
     for r, row_values in enumerate(rows):
         for c, value in enumerate(row_values):
-            cell = table.cell(r, c)
-            cell.text = str(value)
-            text_frame = cell.text_frame
-            text_frame.word_wrap = True
-            text_frame.margin_left = Inches(0.08)
-            text_frame.margin_right = Inches(0.08)
-            text_frame.margin_top = Inches(0.04)
-            text_frame.margin_bottom = Inches(0.04)
-            for paragraph in text_frame.paragraphs:
-                for run in paragraph.runs:
-                    run.font.size = Pt(_TABLE_PT)
-                    if r == 0:
-                        run.font.bold = True
-                        run.font.color.rgb = _TABLE_HEADER_FG
-                    else:
-                        run.font.color.rgb = _BRAND_DARK
+            _style_table_cell(table.cell(r, c), str(value), r, c)
+
+
+def _style_table_cell(cell, value: str, r: int, c: int) -> None:
+    """Apply academic-style formatting to one cell.
+
+    Split out from ``_add_table`` so the cognitive-complexity budget
+    fits — borders + fills + font + alignment all live here.
+    """
+    cell.text = value
+    cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+    text_frame = cell.text_frame
+    text_frame.word_wrap = True
+    text_frame.margin_left = Inches(0.1)
+    text_frame.margin_right = Inches(0.1)
+    text_frame.margin_top = Inches(0.05)
+    text_frame.margin_bottom = Inches(0.05)
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            run.font.size = Pt(_TABLE_PT)
             if r == 0:
-                cell.fill.solid()
-                cell.fill.fore_color.rgb = _TABLE_HEADER_FILL
-            elif r % 2 == 0:
-                cell.fill.solid()
-                cell.fill.fore_color.rgb = _TABLE_ROW_ALT
+                run.font.bold = True
+                run.font.color.rgb = _TABLE_HEADER_FG
             else:
-                cell.fill.solid()
-                cell.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+                run.font.color.rgb = _BRAND_DARK
+                if c == 0:
+                    # Row-label column gets a slightly heavier weight.
+                    run.font.bold = True
+    _set_cell_fill(cell, r)
+    _clear_cell_borders(cell)
+    if r == 1:
+        # Heavy rule below the header — drawn as the data row's TOP
+        # border so the visual width adds up cleanly.
+        _set_cell_border(cell, "T", Pt(1.5), _TABLE_HEADER_RULE)
+    elif r > 1:
+        # Thin separator between adjacent data rows.
+        _set_cell_border(cell, "T", Pt(0.5), _TABLE_DIVIDER)
+
+
+def _set_cell_fill(cell, r: int) -> None:
+    cell.fill.solid()
+    if r == 0:
+        cell.fill.fore_color.rgb = _TABLE_HEADER_FILL
+    elif r % 2 == 0:
+        cell.fill.fore_color.rgb = _TABLE_ROW_ALT
+    else:
+        cell.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+
+
+def _clear_cell_borders(cell) -> None:
+    """Set every edge of ``cell`` to noFill so the table style's default
+    grid lines disappear. The XML structure for a cell's border is
+    ``<a:tcPr>/<a:lnX>/<a:noFill/>`` where X ∈ {L, R, T, B}.
+    """
+    tc_pr = cell._tc.get_or_add_tcPr()
+    for edge in ("L", "R", "T", "B"):
+        tag = qn(f"a:ln{edge}")
+        existing = tc_pr.find(tag)
+        if existing is not None:
+            tc_pr.remove(existing)
+        ln = tc_pr.makeelement(tag, {"w": "0"}, nsmap=None)
+        ln.append(ln.makeelement(qn("a:noFill"), {}, nsmap=None))
+        tc_pr.append(ln)
+
+
+def _set_cell_border(cell, edge: str, width, colour: RGBColor) -> None:
+    """Add a solid-fill border on one edge of ``cell``.
+
+    ``edge`` must be one of L / R / T / B; ``width`` is a ``pptx.util.Pt``
+    (or any EMU-aware value). Replaces an existing border on that edge.
+    """
+    tc_pr = cell._tc.get_or_add_tcPr()
+    tag = qn(f"a:ln{edge}")
+    existing = tc_pr.find(tag)
+    if existing is not None:
+        tc_pr.remove(existing)
+    ln = tc_pr.makeelement(
+        tag,
+        {"w": str(int(width)), "cap": "flat", "cmpd": "sng", "algn": "ctr"},
+        nsmap=None,
+    )
+    solid = ln.makeelement(qn("a:solidFill"), {}, nsmap=None)
+    rgb_hex = f"{colour[0]:02X}{colour[1]:02X}{colour[2]:02X}"
+    solid.append(solid.makeelement(qn("a:srgbClr"), {"val": rgb_hex}, nsmap=None))
+    ln.append(solid)
+    ln.append(ln.makeelement(qn("a:prstDash"), {"val": "solid"}, nsmap=None))
+    ln.append(ln.makeelement(qn("a:round"), {}, nsmap=None))
+    tc_pr.append(ln)
 
 
 def _equal_col_widths(total: Emu, cols: int) -> tuple[Emu, ...]:
