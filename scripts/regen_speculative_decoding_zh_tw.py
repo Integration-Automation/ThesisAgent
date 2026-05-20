@@ -32,6 +32,13 @@ from autopapertoppt.exporters import export_collection  # noqa: E402
 
 MODEL_TAG = "LLM-as-agent (讀完整 PDF)"
 _RUN_DIR_NAME = sys.argv[1] if len(sys.argv) > 1 else "speculative-decoding-zh-tw"
+_FIGURES_ROOT = ROOT / "exports" / _RUN_DIR_NAME / "figures"
+
+
+def _fig(paper_key: str, filename: str) -> str:
+    """Path helper for figures pre-extracted by
+    ``scripts._extract_speculative_figures``."""
+    return str(_FIGURES_ROOT / paper_key / filename)
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +219,24 @@ XIA = Paper(
             "多模態 LLM 的 Speculative Decoding 變體",
             "Drafter 的自適應 / 持續學習機制",
         ),
+        figures=(
+            (
+                "Speculative Decoding 分類體系 (Figure 3)",
+                _fig("xia2024speculative", "p04-02-Taxonomy-of-Speculative-Decoding.png"),
+                (
+                    "雙軸分類:Drafting (Independent / Self) × Verification (Greedy / SpecSampling / Token Tree)。",
+                    "20+ 代表方法依此分群,新方法可在這張圖上找到自己的位置。",
+                ),
+            ),
+            (
+                "Spec-Bench 跨方法加速比較 (Figure 4)",
+                _fig("xia2024speculative", "p08-04-Speedup-comparison-of-various-Speculative.png"),
+                (
+                    "Vicuna-7B 為 target,跨 6 個任務 (MT-Bench / CNN-DM / WMT / CoT / QA / 程式碼) 量化 wall-clock speedup。",
+                    "Token-tree 類方法 (Medusa / EAGLE) 在大 batch 拉開最大領先。",
+                ),
+            ),
+        ),
     ),
 )
 
@@ -389,6 +414,32 @@ SPECTOR = Paper(
             "8-bit quant 後可在消費 GPU 跑 20B → 1B → 50M → N-gram 四階段",
             "更好的 lowest-level drafter (<10µs 但勝於 N-gram)",
             "與 quantization、Flash-Attn 等技術的協同最佳化",
+        ),
+        figures=(
+            (
+                "GPT-2-L 在 RTX 4090 的 roofline (Figure 1)",
+                _fig("spector2023staged", "p02-00-A-roofline-plot-for-single-query-GPT-2-L-inference-on-an.png"),
+                (
+                    "Batch=1 時受 memory bandwidth 限制,算力遠未飽和。",
+                    "證明 small-batch 推論的瓶頸不在 FLOPs。",
+                ),
+            ),
+            (
+                "HumanEval 各 prompt 的相對加速分布 (Figure 2)",
+                _fig("spector2023staged", "p04-01-Relative-performance-distribution-over-different-prob.png"),
+                (
+                    "(A) Greedy decoding,(B) Topk(k=50, T=1) sampling。",
+                    "Speedup 在 2-10× 之間,取決於 prompt 的文本 entropy。",
+                ),
+            ),
+            (
+                "Token 來源視覺化 (Figure 3)",
+                _fig("spector2023staged", "p04-02-A-visualization-of-the-origin-of-tokens-in-an-example.png"),
+                (
+                    "綠色 = N-gram draft2、藍色 = GPT-2 40M draft、紅色 = GPT-2-L 762M oracle。",
+                    "顯示低 entropy token (空白、縮排) 多由 N-gram 供給,oracle 只處理少數關鍵 token。",
+                ),
+            ),
         ),
     ),
 )
@@ -586,6 +637,32 @@ XU_EDGELLM = Paper(
             "Dynamic offloading 與 EdgeLLM 的協同",
             "雲端 + edge 混合推論的 fallback 介面",
         ),
+        figures=(
+            (
+                "EdgeLLM 整體工作流 (Figure 5)",
+                _fig("xu2024edgellm", "p05-03-The-workﬂow-of-EdgeLLM.png"),
+                (
+                    "Draft LLM (常駐記憶體) → 寬度自適應 token tree → batch 送 target LLM 驗證。",
+                    "Verify 期間 draft 持續 provisional generation,I/O 與 compute 重疊。",
+                ),
+            ),
+            (
+                "EdgeLLM 演算流程的具體範例 (Figure 6)",
+                _fig("xu2024edgellm", "p06-04-An-illustrative-example-of-EdgeLLM-The-ground-truth-is-the-A.png"),
+                (
+                    "Draft 一步生成多分支樹,每分支以 confidence 決定是否擴張。",
+                    "對 ground truth『the Apollo program』展示分支接受 / fallback 軌跡。",
+                ),
+            ),
+            (
+                "Branch verification 機制 (Figure 7)",
+                _fig("xu2024edgellm", "p07-05-The-illustration-of-branch-veriﬁcation.png"),
+                (
+                    "Target LLM 一次 forward 同時驗證整棵 token tree。",
+                    "比逐分支序列化驗證減少數倍 latency。",
+                ),
+            ),
+        ),
     ),
 )
 
@@ -765,6 +842,41 @@ SVIRSCHEVSKI = Paper(
             "Heterogeneous offload (NVMe + RAM + VRAM tier) 自動化",
             "Multi-GPU 消費級配置的 partition 策略",
             "Cache tree 在多輪對話中的重用",
+        ),
+        figures=(
+            (
+                "SpecExec 演算法總覽 (Figure 1)",
+                _fig(
+                    "svirschevski2024specexec",
+                    "p17-00-A-high-level-overview-of-the-SpecExec-algorithm.png",
+                ),
+                (
+                    "Drafter 自回歸長出寬度可變的 token tree (深度可達 20+、寬度可達數千)。",
+                    "Target LLM 從 RAM/SSD 載入一次 forward 驗證整棵樹。",
+                ),
+            ),
+            (
+                "Draft size vs 接受 token 數 (Figure 3)",
+                _fig(
+                    "svirschevski2024specexec",
+                    "p19-01-Number-of-accepted-tokens-as-a-function-of-the-draft-size-B-.png",
+                ),
+                (
+                    "B 軸 = 樹寬度。寬度從 64 增到 4096 時接受 token 數從 ≈4 拉到 20+。",
+                    "Offload 讓大寬度的 verify 變便宜,前作的 4-8 token 上限被打破。",
+                ),
+            ),
+            (
+                "Token penalty 下的接受率曲線 (Figure 4)",
+                _fig(
+                    "svirschevski2024specexec",
+                    "p20-02-Acceptance-rate-in-generation-with-token-penalty-dont-start-.png",
+                ),
+                (
+                    "在 token penalty 解碼下,接受率隨樹寬度上升仍維持線性。",
+                    "證明 SpecExec 在抗重複等修正解碼策略下仍有效。",
+                ),
+            ),
         ),
     ),
 )

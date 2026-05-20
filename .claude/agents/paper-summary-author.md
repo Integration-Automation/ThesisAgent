@@ -130,12 +130,52 @@ For each paper that is on-topic for the user's actual intent (see "Off-topic pap
    - `core_observation` — single most important takeaway, gets its own slide
    - `limitations` — author-acknowledged limits
    - `future_work` — author-stated future work
+   - **`figures` — MANDATORY when the paper has any figure.** A thesis-style deck without figures is half the deliverable. See the "Figure extraction" step below.
 
    Always set provenance fields:
    ```python
    model="<your model id> (LLM-as-agent, read N-page PDF)"
    raw_text_chars=<extracted length>
    ```
+
+   ### Figure extraction (mandatory before authoring `figures=`)
+
+   The `figures` field expects `(caption, image_path, description bullets)` tuples
+   pointing at PNGs already on disk. Render them BEFORE the regen script runs:
+
+   ```python
+   from autopapertoppt.intelligence.pdf_assets import extract_figures
+   figures = extract_figures(
+       Path("exports/<run>/pdfs/<key>.pdf"),
+       Path("exports/<run>/figures/<key>/"),
+   )
+   ```
+
+   PyMuPDF (`fitz`) is a default install dependency — no extra extras needed.
+   Each extracted figure is named `p{NN}-{idx}-{caption-slug}.png` so the regen
+   script can reference it stably via a small helper:
+
+   ```python
+   _FIGURES_ROOT = ROOT / "exports" / _RUN_DIR_NAME / "figures"
+   def _fig(paper_key, filename):
+       return str(_FIGURES_ROOT / paper_key / filename)
+   ```
+
+   **Curate the output** — `extract_figures` is greedy (renders every figure-
+   sized region of every page). Inspect the PNGs and pick the 2-3 most
+   meaningful per paper:
+   - System overview / pipeline diagram (almost always Fig 1 or 2)
+   - Key result chart (the one in the abstract claims as headline)
+   - Optionally: a representative ablation chart or qualitative example
+
+   Skip noise — placeholder logo regions, tiny header strips, low-resolution
+   thumbnails, duplicated charts. The exporter renders one slide per figure
+   so > 4 figures per paper bloats the deck past the typical 25-slide cap.
+
+   Worked example: `scripts/_extract_speculative_figures.py` extracts every
+   figure from 4 PDFs into `exports/speculative-decoding-zh-tw/figures/<key>/`;
+   `scripts/regen_speculative_decoding_zh_tw.py::_fig()` references the
+   curated subset. Use this as the template.
 
 3. **Copy URL / DOI / arxiv_id VERBATIM from the search xlsx — never from memory.** Publisher URL paths cannot be guessed:
    - AAAI uses numeric IDs like `v40i5.37389`, not author slugs
@@ -252,6 +292,7 @@ When the user says "search X and make a [lang] PPT", run the runbook below strai
 - Do NOT add `-rich` to filenames. Overwrite the lightweight emit at the canonical `<key>.pptx`.
 - Do NOT exceed 4 entries in `contributions_detailed`. The slide overshoots the footer guard above that.
 - Do NOT add `--lightweight` or `--no-pdf` to the CLI invocation "for speed" when the user asked for a deck. Those flags produce a non-deliverable. See "Default CLI invocation" above.
+- Do NOT omit `figures=` from a rich `PaperSummary` when the paper has any figure. A thesis-style deck without the paper's system diagram or key chart is half a deliverable. See "Figure extraction" under the per-paper procedure.
 - Do NOT leave irrelevant downloads in the run directory. The search engine is keyword-based, so off-topic papers will slip in. Once you classify a paper as off-topic, delete its `exports/<run>/pdfs/<key>.pdf` and `exports/<run>/<key>.pptx`. Keep the aggregate xlsx / bib intact — they are the **honest record** of what the search returned. See "Pruning irrelevant downloads" below.
 
 ## Pruning irrelevant downloads (mandatory before handing the deck back)
