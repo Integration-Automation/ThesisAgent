@@ -109,12 +109,19 @@ _BRAND_DARK = RGBColor(0x1F, 0x3A, 0x66)
 #: WARNING — DO NOT use _BRAND_ACCENT as a TEXT colour.
 #: Red text in slide decks is consistently associated with errors,
 #: warnings, and AI-generated KPI emphasis ("look at this number!").
-#: The project bans red font runs entirely; use bold + _BRAND_DARK
-#: for emphasis instead. The constant is kept around in case a
-#: future non-text accent shape (sparkline, badge, etc.) needs it,
-#: but every existing TEXT callsite has been migrated to _BRAND_DARK.
+#: The project bans red font runs entirely; use _BRAND_HIGHLIGHT (teal)
+#: for emphasis instead. The constant is kept around in case a future
+#: non-text accent shape (sparkline, badge, etc.) needs it, but every
+#: existing TEXT callsite has been migrated to _BRAND_HIGHLIGHT.
 #: See .claude/agents/deck-design.md "No red text" contract.
 _BRAND_ACCENT = RGBColor(0xC0, 0x39, 0x2B)
+#: Emphasis text colour — teal-700 (#0E7490). Replaces the banned red
+#: _BRAND_ACCENT for KPI values, RQ question callouts, figure
+#: captions, and other "this stands out" use cases. Pairs well with
+#: bold; pairs cleanly with _BRAND_DARK navy as the secondary; reads
+#: as professional/modern (think academic posters, not error banners).
+#: Dark-mode pass swaps to teal-400 (#2DD4BF) via _LIGHT_TO_DARK_TEXT.
+_BRAND_HIGHLIGHT = RGBColor(0x0E, 0x74, 0x90)
 _BRAND_GREY = RGBColor(0x55, 0x55, 0x55)
 _BRAND_LIGHT = RGBColor(0xAA, 0xAA, 0xAA)
 
@@ -156,9 +163,10 @@ _DARK_SLIDE_BG = RGBColor(0x12, 0x15, 0x1B)
 # are 3-tuples (R, G, B) since python-pptx's RGBColor is tuple-comparable
 # but we want to match by raw int components.
 _LIGHT_TO_DARK_TEXT: dict[tuple[int, int, int], tuple[int, int, int]] = {
-    (0x1F, 0x3A, 0x66): (0xE5, 0xE7, 0xEB),  # _BRAND_DARK   → near-white text
-    (0x55, 0x55, 0x55): (0x9C, 0xA3, 0xAF),  # _BRAND_GREY   → mid grey
-    (0xAA, 0xAA, 0xAA): (0x6B, 0x72, 0x80),  # _BRAND_LIGHT  → muted grey
+    (0x1F, 0x3A, 0x66): (0xE5, 0xE7, 0xEB),  # _BRAND_DARK      → near-white text
+    (0x55, 0x55, 0x55): (0x9C, 0xA3, 0xAF),  # _BRAND_GREY      → mid grey
+    (0xAA, 0xAA, 0xAA): (0x6B, 0x72, 0x80),  # _BRAND_LIGHT     → muted grey
+    (0x0E, 0x74, 0x90): (0x2D, 0xD4, 0xBF),  # _BRAND_HIGHLIGHT → bright teal-400
     # _BRAND_ACCENT (#C0392B) intentionally NOT mapped — red text was
     # banned per the deck-design "No red text" contract, and the
     # `test_pptx_no_red_text_runs` regression test fails if any run
@@ -900,7 +908,10 @@ def _add_figure_image(
             slide, name="body",
             text=f"[figure unavailable: {path.name}]",
             left=left, top=top, width=max_width, height=Inches(0.5),
-            font_pt=_BODY_PT, colour=_BRAND_DARK,
+            # Muted grey for a placeholder/error state — not a headline.
+            # Was red, then briefly navy; settled on grey because this
+            # surface is contextual chrome, not "this stands out".
+            font_pt=_BODY_PT, colour=_BRAND_GREY,
         )
         return
     # python-pptx scales by aspect ratio if we pass only height (or
@@ -943,7 +954,10 @@ def _add_paper_table_slides(
             text=f"{t(ctx.language, 'label_caption')}: {_clean(caption)}",
             left=_MARGIN_X, top=Inches(1.65),
             width=_BODY_WIDTH, height=Inches(0.55),
-            font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_DARK,
+            # Mid grey reads as a caption label (matches the figure-slide
+            # caption style at line ~887) rather than competing with the
+            # paper-table itself for the eye. Was red, then briefly navy.
+            font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_GREY,
             shrink_to_fit=True,
         )
         cols = len(rows[0])
@@ -999,7 +1013,11 @@ def _add_rq_result_slide(
         slide, name="rq_question", text=question_text,
         left=_MARGIN_X, top=Inches(1.65),
         width=_BODY_WIDTH, height=Inches(0.55),
-        font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_DARK,
+        # Teal highlight — this is the actual research question being
+        # answered on this slide; the eye should land on it before the
+        # results table below. Was red, then briefly navy; teal carries
+        # the "thoughtful, intentional" tone without the warning vibe.
+        font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_HIGHLIGHT,
         shrink_to_fit=True,
     )
     if rq.table:
@@ -1481,9 +1499,12 @@ def _add_kpi_lines(
         run_value.text = str(value)
         run_value.font.size = Pt(_BODY_PT + 2)
         run_value.font.bold = True
-        # Emphasis via bold + brand-dark navy — red text was banned per
-        # deck-design "No red font" contract. See deck-design.md.
-        run_value.font.color.rgb = _BRAND_DARK
+        # Teal accent for KPI numbers — they're the slide's punch line
+        # (a 2.3x speedup, a 78% F1, etc.). Bold + teal makes them pop
+        # without using red, which would read as error/warning. Was red,
+        # then briefly navy; teal restores a real emphasis colour.
+        # See deck-design.md "No red text" contract.
+        run_value.font.color.rgb = _BRAND_HIGHLIGHT
         if baseline:
             run_base = paragraph.add_run()
             run_base.text = f"   ({baseline_label}: {baseline})"

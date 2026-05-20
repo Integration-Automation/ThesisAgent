@@ -302,11 +302,13 @@ def test_pptx_dark_mode_no_light_text_on_light_fill(sample_papers, tmp_path):
 
 def test_pptx_no_red_text_runs(sample_papers, tmp_path):
     """The "No red text" contract: ``_BRAND_ACCENT`` (#C0392B) must
-    never be written as a run colour. Bold + ``_BRAND_DARK`` is the
-    approved emphasis pattern. Red font runs read as error / warning
-    in slide-deck conventions and pattern-match strongly to AI-generated
-    KPI emphasis ("look at this number!"). Banned across light AND
-    dark modes.
+    never be written as a run colour. Bold + ``_BRAND_HIGHLIGHT``
+    (teal-700 ``#0E7490``) is the approved emphasis pattern for
+    headline text (KPI value, RQ question); ``_BRAND_GREY`` is the
+    approved pattern for caption / placeholder / chrome text. Red
+    font runs read as error / warning in slide-deck conventions and
+    pattern-match strongly to AI-generated KPI emphasis ("look at this
+    number!"). Banned across light AND dark modes.
 
     A regression here means a new (or moved) builder added back a
     ``colour=_BRAND_ACCENT`` parameter or wrote
@@ -343,8 +345,9 @@ def test_pptx_no_red_text_runs(sample_papers, tmp_path):
                             f"slide {s_idx} shape {shape.name!r}: {text[:40]!r}"
                         )
     assert not offenders, (
-        "red text (#C0392B) found — use bold + _BRAND_DARK for emphasis "
-        "instead (deck-design 'No red text' contract):\n  "
+        "red text (#C0392B) found — use bold + _BRAND_HIGHLIGHT (teal) "
+        "for headlines or _BRAND_GREY for captions instead "
+        "(deck-design 'No red text' contract):\n  "
         + "\n  ".join(offenders[:10])
     )
 

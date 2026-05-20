@@ -141,12 +141,19 @@ default-dark-mode render.
 **No red text.** ``_BRAND_ACCENT`` (= ``#C0392B`` warm red) is BANNED
 as a TEXT colour across both light and dark modes. Red text reads
 as error / warning in slide conventions and pattern-matches strongly
-to AI-generated KPI emphasis. Use **bold + ``_BRAND_DARK``** instead.
+to AI-generated KPI emphasis. The sanctioned text-emphasis colour is
+**``_BRAND_HIGHLIGHT``** (teal-700, ``#0E7490``) — pair with
+``run.font.bold = True``. Use ``_BRAND_GREY`` for caption / placeholder /
+chrome text so headlines stay headlines. Variety rule: KPI value + RQ
+question use teal; figure caption + figure-unavailable use grey — do
+not collapse all four to the same colour. The dark-mode pass swaps
+teal-700 → teal-400 (``#2DD4BF``) via ``_LIGHT_TO_DARK_TEXT``; the
+audit script's ``_ACCEPTED_DARK_RUN_COLORS`` set knows about both.
 Regression test ``test_pptx_no_red_text_runs`` walks every run on a
-default-rendered deck and fails if any run uses ``#C0392B``. The
+default-rendered deck and fails if any run uses ``#C0392B``. The red
 constant stays in the palette in case a future non-text accent shape
-(sparkline, status badge) wants it. Full rule in
-``.claude/agents/deck-design.md`` "No red text contract (HARD)".
+(sparkline, status badge) wants it. Full rule + per-call-site palette
+mapping in ``.claude/agents/deck-design.md`` "No red text contract (HARD)".
 
 ## Where the detailed rules live
 

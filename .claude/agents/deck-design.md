@@ -48,13 +48,16 @@ Already pinned in `pptx.py`:
 | Constant | RGB | Use |
 |---|---|---|
 | `_BRAND_DARK` | `#1F3A66` (deep navy) | Primary text + accent bar |
-| `_BRAND_ACCENT` | `#C0392B` (warm red) | KPI highlights, hover-style emphasis |
-| `_BRAND_GREY` | `#555555` | Metadata, secondary text |
+| `_BRAND_HIGHLIGHT` | `#0E7490` (teal-700) | Text emphasis — KPI values, RQ question callout, "this stands out" headlines. The sanctioned replacement for the banned red accent. |
+| `_BRAND_ACCENT` | `#C0392B` (warm red) | BANNED for text (see "No red text" contract). Reserved for potential future non-text accent shapes only. |
+| `_BRAND_GREY` | `#555555` | Metadata, captions, secondary text, placeholder/error states |
 | `_BRAND_LIGHT` | `#AAAAAA` | Rule lines, dividers |
 
 Do NOT introduce new brand colours casually — every additional colour
-fights for attention. Reuse the four above unless the user explicitly
-adds one.
+fights for attention. Reuse the five above unless the user explicitly
+adds one. Note the deliberate split: **teal is the headline emphasis,
+grey is the label/chrome emphasis** — picking the wrong one (e.g. teal
+for a figure caption) makes captions compete with KPIs for the eye.
 
 #### Dark-mode palette (default; opt-out with `dark_mode=False` / `--light-mode` / GUI "Light mode")
 
@@ -72,7 +75,8 @@ to know about dark mode at construction time.
 | `_BRAND_DARK` text | `#1F3A66` → `#E5E7EB` | Body text near-white |
 | `_BRAND_GREY` text | `#555555` → `#9CA3AF` | Metadata mid grey |
 | `_BRAND_LIGHT` text | `#AAAAAA` → `#6B7280` | Subtle dividers / page numbers |
-| `_BRAND_ACCENT` | `#C0392B` (unchanged) | Warm red is legible on both light and dark |
+| `_BRAND_HIGHLIGHT` text | `#0E7490` → `#2DD4BF` | Teal-700 → teal-400; brighter teal reads on the dark slide bg without losing the accent identity |
+| `_BRAND_ACCENT` | `#C0392B` (unchanged) | BANNED for text in both modes (see "No red text" contract). If reused for a non-text shape, kept as-is for brand consistency. |
 | `_BRAND_DARK` fill (accent bars / table header) | `#1F3A66` → `#3B5AA0` | Lighter navy reads against the dark slide background |
 | `_TABLE_ROW_ALT` | `#F4F6F9` → `#1F232C` | Dark stripe |
 | Pure white table cell | `#FFFFFF` → `#161A22` | Near-black non-stripe rows |
@@ -136,9 +140,11 @@ manual inspection of a single rendered deck.
 **Red font runs are banned across both light AND dark modes.** The
 constant ``_BRAND_ACCENT`` (= ``#C0392B`` warm red) stays in the palette
 for potential future non-text accent shapes (sparkline highlight,
-status badge, etc.), but every TEXT call site has been migrated to
-``_BRAND_DARK``. Use **bold + brand-dark navy** as the emphasis
-pattern instead.
+status badge, etc.), but every TEXT call site has been migrated off it.
+The sanctioned text-emphasis colour is **``_BRAND_HIGHLIGHT`` (teal-700,
+``#0E7490``)** — pair with ``run.font.bold = True``. Use ``_BRAND_GREY``
+for chrome / label / placeholder emphasis (never teal — teal is reserved
+for "this matters", grey is for "this is context").
 
 Why banned:
 1. Red text reads as error / warning / something-is-broken in slide
@@ -150,20 +156,37 @@ Why banned:
    "default LLM-deck tell" we can eliminate raises perceived quality.
 3. In dark mode red text reads OK on the dark slide bg, but it'd be
    the only accent colour — visually inconsistent with the rest of the
-   palette.
+   palette. Teal pairs cleanly with the navy ``_BRAND_DARK`` body text.
+
+Variety rule (avoid monotone emphasis): when migrating a ex-red site,
+**pick the colour that matches the site's role**, not whichever colour
+is closest at hand. The four migrated sites split:
+
+| Call site | Role | Replacement |
+|---|---|---|
+| KPI value (`_add_kpi_lines`) | "the slide's punch line" headline | `_BRAND_HIGHLIGHT` (teal) |
+| RQ question (`_add_rq_result_slide`) | "the question being answered" headline | `_BRAND_HIGHLIGHT` (teal) |
+| Paper-table caption (`_add_paper_table_slides`) | caption label below subhead | `_BRAND_GREY` (muted) |
+| Figure-unavailable fallback (`_add_figure_image`) | placeholder / error state | `_BRAND_GREY` (muted) |
 
 Implementation contract:
 1. **Never write** ``colour=_BRAND_ACCENT`` in any ``_add_textbox`` /
    ``_add_bullet_box`` / ``_add_*`` helper call site.
 2. **Never assign** ``run.font.color.rgb = _BRAND_ACCENT`` directly.
 3. For emphasis on a value (e.g. a KPI number) use:
-   ``run.font.bold = True`` + ``run.font.color.rgb = _BRAND_DARK``.
-4. Regression test ``test_pptx_no_red_text_runs`` walks every run on
+   ``run.font.bold = True`` + ``run.font.color.rgb = _BRAND_HIGHLIGHT``.
+4. For caption / placeholder / chrome text, use ``_BRAND_GREY`` — not
+   teal, not navy. Reserving teal for headlines is what makes headlines
+   actually read as headlines.
+5. Regression test ``test_pptx_no_red_text_runs`` walks every run on
    a default-rendered deck and fails if any run uses ``#C0392B``.
-5. The dark-mode ``_LIGHT_TO_DARK_TEXT`` map intentionally does NOT
+6. The dark-mode ``_LIGHT_TO_DARK_TEXT`` map intentionally does NOT
    include red — so even if the test missed a case, the dark-mode
    pass wouldn't quietly map it; the run would carry red through to
    the dark deck where the regression test fires.
+7. The audit script's ``_ACCEPTED_DARK_RUN_COLORS`` set includes the
+   dark-mode teal variant ``#2DD4BF``; if you introduce another accent
+   colour, update both the map AND the audit set in the same commit.
 
 If a future "non-text accent" use of red comes up (e.g. a tiny status
 dot in a card layout), that's fine — the test only flags TEXT runs.

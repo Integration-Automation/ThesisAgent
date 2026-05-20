@@ -26,14 +26,17 @@ from pathlib import Path
 from pptx import Presentation
 
 # Colours we KNOW are intentional on a dark deck — the dark-mode text
-# near-white, mid-greys, light-text on header fills. _BRAND_ACCENT
-# (#C0392B warm red) is deliberately NOT in this set — red text was
-# banned per the deck-design "No red text" contract.
+# near-white, mid-greys, light-text on header fills, the dark-mode
+# teal accent. _BRAND_ACCENT (#C0392B warm red) is deliberately NOT in
+# this set — red text was banned per the deck-design "No red text"
+# contract; _BRAND_HIGHLIGHT (teal) is the sanctioned replacement and
+# its dark-mode variant (teal-400 #2DD4BF) is in this set.
 _ACCEPTED_DARK_RUN_COLORS = {
     (0xE5, 0xE7, 0xEB),  # dark-mode body text
     (0x9C, 0xA3, 0xAF),  # dark-mode metadata grey
     (0x6B, 0x72, 0x80),  # dark-mode muted grey
     (0xFF, 0xFF, 0xFF),  # table-header white
+    (0x2D, 0xD4, 0xBF),  # dark-mode teal accent (_BRAND_HIGHLIGHT swap)
 }
 
 
