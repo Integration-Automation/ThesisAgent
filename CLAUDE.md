@@ -4,8 +4,8 @@
 > recent Aider, and several other tools auto-load `AGENTS.md`; keep them in
 > sync when you change rules. Detailed rules now live in `.claude/agents/`
 > as subagents (`code-quality-reviewer`, `compliance-auditor`,
-> `slide-deck-rules`, `env-vars`, `language-vocabulary-check`, plus the
-> task-running agents `dod-verify`, `paper-summary-author`,
+> `slide-deck-rules`, `deck-design`, `env-vars`, `language-vocabulary-check`,
+> plus the task-running agents `dod-verify`, `paper-summary-author`,
 > `post-author-audit`, `slide-overflow-check`).
 
 ## Project Overview
@@ -114,6 +114,7 @@ window open during an IEEE / Scholar / paywalled-PDF step, the path is broken
 | Design patterns, SOLID, performance, async, unit tests, full linter rule set | `code-quality-reviewer` |
 | Core-vs-source-plugin boundary, network safety, browser-automation hard rule, path safety, suppression conventions, bandit skip config | `compliance-auditor` |
 | pptx exporter geometry, rendering tiers, truncation caps, semantic shape names, i18n, LLM-as-agent vs Python pipeline | `slide-deck-rules` |
+| pptx visual identity (typography per language, brand palette, accent geometry, master-slide expectations, "looks AI-generated" anti-patterns) | `deck-design` |
 | Env vars + Python / `.venv` toolchain reference | `env-vars` |
 | Definition-of-Done gate runner | `dod-verify` |
 | LLM-as-agent thesis-style authoring (PDF → rich PaperSummary) | `paper-summary-author` |

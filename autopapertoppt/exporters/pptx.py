@@ -35,7 +35,9 @@ from pathlib import Path
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
+from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
 from autopapertoppt.core.constants import EXPORT_PPTX
@@ -107,6 +109,36 @@ _BRAND_DARK = RGBColor(0x1F, 0x3A, 0x66)
 _BRAND_ACCENT = RGBColor(0xC0, 0x39, 0x2B)
 _BRAND_GREY = RGBColor(0x55, 0x55, 0x55)
 _BRAND_LIGHT = RGBColor(0xAA, 0xAA, 0xAA)
+
+# Per-language typography. (latin_family, east_asian_family). The Latin
+# family also covers Cyrillic / Greek / Devanagari via Inter; the
+# east-asian slot is what PowerPoint consults for CJK code points, so
+# leaving it `None` would let PowerPoint pick a default that doesn't
+# match the Latin choice. See ``deck-design`` agent doc for the
+# full rationale. Inter degrades gracefully to Calibri on hosts without
+# Inter installed.
+_FONT_FAMILIES: dict[str, tuple[str, str | None]] = {
+    "en":     ("Inter", None),
+    "es":     ("Inter", None),
+    "fr":     ("Inter", None),
+    "de":     ("Inter", None),
+    "pt":     ("Inter", None),
+    "it":     ("Inter", None),
+    "vi":     ("Inter", None),
+    "id":     ("Inter", None),
+    "ru":     ("Inter", None),
+    "hi":     ("Inter", "Nirmala UI"),
+    "zh-tw":  ("Inter", "Microsoft JhengHei UI"),
+    "zh-cn":  ("Inter", "Microsoft YaHei UI"),
+    "ja":     ("Inter", "Yu Gothic UI"),
+    "ko":     ("Inter", "Malgun Gothic"),
+}
+_DEFAULT_FONT_FAMILY: tuple[str, str | None] = ("Inter", None)
+
+# Accent geometry (set on every content slide by the typography /
+# accent pass so a stock blank layout still reads as a designed deck).
+_ACCENT_TOP_HEIGHT = Inches(0.08)
+_ACCENT_LEFT_WIDTH = Inches(0.4)
 _BRAND_RULE = RGBColor(0xCC, 0xCC, 0xCC)
 _RQ_BOX_FILL = RGBColor(0xF3, 0xF6, 0xFA)
 _RQ_BOX_BORDER = RGBColor(0x1F, 0x3A, 0x66)
@@ -266,6 +298,11 @@ class PptxExporter(Exporter):
             )
         # Page numbers are stamped AFTER trim so they reflect the final total.
         _stamp_page_numbers(prs, ctx.language)
+        # Visual identity passes — applied last so they affect every shape
+        # placed by every builder (including page numbers). See the
+        # ``deck-design`` subagent doc for rationale.
+        _apply_typography(prs, ctx.language)
+        _decorate_with_accents(prs)
         return prs
 
 
@@ -1606,3 +1643,105 @@ def _stamp_page_numbers(prs: Presentation, language: str) -> None:
             font_pt=_FOOTER_PT, colour=_BRAND_LIGHT,
             align=PP_ALIGN.RIGHT,
         )
+
+
+# ---------------------------------------------------------------------------
+# Visual identity passes — typography + accent geometry
+# ---------------------------------------------------------------------------
+
+
+def _apply_typography(prs: Presentation, language: str) -> None:
+    """Set Latin + East-Asian font on every run across every slide.
+
+    Default Calibri is the biggest "AI-generated deck" tell. We walk
+    every shape post-build and write both ``<a:latin>`` and ``<a:ea>``
+    typeface XML on every run — leaving the east-asian slot at the
+    PowerPoint default would make CJK chars render in a font that
+    doesn't match the Latin choice.
+    """
+    latin, east_asian = _FONT_FAMILIES.get(language, _DEFAULT_FONT_FAMILY)
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for paragraph in shape.text_frame.paragraphs:
+                for run in paragraph.runs:
+                    run.font.name = latin
+                    if east_asian:
+                        _set_east_asian_typeface(run, east_asian)
+
+
+def _set_east_asian_typeface(run, family: str) -> None:
+    """Write the ``<a:ea typeface=...>`` element on a run's rPr.
+
+    python-pptx's ``run.font.name`` setter only writes the Latin
+    typeface (``<a:latin>``). PowerPoint consults a SEPARATE
+    east-asian slot when laying out CJK code points; this helper
+    fills it.
+    """
+    r_pr = run._r.get_or_add_rPr()
+    existing = r_pr.find(qn("a:ea"))
+    if existing is not None:
+        r_pr.remove(existing)
+    ea = r_pr.makeelement(qn("a:ea"), {"typeface": family}, nsmap=None)
+    r_pr.append(ea)
+
+
+def _decorate_with_accents(prs: Presentation) -> None:
+    """Place the accent shapes (cover left band, top bar on content slides).
+
+    Idempotent: if the shapes already exist from a previous build pass
+    (rare but possible in tests that re-run ``_build``), they're left in
+    place — a name match suppresses re-add. The shapes are sent to the
+    back of the slide's z-order so they sit BEHIND any text on the slide.
+    """
+    for index, slide in enumerate(prs.slides):
+        if index == 0:
+            _add_cover_left_band(slide)
+        else:
+            _add_top_accent_bar(slide)
+
+
+def _add_cover_left_band(slide) -> None:
+    if _has_named_shape(slide, "accent_left"):
+        return
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Emu(0), Emu(0),
+        _ACCENT_LEFT_WIDTH, _SLIDE_HEIGHT,
+    )
+    shape.name = "accent_left"
+    shape.line.fill.background()
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = _BRAND_DARK
+    _send_shape_to_back(shape, slide)
+
+
+def _add_top_accent_bar(slide) -> None:
+    if _has_named_shape(slide, "accent_top"):
+        return
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Emu(0), Emu(0),
+        _SLIDE_WIDTH, _ACCENT_TOP_HEIGHT,
+    )
+    shape.name = "accent_top"
+    shape.line.fill.background()
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = _BRAND_DARK
+    _send_shape_to_back(shape, slide)
+
+
+def _has_named_shape(slide, name: str) -> bool:
+    return any(shape.name == name for shape in slide.shapes)
+
+
+def _send_shape_to_back(shape, slide) -> None:
+    """Move ``shape`` to be the first child of ``spTree`` (= back of z-order)."""
+    sp_tree = slide.shapes._spTree
+    sp = shape._element
+    sp_tree.remove(sp)
+    # spTree's first two children are nvGrpSpPr + grpSpPr (group metadata);
+    # everything after that is a shape in z-order. Insert at index 2 so the
+    # band lands BEHIND every text shape but the metadata stays intact.
+    sp_tree.insert(2, sp)

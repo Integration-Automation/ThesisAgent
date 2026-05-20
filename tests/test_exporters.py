@@ -74,6 +74,21 @@ def test_json_exporter_round_trip(sample_papers, tmp_path):
     assert data["papers"][0]["title"] == "Sample Paper on Attention"
 
 
+def _slide_text(slide, name: str) -> str:
+    """Return the text of the shape with the given semantic name, or ''.
+
+    The visual-identity pass inserts ``accent_top`` / ``accent_left``
+    rectangles BEFORE the text shapes in z-order, so ``shapes[0]`` is
+    no longer reliably the title. Tests pin to the project's semantic
+    shape names (`title` / `meta` / `body` / `subhead` / `footer` /
+    `page_number` / etc.) instead.
+    """
+    for shape in slide.shapes:
+        if shape.name == name and shape.has_text_frame:
+            return shape.text_frame.text
+    return ""
+
+
 def test_pptx_exporter_full_deck(sample_papers, tmp_path):
     from pptx import Presentation
 
@@ -89,7 +104,7 @@ def test_pptx_exporter_full_deck(sample_papers, tmp_path):
     # Sample abstracts are short so the optional "Approach" slide is skipped.
     # 1 + 1 + 2 * 4 + 1 = 11.
     assert len(presentation.slides) == 11
-    titles = [s.shapes[0].text_frame.text for s in presentation.slides]
+    titles = [_slide_text(s, "title") for s in presentation.slides]
     assert any("Paper Review" in t for t in titles)
     assert any(t == "Agenda" for t in titles)
     assert "References" in titles
@@ -108,7 +123,7 @@ def test_pptx_exporter_single_paper_skips_agenda_and_divider(sample_papers, tmp_
     presentation = Presentation(str(written["pptx"]))
     # cover + overview + bg + findings + references = 5 (short abstract → no approach slide)
     assert len(presentation.slides) == 5
-    titles = [s.shapes[0].text_frame.text for s in presentation.slides]
+    titles = [_slide_text(s, "title") for s in presentation.slides]
     assert not any(t == "Agenda" for t in titles)
     assert "References" in titles
 
@@ -309,7 +324,7 @@ def test_pptx_thesis_style_when_rich_summary_attached(sample_papers, tmp_path):
     # cover + overview + pain + contrib + technique + literature + flow +
     # method + evaluation + rqs + 1 rq result + contrib_summary + lim/future + qa + refs
     assert len(prs.slides) >= 14
-    titles = [s.shapes[0].text_frame.text for s in prs.slides]
+    titles = [_slide_text(s, "title") for s in prs.slides]
     assert any("Background & Pain Points" in t for t in titles)
     assert any("Key Technologies" in t for t in titles)
     assert any("RQ1" in t for t in titles)

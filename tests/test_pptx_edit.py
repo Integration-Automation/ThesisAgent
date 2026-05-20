@@ -141,7 +141,14 @@ def test_update_saves_to_out_path(deck: Path, tmp_path: Path):
     # original unchanged
     original_slides = pptx_edit.inspect(deck)
     assert "Sample Paper on Attention" in original_slides[3].title
-    # but copy reflects change
+    # but copy reflects change. Find title by semantic shape name —
+    # accent rectangles inserted by the visual-identity pass sit at
+    # `shapes[0]` now.
     copy_pres = Presentation(str(target))
-    titles = [s.shapes[0].text_frame.text for s in copy_pres.slides]
-    assert titles[3] == "Copied"
+    slide3 = copy_pres.slides[3]
+    title_shapes = [
+        sh for sh in slide3.shapes
+        if sh.name == "title" and sh.has_text_frame
+    ]
+    assert title_shapes, "slide 3 has no shape named 'title'"
+    assert title_shapes[0].text_frame.text == "Copied"
