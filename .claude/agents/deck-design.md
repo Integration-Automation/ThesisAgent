@@ -92,6 +92,45 @@ pin `#12151B` dark background + `#E5E7EB` near-white text + `#1F3A66`
 navy as the light-mode opt-out's text colour. Update both tests when
 the dark-bg or near-white colour changes.
 
+#### Dark-mode contract (HARD)
+
+**Every text-adding helper MUST set ``run.font.color.rgb`` explicitly
+to a colour the dark-mode mapping knows how to swap.** A run with
+``font.color.rgb = None`` inherits the slide-master's theme colour
+which renders as near-black on screen — the dark-mode post-pass
+cannot map it back because there's no source RGB to look up.
+
+Concrete rules for every helper that touches ``text_frame.paragraphs[*].runs[*]``:
+
+1. **Always assign ``run.font.color.rgb = _BRAND_*``** (one of the four
+   palette constants) after creating / overwriting the run. Never leave
+   the colour at its constructor default.
+2. **Never assign ``RGBColor(0, 0, 0)`` (pure black).** Use
+   ``_BRAND_DARK`` (= ``#1F3A66``) instead — same readability on light
+   bg, AND the dark-mode post-pass maps it.
+3. **When you must accept a None colour at the helper boundary** (e.g.
+   ``_add_textbox`` already supports ``colour: RGBColor | None``), pick
+   a sensible default INSIDE the helper rather than passing through.
+   Currently ``_add_textbox`` skips colour-set when ``colour is None``
+   — callers must therefore pass ``colour=_BRAND_DARK`` (or another
+   palette colour) explicitly. **Do not call ``_add_textbox(..., colour=None)``.**
+
+The exporter has TWO layers of defence so a missed explicit colour
+doesn't ship invisible text:
+
+* Layer 1 — every text-adding helper sets the colour. ``_add_bullet_box``
+  used to omit this; fixed (commit ``536aa8b``'s follow-up).
+* Layer 2 — ``_swap_text_colors`` in the dark-mode post-pass treats
+  ``rgb is None`` and ``rgb == (0,0,0)`` as "promote to ``#E5E7EB``
+  near-white". Safety net for future builders that forget Layer 1.
+
+Both layers ship together; tests pin both. The regression test
+``test_pptx_dark_mode_has_no_invisible_runs`` (in ``tests/test_exporters.py``)
+walks every run on every slide of a default-dark-mode deck and fails
+if any non-empty run has ``rgb is None`` or ``rgb == (0,0,0)``. A
+companion debug script lives at ``scripts/_audit_dark_text.py`` for
+manual inspection of a single rendered deck.
+
 Exposure surfaces (dark is default; the toggles flip to LIGHT):
 - CLI: `--light-mode` opt-out flag (when absent → dark)
 - GUI: Deck tab `deck.light_mode_label` checkbox (unchecked → dark)

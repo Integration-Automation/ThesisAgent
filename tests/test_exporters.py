@@ -170,6 +170,58 @@ def test_pptx_default_is_dark_mode(sample_papers, tmp_path):
     )
 
 
+def test_pptx_dark_mode_has_no_invisible_runs(sample_papers, tmp_path):
+    """Dark-mode regression guard — no text run may end up with
+    ``font.color.rgb is None`` or pure black on the dark slide bg.
+
+    A run with no explicit colour inherits the theme's body-text colour
+    (renders as near-black) and the dark-mode post-pass cannot map it
+    because there's no source RGB to look up. The recolour pass now
+    promotes None / black to ``#E5E7EB`` as a safety net; this test
+    pins that fallback so a future builder that forgets to set an
+    explicit run colour still produces a readable dark deck.
+    """
+    from pptx import Presentation
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="dark-readability",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    invisible: list[str] = []
+    for s_idx, slide in enumerate(prs.slides, 1):
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for p_idx, paragraph in enumerate(shape.text_frame.paragraphs):
+                for r_idx, run in enumerate(paragraph.runs):
+                    text = (run.text or "").strip()
+                    if not text:
+                        continue
+                    try:
+                        rgb = run.font.color.rgb
+                    except (AttributeError, ValueError, TypeError):
+                        rgb = None
+                    if rgb is None:
+                        invisible.append(
+                            f"slide {s_idx} shape {shape.name!r} "
+                            f"p{p_idx}r{r_idx}: rgb=None text={text[:30]!r}"
+                        )
+                    elif tuple(rgb) == (0, 0, 0):
+                        invisible.append(
+                            f"slide {s_idx} shape {shape.name!r} "
+                            f"p{p_idx}r{r_idx}: rgb=black text={text[:30]!r}"
+                        )
+    assert not invisible, (
+        "dark-mode deck contains runs with no explicit (or black) "
+        "colour — these render invisible on the dark slide bg:\n  "
+        + "\n  ".join(invisible[:10])
+    )
+
+
 def test_pptx_light_mode_keeps_navy_text(sample_papers, tmp_path):
     """``dark_mode=False`` opt-out skips the post-build recolour pass.
 

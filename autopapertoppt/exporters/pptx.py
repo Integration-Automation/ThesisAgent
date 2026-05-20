@@ -1321,6 +1321,14 @@ def _add_bullet_box(
         paragraph.alignment = PP_ALIGN.LEFT
         for run in paragraph.runs:
             run.font.size = Pt(font_pt)
+            # ALWAYS set the run colour explicitly. A run with
+            # ``font.color.rgb = None`` inherits the theme's body-text
+            # colour (which renders as black) and the dark-mode
+            # post-pass cannot swap it because there's no source RGB
+            # to look up in the mapping. See deck-design.md
+            # "Dark-mode contract" — every text-adding helper sets a
+            # palette colour, no exceptions.
+            run.font.color.rgb = _BRAND_DARK
 
 
 def _add_footer(slide, text: str) -> None:
@@ -1937,22 +1945,32 @@ def _swap_fill(shape_or_cell) -> None:
 
 
 def _swap_text_colors(shape_or_cell) -> None:
+    """Swap every run's text colour for the dark-mode equivalent.
+
+    Safety net for runs that the builders forgot to colour explicitly:
+    when ``font.color.rgb`` is ``None`` (theme inheritance, renders as
+    near-black on screen) or pure black ``(0,0,0)``, promote to the
+    dark-mode body colour ``#E5E7EB``. Without this fallback such runs
+    would render as black-on-dark — invisible. See
+    ``.claude/agents/deck-design.md`` "Dark-mode contract".
+    """
     text_frame = getattr(shape_or_cell, "text_frame", None)
     if text_frame is None:
         return
+    near_white = RGBColor(0xE5, 0xE7, 0xEB)
     for paragraph in text_frame.paragraphs:
         for run in paragraph.runs:
             try:
                 rgb = run.font.color.rgb
             except (AttributeError, ValueError, TypeError):
-                continue
-            if rgb is None:
+                rgb = None
+            if rgb is None or (int(rgb[0]), int(rgb[1]), int(rgb[2])) == (0, 0, 0):
+                run.font.color.rgb = near_white
                 continue
             key = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
             new = _LIGHT_TO_DARK_TEXT.get(key)
-            if new is None:
-                continue
-            run.font.color.rgb = RGBColor(*new)
+            if new is not None:
+                run.font.color.rgb = RGBColor(*new)
 
 
 def _swap_cell_border_colors(cell) -> None:

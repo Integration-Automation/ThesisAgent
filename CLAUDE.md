@@ -107,6 +107,28 @@ window open during an IEEE / Scholar / paywalled-PDF step, the path is broken
 — surface it, don't trust the results. Full rule + audit checklist:
 `compliance-auditor` subagent.
 
+## Dark-Mode Contract: Every Text Run Sets an Explicit Colour (HARD RULE)
+
+Dark mode is the project's default pptx render path. The post-build
+recolour pass swaps light-palette RGB values to their dark-palette
+equivalents — but it can only swap colours it can read. **A text run
+with `run.font.color.rgb = None` inherits the slide-master's theme
+colour, renders as near-black on the dark slide background, and is
+invisible.** Every text-adding helper in `autopapertoppt/exporters/pptx.py`
+MUST therefore assign `run.font.color.rgb = _BRAND_*` (one of the four
+palette constants) after creating or overwriting a run. Never leave the
+colour at its default; never pass `colour=None` to `_add_textbox`;
+never write `RGBColor(0, 0, 0)` — use `_BRAND_DARK` instead.
+
+The `_swap_text_colors` pass in the dark-mode post-build now also
+promotes any leftover `rgb is None` or `(0, 0, 0)` runs to `#E5E7EB`
+near-white as a second layer of defence. The regression test
+`tests/test_exporters.py::test_pptx_dark_mode_has_no_invisible_runs`
+walks every run on every slide and fails if any non-empty run lacks an
+explicit non-black colour. Full rule + the audit script + the
+two-layer defence rationale live in `.claude/agents/deck-design.md`
+"Dark-mode contract".
+
 ## Where the detailed rules live
 
 | Topic | Subagent (in `.claude/agents/`) |
