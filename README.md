@@ -294,6 +294,7 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `--paywall-threshold` | Fraction of paywalled results that triggers the confirmation prompt. Default 0.30. |
 | `--yes` | Skip the paywall prompt and proceed. |
 | `--max-slides` | Per-paper slide cap (default 25; pass 0 for unlimited). |
+| `--light-mode` | Render the pptx with a white background + navy text. Default is dark mode (dark background + near-white text) — pass this for projectors in well-lit rooms or when the deck will be printed. |
 | `--quiet` | Suppress per-paper printout. |
 
 ### Environment variables

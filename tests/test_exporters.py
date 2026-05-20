@@ -128,34 +128,7 @@ def test_pptx_exporter_single_paper_skips_agenda_and_divider(sample_papers, tmp_
     assert "References" in titles
 
 
-def test_pptx_dark_mode_swaps_palette(sample_papers, tmp_path):
-    """``dark_mode=True`` triggers the post-build recolour pass.
-
-    Walks the rendered deck and confirms:
-    1. Slide background fill is the dark colour (`#12151B`).
-    2. At least one text run has a near-white colour (≠ the light
-       palette's brand_dark navy).
-    """
-    from pptx import Presentation
-    from pptx.dml.color import RGBColor
-
-    collection = _collection(sample_papers)
-    options = ExportOptions(
-        formats=("pptx",),
-        out_dir=str(tmp_path),
-        filename_stem="dark",
-        dark_mode=True,
-    )
-    written = export_collection(collection, options)
-    prs = Presentation(str(written["pptx"]))
-    # Slide background should be dark.
-    first = list(prs.slides)[0]
-    bg_rgb = first.background.fill.fore_color.rgb
-    assert tuple(bg_rgb) == tuple(RGBColor(0x12, 0x15, 0x1B))
-    # At least one run on a content slide should carry the swapped text
-    # colour (E5 E7 EB — near-white).
-    light_text = tuple(RGBColor(0xE5, 0xE7, 0xEB))
-    found_light = False
+def _find_run_color(prs, target_rgb: tuple[int, int, int]) -> bool:
     for slide in prs.slides:
         for shape in slide.shapes:
             if not shape.has_text_frame:
@@ -166,10 +139,68 @@ def test_pptx_dark_mode_swaps_palette(sample_papers, tmp_path):
                         rgb = run.font.color.rgb
                     except (AttributeError, ValueError, TypeError):
                         continue
-                    if rgb is not None and tuple(rgb) == light_text:
-                        found_light = True
-                        break
-    assert found_light, "no run was re-coloured to the dark-mode text colour"
+                    if rgb is not None and tuple(rgb) == target_rgb:
+                        return True
+    return False
+
+
+def test_pptx_default_is_dark_mode(sample_papers, tmp_path):
+    """``dark_mode`` defaults to True, so an ExportOptions that doesn't
+    explicitly pass the field still produces a dark deck.
+
+    Confirms:
+    1. Slide background fill is the dark colour (`#12151B`).
+    2. At least one run carries the swapped near-white text colour.
+    """
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="default-dark",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    bg_rgb = list(prs.slides)[0].background.fill.fore_color.rgb
+    assert tuple(bg_rgb) == tuple(RGBColor(0x12, 0x15, 0x1B))
+    assert _find_run_color(prs, (0xE5, 0xE7, 0xEB)), (
+        "no run was re-coloured to the dark-mode near-white text"
+    )
+
+
+def test_pptx_light_mode_keeps_navy_text(sample_papers, tmp_path):
+    """``dark_mode=False`` opt-out skips the post-build recolour pass.
+
+    Confirms:
+    1. No slide-level background fill is set (or — if set — it isn't
+       the dark colour).
+    2. At least one run carries the original navy ``_BRAND_DARK``
+       (#1F3A66) colour.
+    """
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="explicit-light",
+        dark_mode=False,
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    # No dark slide background.
+    try:
+        bg_rgb = list(prs.slides)[0].background.fill.fore_color.rgb
+    except (AttributeError, ValueError, TypeError):
+        bg_rgb = None
+    if bg_rgb is not None:
+        assert tuple(bg_rgb) != tuple(RGBColor(0x12, 0x15, 0x1B))
+    assert _find_run_color(prs, (0x1F, 0x3A, 0x66)), (
+        "no run kept the light-palette navy text colour"
+    )
 
 
 def test_pptx_exporter_no_abstract_skips_content_slides(sample_papers, tmp_path):

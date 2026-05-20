@@ -960,13 +960,14 @@ ALL_PAPERS = (XIA, SPECTOR, XU_EDGELLM, SVIRSCHEVSKI)
 def main() -> None:
     out_dir = ROOT / "exports" / _RUN_DIR_NAME
     out_dir.mkdir(parents=True, exist_ok=True)
-    # Two variants per paper: a light deck `<key>-zh-tw.pptx` and a
-    # dark deck `<key>-zh-tw-dark.pptx`. Same content, palette swapped
-    # via ExportOptions.dark_mode — useful when presenting on OLED
-    # screens / in low-light rooms where the light deck would glare.
+    # Two variants per paper: a DARK deck `<key>-zh-tw.pptx` (default
+    # output; dark mode is now the project default since OLED projectors
+    # and low-light venues are the common presentation context) and a
+    # LIGHT deck `<key>-zh-tw-light.pptx` (opt-out for print / well-lit
+    # rooms). Same content, palette swapped via ExportOptions.dark_mode.
     variants: tuple[tuple[bool, str], ...] = (
-        (False, ""),
-        (True, "-dark"),
+        (True, ""),
+        (False, "-light"),
     )
     for paper in ALL_PAPERS:
         collection = PaperCollection(

@@ -56,10 +56,12 @@ Do NOT introduce new brand colours casually — every additional colour
 fights for attention. Reuse the four above unless the user explicitly
 adds one.
 
-#### Dark-mode palette (`ExportOptions.dark_mode=True`)
+#### Dark-mode palette (default; opt-out with `dark_mode=False` / `--light-mode` / GUI "Light mode")
 
-When dark mode is on, the exporter builds the deck with the light
-palette first then runs `_apply_dark_mode(prs)` as a post-build pass.
+**Dark mode is the project default.** OLED projectors and low-light
+presentation venues are the common case; bright-white slides glare
+under both. The exporter builds with the light palette first, then
+runs `_apply_dark_mode(prs)` as a post-build pass.
 The pass re-colours individual runs / shape fills / cell borders by
 looking up their current RGB in two mapping dicts. No builder needs
 to know about dark mode at construction time.
@@ -84,18 +86,20 @@ is intentionally non-invasive — we don't refactor the 100+ direct
 fact.
 
 When tuning the dark palette, **adjust both mapping dicts** + the
-`_DARK_SLIDE_BG` constant; the existing test
-`test_pptx_dark_mode_swaps_palette` pins `#12151B` background +
-`#E5E7EB` text-on-slide, so update the test when the dark-bg or
-near-white colour changes.
+`_DARK_SLIDE_BG` constant; the existing tests
+`test_pptx_default_is_dark_mode` and `test_pptx_light_mode_keeps_navy_text`
+pin `#12151B` dark background + `#E5E7EB` near-white text + `#1F3A66`
+navy as the light-mode opt-out's text colour. Update both tests when
+the dark-bg or near-white colour changes.
 
-Exposure surfaces:
-- CLI: `--dark-mode` flag
-- GUI: Deck tab `deck.dark_mode_label` checkbox
-- Programmatic: `ExportOptions(dark_mode=True)`
-- Regen script: pass `dark_mode=True` per variant — see
-  `scripts/regen_speculative_decoding_zh_tw.py` which ships both light
-  (`<key>-zh-tw.pptx`) and dark (`<key>-zh-tw-dark.pptx`) variants.
+Exposure surfaces (dark is default; the toggles flip to LIGHT):
+- CLI: `--light-mode` opt-out flag (when absent → dark)
+- GUI: Deck tab `deck.light_mode_label` checkbox (unchecked → dark)
+- Programmatic: `ExportOptions(dark_mode=False)` to opt out
+- Regen script: pass `dark_mode=False` per variant — see
+  `scripts/regen_speculative_decoding_zh_tw.py` which ships both the
+  default dark deck (`<key>-zh-tw.pptx`) and a light opt-out
+  (`<key>-zh-tw-light.pptx`).
 
 ### Table styling (the second-biggest "AI-generated" tell after Calibri)
 
