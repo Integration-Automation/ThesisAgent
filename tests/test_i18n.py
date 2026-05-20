@@ -487,6 +487,25 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
         (re.compile(r"標識(?![別字符碼])"), "標識 → 標示 (`標識符` already covered)"),
         # Image / pixel.
         (re.compile(r"圖元"), "圖元 → 像素"),
+        # Round 8 — last sweep of clearly-S-only compounds. After this,
+        # diminishing returns + rising false-positive risk; the `跨度`
+        # mistake in round 7 is the cautionary tale.
+        # `注冊` writes 注 instead of 註 (annotate / register) — S form.
+        (re.compile(r"注冊"), "注冊 → 註冊"),
+        (re.compile(r"程序員"), "程序員 → 程式設計師"),
+        (re.compile(r"數據挖掘"), "數據挖掘 → 資料探勘"),
+        (re.compile(r"網關"), "網關 → 閘道"),
+        (re.compile(r"負載均衡"), "負載均衡 → 負載平衡"),
+        (re.compile(r"測試用例"), "測試用例 → 測試案例"),
+        # `界面` standalone is also a TW physics term ("油水界面"); only
+        # the software-UI compounds are clearly S calques.
+        (re.compile(r"圖形界面"), "圖形界面 → 圖形介面 (GUI)"),
+        (re.compile(r"用戶界面"), "用戶界面 → 使用者介面 (UI)"),
+        # Software drivers.
+        (re.compile(r"驅動程序"), "驅動程序 → 驅動程式"),
+        # Middleware / full-stack.
+        (re.compile(r"中間件"), "中間件 → 中介軟體 (middleware)"),
+        (re.compile(r"全棧"), "全棧 → 全端"),
     ]
     zh_tw_paths = [
         _REPO_ROOT / "scripts" / "regen_llm_security_batch_zh_tw.py",

@@ -460,6 +460,60 @@ right bucket.
 | 標識 (≠ 標識符) | 標示 / 識別 | label / marker |
 | 圖元 | 像素 | pixel (Chinese-academic S form) |
 
+#### Registration / roles / mining / network gateway
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 注冊 | 註冊 | register (S `注` ≠ T `註`; compound only — bare `注` is too generic) |
+| 程序員 | 程式設計師 | programmer |
+| 數據挖掘 | 資料探勘 | data mining |
+| 網關 | 閘道 | network gateway |
+| 負載均衡 | 負載平衡 | load balancing |
+| 測試用例 | 測試案例 | test case (bare `用例` is borderline — TW also uses it for "use case") |
+
+#### GUI compounds (the bare `界面` is risky — only the compounds are flagged)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 圖形界面 | 圖形介面 (GUI) | graphical interface |
+| 用戶界面 | 使用者介面 (UI) | user interface |
+
+> Why bare `界面` is NOT flagged: in TW, `界面` is the standard physics
+> term for an interfacial boundary (`油水界面`, `相界面`). Adding it
+> as a generic pattern would false-positive heavily. Only the
+> software-UI compounds (`圖形界面`, `用戶界面`) are S calques.
+
+#### Drivers / middleware / stack
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 驅動程序 | 驅動程式 | software driver |
+| 中間件 | 中介軟體 | middleware |
+| 全棧 | 全端 | full-stack |
+
+---
+
+## When to stop adding patterns (note to future maintainers)
+
+The list is now at 244 regex entries across 27+ sub-sections. **Resist
+the urge to keep expanding proactively** — the diminishing-returns
+breakpoint is real, and the false-positive risk rises sharply because
+the remaining un-covered S-Chinese terms are mostly ones TW also uses
+informally (跨度 / 數據 / 配置 / 部署 / 引用 / 訪問 / 升級 / 切換 /
+範圍 / 通信 / 信號 / 用戶 / 端口 / 路由 / 域名 / 數據 / 服務 …).
+
+The round-7 `跨度 → 跨距` mistake is the cautionary tale: it false-
+positived on `時間跨度` in `regen_llm_security_batch_zh_tw.py` because
+`跨度` is also standard TW vocabulary, and had to be reverted.
+
+**Going forward, prefer the reactive path:**
+- When a NEW real zh-tw offender surfaces in a regen script / README /
+  rst / i18n key — add the specific pattern for it then, with the
+  context of a known false-positive surface to design the
+  negative-lookaround against.
+- If the user supplies a list of project-specific terms they want
+  enforced, add those (with the user's confidence as the safety net).
+
 ### Simplified Chinese (zh-cn) — avoid Traditional vocabulary
 
 Same idea in reverse. Common offenders that occasionally leak from
