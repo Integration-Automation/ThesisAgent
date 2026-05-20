@@ -454,6 +454,39 @@ def test_zh_tw_files_use_traditional_chinese_vocabulary():
         (re.compile(r"服務質量"), "服務質量 → 服務品質 (QoS)"),
         (re.compile(r"命令行"), "命令行 → 命令列 (CLI)"),
         (re.compile(r"流水線"), "流水線 → 管線 (CI/CD pipeline)"),
+        # Round 7 — common verbs / number bases / kernel terms / UI controls
+        # that were in the agent doc but never in the test.
+        # `復` (= again) vs `複` (= duplicate). S 復制 / 復用 conflate them.
+        (re.compile(r"復制"), "復制 → 複製 (S `復` ≠ T `複`)"),
+        (re.compile(r"復用"), "復用 → 重用"),
+        (re.compile(r"編寫"), "編寫 → 撰寫"),
+        # Number bases.
+        (re.compile(r"二進制"), "二進制 → 二進位"),
+        (re.compile(r"八進制"), "八進制 → 八進位"),
+        (re.compile(r"十進制"), "十進制 → 十進位"),
+        (re.compile(r"十六進制"), "十六進制 → 十六進位"),
+        (re.compile(r"(?<![進])進制"), "進制 → 進位"),
+        # Serial / parallel transmission.
+        (re.compile(r"串行"), "串行 → 串列"),
+        # Files / containers.
+        (re.compile(r"壓縮文件"), "壓縮文件 → 壓縮檔"),
+        (re.compile(r"二叉堆"), "二叉堆 → 二元堆積"),
+        (re.compile(r"堆棧"), "堆棧 → 堆疊"),
+        # Messaging.
+        (re.compile(r"私聊"), "私聊 → 私訊"),
+        # Kernel / syscalls.
+        (re.compile(r"用戶態"), "用戶態 → 使用者模式"),
+        (re.compile(r"系統調用"), "系統調用 → 系統呼叫"),
+        (re.compile(r"(?<![失強])調用"), "調用 → 呼叫"),
+        # Engineering / reverse engineering.
+        (re.compile(r"反向工程"), "反向工程 → 逆向工程"),
+        # UI controls / components.
+        (re.compile(r"控件"), "控件 → 控制項"),
+        (re.compile(r"部件"), "部件 → 元件"),
+        # Identifiers / labels.
+        (re.compile(r"標識(?![別字符碼])"), "標識 → 標示 (`標識符` already covered)"),
+        # Image / pixel.
+        (re.compile(r"圖元"), "圖元 → 像素"),
     ]
     zh_tw_paths = [
         _REPO_ROOT / "scripts" / "regen_llm_security_batch_zh_tw.py",

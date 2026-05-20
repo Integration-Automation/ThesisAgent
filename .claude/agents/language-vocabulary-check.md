@@ -416,6 +416,50 @@ right bucket.
 | 命令行 | 命令列 (CLI) | command line |
 | 流水線 | 管線 | CI/CD pipeline |
 
+#### `復` vs `複` (S conflates them; T-Chinese distinguishes)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 復制 | 複製 | duplicate / copy (S `復` = "again", T `複` = "duplicate") |
+| 復用 | 重用 | reuse |
+| 復健 / 復活 / 復原 | (same, all use `復` correctly = "again") | recover / revive |
+
+#### Number bases
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 二進制 / 八進制 / 十進制 / 十六進制 | 二進位 / 八進位 / 十進位 / 十六進位 | binary / octal / decimal / hex |
+| 進制 | 進位 | base / radix (general) |
+
+#### Serial / parallel / stack / files (continued)
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 串行 | 串列 | serial (transmission) |
+| 堆棧 | 堆疊 | stack (alternate S spelling) |
+| 二叉堆 | 二元堆積 | binary heap |
+| 壓縮文件 | 壓縮檔 | compressed archive |
+
+#### Kernel / syscalls / messaging
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 用戶態 | 使用者模式 | userspace / user mode |
+| 系統調用 | 系統呼叫 | system call |
+| 調用 | 呼叫 | call / invoke (negative-lookbehind to skip `失調用` / `強調用`) |
+| 反向工程 | 逆向工程 | reverse engineering |
+| 私聊 | 私訊 | private message |
+| 編寫 | 撰寫 | write (code / a document) |
+
+#### UI controls / parts / identifiers
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 控件 | 控制項 | UI control / widget |
+| 部件 | 元件 | component / part |
+| 標識 (≠ 標識符) | 標示 / 識別 | label / marker |
+| 圖元 | 像素 | pixel (Chinese-academic S form) |
+
 ### Simplified Chinese (zh-cn) — avoid Traditional vocabulary
 
 Same idea in reverse. Common offenders that occasionally leak from
