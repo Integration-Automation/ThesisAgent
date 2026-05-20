@@ -21,80 +21,215 @@ script's authored `PaperSummary` text gets reviewed, run this agent.
 
 These all use Traditional hanzi but are S-Chinese vocabulary calques.
 A simplified-vs-traditional character checker WILL NOT catch them.
+Grouped by domain so future maintainers can drop new entries into the
+right bucket.
 
-| S-Chinese (avoid in zh-tw) | T-Chinese (use instead) | Meaning |
+#### Memory / hardware
+
+| S-Chinese (avoid in zh-tw) | T-Chinese | Meaning |
 |---|---|---|
 | 內存 | 記憶體 | RAM / memory |
-| 魯棒性 / 鲁棒性 | 穩健性 / 強健性 | robustness |
-| 視頻 | 影片 | video |
-| 屏幕 | 螢幕 | screen |
-| 移動端 | 行動裝置 | mobile device |
-| 計算機 | 電腦 | computer |
-| 服務器 | 伺服器 | server |
-| 數據庫 | 資料庫 | database |
-| 操作系統 | 作業系統 | operating system |
-| 應用程序 | 應用程式 | application program |
-| 程序 (computing context) | 程式 | program (`進程` / `線程` are S-only) |
-| 字符 | 字元 | character |
-| 字符串 | 字串 | string |
-| 圖像 | 影像 (visual) / 圖片 | image |
-| 鼠標 | 滑鼠 | mouse |
-| 黑客 | 駭客 | hacker |
-| 賬戶 / 賬號 | 帳戶 / 帳號 | account |
-| 鏈接 | 連結 | link |
-| 加載 | 載入 | load |
-| 設置 | 設定 | setting |
-| 異常 (computing) | 例外 | exception |
-| 集群 | 叢集 | cluster |
-| 線程 | 執行緒 | thread |
-| 進程 | 行程 / 處理程序 | process |
-| 隊列 | 佇列 | queue |
-| 棧 | 堆疊 | stack |
-| 帶寬 | 頻寬 | bandwidth |
-| 內核 | 核心 | kernel |
-| 內置 | 內建 | built-in |
-| 集成 | 整合 | integration |
-| 模塊 | 模組 | module |
-| 重定向 | 重新導向 | redirect |
-| 主頁 | 首頁 | homepage |
-| 編程 | 程式設計 | programming |
-| 文件 (computer file context) | 檔案 | file (TW uses `文件` for "document") |
-| 復用 | 重用 | reuse |
-| 缺省 | 預設 | default |
-| 句柄 | 控制代碼 / handle | handle (object reference) |
-| 模板 | 範本 | template |
-| 框架 | 框架 (same in TW; also `架構`) | framework |
-| 庫 (library context) | 函式庫 | library |
-| 屬性 | 屬性 (same) | property |
-| 對話框 | 對話方塊 | dialog box |
-| 菜單 | 選單 | menu |
-| 注釋 | 註解 | comment / annotation |
-| 信號 | 訊號 | signal |
-| 互信息 | 互資訊 | mutual information |
+| 主存 | 主記憶體 | main memory |
+| 內存條 | 記憶體模組 | RAM stick |
 | 硬件 | 硬體 | hardware |
+| 軟件 | 軟體 | software (char-level: 软件) |
 | 主板 | 主機板 | motherboard |
 | 顯卡 | 顯示卡 | graphics card |
+| 顯示器 | 螢幕 / 顯示器 | display (both used in TW; prefer 螢幕) |
 | 硬盤 | 硬碟 | hard disk |
 | 軟盤 | 軟碟 | floppy disk |
 | 光盤 | 光碟 | optical disc |
-| 打印 / 打印機 | 列印 / 印表機 | print(er) |
-| 密鑰 | 金鑰 | crypto key |
-| 數組 | 陣列 | array |
+| 鼠標 | 滑鼠 | mouse |
+| 屏幕 | 螢幕 | screen |
+| 寬屏 | 寬螢幕 | widescreen |
+| 寄存器 | 暫存器 | CPU register |
+| 外設 | 周邊設備 | peripheral |
+| 移動端 | 行動裝置 | mobile device |
+| 攝像頭 | 攝影機 / 鏡頭 | camera |
+| 攝像 | 攝影 | filming / video capture |
+
+#### Operating system / runtime
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 操作系統 | 作業系統 | OS |
+| 計算機 | 電腦 | computer |
+| 服務器 | 伺服器 | server |
+| 客戶端 | 用戶端 (also 客戶端) | client (both used; prefer 用戶端 in formal TW) |
+| 線程 | 執行緒 | thread |
+| 進程 | 行程 / 處理程序 | process |
+| 內核 | 核心 | kernel |
+| 內置 | 內建 | built-in |
+| 集群 | 叢集 | cluster |
+| 守護進程 | 常駐程式 / daemon | daemon |
+| 句柄 | 控制代碼 / handle | OS handle |
+| 進程間通信 | 行程間通訊 | IPC |
+
+#### Programming language constructs
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 程序 (computing context) | 程式 | program |
+| 編程 | 程式設計 | programming |
+| 函數 | 函式 (`函数` is the char-level S form) | function |
+| 接口 | 介面 (`接口` survives in some compounds; check context) | interface |
+| 對象導向 | 物件導向 | object-oriented |
+| 類 (≠ 類別 / 種類) | 類別 | class (OOP) |
+| 對象 (OOP context) | 物件 | object (OOP) — bare `對象` also means "target" in TW, so disambiguate by context |
+| 實例 (OOP) | 實例 / 案例 | instance |
+| 構造 (OOP) | 建構 | constructor |
+| 析構 | 解構 | destructor |
 | 變量 (≠ 不變量) | 變數 | variable (`不變量` = invariant is fine in TW) |
+| 常量 | 常數 | constant |
+| 指針 | 指標 | pointer (note: `指針` in TW also means "clock hand" — context-dependent) |
+| 數組 | 陣列 | array |
 | 字節 | 位元組 | byte |
 | 比特 (≠ 比特幣) | 位元 | bit (`比特幣` = bitcoin is accepted in TW) |
-| 注釋 | 註解 / 註釋 | comment / annotation (the form starting with `注` is S; TW uses `註`) |
+| 字符 | 字元 | character |
+| 字符串 | 字串 | string |
+| 函數體 | 函式主體 / 函式內容 | function body |
+| 注釋 (starts with 注) | 註解 / 註釋 (starts with 註) | comment / annotation |
 | 模板 | 範本 | template |
 | 跟蹤 | 追蹤 | track / trace |
 | 異步 | 非同步 | async |
-| 串口 | 序列埠 | serial port |
-| 圖標 | 圖示 | icon |
-| 高清 | 高畫質 | high definition |
-| 寬屏 | 寬螢幕 | widescreen |
-| 信道 | 通道 / 頻道 | channel |
+| 同步 | 同步 (same) | sync |
+| 多線程 | 多執行緒 | multithreading |
+| 死循環 | 死迴圈 | infinite loop |
+| 遞歸 | 遞迴 | recursion |
+| 調用 | 呼叫 | call / invoke |
+| 重定向 | 重新導向 | redirect |
+| 集成 | 整合 | integration |
+| 模塊 | 模組 | module |
+| 異常 (computing) | 例外 | exception |
+| 鏈接 | 連結 | link |
+| 加載 | 載入 | load |
+| 設置 | 設定 | setting |
+| 缺省 | 預設 | default |
+| 復用 | 重用 | reuse |
+
+#### Data / database / files
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 數據 (computing) | 資料 | data (`数据` is the char-level S form; `數據` survives sometimes in TW informal) |
+| 數據庫 | 資料庫 | database |
+| 數據包 | 封包 | packet |
+| 數據結構 | 資料結構 | data structure |
+| 字段 | 欄位 | DB field |
+| 隊列 | 佇列 | queue |
+| 棧 | 堆疊 | stack |
+| 哈希 | 雜湊 | hash |
 | 鏡像文件 | 映像檔 | disk image |
 | 文件夾 | 資料夾 | folder |
+| 文件名 | 檔名 | filename |
+| 文件 (computer file context) | 檔案 | file (TW uses `文件` for "document") |
+| 擴展名 / 後綴名 | 副檔名 | file extension |
+| 配置文件 | 設定檔 / 組態檔 | config file |
+| 存儲過程 | 預存程序 | stored procedure |
+| 回滾 | 復原 / 回滾 | rollback (both used) |
+| 死鎖 | 死結 | deadlock |
+| 範式 (DB normal form) | 正規化 / 範式 | DB normal form (both used in TW) |
+
+#### Network
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 網絡 | 網路 | network (char-level: 网络) |
+| 神經網絡 | 神經網路 | neural network |
+| 互聯網 | 網際網路 | Internet |
+| 帶寬 | 頻寬 | bandwidth |
+| 信道 | 通道 / 頻道 | channel |
+| 信號 | 訊號 | signal |
+| 通信 | 通訊 (both used in TW; prefer 通訊) | communication |
+| 主頁 | 首頁 | homepage |
+| 鏈接 | 連結 | link |
+| 報文 | 訊息 / 訊框 | message |
+| 抓包 | 封包擷取 | packet capture |
+| 套接字 | 通訊端 / socket | socket |
+| 串口 | 序列埠 | serial port |
+| 端口 (≠ 終端口岸) | 連接埠 / 通訊埠 / 埠 | network port (note: TW now also uses `端口` in some contexts) |
+| 交換機 | 交換器 | network switch |
+| 路由器 | 路由器 (both) | router |
+| 域名 | 域名 / 網域 | domain name (both used) |
+
+#### Cloud / DevOps
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 雲計算 | 雲端運算 | cloud computing |
+| 雲存儲 | 雲端儲存 | cloud storage |
+| 沙盒 | 沙箱 | sandbox |
+| 構建 | 建置 | build (CI / make) |
+| 部署 | 部署 (same in TW; also `佈署`) | deploy |
+
+#### ML / math / statistics
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 魯棒性 / 鲁棒性 | 穩健性 / 強健性 | robustness |
+| 歸一化 | 標準化 / 正規化 | normalisation |
+| 概率 | 機率 | probability |
+| 方差 | 變異數 | variance |
+| 均值 | 平均值 | mean |
+| 標量 | 純量 | scalar |
+| 批處理 | 批次處理 | batch processing |
+| 過擬合 | 過度擬合 | overfitting (both used) |
+| 互信息 | 互資訊 | mutual information |
+
+#### UI / desktop
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 對話框 | 對話方塊 | dialog box |
+| 菜單 | 選單 | menu |
+| 滑塊 | 滑桿 | slider |
+| 滾動條 | 捲軸 | scrollbar |
+| 復選框 | 核取方塊 | checkbox |
+| 單選框 | 選項按鈕 / 圓鈕 | radio button |
+| 下拉框 | 下拉選單 | dropdown |
+| 工具欄 | 工具列 | toolbar |
+| 狀態欄 | 狀態列 | status bar |
+| 任務欄 | 工作列 | taskbar |
+| 通知欄 | 通知列 | notification bar |
+| 標籤頁 | 索引標籤 | browser tab |
+| 彈窗 | 彈出視窗 | popup window |
+| 圖標 | 圖示 | icon |
+| 像素 | 像素 / 畫素 | pixel |
+
+#### Media / device
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 視頻 | 影片 | video |
+| 圖像 | 影像 / 圖片 | image |
+| 高清 | 高畫質 | high definition |
 | 短信 | 簡訊 | SMS / text message |
+| 充電寶 | 行動電源 | power bank |
+| 打印 / 打印機 | 列印 / 印表機 | print / printer |
+
+#### Identity / security
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 黑客 | 駭客 | hacker |
+| 密鑰 | 金鑰 | crypto key |
+| 密碼 | 密碼 (same) | password |
+| 口令 | 密碼 | password (老式 / formal S) |
+| 賬戶 / 賬號 | 帳戶 / 帳號 | account |
+| 用戶 | 使用者 / 用戶 (both used) | user |
+| 用戶名 | 使用者名稱 / 用戶名 | username |
+| 補丁 | 修補程式 / 修補檔 | patch (TW informal also uses 補丁) |
+
+#### Verbs
+
+| S-Chinese | T-Chinese | Meaning |
+|---|---|---|
+| 搜索 | 搜尋 | search |
+| 查找 | 尋找 / 搜尋 | find / locate |
+| 新建 | 新增 | create new |
+| 啟動 | 啟動 (same) | start |
+| 重啟 | 重新啟動 / 重啟 (both) | restart |
+| 卸載 | 解除安裝 / 卸載 (both) | uninstall |
 
 ### Simplified Chinese (zh-cn) — avoid Traditional vocabulary
 

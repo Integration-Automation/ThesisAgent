@@ -272,7 +272,7 @@ MCCLEARN = Paper(
             ("日常需求 ≠ cyber 需求", (
                 "ATM 提款上限比加密更貼近日常威脅模型",
                 "找食物、找住處、找工作就是 security work",
-                "信任網絡 (海外親屬匯款) 成為救命工具",
+                "信任網路 (海外親屬匯款) 成為救命工具",
             )),
             ("為流離者設計往往是想像而非真實", (
                 "設計師可以隨意想像永遠不見面的使用者",
@@ -1282,7 +1282,7 @@ NIU = Paper(
             ("PRISMA 框架", "系統性回顧方法"),
             ("STRIDE 風格", "威脅分類"),
             ("Scopus / IEEE Xplore / PubMed / WoS / Scholar", "資料庫涵蓋"),
-            ("Backward + forward citation tracking", "擴大關鍵字之外的搜索"),
+            ("Backward + forward citation tracking", "擴大關鍵字之外的搜尋"),
             ("Taxonomy 圖", "威脅與防禦對應"),
         ),
         method_sections=(
