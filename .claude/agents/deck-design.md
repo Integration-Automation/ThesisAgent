@@ -131,6 +131,45 @@ if any non-empty run has ``rgb is None`` or ``rgb == (0,0,0)``. A
 companion debug script lives at ``scripts/_audit_dark_text.py`` for
 manual inspection of a single rendered deck.
 
+#### "No red text" contract (HARD)
+
+**Red font runs are banned across both light AND dark modes.** The
+constant ``_BRAND_ACCENT`` (= ``#C0392B`` warm red) stays in the palette
+for potential future non-text accent shapes (sparkline highlight,
+status badge, etc.), but every TEXT call site has been migrated to
+``_BRAND_DARK``. Use **bold + brand-dark navy** as the emphasis
+pattern instead.
+
+Why banned:
+1. Red text reads as error / warning / something-is-broken in slide
+   conventions. KPI values painted red signal "this is bad" — the
+   opposite of what we want for a result we're proud of.
+2. Red text on slide decks pattern-matches strongly to AI-generated
+   output ("LOOK AT THIS NUMBER!" + red bold + over-emphasis). Same
+   reason we removed Calibri default and added accent geometry — every
+   "default LLM-deck tell" we can eliminate raises perceived quality.
+3. In dark mode red text reads OK on the dark slide bg, but it'd be
+   the only accent colour — visually inconsistent with the rest of the
+   palette.
+
+Implementation contract:
+1. **Never write** ``colour=_BRAND_ACCENT`` in any ``_add_textbox`` /
+   ``_add_bullet_box`` / ``_add_*`` helper call site.
+2. **Never assign** ``run.font.color.rgb = _BRAND_ACCENT`` directly.
+3. For emphasis on a value (e.g. a KPI number) use:
+   ``run.font.bold = True`` + ``run.font.color.rgb = _BRAND_DARK``.
+4. Regression test ``test_pptx_no_red_text_runs`` walks every run on
+   a default-rendered deck and fails if any run uses ``#C0392B``.
+5. The dark-mode ``_LIGHT_TO_DARK_TEXT`` map intentionally does NOT
+   include red — so even if the test missed a case, the dark-mode
+   pass wouldn't quietly map it; the run would carry red through to
+   the dark deck where the regression test fires.
+
+If a future "non-text accent" use of red comes up (e.g. a tiny status
+dot in a card layout), that's fine — the test only flags TEXT runs.
+Just keep the constant pointing at the same RGB so the brand stays
+consistent.
+
 #### Light-on-light contrast contract (the OTHER invisibility bug)
 
 A near-black bug is "text rgb=None → black on dark = invisible". The

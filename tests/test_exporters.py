@@ -300,6 +300,55 @@ def test_pptx_dark_mode_no_light_text_on_light_fill(sample_papers, tmp_path):
     )
 
 
+def test_pptx_no_red_text_runs(sample_papers, tmp_path):
+    """The "No red text" contract: ``_BRAND_ACCENT`` (#C0392B) must
+    never be written as a run colour. Bold + ``_BRAND_DARK`` is the
+    approved emphasis pattern. Red font runs read as error / warning
+    in slide-deck conventions and pattern-match strongly to AI-generated
+    KPI emphasis ("look at this number!"). Banned across light AND
+    dark modes.
+
+    A regression here means a new (or moved) builder added back a
+    ``colour=_BRAND_ACCENT`` parameter or wrote
+    ``run.font.color.rgb = _BRAND_ACCENT`` directly.
+    """
+    from pptx import Presentation
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="no-red",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    red = (0xC0, 0x39, 0x2B)
+    offenders: list[str] = []
+    for s_idx, slide in enumerate(prs.slides, 1):
+        for shape in slide.shapes:
+            tf = getattr(shape, "text_frame", None)
+            if tf is None:
+                continue
+            for para in tf.paragraphs:
+                for run in para.runs:
+                    text = (run.text or "").strip()
+                    if not text:
+                        continue
+                    try:
+                        rgb = run.font.color.rgb
+                    except (AttributeError, ValueError, TypeError):
+                        continue
+                    if rgb is not None and tuple(rgb) == red:
+                        offenders.append(
+                            f"slide {s_idx} shape {shape.name!r}: {text[:40]!r}"
+                        )
+    assert not offenders, (
+        "red text (#C0392B) found — use bold + _BRAND_DARK for emphasis "
+        "instead (deck-design 'No red text' contract):\n  "
+        + "\n  ".join(offenders[:10])
+    )
+
+
 def test_pptx_light_mode_keeps_navy_text(sample_papers, tmp_path):
     """``dark_mode=False`` opt-out skips the post-build recolour pass.
 

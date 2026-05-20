@@ -106,6 +106,14 @@ _REFERENCES_PER_SLIDE = 8       # split long bib lists across slides
 
 # Colours (mirror the reference deck's palette)
 _BRAND_DARK = RGBColor(0x1F, 0x3A, 0x66)
+#: WARNING — DO NOT use _BRAND_ACCENT as a TEXT colour.
+#: Red text in slide decks is consistently associated with errors,
+#: warnings, and AI-generated KPI emphasis ("look at this number!").
+#: The project bans red font runs entirely; use bold + _BRAND_DARK
+#: for emphasis instead. The constant is kept around in case a
+#: future non-text accent shape (sparkline, badge, etc.) needs it,
+#: but every existing TEXT callsite has been migrated to _BRAND_DARK.
+#: See .claude/agents/deck-design.md "No red text" contract.
 _BRAND_ACCENT = RGBColor(0xC0, 0x39, 0x2B)
 _BRAND_GREY = RGBColor(0x55, 0x55, 0x55)
 _BRAND_LIGHT = RGBColor(0xAA, 0xAA, 0xAA)
@@ -151,7 +159,11 @@ _LIGHT_TO_DARK_TEXT: dict[tuple[int, int, int], tuple[int, int, int]] = {
     (0x1F, 0x3A, 0x66): (0xE5, 0xE7, 0xEB),  # _BRAND_DARK   → near-white text
     (0x55, 0x55, 0x55): (0x9C, 0xA3, 0xAF),  # _BRAND_GREY   → mid grey
     (0xAA, 0xAA, 0xAA): (0x6B, 0x72, 0x80),  # _BRAND_LIGHT  → muted grey
-    # _BRAND_ACCENT (#C0392B) stays — warm red is legible on dark.
+    # _BRAND_ACCENT (#C0392B) intentionally NOT mapped — red text was
+    # banned per the deck-design "No red text" contract, and the
+    # `test_pptx_no_red_text_runs` regression test fails if any run
+    # ever writes that colour. If a run shows up with it the test
+    # catches it BEFORE we reach this swap layer.
 }
 
 # Light-palette RGB → dark-palette RGB mapping for SHAPE / CELL FILLS
@@ -888,7 +900,7 @@ def _add_figure_image(
             slide, name="body",
             text=f"[figure unavailable: {path.name}]",
             left=left, top=top, width=max_width, height=Inches(0.5),
-            font_pt=_BODY_PT, colour=_BRAND_ACCENT,
+            font_pt=_BODY_PT, colour=_BRAND_DARK,
         )
         return
     # python-pptx scales by aspect ratio if we pass only height (or
@@ -931,7 +943,7 @@ def _add_paper_table_slides(
             text=f"{t(ctx.language, 'label_caption')}: {_clean(caption)}",
             left=_MARGIN_X, top=Inches(1.65),
             width=_BODY_WIDTH, height=Inches(0.55),
-            font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_ACCENT,
+            font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_DARK,
             shrink_to_fit=True,
         )
         cols = len(rows[0])
@@ -987,7 +999,7 @@ def _add_rq_result_slide(
         slide, name="rq_question", text=question_text,
         left=_MARGIN_X, top=Inches(1.65),
         width=_BODY_WIDTH, height=Inches(0.55),
-        font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_ACCENT,
+        font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_DARK,
         shrink_to_fit=True,
     )
     if rq.table:
@@ -1469,7 +1481,9 @@ def _add_kpi_lines(
         run_value.text = str(value)
         run_value.font.size = Pt(_BODY_PT + 2)
         run_value.font.bold = True
-        run_value.font.color.rgb = _BRAND_ACCENT
+        # Emphasis via bold + brand-dark navy — red text was banned per
+        # deck-design "No red font" contract. See deck-design.md.
+        run_value.font.color.rgb = _BRAND_DARK
         if baseline:
             run_base = paragraph.add_run()
             run_base.text = f"   ({baseline_label}: {baseline})"

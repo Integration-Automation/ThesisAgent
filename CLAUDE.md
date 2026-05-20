@@ -138,6 +138,16 @@ near-white → invisible. Regression test
 and fails when both fill and text luminance are > 0.7 of 255 in a
 default-dark-mode render.
 
+**No red text.** ``_BRAND_ACCENT`` (= ``#C0392B`` warm red) is BANNED
+as a TEXT colour across both light and dark modes. Red text reads
+as error / warning in slide conventions and pattern-matches strongly
+to AI-generated KPI emphasis. Use **bold + ``_BRAND_DARK``** instead.
+Regression test ``test_pptx_no_red_text_runs`` walks every run on a
+default-rendered deck and fails if any run uses ``#C0392B``. The
+constant stays in the palette in case a future non-text accent shape
+(sparkline, status badge) wants it. Full rule in
+``.claude/agents/deck-design.md`` "No red text contract (HARD)".
+
 ## Where the detailed rules live
 
 | Topic | Subagent (in `.claude/agents/`) |
