@@ -128,6 +128,50 @@ def test_pptx_exporter_single_paper_skips_agenda_and_divider(sample_papers, tmp_
     assert "References" in titles
 
 
+def test_pptx_dark_mode_swaps_palette(sample_papers, tmp_path):
+    """``dark_mode=True`` triggers the post-build recolour pass.
+
+    Walks the rendered deck and confirms:
+    1. Slide background fill is the dark colour (`#12151B`).
+    2. At least one text run has a near-white colour (≠ the light
+       palette's brand_dark navy).
+    """
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="dark",
+        dark_mode=True,
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    # Slide background should be dark.
+    first = list(prs.slides)[0]
+    bg_rgb = first.background.fill.fore_color.rgb
+    assert tuple(bg_rgb) == tuple(RGBColor(0x12, 0x15, 0x1B))
+    # At least one run on a content slide should carry the swapped text
+    # colour (E5 E7 EB — near-white).
+    light_text = tuple(RGBColor(0xE5, 0xE7, 0xEB))
+    found_light = False
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for para in shape.text_frame.paragraphs:
+                for run in para.runs:
+                    try:
+                        rgb = run.font.color.rgb
+                    except (AttributeError, ValueError, TypeError):
+                        continue
+                    if rgb is not None and tuple(rgb) == light_text:
+                        found_light = True
+                        break
+    assert found_light, "no run was re-coloured to the dark-mode text colour"
+
+
 def test_pptx_exporter_no_abstract_skips_content_slides(sample_papers, tmp_path):
     from pptx import Presentation
 

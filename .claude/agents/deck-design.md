@@ -56,6 +56,47 @@ Do NOT introduce new brand colours casually — every additional colour
 fights for attention. Reuse the four above unless the user explicitly
 adds one.
 
+#### Dark-mode palette (`ExportOptions.dark_mode=True`)
+
+When dark mode is on, the exporter builds the deck with the light
+palette first then runs `_apply_dark_mode(prs)` as a post-build pass.
+The pass re-colours individual runs / shape fills / cell borders by
+looking up their current RGB in two mapping dicts. No builder needs
+to know about dark mode at construction time.
+
+| Light → Dark | RGB swap | Why |
+|---|---|---|
+| Slide background | `#FFFFFF` → `#12151B` | Near-black so OLED screens save power + low-light rooms get less glare; not pure black to avoid the "burn-in" cliff |
+| `_BRAND_DARK` text | `#1F3A66` → `#E5E7EB` | Body text near-white |
+| `_BRAND_GREY` text | `#555555` → `#9CA3AF` | Metadata mid grey |
+| `_BRAND_LIGHT` text | `#AAAAAA` → `#6B7280` | Subtle dividers / page numbers |
+| `_BRAND_ACCENT` | `#C0392B` (unchanged) | Warm red is legible on both light and dark |
+| `_BRAND_DARK` fill (accent bars / table header) | `#1F3A66` → `#3B5AA0` | Lighter navy reads against the dark slide background |
+| `_TABLE_ROW_ALT` | `#F4F6F9` → `#1F232C` | Dark stripe |
+| Pure white table cell | `#FFFFFF` → `#161A22` | Near-black non-stripe rows |
+| `_TABLE_DIVIDER` | `#D0D7E2` → `#3D4452` | Muted grey-blue inter-row rule |
+
+Two mapping dicts live in `pptx.py`: `_LIGHT_TO_DARK_TEXT` (for
+`<a:solidFill>/<a:srgbClr>` inside text runs) and `_LIGHT_TO_DARK_FILL`
+(for shape fills + table-cell fills + cell-border XML). The recoloring
+is intentionally non-invasive — we don't refactor the 100+ direct
+`_BRAND_*` references; instead we walk the rendered tree after the
+fact.
+
+When tuning the dark palette, **adjust both mapping dicts** + the
+`_DARK_SLIDE_BG` constant; the existing test
+`test_pptx_dark_mode_swaps_palette` pins `#12151B` background +
+`#E5E7EB` text-on-slide, so update the test when the dark-bg or
+near-white colour changes.
+
+Exposure surfaces:
+- CLI: `--dark-mode` flag
+- GUI: Deck tab `deck.dark_mode_label` checkbox
+- Programmatic: `ExportOptions(dark_mode=True)`
+- Regen script: pass `dark_mode=True` per variant — see
+  `scripts/regen_speculative_decoding_zh_tw.py` which ships both light
+  (`<key>-zh-tw.pptx`) and dark (`<key>-zh-tw-dark.pptx`) variants.
+
 ### Table styling (the second-biggest "AI-generated" tell after Calibri)
 
 PowerPoint's default table style draws a heavy black grid on every cell.

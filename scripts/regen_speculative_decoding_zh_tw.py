@@ -960,6 +960,14 @@ ALL_PAPERS = (XIA, SPECTOR, XU_EDGELLM, SVIRSCHEVSKI)
 def main() -> None:
     out_dir = ROOT / "exports" / _RUN_DIR_NAME
     out_dir.mkdir(parents=True, exist_ok=True)
+    # Two variants per paper: a light deck `<key>-zh-tw.pptx` and a
+    # dark deck `<key>-zh-tw-dark.pptx`. Same content, palette swapped
+    # via ExportOptions.dark_mode — useful when presenting on OLED
+    # screens / in low-light rooms where the light deck would glare.
+    variants: tuple[tuple[bool, str], ...] = (
+        (False, ""),
+        (True, "-dark"),
+    )
     for paper in ALL_PAPERS:
         collection = PaperCollection(
             query=Query(
@@ -969,23 +977,26 @@ def main() -> None:
             ),
             papers=(paper,),
         )
-        options = ExportOptions(
-            formats=("pptx",),
-            out_dir=str(out_dir),
-            # Language-variant filename is the explicit exception to the
-            # canonical-stem rule, so the user can keep zh-tw and English
-            # decks side-by-side without collision.
-            filename_stem=f"{paper.bibtex_key()}-zh-tw",
-            include_abstract=True,
-            language="zh-tw",
-            # Disable the 25-slides-per-paper cap so every curated
-            # figure makes it into the deck even when the rich-tier
-            # body content already consumes most of the budget.
-            max_slides_per_paper=0,
-        )
-        written = export_collection(collection, options)
-        for fmt, path in written.items():
-            print(f"  - {paper.bibtex_key()} {fmt}: {path}")
+        for dark, suffix in variants:
+            options = ExportOptions(
+                formats=("pptx",),
+                out_dir=str(out_dir),
+                # Language-variant filename is the explicit exception to the
+                # canonical-stem rule, so the user can keep zh-tw and English
+                # decks side-by-side without collision. Same exception
+                # applies to the `-dark` variant suffix.
+                filename_stem=f"{paper.bibtex_key()}-zh-tw{suffix}",
+                include_abstract=True,
+                language="zh-tw",
+                # Disable the 25-slides-per-paper cap so every curated
+                # figure makes it into the deck even when the rich-tier
+                # body content already consumes most of the budget.
+                max_slides_per_paper=0,
+                dark_mode=dark,
+            )
+            written = export_collection(collection, options)
+            for fmt, path in written.items():
+                print(f"  - {paper.bibtex_key()}{suffix} {fmt}: {path}")
 
 
 if __name__ == "__main__":

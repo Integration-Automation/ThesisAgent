@@ -137,6 +137,11 @@ class DeckPage(QWidget):
         )
         self._include_abstract_check.setChecked(True)
         options_form.addRow(self._include_abstract_check)
+        self._dark_mode_check = QCheckBox(
+            t("deck.dark_mode_label", self._ui_language), self,
+        )
+        self._dark_mode_check.setChecked(False)
+        options_form.addRow(self._dark_mode_check)
         outer.addWidget(options_box)
 
         # Action row
@@ -257,6 +262,7 @@ class DeckPage(QWidget):
             include_abstract=self._include_abstract_check.isChecked(),
             language=language,
             max_slides_per_paper=self._max_slides_spin.value(),
+            dark_mode=self._dark_mode_check.isChecked(),
         )
         collection = self._collection
         self._export_button.setEnabled(False)

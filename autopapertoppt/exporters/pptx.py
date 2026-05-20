@@ -139,6 +139,34 @@ _DEFAULT_FONT_FAMILY: tuple[str, str | None] = ("Inter", None)
 # accent pass so a stock blank layout still reads as a designed deck).
 _ACCENT_TOP_HEIGHT = Inches(0.08)
 _ACCENT_LEFT_WIDTH = Inches(0.4)
+
+# Dark-mode palette (post-build recolour, opt-in via
+# ``ExportOptions.dark_mode``).
+_DARK_SLIDE_BG = RGBColor(0x12, 0x15, 0x1B)
+
+# Light-palette RGB → dark-palette RGB mapping for TEXT colours. Keys
+# are 3-tuples (R, G, B) since python-pptx's RGBColor is tuple-comparable
+# but we want to match by raw int components.
+_LIGHT_TO_DARK_TEXT: dict[tuple[int, int, int], tuple[int, int, int]] = {
+    (0x1F, 0x3A, 0x66): (0xE5, 0xE7, 0xEB),  # _BRAND_DARK   → near-white text
+    (0x55, 0x55, 0x55): (0x9C, 0xA3, 0xAF),  # _BRAND_GREY   → mid grey
+    (0xAA, 0xAA, 0xAA): (0x6B, 0x72, 0x80),  # _BRAND_LIGHT  → muted grey
+    # _BRAND_ACCENT (#C0392B) stays — warm red is legible on dark.
+}
+
+# Light-palette RGB → dark-palette RGB mapping for SHAPE / CELL FILLS
+# and cell-border lines. Keeps the navy header on tables but lightens
+# its tone slightly so it reads against the dark slide background.
+_LIGHT_TO_DARK_FILL: dict[tuple[int, int, int], tuple[int, int, int]] = {
+    # _BRAND_DARK accent bars + accent_left + table header fill
+    (0x1F, 0x3A, 0x66): (0x3B, 0x5A, 0xA0),
+    # _TABLE_ROW_ALT → dark row stripe
+    (0xF4, 0xF6, 0xF9): (0x1F, 0x23, 0x2C),
+    # Pure white table rows → near-black
+    (0xFF, 0xFF, 0xFF): (0x16, 0x1A, 0x22),
+    # _TABLE_DIVIDER → muted grey-blue rule
+    (0xD0, 0xD7, 0xE2): (0x3D, 0x44, 0x52),
+}
 _BRAND_RULE = RGBColor(0xCC, 0xCC, 0xCC)
 _RQ_BOX_FILL = RGBColor(0xF3, 0xF6, 0xFA)
 _RQ_BOX_BORDER = RGBColor(0x1F, 0x3A, 0x66)
@@ -305,6 +333,8 @@ class PptxExporter(Exporter):
         # ``deck-design`` subagent doc for rationale.
         _apply_typography(prs, ctx.language)
         _decorate_with_accents(prs)
+        if options.dark_mode:
+            _apply_dark_mode(prs)
         return prs
 
 
@@ -1827,3 +1857,129 @@ def _send_shape_to_back(shape, slide) -> None:
     # everything after that is a shape in z-order. Insert at index 2 so the
     # band lands BEHIND every text shape but the metadata stays intact.
     sp_tree.insert(2, sp)
+
+
+# ---------------------------------------------------------------------------
+# Dark-mode pass (opt-in via ExportOptions.dark_mode)
+# ---------------------------------------------------------------------------
+
+
+def _apply_dark_mode(prs: Presentation) -> None:
+    """Swap the light palette for the dark palette on every slide.
+
+    The exporter builds the deck with the light palette unconditionally,
+    then this post-pass re-colours individual shapes / runs / table cells
+    by looking up their current RGB in the light→dark mapping. The
+    approach is intentionally non-invasive — we don't refactor the 100+
+    direct ``_BRAND_*`` references into a palette-aware lookup; instead
+    we walk the rendered tree after the fact.
+
+    Steps per slide:
+    1. Solid-fill the slide background with ``_DARK_SLIDE_BG``.
+    2. Walk every shape:
+       - If it's a table, iterate the table's cells (fills + text + borders).
+       - Otherwise recolour the shape's own fill + text frame.
+    """
+    for slide in prs.slides:
+        _set_slide_background(slide, _DARK_SLIDE_BG)
+        for shape in slide.shapes:
+            _recolor_shape(shape)
+
+
+def _set_slide_background(slide, colour: RGBColor) -> None:
+    fill = slide.background.fill
+    fill.solid()
+    fill.fore_color.rgb = colour
+
+
+def _recolor_shape(shape) -> None:
+    """Single shape: swap its fill, text-run colours, and (if table) its
+    per-cell fills + borders + cell-level runs."""
+    if shape.has_table:
+        for cell in _iter_table_cells(shape.table):
+            _swap_fill(cell)
+            _swap_text_colors(cell)
+            _swap_cell_border_colors(cell)
+        return
+    _swap_fill(shape)
+    if shape.has_text_frame:
+        _swap_text_colors(shape)
+
+
+def _iter_table_cells(table):
+    """python-pptx exposes ``iter_cells`` on Table but the API name has
+    changed between versions; this wrapper falls through to the manual
+    row/col iteration when needed."""
+    iter_cells = getattr(table, "iter_cells", None)
+    if iter_cells is not None:
+        yield from iter_cells()
+        return
+    for row in table.rows:
+        yield from row.cells
+
+
+def _swap_fill(shape_or_cell) -> None:
+    fill = getattr(shape_or_cell, "fill", None)
+    if fill is None:
+        return
+    try:
+        rgb = fill.fore_color.rgb
+    except (AttributeError, ValueError, TypeError):
+        return
+    if rgb is None:
+        return
+    key = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+    new = _LIGHT_TO_DARK_FILL.get(key)
+    if new is None:
+        return
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(*new)
+
+
+def _swap_text_colors(shape_or_cell) -> None:
+    text_frame = getattr(shape_or_cell, "text_frame", None)
+    if text_frame is None:
+        return
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            try:
+                rgb = run.font.color.rgb
+            except (AttributeError, ValueError, TypeError):
+                continue
+            if rgb is None:
+                continue
+            key = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+            new = _LIGHT_TO_DARK_TEXT.get(key)
+            if new is None:
+                continue
+            run.font.color.rgb = RGBColor(*new)
+
+
+def _swap_cell_border_colors(cell) -> None:
+    """Walk the cell's ``<a:lnX>`` border elements and recolour any
+    ``<a:srgbClr>`` whose value matches the light-palette divider /
+    header-rule colours."""
+    tc_pr = cell._tc.find(qn("a:tcPr"))
+    if tc_pr is None:
+        return
+    for edge in ("L", "R", "T", "B"):
+        ln = tc_pr.find(qn(f"a:ln{edge}"))
+        if ln is None:
+            continue
+        solid = ln.find(qn("a:solidFill"))
+        if solid is None:
+            continue
+        clr = solid.find(qn("a:srgbClr"))
+        if clr is None:
+            continue
+        val = clr.get("val", "")
+        if len(val) != 6:
+            continue
+        try:
+            key = (int(val[0:2], 16), int(val[2:4], 16), int(val[4:6], 16))
+        except ValueError:
+            continue
+        new = _LIGHT_TO_DARK_FILL.get(key)
+        if new is None:
+            continue
+        clr.set("val", f"{new[0]:02X}{new[1]:02X}{new[2]:02X}")
