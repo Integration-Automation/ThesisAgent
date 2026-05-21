@@ -36,9 +36,7 @@ install is needed.
 
 ## Tabs
 
-The window has four tabs. The first two are functional in this
-release; the other two are placeholders that will land in a
-follow-up.
+The window has four tabs. **All four are functional in this release.**
 
 ### Search
 
@@ -90,18 +88,49 @@ Empty values clear the corresponding env var. **Restart the app**
 to refresh fetcher singletons that cached the env value at
 construction time.
 
-### Enrich (coming soon)
+### Enrich
 
-Per-paper PDF + LLM enrichment will land here. For now: set
-`ANTHROPIC_API_KEY` in **Settings**, run a search, then export —
-the CLI side auto-enriches each paper that has a downloadable PDF.
+Drives the per-paper PDF + LLM enrichment step. The Search tab emits
+a `collection_ready` signal as soon as the results table populates;
+the Enrich tab catches it and renders a per-paper row showing:
 
-### Deck (coming soon)
+- The paper's BibTeX key + title (clickable → opens the URL).
+- A **PDF** column — green tick when a `pdf_url` is on file (Unpaywall
+  / S2 / arXiv / CORE.ac.uk lifted it), grey dash otherwise.
+- An **Enrich** action that runs either the Python pipeline
+  (Anthropic API, needs `ANTHROPIC_API_KEY` in Settings) or surfaces
+  the LLM-as-agent path for runs without an API key.
+- A progress strip across the bottom — the worker reports the current
+  paper, elapsed seconds, and a per-paper success/failure tally.
 
-PPTX inspector / editor. The MCP server already exposes
-`pptx_inspect` / `pptx_update_slide` / `pptx_reorder_slides` /
-`pptx_delete_slide` / `pptx_add_slide`; this tab will wire them
-behind a Qt list view + form panel.
+Authored summaries are merged back onto the in-memory `PaperCollection`,
+so a subsequent **Export** picks up the rich-tier layout automatically.
+
+### Deck
+
+The pre-export deck-shaping controls. Wires `ExportOptions` fields
+behind Qt widgets:
+
+- **Light mode** checkbox — unchecked (default) ships the dark deck
+  (slide bg `#12151B`, body text `#E5E7EB`, brighter teal accent
+  `#2DD4BF`). Tick it for the printable / well-lit-room variant
+  (white bg + navy text). Mirrors the CLI `--light-mode` flag.
+- **Max slides per paper** — integer spinner. Defaults to 25;
+  `0` means unlimited.
+- **Max figures per paper** — controls how many `figures=` entries the
+  rich-tier layout actually renders. The priority trim keeps the
+  cover / references / contributions slides intact and drops Q&A /
+  figure / paper-table slides first when the cap kicks in.
+- **Include abstract** checkbox — when off, the deck skips the
+  abstract slide entirely (useful for an "executive overview only"
+  variant).
+
+The PPTX inspector / editor surface (drives `pptx_inspect` /
+`pptx_update_slide` / `pptx_reorder_slides` / `pptx_delete_slide` /
+`pptx_add_slide`) is wired to the same shape names the exporter
+produces — `title`, `meta`, `body`, `kpi`, `rq_question`, `figure`,
+`accent_top`, `accent_left` — so the editor list view labels each
+slide by its semantic role rather than by raw shape index.
 
 ## i18n
 

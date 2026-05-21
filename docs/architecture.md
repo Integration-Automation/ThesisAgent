@@ -375,6 +375,38 @@ how much info each paper carries:
 All three tiers share the same shape-naming convention so
 `pptx_edit.update_slide(..., title=...)` looks up shapes by name.
 
+### Post-build visual-identity passes
+
+After the chosen tier builds the deck on the light palette, three
+non-invasive walk-and-rewrite passes run before the file is saved:
+
+1. **Typography** (`_apply_typography(prs, language)`) — walks every
+   text run, writes `<a:latin typeface=…>` AND `<a:ea typeface=…>` on
+   the run's XML based on `_FONT_FAMILIES[language]`. Setting only
+   `run.font.name` (the Latin slot) leaves CJK glyphs in PowerPoint's
+   default East-Asian font; both slots matter.
+2. **Accent geometry** (`_decorate_with_accents(prs)`) — adds the
+   `accent_top` bar to every content slide and an `accent_left` band
+   to the cover. Both are full-width / full-height navy rectangles
+   the user never sees as separate shapes but instantly reads as
+   "this deck has an identity".
+3. **Dark-mode recolour** (`_apply_dark_mode(prs)`, runs when
+   `ExportOptions.dark_mode=True`, which is the default) — walks every
+   slide / shape / run / table cell and swaps light-palette RGBs to
+   their dark equivalents via `_LIGHT_TO_DARK_TEXT` + `_LIGHT_TO_DARK_FILL`
+   dicts. The slide background switches to `#12151B`; body text goes
+   to `#E5E7EB`; the teal accent (`#0E7490`) goes to a brighter
+   `#2DD4BF`. The pass is intentionally non-invasive: it doesn't
+   refactor the 100+ direct `_BRAND_*` constant references in the
+   builders, it just rewrites RGBs after the fact.
+
+The three passes ship with regression tests in
+`tests/test_exporters.py`: `test_pptx_default_is_dark_mode`,
+`test_pptx_dark_mode_has_no_invisible_runs` (no run is `rgb=None` or
+black), `test_pptx_dark_mode_no_light_text_on_light_fill` (no
+near-white text inside a near-white-filled callout), and
+`test_pptx_no_red_text_runs` (red `#C0392B` is banned for text).
+
 ## Why the design choices
 
 | Choice | Reason |

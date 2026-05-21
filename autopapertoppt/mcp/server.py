@@ -14,12 +14,13 @@ Tools:
   LLM agent can drive the PDF retrieval step before authoring rich
   summaries.
 - export(papers, keywords, formats, out_dir, filename_stem, include_abstract,
-         language, max_slides_per_paper) -> {written: {fmt: path}}
+         language, max_slides_per_paper, dark_mode) -> {written: {fmt: path}}
   formats may be any of: pptx, xlsx, md, bib, json
   papers[*].summary may include rich fields (pain_points, research_question,
   headline_metrics, technique_table, literature_table, method_sections,
   research_questions, rq_results, …) — when present, the PPT switches to
-  thesis-style layout.
+  thesis-style layout. ``dark_mode`` defaults to True (project default);
+  pass False for the light/printable variant.
 - pptx_inspect(path) -> {slides: [...]}
 - pptx_update_slide(path, slide_index, title?, body?, meta?, shape_updates?) -> {path}
 - pptx_delete_slide(path, slide_index) -> {path}
@@ -284,6 +285,7 @@ def _register_export_tool(server: FastMCP) -> None:
         include_abstract: bool = True,
         language: str = "en",
         max_slides_per_paper: int | None = 25,
+        dark_mode: bool = True,
     ) -> dict[str, Any]:
         """Export a list of papers (from search / fetch_paper) to disk.
 
@@ -291,12 +293,19 @@ def _register_export_tool(server: FastMCP) -> None:
         the rich-tier shape (pain_points, research_question, headline_metrics,
         technique_table, literature_table, method_sections, research_questions,
         rq_results, …), the PPT exporter switches to thesis-style layout.
-        ``language`` accepts en / zh-tw / zh-cn / ja.
+        ``language`` accepts en / zh-tw / zh-cn / ja / es / fr / de / ko /
+        pt / ru / it / vi / hi / id.
 
         ``max_slides_per_paper`` caps the per-paper slide count after the
         priority-based trim (cover/references/contributions are kept,
         Q&A/figure slides drop first). Default 25; pass ``0`` (or
         ``None``) for unlimited.
+
+        ``dark_mode`` defaults to True — the post-build pass swaps the
+        brand palette to dark slide background (#12151B) + near-white
+        text (#E5E7EB) so OLED projectors and low-light venues don't
+        glare. Pass False for the light/printable variant (white slide
+        background + navy text).
         """
         if not papers:
             raise AutoPaperToPPTError("export requires at least one paper")
@@ -318,6 +327,7 @@ def _register_export_tool(server: FastMCP) -> None:
             include_abstract=include_abstract,
             language=language,
             max_slides_per_paper=slide_cap,
+            dark_mode=dark_mode,
         )
         written = export_collection(collection, options)
         return {

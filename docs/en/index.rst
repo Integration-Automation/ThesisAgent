@@ -318,8 +318,59 @@ to ``en``.
 
 Every text box on every slide carries a semantic ``name`` (``title``,
 ``meta``, ``body``, ``subhead``, ``footer``, ``page_number``, ``kpi``,
-``rq_box``) so the editing tools can target shapes without depending
-on visual position. See :doc:`/pptx_editing`.
+``rq_box``, ``rq_question``, ``figure``, ``accent_top``,
+``accent_left``) so the editing tools can target shapes without
+depending on visual position. See :doc:`/pptx_editing`.
+
+Designed-deck visual identity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The exporter applies three non-invasive post-build passes so a deck
+doesn't look like generic ``add_slide()`` output:
+
+* **Per-language typography** — every text run gets both an
+  ``<a:latin>`` and ``<a:ea>`` typeface override. Latin defaults to
+  Inter; East-Asian to Microsoft JhengHei UI (zh-tw), YaHei UI
+  (zh-cn), Yu Gothic UI (ja), Malgun Gothic (ko); Nirmala UI handles
+  Devanagari (hi). Setting only the Latin slot leaves CJK glyphs in
+  PowerPoint's default East-Asian font — both slots matter.
+* **Accent geometry** — every content slide gets a thin navy top bar
+  (``accent_top``, full width); the cover slide also carries a left
+  vertical band (``accent_left``).
+* **Academic-style tables** — the default PowerPoint heavy black grid
+  is stripped; the header row gets a solid navy fill + 1.5pt navy
+  bottom rule; data rows alternate light blue / white with a 0.5pt
+  soft inter-row divider; vertical alignment is middle; the first
+  column is bold so row labels read as headers.
+
+Dark mode
+^^^^^^^^^
+
+Dark mode is the **default** render path. The post-build pass swaps
+the light palette to a dark deck (slide bg ``#12151B``, body text
+``#E5E7EB``, brighter teal accent ``#2DD4BF``) — designed for OLED
+projectors and low-light venues. Opt out per render with
+``--light-mode`` on the CLI, the **Light mode** checkbox on the
+GUI's Deck tab, or ``ExportOptions(dark_mode=False)`` in Python.
+Over MCP, pass ``dark_mode: false`` to the ``export`` tool.
+
+Red is **banned as a text colour** in both modes. The sanctioned
+emphasis colour is teal ``#0E7490`` (bold + teal for KPI values and
+RQ question callouts); grey is for captions / placeholders. Regression
+tests in ``tests/test_exporters.py`` pin every contract — no
+``rgb=None`` runs, no near-white text on near-white callouts, no
+``#C0392B`` text runs.
+
+zh-tw / zh-cn vocabulary guard
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A 244-pattern regex catalogue in
+``tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary``
+catches Simplified-Chinese loan words rendered in Traditional hanzi
+— e.g. ``內存`` (should be ``記憶體``), ``魯棒性`` (``穩健性``),
+``軟件`` (``軟體``), ``緩存`` (``快取``). The same guard runs in
+reverse for zh-cn strings. Full rule + the regex catalogue live in
+``.claude/agents/language-vocabulary-check.md``.
 
 ----
 
@@ -380,8 +431,10 @@ Tools at a glance:
    * - ``export``
      - Papers list + formats → writes ``.pptx/.xlsx/.md/.bib/.json``.
        Accepts a ``summary`` field per paper that can carry the
-       full thesis-style schema; accepts ``language`` for i18n and
-       ``max_slides_per_paper`` (default 25; pass ``0`` for unlimited).
+       full thesis-style schema; accepts ``language`` for i18n,
+       ``max_slides_per_paper`` (default 25; pass ``0`` for unlimited),
+       and ``dark_mode`` (default ``true`` — dark deck; pass ``false``
+       for the printable light variant).
    * - ``pptx_inspect``
      - Read slide / shape structure of an existing deck.
    * - ``pptx_update_slide``

@@ -85,6 +85,8 @@ for p in ALL_PAPERS:
   - `.md` — 전체 출처 / 제목 / 초록 리스트.
   - `.bib` — 충돌 없는 인용 키, LaTeX 이스케이프된 필드.
   - `.json` — 다운스트림 도구를 위한 원시 페이로드.
+  - **디자인된 시각 정체성** (기본 Calibri-on-white 모습이 아님): 언어별 타이포그래피 (Latin 은 Inter, CJK + Hindi 는 Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI), 프로그램으로 그리는 accent geometry (모든 콘텐츠 슬라이드 상단의 accent bar + 표지 좌측 띠), 학술 스타일 표 (기본 검정 그리드 제거, navy 헤더 룰, 부드러운 행간 divider, 교대 행 stripe, 수직 중앙 정렬, 첫 열 굵게). 5색 팔레트 (navy / teal / grey / light / white) — 빨간 텍스트는 **금지**, 강조는 **굵게 + teal `#0E7490`** 으로.
+  - **다크 모드가 기본**. light palette 로 빌드한 다음 post-build pass 가 text + fill + cell-border 의 RGB 를 다크 모드로 교체 (슬라이드 배경 `#12151B`, 본문 `#E5E7EB`, teal accent 은 더 밝은 `#2DD4BF` 로). OLED 프로젝터와 어두운 발표장을 위한 기본. 인쇄나 밝은 환경에서는 `--light-mode` (CLI), GUI Deck 탭의 **Light mode** 체크 해제, 또는 Python 에서 `ExportOptions(dark_mode=False)` 로 opt out.
 - **PPT 편집 툴킷**: `autopapertoppt.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) 는 익스포터가 생성한 모든 덱에 대해 작동. 동등한 `pptx_*` MCP 도구로 LLM 에이전트가 생성된 덱을 반복적으로 수정 가능.
 - **MCP 서버**: 11 개 도구 — `list_sources` (디스커버리), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, 그리고 5 개의 `pptx_*` 편집 도구. MCP 호환 LLM (Claude Code, Claude Desktop, Cursor, …) 이 전체 워크플로를 구동 가능.
 - **두 가지 enrichment 경로** 초록을 넘어 진짜 논문 발표 스타일 덱으로:
