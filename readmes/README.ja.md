@@ -85,6 +85,8 @@ for p in ALL_PAPERS:
   - `.md` — 完全なソース / タイトル / 要約リスト。
   - `.bib` — 衝突しない引用キー、LaTeX エスケープ済みフィールド。
   - `.json` — 下流ツーリング用の生ペイロード。
+  - **デザイン済みのビジュアルアイデンティティ**(デフォルトの Calibri-on-white ではありません):言語ごとのタイポグラフィ(Latin に Inter、CJK + Hindi に Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI)、プログラム生成のアクセント幾何(コンテンツスライド上端のアクセントバー + カバーの左帯)、学術風テーブル(デフォルトの黒グリッド除去、navy ヘッダールール、淡色の行間 divider、交互の行ストライプ、垂直中央揃え、行ラベルは太字)。5 色 palette(navy / teal / grey / light / white)— テキストの赤色は禁止、強調は **太字 + teal `#0E7490`** で。
+  - **ダークモードがデフォルト**。light palette で構築してから post-build pass で text + fill + cell-border の RGB をダークに置換(slide bg `#12151B`、本文 `#E5E7EB`、teal accent はより明るい `#2DD4BF` に)。OLED プロジェクター/暗所での発表を想定。明るい会場や印刷用には `--light-mode`(CLI)、GUI の Deck タブの **Light mode** チェック、または `ExportOptions(dark_mode=False)`(プログラム)でオプトアウト。
 - **PPT 編集ツールキット**: `autopapertoppt.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)はエクスポータが生成した任意のデッキに対して動作。LLM エージェントが生成済みデッキで反復できる `pptx_*` MCP ツールも同梱。
 - **MCP サーバー**: 11 ツール — `list_sources`(発見)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 5 個の `pptx_*` 編集ツール。MCP 対応 LLM(Claude Code、Claude Desktop、Cursor、…)から全ワークフローを駆動可能。
 - **2 つのエンリッチパス**(要約だけでなく本物の論文発表級デッキへ):

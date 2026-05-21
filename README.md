@@ -182,6 +182,24 @@ the template for any multi-paper search. The zh-tw companion is at
     are i18n'd across **14 languages**: English, 繁體中文, 简体中文,
     日本語, Español, Français, Deutsch, 한국어, Português, Русский,
     Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia.
+  - **Designed-deck visual identity** (not the default Calibri-on-white
+    look): per-language typography (Inter for Latin, Microsoft JhengHei
+    UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI for CJK
+    + Hindi), programmatic accent geometry (top accent bar on every
+    content slide + left band on the cover), academic-style table
+    formatting (default grid stripped, navy header rule, soft inter-row
+    dividers, alternating row stripe, middle-vertical alignment, bold
+    row labels), and a five-colour palette discipline (navy / teal /
+    grey / light / white) with red **banned** for text (use bold +
+    teal `#0E7490` for emphasis instead).
+  - **Dark mode is the default render path.** Build runs on the light
+    palette, then a post-build pass swaps text + fill + cell-border
+    RGBs to a dark deck (slide bg `#12151B`, body text `#E5E7EB`,
+    accent teal swapped to a brighter `#2DD4BF`). OLED projectors and
+    low-light venues get the dark deck without authors having to think
+    about it; pass `--light-mode` (CLI), uncheck **Light mode** (GUI
+    Deck tab), or `ExportOptions(dark_mode=False)` (programmatic) to
+    opt out for projectors in well-lit rooms or for printed handouts.
   - `.xlsx` — Papers sheet + Query provenance sheet, hyperlinked URL /
     PDF, frozen header, auto column widths. Column 5 (**Source**) shows
     the real publication venue (e.g. "IEEE Access"); column 6
@@ -226,6 +244,13 @@ the template for any multi-paper search. The zh-tw companion is at
   limit (token bucket), `defusedxml` for any XML payload,
   path-traversal-safe export paths, no `eval` / `exec` / `pickle` on
   user input.
+- **zh-tw / zh-cn vocabulary guard**: ~244 regex patterns in
+  `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary`
+  catch Simplified-Chinese loan words rendered with Traditional hanzi
+  (e.g. `內存` → `記憶體`, `魯棒性` → `穩健性`, `軟件` → `軟體`,
+  `緩存` → `快取`). Same guard runs in reverse for zh-cn locale
+  strings. Full rule + the regex catalogue live in
+  `.claude/agents/language-vocabulary-check.md`.
 
 ## Quick start
 
@@ -369,7 +394,7 @@ Tools:
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |
-| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json`. Accepts a `summary` field per paper for the rich thesis-style schema and `max_slides_per_paper` (default 25). |
+| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `true` — the project's dark-deck post-pass; pass `false` for the printable light variant). |
 | `pptx_inspect` | Read slide / shape structure of an existing deck. |
 | `pptx_update_slide` | Replace `title` / `body` / `meta` (by shape name) or arbitrary shapes by index. |
 | `pptx_delete_slide` | Remove a slide and its part relationship. |
@@ -385,7 +410,7 @@ LLM-as-agent flow (no `ANTHROPIC_API_KEY` needed — the LLM is the agent):
 4. fetch_pdf_text(pdf_url=paper.pdf_url)           # per paper
 5. (the LLM reads body text, produces a structured `summary` dict)
 6. export(papers=[{...paper, "summary": {pain_points: [...], rq_results: [...]}}],
-          language="zh-tw", formats=["pptx","bib"], ...)
+          language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
 Full reference in [`docs/mcp.md`](docs/mcp.md).
@@ -433,11 +458,13 @@ pip install autopapertoppt[gui]
 autopapertoppt-gui                 # or: autopapertoppt gui
 ```
 
-The window has four tabs — **Search** (functional), **Settings**
-(functional, persists API keys via QSettings), **Enrich**, and
-**Deck** (the latter two land in a follow-up). The Windows release
-zip ships the Nuitka-compiled bundle with PySide6 included, so
-`autopapertoppt.exe gui` works without a separate Python install.
+The window has four tabs — **Search**, **Settings** (persists API keys
+via QSettings), **Enrich** (drives the LLM-as-agent / Python-pipeline
+enrichment over a `collection_ready` signal), and **Deck** (the Light
+mode toggle + slide-cap + max-figures controls flow through to
+`ExportOptions`). The Windows release zip ships the Nuitka-compiled
+bundle with PySide6 included, so `autopapertoppt.exe gui` works
+without a separate Python install.
 **UI ships in all 14 languages** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — first run picks

@@ -266,7 +266,8 @@ Render a papers list to any combination of `.pptx`, `.xlsx`, `.md`,
   "filename_stem": "attention",
   "include_abstract": true,
   "language": "zh-tw",
-  "max_slides_per_paper": 25
+  "max_slides_per_paper": 25,
+  "dark_mode": true
 }
 ```
 
@@ -274,6 +275,15 @@ Render a papers list to any combination of `.pptx`, `.xlsx`, `.md`,
 after the priority-based trim — cover / references / contributions are
 kept first; Q&A / figure / paper-table slides drop first. Pass `0`
 (or omit the field) for unlimited.
+
+`dark_mode` (default `true`) toggles the post-build recolour pass.
+On: dark slide background (`#12151B`) + near-white body text (`#E5E7EB`)
++ darker table-row stripe — designed for OLED projectors and low-light
+venues. Off: the light/printable variant (white background + navy text
+`#1F3A66`). Both modes share the same builder pipeline — the dark pass
+runs over the rendered tree, so the agent doesn't pick layouts up-front.
+The teal accent (`#0E7490` → `#2DD4BF` in dark) marks KPI values and RQ
+question callouts; red is banned for text in both modes.
 
 Returns:
 
@@ -303,7 +313,11 @@ sentence-bucketing on `paper.abstract`.
 `fr`, `de`, `ko`, `pt`, `ru`, `it`, `vi`, `hi`, `id`. Drives both the
 template strings (Agenda / References / "Paper N of M" / footer) and
 the suggested LLM output language when the agent fills in the summary.
-Anything outside that set falls back to `en` silently.
+Anything outside that set falls back to `en` silently. Each locale
+also drives the per-language typography pass (Inter for Latin, plus
+Microsoft JhengHei UI for zh-tw / YaHei UI for zh-cn / Yu Gothic UI
+for ja / Malgun Gothic for ko / Nirmala UI for hi) — replaces the
+PowerPoint Calibri default, which is the biggest "AI-generated" tell.
 
 ### `pptx_inspect`
 

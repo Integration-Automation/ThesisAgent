@@ -97,6 +97,8 @@ for key in irrelevant_keys:
 - **本地 PDF 模式** (`--pdf <path>`): 传一个 PDF 或一整个目录。内置启发式抽取器会从每个 PDF 的首页直接抽出 **标题、作者、年份、arXiv ID、DOI、真正的摘要**(以「Abstract」/「ABSTRACT」/「摘要」标题为锚点,而不是随便切前 N 字)。单 PDF 时 `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` 会覆盖抽取结果;目录模式下以每个文件自己的抽取结果为准,每篇都会输出一份以 BibTeX key 命名的幻灯片。
 - **五种导出器**:
   - `.pptx` —— 16:9 宽屏、带页码。三种 rendering tier(轻量摘要 / 扁平结构化 / **论文答辩级 thesis-style**:痛点四宫格、研究问题 callout、KPI 区、技术比较表、文献定位表、系统总览、方法细节、每个 RQ 结果表、贡献总结、核心观察、限制与未来工作、Q&A、参考文献)。所有模板字符串都做 i18n,共 **14 种语言**:English、繁體中文、简体中文、日本語、Español、Français、Deutsch、한국어、Português、Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia。
+  - **设计过的视觉识别**(不是默认 Calibri-on-white 的样子):按语言字体 pass(Latin 用 Inter,CJK + Hindi 用 Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI)、程式化的 accent geometry(每张内容幻灯片顶部的 accent bar + 封面的左侧色带)、学术风表格(去掉默认黑色 grid、navy header rule、淡色 inter-row divider、交替 row stripe、垂直居中、首列加粗作行标签),搭配五色 palette 纪律(navy / teal / grey / light / white) —— 红色文字被禁用,强调用 **粗体 + teal `#0E7490`** 代替。
+  - **暗色模式为默认**。先用 light palette 构建 deck,再用 post-build pass 把 text + fill + cell-border 的 RGB 换成暗色版本(slide bg `#12151B`、body text `#E5E7EB`、teal accent 换成更亮的 `#2DD4BF`)。OLED 投影仪与昏暗会场直接拿到暗版本,作者无须额外配置;若要打印或在明亮场地用,加 `--light-mode`(CLI)、取消勾选 GUI Deck 页的 **Light mode**、或在程序里传 `ExportOptions(dark_mode=False)`。
   - `.xlsx` —— Papers 工作表 + Query 出处工作表,URL/PDF 带超链接、首行冻结、列宽自动。第 5 列 **Source** 显示真实刊登来源(例如「IEEE Access」),第 6 列 **Indexed via** 显示是哪个 fetcher 抓到的(例如「openalex」),两个信息不会混在一起。
   - `.md` —— 完整来源/标题/摘要清单。
   - `.bib` —— 不会撞 key、LaTeX 特殊字符已转义。
@@ -172,6 +174,7 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `--paywall-threshold` | 多少比例的结果是付费墙才会触发确认提示。默认 0.30。 |
 | `--yes` | 跳过付费墙提示。 |
 | `--max-slides` | 每篇 PPT 幻灯片上限(默认 25;传 0 表示不限)。 |
+| `--light-mode` | 用白底 + navy 文字 render 幻灯片。**暗色模式才是默认** —— 加这个 flag 是在明亮会场投影或打印手册时使用。 |
 | `--quiet` | 不打印每篇论文。 |
 
 默认值: `--query` → `pptx,xlsx,bib`;`--paper` → `pptx,bib`。一律可被 `--export` 覆盖。
