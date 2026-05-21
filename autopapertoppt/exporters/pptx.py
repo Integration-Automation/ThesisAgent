@@ -35,7 +35,9 @@ from pathlib import Path
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
+from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
 from autopapertoppt.core.constants import EXPORT_PPTX
@@ -104,15 +106,100 @@ _REFERENCES_PER_SLIDE = 8       # split long bib lists across slides
 
 # Colours (mirror the reference deck's palette)
 _BRAND_DARK = RGBColor(0x1F, 0x3A, 0x66)
+#: WARNING — DO NOT use _BRAND_ACCENT as a TEXT colour.
+#: Red text in slide decks is consistently associated with errors,
+#: warnings, and AI-generated KPI emphasis ("look at this number!").
+#: The project bans red font runs entirely; use _BRAND_HIGHLIGHT (teal)
+#: for emphasis instead. The constant is kept around in case a future
+#: non-text accent shape (sparkline, badge, etc.) needs it, but every
+#: existing TEXT callsite has been migrated to _BRAND_HIGHLIGHT.
+#: See .claude/agents/deck-design.md "No red text" contract.
 _BRAND_ACCENT = RGBColor(0xC0, 0x39, 0x2B)
+#: Emphasis text colour — teal-700 (#0E7490). Replaces the banned red
+#: _BRAND_ACCENT for KPI values, RQ question callouts, figure
+#: captions, and other "this stands out" use cases. Pairs well with
+#: bold; pairs cleanly with _BRAND_DARK navy as the secondary; reads
+#: as professional/modern (think academic posters, not error banners).
+#: Dark-mode pass swaps to teal-400 (#2DD4BF) via _LIGHT_TO_DARK_TEXT.
+_BRAND_HIGHLIGHT = RGBColor(0x0E, 0x74, 0x90)
 _BRAND_GREY = RGBColor(0x55, 0x55, 0x55)
 _BRAND_LIGHT = RGBColor(0xAA, 0xAA, 0xAA)
+
+# Per-language typography. (latin_family, east_asian_family). The Latin
+# family also covers Cyrillic / Greek / Devanagari via Inter; the
+# east-asian slot is what PowerPoint consults for CJK code points, so
+# leaving it `None` would let PowerPoint pick a default that doesn't
+# match the Latin choice. See ``deck-design`` agent doc for the
+# full rationale. Inter degrades gracefully to Calibri on hosts without
+# Inter installed.
+_FONT_FAMILIES: dict[str, tuple[str, str | None]] = {
+    "en":     ("Inter", None),
+    "es":     ("Inter", None),
+    "fr":     ("Inter", None),
+    "de":     ("Inter", None),
+    "pt":     ("Inter", None),
+    "it":     ("Inter", None),
+    "vi":     ("Inter", None),
+    "id":     ("Inter", None),
+    "ru":     ("Inter", None),
+    "hi":     ("Inter", "Nirmala UI"),
+    "zh-tw":  ("Inter", "Microsoft JhengHei UI"),
+    "zh-cn":  ("Inter", "Microsoft YaHei UI"),
+    "ja":     ("Inter", "Yu Gothic UI"),
+    "ko":     ("Inter", "Malgun Gothic"),
+}
+_DEFAULT_FONT_FAMILY: tuple[str, str | None] = ("Inter", None)
+
+# Accent geometry (set on every content slide by the typography /
+# accent pass so a stock blank layout still reads as a designed deck).
+_ACCENT_TOP_HEIGHT = Inches(0.08)
+_ACCENT_LEFT_WIDTH = Inches(0.4)
+
+# Dark-mode palette (post-build recolour, opt-in via
+# ``ExportOptions.dark_mode``).
+_DARK_SLIDE_BG = RGBColor(0x12, 0x15, 0x1B)
+
+# Light-palette RGB → dark-palette RGB mapping for TEXT colours. Keys
+# are 3-tuples (R, G, B) since python-pptx's RGBColor is tuple-comparable
+# but we want to match by raw int components.
+_LIGHT_TO_DARK_TEXT: dict[tuple[int, int, int], tuple[int, int, int]] = {
+    (0x1F, 0x3A, 0x66): (0xE5, 0xE7, 0xEB),  # _BRAND_DARK      → near-white text
+    (0x55, 0x55, 0x55): (0x9C, 0xA3, 0xAF),  # _BRAND_GREY      → mid grey
+    (0xAA, 0xAA, 0xAA): (0x6B, 0x72, 0x80),  # _BRAND_LIGHT     → muted grey
+    (0x0E, 0x74, 0x90): (0x2D, 0xD4, 0xBF),  # _BRAND_HIGHLIGHT → bright teal-400
+    # _BRAND_ACCENT (#C0392B) intentionally NOT mapped — red text was
+    # banned per the deck-design "No red text" contract, and the
+    # `test_pptx_no_red_text_runs` regression test fails if any run
+    # ever writes that colour. If a run shows up with it the test
+    # catches it BEFORE we reach this swap layer.
+}
+
+# Light-palette RGB → dark-palette RGB mapping for SHAPE / CELL FILLS
+# and cell-border lines. Keeps the navy header on tables but lightens
+# its tone slightly so it reads against the dark slide background.
+_LIGHT_TO_DARK_FILL: dict[tuple[int, int, int], tuple[int, int, int]] = {
+    # _BRAND_DARK accent bars + accent_left + table header fill
+    (0x1F, 0x3A, 0x66): (0x3B, 0x5A, 0xA0),
+    # _TABLE_ROW_ALT → dark row stripe
+    (0xF4, 0xF6, 0xF9): (0x1F, 0x23, 0x2C),
+    # Pure white table rows → near-black
+    (0xFF, 0xFF, 0xFF): (0x16, 0x1A, 0x22),
+    # _TABLE_DIVIDER → muted grey-blue rule
+    (0xD0, 0xD7, 0xE2): (0x3D, 0x44, 0x52),
+    # _RQ_BOX_FILL (research-question callout box) → dark navy tint.
+    # Without this swap the box stays near-white while the text inside
+    # is re-coloured to near-white = white-on-white = invisible. This
+    # specific bug is what the dark-mode contrast contract guards.
+    (0xF3, 0xF6, 0xFA): (0x1E, 0x26, 0x38),
+}
 _BRAND_RULE = RGBColor(0xCC, 0xCC, 0xCC)
 _RQ_BOX_FILL = RGBColor(0xF3, 0xF6, 0xFA)
 _RQ_BOX_BORDER = RGBColor(0x1F, 0x3A, 0x66)
 _TABLE_HEADER_FILL = RGBColor(0x1F, 0x3A, 0x66)
 _TABLE_HEADER_FG = RGBColor(0xFF, 0xFF, 0xFF)
 _TABLE_ROW_ALT = RGBColor(0xF4, 0xF6, 0xF9)
+_TABLE_DIVIDER = RGBColor(0xD0, 0xD7, 0xE2)  # row divider — soft grey-blue
+_TABLE_HEADER_RULE = RGBColor(0x1F, 0x3A, 0x66)  # heavy nav rule under header
 
 # ---------------------------------------------------------------------------
 # Abstract segmentation (fallback when summary is absent / lightweight only)
@@ -266,6 +353,13 @@ class PptxExporter(Exporter):
             )
         # Page numbers are stamped AFTER trim so they reflect the final total.
         _stamp_page_numbers(prs, ctx.language)
+        # Visual identity passes — applied last so they affect every shape
+        # placed by every builder (including page numbers). See the
+        # ``deck-design`` subagent doc for rationale.
+        _apply_typography(prs, ctx.language)
+        _decorate_with_accents(prs)
+        if options.dark_mode:
+            _apply_dark_mode(prs)
         return prs
 
 
@@ -814,7 +908,10 @@ def _add_figure_image(
             slide, name="body",
             text=f"[figure unavailable: {path.name}]",
             left=left, top=top, width=max_width, height=Inches(0.5),
-            font_pt=_BODY_PT, colour=_BRAND_ACCENT,
+            # Muted grey for a placeholder/error state — not a headline.
+            # Was red, then briefly navy; settled on grey because this
+            # surface is contextual chrome, not "this stands out".
+            font_pt=_BODY_PT, colour=_BRAND_GREY,
         )
         return
     # python-pptx scales by aspect ratio if we pass only height (or
@@ -857,7 +954,10 @@ def _add_paper_table_slides(
             text=f"{t(ctx.language, 'label_caption')}: {_clean(caption)}",
             left=_MARGIN_X, top=Inches(1.65),
             width=_BODY_WIDTH, height=Inches(0.55),
-            font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_ACCENT,
+            # Mid grey reads as a caption label (matches the figure-slide
+            # caption style at line ~887) rather than competing with the
+            # paper-table itself for the eye. Was red, then briefly navy.
+            font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_GREY,
             shrink_to_fit=True,
         )
         cols = len(rows[0])
@@ -913,7 +1013,11 @@ def _add_rq_result_slide(
         slide, name="rq_question", text=question_text,
         left=_MARGIN_X, top=Inches(1.65),
         width=_BODY_WIDTH, height=Inches(0.55),
-        font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_ACCENT,
+        # Teal highlight — this is the actual research question being
+        # answered on this slide; the eye should land on it before the
+        # results table below. Was red, then briefly navy; teal carries
+        # the "thoughtful, intentional" tone without the warning vibe.
+        font_pt=_SUBHEAD_PT - 2, bold=True, colour=_BRAND_HIGHLIGHT,
         shrink_to_fit=True,
     )
     if rq.table:
@@ -1252,6 +1356,14 @@ def _add_bullet_box(
         paragraph.alignment = PP_ALIGN.LEFT
         for run in paragraph.runs:
             run.font.size = Pt(font_pt)
+            # ALWAYS set the run colour explicitly. A run with
+            # ``font.color.rgb = None`` inherits the theme's body-text
+            # colour (which renders as black) and the dark-mode
+            # post-pass cannot swap it because there's no source RGB
+            # to look up in the mapping. See deck-design.md
+            # "Dark-mode contract" — every text-adding helper sets a
+            # palette colour, no exceptions.
+            run.font.color.rgb = _BRAND_DARK
 
 
 def _add_footer(slide, text: str) -> None:
@@ -1387,7 +1499,12 @@ def _add_kpi_lines(
         run_value.text = str(value)
         run_value.font.size = Pt(_BODY_PT + 2)
         run_value.font.bold = True
-        run_value.font.color.rgb = _BRAND_ACCENT
+        # Teal accent for KPI numbers — they're the slide's punch line
+        # (a 2.3x speedup, a 78% F1, etc.). Bold + teal makes them pop
+        # without using red, which would read as error/warning. Was red,
+        # then briefly navy; teal restores a real emphasis colour.
+        # See deck-design.md "No red text" contract.
+        run_value.font.color.rgb = _BRAND_HIGHLIGHT
         if baseline:
             run_base = paragraph.add_run()
             run_base.text = f"   ({baseline_label}: {baseline})"
@@ -1398,6 +1515,23 @@ def _add_kpi_lines(
 def _add_table(
     slide, *, rows, left, top, width, height, col_widths,
 ) -> None:
+    """Render a clean academic-style table.
+
+    Styling rules (mirror published thesis-defence decks, not the default
+    PowerPoint table look):
+
+    * No default black grid lines — every cell border is set to noFill
+      first, then specific rules are added back where they help readability.
+    * Header row: navy fill, white bold text, with a thick (1.5pt) navy
+      bottom rule below it for emphasis (the rule sits in the data row's
+      top edge, not the header's bottom, so it doesn't double up).
+    * Data rows: alternate very-light-blue / white background; thin
+      (0.5pt) grey-blue rule between adjacent data rows.
+    * Cell vertical alignment: middle, so short labels and longer
+      descriptions in the same row sit on a shared baseline.
+    * First column of body rows: bold, slightly emphasised — most tables
+      in this project use the leftmost cell as a row label.
+    """
     if not rows:
         return
     row_count = len(rows)
@@ -1410,31 +1544,94 @@ def _add_table(
         table.columns[col_index].width = w
     for r, row_values in enumerate(rows):
         for c, value in enumerate(row_values):
-            cell = table.cell(r, c)
-            cell.text = str(value)
-            text_frame = cell.text_frame
-            text_frame.word_wrap = True
-            text_frame.margin_left = Inches(0.08)
-            text_frame.margin_right = Inches(0.08)
-            text_frame.margin_top = Inches(0.04)
-            text_frame.margin_bottom = Inches(0.04)
-            for paragraph in text_frame.paragraphs:
-                for run in paragraph.runs:
-                    run.font.size = Pt(_TABLE_PT)
-                    if r == 0:
-                        run.font.bold = True
-                        run.font.color.rgb = _TABLE_HEADER_FG
-                    else:
-                        run.font.color.rgb = _BRAND_DARK
+            _style_table_cell(table.cell(r, c), str(value), r, c)
+
+
+def _style_table_cell(cell, value: str, r: int, c: int) -> None:
+    """Apply academic-style formatting to one cell.
+
+    Split out from ``_add_table`` so the cognitive-complexity budget
+    fits — borders + fills + font + alignment all live here.
+    """
+    cell.text = value
+    cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+    text_frame = cell.text_frame
+    text_frame.word_wrap = True
+    text_frame.margin_left = Inches(0.1)
+    text_frame.margin_right = Inches(0.1)
+    text_frame.margin_top = Inches(0.05)
+    text_frame.margin_bottom = Inches(0.05)
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            run.font.size = Pt(_TABLE_PT)
             if r == 0:
-                cell.fill.solid()
-                cell.fill.fore_color.rgb = _TABLE_HEADER_FILL
-            elif r % 2 == 0:
-                cell.fill.solid()
-                cell.fill.fore_color.rgb = _TABLE_ROW_ALT
+                run.font.bold = True
+                run.font.color.rgb = _TABLE_HEADER_FG
             else:
-                cell.fill.solid()
-                cell.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+                run.font.color.rgb = _BRAND_DARK
+                if c == 0:
+                    # Row-label column gets a slightly heavier weight.
+                    run.font.bold = True
+    _set_cell_fill(cell, r)
+    _clear_cell_borders(cell)
+    if r == 1:
+        # Heavy rule below the header — drawn as the data row's TOP
+        # border so the visual width adds up cleanly.
+        _set_cell_border(cell, "T", Pt(1.5), _TABLE_HEADER_RULE)
+    elif r > 1:
+        # Thin separator between adjacent data rows.
+        _set_cell_border(cell, "T", Pt(0.5), _TABLE_DIVIDER)
+
+
+def _set_cell_fill(cell, r: int) -> None:
+    cell.fill.solid()
+    if r == 0:
+        cell.fill.fore_color.rgb = _TABLE_HEADER_FILL
+    elif r % 2 == 0:
+        cell.fill.fore_color.rgb = _TABLE_ROW_ALT
+    else:
+        cell.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+
+
+def _clear_cell_borders(cell) -> None:
+    """Set every edge of ``cell`` to noFill so the table style's default
+    grid lines disappear. The XML structure for a cell's border is
+    ``<a:tcPr>/<a:lnX>/<a:noFill/>`` where X ∈ {L, R, T, B}.
+    """
+    tc_pr = cell._tc.get_or_add_tcPr()
+    for edge in ("L", "R", "T", "B"):
+        tag = qn(f"a:ln{edge}")
+        existing = tc_pr.find(tag)
+        if existing is not None:
+            tc_pr.remove(existing)
+        ln = tc_pr.makeelement(tag, {"w": "0"}, nsmap=None)
+        ln.append(ln.makeelement(qn("a:noFill"), {}, nsmap=None))
+        tc_pr.append(ln)
+
+
+def _set_cell_border(cell, edge: str, width, colour: RGBColor) -> None:
+    """Add a solid-fill border on one edge of ``cell``.
+
+    ``edge`` must be one of L / R / T / B; ``width`` is a ``pptx.util.Pt``
+    (or any EMU-aware value). Replaces an existing border on that edge.
+    """
+    tc_pr = cell._tc.get_or_add_tcPr()
+    tag = qn(f"a:ln{edge}")
+    existing = tc_pr.find(tag)
+    if existing is not None:
+        tc_pr.remove(existing)
+    ln = tc_pr.makeelement(
+        tag,
+        {"w": str(int(width)), "cap": "flat", "cmpd": "sng", "algn": "ctr"},
+        nsmap=None,
+    )
+    solid = ln.makeelement(qn("a:solidFill"), {}, nsmap=None)
+    rgb_hex = f"{colour[0]:02X}{colour[1]:02X}{colour[2]:02X}"
+    solid.append(solid.makeelement(qn("a:srgbClr"), {"val": rgb_hex}, nsmap=None))
+    ln.append(solid)
+    ln.append(ln.makeelement(qn("a:prstDash"), {"val": "solid"}, nsmap=None))
+    ln.append(ln.makeelement(qn("a:round"), {}, nsmap=None))
+    tc_pr.append(ln)
 
 
 def _equal_col_widths(total: Emu, cols: int) -> tuple[Emu, ...]:
@@ -1606,3 +1803,241 @@ def _stamp_page_numbers(prs: Presentation, language: str) -> None:
             font_pt=_FOOTER_PT, colour=_BRAND_LIGHT,
             align=PP_ALIGN.RIGHT,
         )
+
+
+# ---------------------------------------------------------------------------
+# Visual identity passes — typography + accent geometry
+# ---------------------------------------------------------------------------
+
+
+def _apply_typography(prs: Presentation, language: str) -> None:
+    """Set Latin + East-Asian font on every run across every slide.
+
+    Default Calibri is the biggest "AI-generated deck" tell. We walk
+    every shape post-build and write both ``<a:latin>`` and ``<a:ea>``
+    typeface XML on every run — leaving the east-asian slot at the
+    PowerPoint default would make CJK chars render in a font that
+    doesn't match the Latin choice.
+    """
+    latin, east_asian = _FONT_FAMILIES.get(language, _DEFAULT_FONT_FAMILY)
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for paragraph in shape.text_frame.paragraphs:
+                for run in paragraph.runs:
+                    run.font.name = latin
+                    if east_asian:
+                        _set_east_asian_typeface(run, east_asian)
+
+
+def _set_east_asian_typeface(run, family: str) -> None:
+    """Write the ``<a:ea typeface=...>`` element on a run's rPr.
+
+    python-pptx's ``run.font.name`` setter only writes the Latin
+    typeface (``<a:latin>``). PowerPoint consults a SEPARATE
+    east-asian slot when laying out CJK code points; this helper
+    fills it.
+    """
+    r_pr = run._r.get_or_add_rPr()
+    existing = r_pr.find(qn("a:ea"))
+    if existing is not None:
+        r_pr.remove(existing)
+    ea = r_pr.makeelement(qn("a:ea"), {"typeface": family}, nsmap=None)
+    r_pr.append(ea)
+
+
+def _decorate_with_accents(prs: Presentation) -> None:
+    """Place the accent shapes (cover left band, top bar on content slides).
+
+    Idempotent: if the shapes already exist from a previous build pass
+    (rare but possible in tests that re-run ``_build``), they're left in
+    place — a name match suppresses re-add. The shapes are sent to the
+    back of the slide's z-order so they sit BEHIND any text on the slide.
+    """
+    for index, slide in enumerate(prs.slides):
+        if index == 0:
+            _add_cover_left_band(slide)
+        else:
+            _add_top_accent_bar(slide)
+
+
+def _add_cover_left_band(slide) -> None:
+    if _has_named_shape(slide, "accent_left"):
+        return
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Emu(0), Emu(0),
+        _ACCENT_LEFT_WIDTH, _SLIDE_HEIGHT,
+    )
+    shape.name = "accent_left"
+    shape.line.fill.background()
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = _BRAND_DARK
+    _send_shape_to_back(shape, slide)
+
+
+def _add_top_accent_bar(slide) -> None:
+    if _has_named_shape(slide, "accent_top"):
+        return
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Emu(0), Emu(0),
+        _SLIDE_WIDTH, _ACCENT_TOP_HEIGHT,
+    )
+    shape.name = "accent_top"
+    shape.line.fill.background()
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = _BRAND_DARK
+    _send_shape_to_back(shape, slide)
+
+
+def _has_named_shape(slide, name: str) -> bool:
+    return any(shape.name == name for shape in slide.shapes)
+
+
+def _send_shape_to_back(shape, slide) -> None:
+    """Move ``shape`` to be the first child of ``spTree`` (= back of z-order)."""
+    sp_tree = slide.shapes._spTree
+    sp = shape._element
+    sp_tree.remove(sp)
+    # spTree's first two children are nvGrpSpPr + grpSpPr (group metadata);
+    # everything after that is a shape in z-order. Insert at index 2 so the
+    # band lands BEHIND every text shape but the metadata stays intact.
+    sp_tree.insert(2, sp)
+
+
+# ---------------------------------------------------------------------------
+# Dark-mode pass (opt-in via ExportOptions.dark_mode)
+# ---------------------------------------------------------------------------
+
+
+def _apply_dark_mode(prs: Presentation) -> None:
+    """Swap the light palette for the dark palette on every slide.
+
+    The exporter builds the deck with the light palette unconditionally,
+    then this post-pass re-colours individual shapes / runs / table cells
+    by looking up their current RGB in the light→dark mapping. The
+    approach is intentionally non-invasive — we don't refactor the 100+
+    direct ``_BRAND_*`` references into a palette-aware lookup; instead
+    we walk the rendered tree after the fact.
+
+    Steps per slide:
+    1. Solid-fill the slide background with ``_DARK_SLIDE_BG``.
+    2. Walk every shape:
+       - If it's a table, iterate the table's cells (fills + text + borders).
+       - Otherwise recolour the shape's own fill + text frame.
+    """
+    for slide in prs.slides:
+        _set_slide_background(slide, _DARK_SLIDE_BG)
+        for shape in slide.shapes:
+            _recolor_shape(shape)
+
+
+def _set_slide_background(slide, colour: RGBColor) -> None:
+    fill = slide.background.fill
+    fill.solid()
+    fill.fore_color.rgb = colour
+
+
+def _recolor_shape(shape) -> None:
+    """Single shape: swap its fill, text-run colours, and (if table) its
+    per-cell fills + borders + cell-level runs."""
+    if shape.has_table:
+        for cell in _iter_table_cells(shape.table):
+            _swap_fill(cell)
+            _swap_text_colors(cell)
+            _swap_cell_border_colors(cell)
+        return
+    _swap_fill(shape)
+    if shape.has_text_frame:
+        _swap_text_colors(shape)
+
+
+def _iter_table_cells(table):
+    """python-pptx exposes ``iter_cells`` on Table but the API name has
+    changed between versions; this wrapper falls through to the manual
+    row/col iteration when needed."""
+    iter_cells = getattr(table, "iter_cells", None)
+    if iter_cells is not None:
+        yield from iter_cells()
+        return
+    for row in table.rows:
+        yield from row.cells
+
+
+def _swap_fill(shape_or_cell) -> None:
+    fill = getattr(shape_or_cell, "fill", None)
+    if fill is None:
+        return
+    try:
+        rgb = fill.fore_color.rgb
+    except (AttributeError, ValueError, TypeError):
+        return
+    if rgb is None:
+        return
+    key = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+    new = _LIGHT_TO_DARK_FILL.get(key)
+    if new is None:
+        return
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(*new)
+
+
+def _swap_text_colors(shape_or_cell) -> None:
+    """Swap every run's text colour for the dark-mode equivalent.
+
+    Safety net for runs that the builders forgot to colour explicitly:
+    when ``font.color.rgb`` is ``None`` (theme inheritance, renders as
+    near-black on screen) or pure black ``(0,0,0)``, promote to the
+    dark-mode body colour ``#E5E7EB``. Without this fallback such runs
+    would render as black-on-dark — invisible. See
+    ``.claude/agents/deck-design.md`` "Dark-mode contract".
+    """
+    text_frame = getattr(shape_or_cell, "text_frame", None)
+    if text_frame is None:
+        return
+    near_white = RGBColor(0xE5, 0xE7, 0xEB)
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            try:
+                rgb = run.font.color.rgb
+            except (AttributeError, ValueError, TypeError):
+                rgb = None
+            if rgb is None or (int(rgb[0]), int(rgb[1]), int(rgb[2])) == (0, 0, 0):
+                run.font.color.rgb = near_white
+                continue
+            key = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+            new = _LIGHT_TO_DARK_TEXT.get(key)
+            if new is not None:
+                run.font.color.rgb = RGBColor(*new)
+
+
+def _swap_cell_border_colors(cell) -> None:
+    """Walk the cell's ``<a:lnX>`` border elements and recolour any
+    ``<a:srgbClr>`` whose value matches the light-palette divider /
+    header-rule colours."""
+    tc_pr = cell._tc.find(qn("a:tcPr"))
+    if tc_pr is None:
+        return
+    for edge in ("L", "R", "T", "B"):
+        ln = tc_pr.find(qn(f"a:ln{edge}"))
+        if ln is None:
+            continue
+        solid = ln.find(qn("a:solidFill"))
+        if solid is None:
+            continue
+        clr = solid.find(qn("a:srgbClr"))
+        if clr is None:
+            continue
+        val = clr.get("val", "")
+        if len(val) != 6:
+            continue
+        try:
+            key = (int(val[0:2], 16), int(val[2:4], 16), int(val[4:6], 16))
+        except ValueError:
+            continue
+        new = _LIGHT_TO_DARK_FILL.get(key)
+        if new is None:
+            continue
+        clr.set("val", f"{new[0]:02X}{new[1]:02X}{new[2]:02X}")

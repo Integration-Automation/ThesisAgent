@@ -74,6 +74,21 @@ def test_json_exporter_round_trip(sample_papers, tmp_path):
     assert data["papers"][0]["title"] == "Sample Paper on Attention"
 
 
+def _slide_text(slide, name: str) -> str:
+    """Return the text of the shape with the given semantic name, or ''.
+
+    The visual-identity pass inserts ``accent_top`` / ``accent_left``
+    rectangles BEFORE the text shapes in z-order, so ``shapes[0]`` is
+    no longer reliably the title. Tests pin to the project's semantic
+    shape names (`title` / `meta` / `body` / `subhead` / `footer` /
+    `page_number` / etc.) instead.
+    """
+    for shape in slide.shapes:
+        if shape.name == name and shape.has_text_frame:
+            return shape.text_frame.text
+    return ""
+
+
 def test_pptx_exporter_full_deck(sample_papers, tmp_path):
     from pptx import Presentation
 
@@ -89,7 +104,7 @@ def test_pptx_exporter_full_deck(sample_papers, tmp_path):
     # Sample abstracts are short so the optional "Approach" slide is skipped.
     # 1 + 1 + 2 * 4 + 1 = 11.
     assert len(presentation.slides) == 11
-    titles = [s.shapes[0].text_frame.text for s in presentation.slides]
+    titles = [_slide_text(s, "title") for s in presentation.slides]
     assert any("Paper Review" in t for t in titles)
     assert any(t == "Agenda" for t in titles)
     assert "References" in titles
@@ -108,9 +123,266 @@ def test_pptx_exporter_single_paper_skips_agenda_and_divider(sample_papers, tmp_
     presentation = Presentation(str(written["pptx"]))
     # cover + overview + bg + findings + references = 5 (short abstract → no approach slide)
     assert len(presentation.slides) == 5
-    titles = [s.shapes[0].text_frame.text for s in presentation.slides]
+    titles = [_slide_text(s, "title") for s in presentation.slides]
     assert not any(t == "Agenda" for t in titles)
     assert "References" in titles
+
+
+def _find_run_color(prs, target_rgb: tuple[int, int, int]) -> bool:
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for para in shape.text_frame.paragraphs:
+                for run in para.runs:
+                    try:
+                        rgb = run.font.color.rgb
+                    except (AttributeError, ValueError, TypeError):
+                        continue
+                    if rgb is not None and tuple(rgb) == target_rgb:
+                        return True
+    return False
+
+
+def test_pptx_default_is_dark_mode(sample_papers, tmp_path):
+    """``dark_mode`` defaults to True, so an ExportOptions that doesn't
+    explicitly pass the field still produces a dark deck.
+
+    Confirms:
+    1. Slide background fill is the dark colour (`#12151B`).
+    2. At least one run carries the swapped near-white text colour.
+    """
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="default-dark",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    bg_rgb = list(prs.slides)[0].background.fill.fore_color.rgb
+    assert tuple(bg_rgb) == tuple(RGBColor(0x12, 0x15, 0x1B))
+    assert _find_run_color(prs, (0xE5, 0xE7, 0xEB)), (
+        "no run was re-coloured to the dark-mode near-white text"
+    )
+
+
+def test_pptx_dark_mode_has_no_invisible_runs(sample_papers, tmp_path):
+    """Dark-mode regression guard — no text run may end up with
+    ``font.color.rgb is None`` or pure black on the dark slide bg.
+
+    A run with no explicit colour inherits the theme's body-text colour
+    (renders as near-black) and the dark-mode post-pass cannot map it
+    because there's no source RGB to look up. The recolour pass now
+    promotes None / black to ``#E5E7EB`` as a safety net; this test
+    pins that fallback so a future builder that forgets to set an
+    explicit run colour still produces a readable dark deck.
+    """
+    from pptx import Presentation
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="dark-readability",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    invisible: list[str] = []
+    for s_idx, slide in enumerate(prs.slides, 1):
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for p_idx, paragraph in enumerate(shape.text_frame.paragraphs):
+                for r_idx, run in enumerate(paragraph.runs):
+                    text = (run.text or "").strip()
+                    if not text:
+                        continue
+                    try:
+                        rgb = run.font.color.rgb
+                    except (AttributeError, ValueError, TypeError):
+                        rgb = None
+                    if rgb is None:
+                        invisible.append(
+                            f"slide {s_idx} shape {shape.name!r} "
+                            f"p{p_idx}r{r_idx}: rgb=None text={text[:30]!r}"
+                        )
+                    elif tuple(rgb) == (0, 0, 0):
+                        invisible.append(
+                            f"slide {s_idx} shape {shape.name!r} "
+                            f"p{p_idx}r{r_idx}: rgb=black text={text[:30]!r}"
+                        )
+    assert not invisible, (
+        "dark-mode deck contains runs with no explicit (or black) "
+        "colour — these render invisible on the dark slide bg:\n  "
+        + "\n  ".join(invisible[:10])
+    )
+
+
+def _luminance_255(rgb_tuple: tuple[int, int, int]) -> float:
+    return 0.2126 * rgb_tuple[0] + 0.7152 * rgb_tuple[1] + 0.0722 * rgb_tuple[2]
+
+
+_LIGHT_LUMINANCE_THRESHOLD = 0.7 * 255  # > 178
+
+
+def _shape_fill_rgb(shape) -> tuple[int, int, int] | None:
+    try:
+        fill_rgb = shape.fill.fore_color.rgb
+    except (AttributeError, ValueError, TypeError):
+        return None
+    if fill_rgb is None:
+        return None
+    return (int(fill_rgb[0]), int(fill_rgb[1]), int(fill_rgb[2]))
+
+
+def _scan_shape_for_light_on_light(s_idx, shape, fill_tuple, bad) -> None:
+    tf = getattr(shape, "text_frame", None)
+    if tf is None:
+        return
+    for para in tf.paragraphs:
+        for run in para.runs:
+            if not (run.text or "").strip():
+                continue
+            try:
+                text_rgb = run.font.color.rgb
+            except (AttributeError, ValueError, TypeError):
+                continue
+            if text_rgb is None:
+                continue
+            text_tuple = (int(text_rgb[0]), int(text_rgb[1]), int(text_rgb[2]))
+            if _luminance_255(text_tuple) > _LIGHT_LUMINANCE_THRESHOLD:
+                bad.append(
+                    f"slide {s_idx} shape {shape.name!r}: "
+                    f"fill={fill_tuple} text={text_tuple} text={run.text[:30]!r}"
+                )
+
+
+def test_pptx_dark_mode_no_light_text_on_light_fill(sample_papers, tmp_path):
+    """Dark-mode regression guard — failure mode B (light-on-light).
+
+    The previous regression caught text runs with no explicit colour
+    (rgb=None, render as black on dark slide bg). This test catches
+    the OTHER failure mode: a shape whose fill is light (luminance >
+    ~0.7 × 255) but contains text whose colour is ALSO light → text
+    disappears INTO the box. The `_RQ_BOX_FILL` (#F3F6FA near-white)
+    bug was the cautionary tale: the box stayed near-white in dark
+    mode while its text got swapped to near-white via the post-pass.
+    """
+    from pptx import Presentation
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="dark-contrast",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+
+    bad: list[str] = []
+    for s_idx, slide in enumerate(prs.slides, 1):
+        for shape in slide.shapes:
+            fill_tuple = _shape_fill_rgb(shape)
+            if fill_tuple is None:
+                continue
+            if _luminance_255(fill_tuple) <= _LIGHT_LUMINANCE_THRESHOLD:
+                continue
+            _scan_shape_for_light_on_light(s_idx, shape, fill_tuple, bad)
+    assert not bad, (
+        "dark-mode deck has light-on-light text that disappears into "
+        "the shape fill (extend _LIGHT_TO_DARK_FILL to recolour the "
+        "fill, OR don't use a near-white fill in light mode):\n  "
+        + "\n  ".join(bad[:10])
+    )
+
+
+def test_pptx_no_red_text_runs(sample_papers, tmp_path):
+    """The "No red text" contract: ``_BRAND_ACCENT`` (#C0392B) must
+    never be written as a run colour. Bold + ``_BRAND_HIGHLIGHT``
+    (teal-700 ``#0E7490``) is the approved emphasis pattern for
+    headline text (KPI value, RQ question); ``_BRAND_GREY`` is the
+    approved pattern for caption / placeholder / chrome text. Red
+    font runs read as error / warning in slide-deck conventions and
+    pattern-match strongly to AI-generated KPI emphasis ("look at this
+    number!"). Banned across light AND dark modes.
+
+    A regression here means a new (or moved) builder added back a
+    ``colour=_BRAND_ACCENT`` parameter or wrote
+    ``run.font.color.rgb = _BRAND_ACCENT`` directly.
+    """
+    from pptx import Presentation
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="no-red",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    red = (0xC0, 0x39, 0x2B)
+    offenders: list[str] = []
+    for s_idx, slide in enumerate(prs.slides, 1):
+        for shape in slide.shapes:
+            tf = getattr(shape, "text_frame", None)
+            if tf is None:
+                continue
+            for para in tf.paragraphs:
+                for run in para.runs:
+                    text = (run.text or "").strip()
+                    if not text:
+                        continue
+                    try:
+                        rgb = run.font.color.rgb
+                    except (AttributeError, ValueError, TypeError):
+                        continue
+                    if rgb is not None and tuple(rgb) == red:
+                        offenders.append(
+                            f"slide {s_idx} shape {shape.name!r}: {text[:40]!r}"
+                        )
+    assert not offenders, (
+        "red text (#C0392B) found — use bold + _BRAND_HIGHLIGHT (teal) "
+        "for headlines or _BRAND_GREY for captions instead "
+        "(deck-design 'No red text' contract):\n  "
+        + "\n  ".join(offenders[:10])
+    )
+
+
+def test_pptx_light_mode_keeps_navy_text(sample_papers, tmp_path):
+    """``dark_mode=False`` opt-out skips the post-build recolour pass.
+
+    Confirms:
+    1. No slide-level background fill is set (or — if set — it isn't
+       the dark colour).
+    2. At least one run carries the original navy ``_BRAND_DARK``
+       (#1F3A66) colour.
+    """
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("pptx",),
+        out_dir=str(tmp_path),
+        filename_stem="explicit-light",
+        dark_mode=False,
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    # No dark slide background.
+    try:
+        bg_rgb = list(prs.slides)[0].background.fill.fore_color.rgb
+    except (AttributeError, ValueError, TypeError):
+        bg_rgb = None
+    if bg_rgb is not None:
+        assert tuple(bg_rgb) != tuple(RGBColor(0x12, 0x15, 0x1B))
+    assert _find_run_color(prs, (0x1F, 0x3A, 0x66)), (
+        "no run kept the light-palette navy text colour"
+    )
 
 
 def test_pptx_exporter_no_abstract_skips_content_slides(sample_papers, tmp_path):
@@ -309,7 +581,7 @@ def test_pptx_thesis_style_when_rich_summary_attached(sample_papers, tmp_path):
     # cover + overview + pain + contrib + technique + literature + flow +
     # method + evaluation + rqs + 1 rq result + contrib_summary + lim/future + qa + refs
     assert len(prs.slides) >= 14
-    titles = [s.shapes[0].text_frame.text for s in prs.slides]
+    titles = [_slide_text(s, "title") for s in prs.slides]
     assert any("Background & Pain Points" in t for t in titles)
     assert any("Key Technologies" in t for t in titles)
     assert any("RQ1" in t for t in titles)

@@ -72,6 +72,12 @@ def _inspect(pptx_path: Path) -> list[tuple[int, str, str, int, int]]:
         for shape in slide.shapes:
             if not shape.has_text_frame:
                 continue
+            # Decorative shapes (`accent_top`, `accent_left`, etc.) have
+            # an empty text_frame; estimating wrapped text on an empty
+            # frame inflates to ~1 line-height which would false-flag
+            # the 0.08" top accent bar. Skip when no actual text.
+            if not (shape.text_frame.text or "").strip():
+                continue
             name = shape.name or "?"
             top = shape.top or 0
             height = shape.height or 0

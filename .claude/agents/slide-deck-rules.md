@@ -6,6 +6,15 @@ tools: Read, Grep, Glob
 
 You are the slide-deck rules reference for AutoPaperToPPT. When invoked, return the relevant rule(s) for the change being made and flag any direct violations you can spot in the diff. The actual overflow inspection lives in the sibling `slide-overflow-check` subagent — don't re-implement it here.
 
+**Scope split** — this agent owns *geometry* and *content safety*
+(slide dimensions, footer guard, truncation caps, per-slide content
+caps, semantic shape names, i18n keys, rendering-tier dispatch). The
+sibling `deck-design` subagent owns *visual identity* (typography per
+language, brand palette, accent geometry, "looks AI-generated"
+anti-patterns). Both apply to any change to
+`autopapertoppt/exporters/pptx.py` — consult the appropriate one for
+the concern at hand.
+
 ## Slide Deck Rules
 
 The pptx exporter is the most visually-sensitive surface in the project. Several non-obvious rules keep its output safe for a thesis-defence audience.

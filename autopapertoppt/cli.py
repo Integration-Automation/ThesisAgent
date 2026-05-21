@@ -237,6 +237,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--light-mode",
+        action="store_true",
+        help=(
+            "Render the pptx with the classic white slide background + "
+            "navy text. Default is dark mode (dark slide background, "
+            "near-white text) — pass this flag for projectors in "
+            "well-lit rooms or when the deck will be printed / read on "
+            "paper."
+        ),
+    )
+    parser.add_argument(
         "--no-pdf",
         dest="download_pdf",
         action="store_false",
@@ -358,6 +369,7 @@ async def _run(args: argparse.Namespace) -> int:
         include_abstract=not args.no_abstract,
         language=args.lang,
         max_slides_per_paper=args.max_slides,
+        dark_mode=not args.light_mode,
     )
     needs_pptx = EXPORT_PPTX in formats
     # ``--pdf`` already supplies the PDF — the paywall gate is irrelevant

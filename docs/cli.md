@@ -25,7 +25,7 @@ autopapertoppt (--query KEYWORDS | --paper IDENTIFIER)
                 [--llm-model MODEL]
                 [--all-venues]
                 [--paywall-threshold FLOAT] [--yes]
-                [--max-slides N]
+                [--max-slides N] [--light-mode]
                 [--quiet]
 ```
 
@@ -51,6 +51,7 @@ autopapertoppt (--query KEYWORDS | --paper IDENTIFIER)
 | `--paywall-threshold` | `0.30` | Fraction of paywalled results above which the search-mode pipeline asks the user before generating per-paper PPTs. |
 | `--yes` | off | Auto-accept the paywall prompt. |
 | `--max-slides` | `25` | Per-paper slide cap. Pass `0` for unlimited. |
+| `--light-mode` | off | Render the pptx in light mode (white slide background + navy text). **Dark mode is the default** — the exporter swaps the brand palette via a post-build pass (slide bg `#12151B`, body text `#E5E7EB`, lighter table-row stripe) so OLED projectors and low-light venues don't glare. Pass this flag for projectors in well-lit rooms or when the deck will be printed. |
 | `--quiet` | off | Suppress the per-paper one-line printout to stdout. |
 
 ## Examples
