@@ -6,11 +6,11 @@ from pathlib import Path
 
 import httpx
 import pytest
-from pubmed.fetcher import PubMedFetcher
 
 from autopapertoppt.core.exceptions import ParseError
 from autopapertoppt.core.models import Query
 from autopapertoppt.fetchers import http as http_module
+from autopapertoppt.sources.pubmed.fetcher import PubMedFetcher
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "pubmed"
 _ESEARCH_JSON = (_FIXTURE_DIR / "esearch.json").read_text(encoding="utf-8")
@@ -48,7 +48,7 @@ def _install(monkeypatch, transport):
     async def fake_get_client(_source):
         return httpx.AsyncClient(transport=transport)
 
-    monkeypatch.setattr("pubmed.fetcher.get_client", fake_get_client)
+    monkeypatch.setattr("autopapertoppt.sources.pubmed.fetcher.get_client", fake_get_client)
 
 
 async def test_search_full_pipeline(monkeypatch):

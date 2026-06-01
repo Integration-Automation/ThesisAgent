@@ -6,8 +6,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-from springer.fetcher import SpringerFetcher
-from springer.parser import parse_record
 
 from autopapertoppt.core.exceptions import (
     ConfigError,
@@ -17,6 +15,8 @@ from autopapertoppt.core.exceptions import (
 )
 from autopapertoppt.core.models import Query
 from autopapertoppt.fetchers import http as http_module
+from autopapertoppt.sources.springer.fetcher import SpringerFetcher
+from autopapertoppt.sources.springer.parser import parse_record
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "springer"
 _FIXTURE_BYTES = (_FIXTURE_DIR / "llm_security.json").read_bytes()
@@ -49,7 +49,7 @@ def _install(monkeypatch, transport):
     async def fake_get_client(_source):
         return httpx.AsyncClient(transport=transport)
 
-    monkeypatch.setattr("springer.fetcher.get_client", fake_get_client)
+    monkeypatch.setattr("autopapertoppt.sources.springer.fetcher.get_client", fake_get_client)
 
 
 async def test_search_returns_papers(monkeypatch):

@@ -1,6 +1,6 @@
 """PubMed plugin via NCBI E-utilities (esearch + efetch)."""
 
-from pubmed.fetcher import PubMedFetcher
+from .fetcher import PubMedFetcher
 
 fetcher_class = PubMedFetcher
 

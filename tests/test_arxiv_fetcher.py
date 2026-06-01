@@ -6,7 +6,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-from arxiv.fetcher import ArxivFetcher
 
 from autopapertoppt.core.exceptions import (
     ParseError,
@@ -15,6 +14,7 @@ from autopapertoppt.core.exceptions import (
 )
 from autopapertoppt.core.models import Query
 from autopapertoppt.fetchers import http as http_module
+from autopapertoppt.sources.arxiv.fetcher import ArxivFetcher
 
 
 @pytest.fixture()
@@ -51,7 +51,7 @@ async def _install_mock(monkeypatch, transport: _MockTransport) -> None:
         return httpx.AsyncClient(transport=transport, base_url="https://export.arxiv.org")
 
     monkeypatch.setattr(
-        "arxiv.fetcher.get_client",
+        "autopapertoppt.sources.arxiv.fetcher.get_client",
         fake_get_client,
     )
 

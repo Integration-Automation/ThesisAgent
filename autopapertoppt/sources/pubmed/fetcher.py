@@ -19,7 +19,8 @@ from autopapertoppt.fetchers.base import Fetcher, FetcherConfig
 from autopapertoppt.fetchers.http import get_client
 from autopapertoppt.fetchers.rate_limit import RateLimit
 from autopapertoppt.utils.logging import get_logger
-from pubmed.parser import parse_efetch
+
+from .parser import parse_efetch
 
 _LOG = get_logger(__name__)
 _SOURCE_NAME = "pubmed"

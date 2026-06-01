@@ -14,7 +14,7 @@ At least one of the two env vars must be set or the plugin refuses to
 load (the search pipeline catches the ConfigError and skips the source).
 """
 
-from ieee.fetcher import IeeeFetcher
+from .fetcher import IeeeFetcher
 
 fetcher_class = IeeeFetcher
 

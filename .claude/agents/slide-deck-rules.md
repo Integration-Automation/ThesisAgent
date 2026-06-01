@@ -73,6 +73,44 @@ When adding a new template string:
 
 When changing the deck or i18n, delegate to the `slide-overflow-check` subagent — it walks every shape on every slide and checks rendered-text height vs. the box's reserved height, and confirms no shape extends past the footer guard.
 
+### 8. Content clarity & first-use context (HARD)
+
+**Every acronym, specialised term, math notation, and library / tool name that appears on a slide MUST carry its definition at first use** — same principle as `paper_rule`'s technical-terminology rule, but the slide context tightens it further. Slide decks are read at presentation speed (~30 seconds per slide), often by a thesis-committee member who arrived in the middle of the talk, and that reader has no time to flip back to find where `ADA` was defined four slides ago. The rule applies to:
+
+- **Acronyms** — `ADA`, `HOR`, `FPR`, `IL`, `EC`, `AT`, `VAE`, `DPI`, `AID`, `RAG`, `CoT`, `KD`, `PEFT`, `QLoRA`, `STA`, …
+- **Library / tool names** — `FAISS`, `Qwen3-Coder-30B`, `PyTorch Geometric`, `BLEU`, `ROUGE`, …
+- **Math notation** — `I(za;zb|Ep)`, `‖·‖_2`, `argmin`, `λ_max`, eigenvector / Laplacian terms
+- **Workflow / domain terms** — `Pull Request`, `code smell`, `Post-output moderation`, `Embedding Clustering`, `對抗訓練`, …
+
+**Two patterns — pick the one the slide layout supports:**
+
+1. **Inline parenthetical gloss** (preferred — no extra slides, fits any layout):
+   ```
+   規則式 ADA(對抗偵測準確率, Adversarial Detection Accuracy)在多樣 benchmark 上掉到 65.4%
+   VAE(變分自編碼器, Variational Autoencoder)編碼器把 prompt 切成對抗 za 與良性 zb
+   互資訊 I(za;zb|Ep) — 論文以 DPI(Data Processing Inequality)給出形式化證明
+   ```
+   Gloss = full Chinese name + (optional) English expansion + (when needed) one short clause on *what it does*. Keep it to ≤ 20 chars when possible.
+
+2. **Definition-list block** (use when slide is dedicated to "evaluation metrics" or "method components" — i.e. the slide is already an inventory):
+   ```
+   • 對抗偵測準確率 (ADA): 偵測到的對抗 prompt / 全部對抗 prompt
+   • 有害輸出減量    (HOR): 1 − (含有害輸出的回答數 / 對照組)
+   • 偽陽性率        (FPR): 被誤判為對抗的良性 prompt 比例
+   ```
+
+**Anti-patterns** (instant "I wrote this for my own lab" tells):
+
+1. **Acronym soup at first use** — `規則式 ADA 在多樣 benchmark 上掉到 65.4%` with no prior definition. The audience hears "65.4%" but doesn't know what's being measured.
+2. **Definition appearing AFTER first use** — `ADA` on slide 3, definition on slide 9. The opposite of "脈絡清楚" — by the time the reader sees the definition, they've already disengaged.
+3. **Math notation dropped without naming the operator** — `min I(za;zb|Ep)` instead of `min 互資訊 I(za;zb|Ep)`. The audience reads `I(·;·|·)` as "some math symbol" rather than "this is mutual information between two variables conditioned on a third".
+4. **Library / model name without provenance** — `FAISS 依語意檢索` instead of `FAISS(Facebook AI 釋出之向量索引庫,支援高速近似最近鄰搜尋)依語意檢索`. The audience has to Google to know whether FAISS is a model, library, or dataset.
+5. **Separate "Glossary" / "縮寫表" slide** — bloats the deck and breaks reading flow, and readers don't flip back anyway. Inline glosses at first use are the right pattern. (Exception: a metric-definitions slide is fine because it's content, not a glossary.)
+
+**Builder responsibility:** when authoring a new section / RQ / pain-point / contribution slide in `PptxExporter` or via the LLM-as-agent flow (`paper-summary-author`), check every term the slide introduces against the slide deck so far. If this is the term's first appearance, the gloss must be on this slide. The audit is mechanical — grep the slide-by-slide text dump for acronyms in caps + standalone math notation + 英文 library names.
+
+**Interaction with content caps:** glosses cost chars and may push a bullet over `_BULLET_MAX_CHARS = 96`. When they do, the priority order from `paper_rule`'s tech-term rule applies: keep the gloss, trim adjacent filler, never drop the gloss.
+
 ---
 
 ## LLM-as-agent vs Python pipeline (enrichment dispatch)

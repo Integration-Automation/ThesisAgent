@@ -34,7 +34,8 @@ from autopapertoppt.fetchers.base import Fetcher, FetcherConfig
 from autopapertoppt.fetchers.http import get_client
 from autopapertoppt.fetchers.rate_limit import RateLimit
 from autopapertoppt.utils.logging import get_logger
-from ieee.parser import parse_api_record, parse_metadata_blob, parse_search_record
+
+from .parser import parse_api_record, parse_metadata_blob, parse_search_record
 
 _LOG = get_logger(__name__)
 _SOURCE_NAME = "ieee"
@@ -90,7 +91,7 @@ class IeeeFetcher(Fetcher):
         to httpx only when WebRunner is unavailable or fails (so the
         plugin still degrades cleanly when Chrome isn't installed).
         """
-        from ieee import webrunner_backend
+        from . import webrunner_backend
 
         if webrunner_backend.is_available():
             try:
@@ -113,7 +114,7 @@ class IeeeFetcher(Fetcher):
         return paper
 
     async def _scrape_document(self, arnumber: str) -> str:
-        from ieee import webrunner_backend
+        from . import webrunner_backend
 
         if webrunner_backend.is_available():
             try:

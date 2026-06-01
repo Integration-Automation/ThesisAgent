@@ -206,7 +206,7 @@ Default mix (no env vars required): `arxiv`, `semantic_scholar`, `openalex`,
 
 Opt-in plugins (need an env var or explicit flag):
 - `ieee` — **on by default**, search and document fetch go through
-  **visible Chrome via WebRunner** (`sources/ieee/webrunner_backend.py`).
+  **visible Chrome via WebRunner** (`autopapertoppt/sources/ieee/webrunner_backend.py`).
   See "IEEE / paywalled domains use WebRunner" below — this is a hard
   rule, not a perf hint. Set `AUTOPAPERTOPPT_IEEE_API_KEY` to switch
   to the official Xplore API path; set
@@ -260,7 +260,7 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   detail.)
 - **Definition of Done.** Every change must pass `py -m pytest tests/`,
   `py -m ruff check .`, and
-  `py -m bandit -c pyproject.toml -r autopapertoppt/ sources/` before
+  `py -m bandit -c pyproject.toml -r autopapertoppt/` before
   it can be committed. New code requires new tests.
 
 ## Where to look for the rest
@@ -279,6 +279,6 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
 - DoD gate runner: `.claude/agents/dod-verify.md`.
 - LLM-as-agent thesis-style authoring: `.claude/agents/paper-summary-author.md`
   + `post-author-audit.md` + `slide-overflow-check.md`.
-- Per-source plugin contract and recorded fixtures: `sources/<name>/`
+- Per-source plugin contract and recorded fixtures: `autopapertoppt/sources/<name>/`
   + `tests/fixtures/<name>/`.
 - LLM-as-agent flow examples: `scripts/regen_*.py`.

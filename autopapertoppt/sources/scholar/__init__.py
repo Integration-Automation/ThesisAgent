@@ -6,7 +6,7 @@ forbid bulk automated scraping; this plugin paces requests aggressively
 returns the CAPTCHA / sorry page.
 """
 
-from scholar.fetcher import ScholarFetcher
+from .fetcher import ScholarFetcher
 
 fetcher_class = ScholarFetcher
 

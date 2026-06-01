@@ -27,7 +27,8 @@ from autopapertoppt.fetchers.base import Fetcher, FetcherConfig
 from autopapertoppt.fetchers.http import get_client
 from autopapertoppt.fetchers.rate_limit import RateLimit
 from autopapertoppt.utils.logging import get_logger
-from openalex.parser import parse_work
+
+from .parser import parse_work
 
 _LOG = get_logger(__name__)
 _SOURCE_NAME = "openalex"

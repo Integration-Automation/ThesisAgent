@@ -22,7 +22,8 @@ from autopapertoppt.fetchers.base import Fetcher, FetcherConfig
 from autopapertoppt.fetchers.http import get_client
 from autopapertoppt.fetchers.rate_limit import RateLimit
 from autopapertoppt.utils.logging import get_logger
-from semantic_scholar.parser import GRAPH_FIELDS, parse_paper
+
+from .parser import GRAPH_FIELDS, parse_paper
 
 _LOG = get_logger(__name__)
 _SOURCE_NAME = "semantic_scholar"

@@ -1,6 +1,6 @@
 """Semantic Scholar plugin. Free Graph API — no key needed for low volume."""
 
-from semantic_scholar.fetcher import SemanticScholarFetcher
+from .fetcher import SemanticScholarFetcher
 
 fetcher_class = SemanticScholarFetcher
 

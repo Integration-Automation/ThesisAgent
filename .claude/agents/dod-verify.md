@@ -10,11 +10,11 @@ You are the Definition-of-Done gatekeeper for the AutoPaperToPPT project. Your j
 
 A change is committable only when ALL of the following are green:
 
-1. **Unit tests exist for the change.** Look at `git status` + `git diff --stat` and confirm that every new/modified source file under `autopapertoppt/` or `sources/` has a corresponding test under `tests/`. New code without new tests fails this gate — flag it explicitly.
+1. **Unit tests exist for the change.** Look at `git status` + `git diff --stat` and confirm that every new/modified source file under `autopapertoppt/` (including `autopapertoppt/sources/<name>/`) has a corresponding test under `tests/`. New code without new tests fails this gate — flag it explicitly.
 2. **pytest is clean.** `py -m pytest tests/` runs without new failures. Skips that already existed before the change are allowed; new skips are not.
 3. **ruff is clean.** `py -m ruff check .` reports no new errors on the changed files.
-4. **bandit is clean.** `py -m bandit -c pyproject.toml -r autopapertoppt/ sources/` reports `No issues identified`. The `-c` flag is REQUIRED — without it, bandit ignores the project's skip config and produces false positives.
-5. **Search-mode smoke.** Required when the diff touches `sources/`, `autopapertoppt/exporters/`, `autopapertoppt/intelligence/`, or `autopapertoppt/mcp/`:
+4. **bandit is clean.** `py -m bandit -c pyproject.toml -r autopapertoppt/` reports `No issues identified`. The `-c` flag is REQUIRED — without it, bandit ignores the project's skip config and produces false positives. (Sources moved under `autopapertoppt/sources/` in 2026-05, so the standalone `sources/` arg is gone.)
+5. **Search-mode smoke.** Required when the diff touches `autopapertoppt/sources/`, `autopapertoppt/exporters/`, `autopapertoppt/intelligence/`, or `autopapertoppt/mcp/`:
    ```
    py -m autopapertoppt --query "transformer attention" --source arxiv --max 3 --out ./exports/smoke/
    ```
@@ -30,7 +30,7 @@ A change is committable only when ALL of the following are green:
    ```
    Verify every documented tool is present (`search`, `fetch_paper`, `fetch_pdf_text`, `export`, `pptx_inspect`, `pptx_update_slide`, `pptx_delete_slide`, `pptx_reorder_slides`, `pptx_add_slide`).
 8. **Deck-overflow smoke** (when `autopapertoppt/exporters/` or `autopapertoppt/exporters/i18n.py` changed): delegate to the `slide-overflow-check` subagent or invoke the headless overflow check directly.
-9. **IEEE WebRunner sanity** (when `sources/ieee/` or `autopapertoppt/fetchers/webrunner_browser.py` or `sources/scholar/webrunner_backend.py` changed): grep the changed file for `headless`, `--headless`, `add_argument("--headless")`, and any path that POSTs directly to `https://ieeexplore.ieee.org/rest/search` outside `webrunner_backend.py`. The canonical search path is visible Chrome via WebRunner — see `CLAUDE.md` "Browser Automation Is Mandatory for Publisher Domains". Headless modes or an httpx path that no longer logs the WebRunner-first attempt fails this gate.
+9. **IEEE WebRunner sanity** (when `autopapertoppt/sources/ieee/` or `autopapertoppt/fetchers/webrunner_browser.py` or `autopapertoppt/sources/scholar/webrunner_backend.py` changed): grep the changed file for `headless`, `--headless`, `add_argument("--headless")`, and any path that POSTs directly to `https://ieeexplore.ieee.org/rest/search` outside `webrunner_backend.py`. The canonical search path is visible Chrome via WebRunner — see `CLAUDE.md` "Browser Automation Is Mandatory for Publisher Domains". Headless modes or an httpx path that no longer logs the WebRunner-first attempt fails this gate.
 10. **Commit message hygiene.** If the user is about to commit, read the staged message (or proposed message) and reject any mention of an AI tool/model name or a `Co-Authored-By` line.
 
 ## How to run

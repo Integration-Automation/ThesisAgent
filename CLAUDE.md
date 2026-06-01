@@ -34,17 +34,17 @@ Single-process, Python 3.12+. Heavy I/O off the event loop; shared
 
 ```
 AutoPaperToPPT/
-├── autopapertoppt/                  # main package
+├── autopapertoppt/                  # main package (everything installable lives here)
 │   ├── core/                         # Paper / PaperSummary / Query models, dedup, ranking, pipeline
 │   ├── fetchers/                     # HTTPS-only shared client, token-bucket rate limit, WebRunner browser
 │   ├── exporters/                    # pptx (rich + lightweight), xlsx, bibtex, markdown, json + pptx_edit + i18n
 │   ├── intelligence/                 # PDF fetch/extract + Anthropic summariser ([intelligence] extra)
 │   ├── mcp/                          # FastMCP server registering all tools
+│   ├── sources/<name>/               # per-source plugins (arxiv/, semantic_scholar/, openalex/, pubmed/,
+│   │                                 # ieee/, acm/, scholar/, dblp/, crossref/, openaire/, springer/)
 │   ├── utils/                        # logging, path safety, async helpers
 │   ├── cli.py                        # argparse CLI
 │   └── __main__.py
-├── sources/<name>/                   # per-source plugins (arxiv/, semantic_scholar/, openalex/, pubmed/,
-│                                     # ieee/, acm/, scholar/, dblp/, crossref/, openaire/, springer/)
 ├── tests/                            # pytest + recorded fixtures (hermetic, no live HTTP)
 ├── docs/                             # Sphinx tree (en + zh-tw + zh-cn)
 ├── scripts/                          # one-off regen / fixture-record scripts
@@ -60,6 +60,48 @@ report format (and chains `slide-overflow-check` when exporters/i18n change,
 `code-quality-reviewer` for deeper code-quality review,
 `compliance-auditor` for project conventions). Skipping a gate "to come back
 later" is not allowed.
+
+## Content additions must be context-clear + detail-explained (HARD)
+
+Every addition to this project — **a new rule in a subagent doc, a new
+paragraph in a paper, a new bullet on a slide, a new constant or helper
+in code** — must (1) have **clear context** for why it exists and (2)
+carry a **detailed enough explanation** that a reader who didn't witness
+the change can act on it without further questions.
+
+Concretely:
+
+| Addition type | "Clear context" means | "Detailed explanation" means |
+|---|---|---|
+| Subagent rule | A **Why:** clause naming the past incident / failure mode the rule prevents. | At least one **example** of the rule applied + one **anti-pattern** showing how it fails. Rules without examples bit-rot. |
+| Paper / thesis paragraph | A topic sentence locating the paragraph in the larger argument (which section, which RQ, which contribution). | Every technical term defined at first use (see `paper_rule` "Technical terminology"), and every quantitative claim cited or shown in a table. |
+| Slide bullet | A sub-head that says what the slide as a whole is about. | Every acronym / math notation / library name glossed at first use (see `slide-deck-rules` §8 "Content clarity & first-use context"). |
+| Code helper | A docstring naming the boundary the helper guards and the failure mode it prevents. | Type hints + one usage example in either the docstring or a unit test. |
+
+**Why this is a top-level rule rather than buried in one subagent**: it
+applies across every surface this project produces (rules, papers,
+slides, code) and has been the single most common review-cycle source of
+churn — "why does X exist?" / "what does Y do?" questions that should
+have been answered at write-time. The subagent-specific applications
+(`paper_rule` "Technical terminology", `slide-deck-rules` §8 "Content
+clarity & first-use context", `code-quality-reviewer` "docstring +
+example") all derive from this top-level principle. When in doubt about
+how to phrase an addition, default to "explain like the reader just
+joined the conversation".
+
+**Prose punctuation in additions**: prefer `，` (Chinese) or `,` (English)
+to join clauses, and avoid `；` / `;`. **Why**: short comma-joined
+clauses are easier to scan than semicolon-stacked compound sentences,
+and mixed semicolon use creates inconsistent punctuation density across
+the rule base — a reader scanning for the next rule loses focus on
+"is this still part of the previous clause or a new point?". **How to
+apply**: when a `;` would join two clauses, either swap it for `，` /
+`,` or split into two sentences (the second option reads even more
+clearly for rule prose). **Exceptions kept**: math notation like
+`I(za;zb|Ep)` retains its mandatory `;` (it's part of the operator
+syntax, not prose), and APA in-text citation grouping like
+`(Lee, 2023; Smith et al., 2024)` keeps `;` because APA mandates it as
+the separator inside a single citation parenthesis.
 
 ## Git Commits
 
@@ -90,7 +132,7 @@ download from publisher CDNs (ieeexplore.ieee.org, dl.acm.org, link.springer.com
 sciencedirect.com, wiley/oup/nature/science/…) MUST go through **visible Chrome**.
 Two paths exist:
 
-1. **Python pipeline** — IEEE / Scholar plugins call their own `webrunner_backend`
+1. **Python pipeline** — IEEE / Scholar plugins under `autopapertoppt/sources/<name>/` call their own `webrunner_backend`
    from inside `asyncio.gather`. Used by the CLI in unattended mode.
 2. **LLM-as-agent** — the LLM in a Claude Code session drives Chrome itself via
    Bash + `autopapertoppt.fetchers.webrunner_browser.make_driver()`. Reference:

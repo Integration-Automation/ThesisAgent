@@ -1,6 +1,6 @@
 """DBLP source plugin. Exposes `fetcher_class` for the source registry."""
 
-from dblp.fetcher import DblpFetcher
+from .fetcher import DblpFetcher
 
 fetcher_class = DblpFetcher
 

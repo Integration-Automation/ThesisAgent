@@ -9,7 +9,6 @@ No API key required.
 
 from __future__ import annotations
 
-from arxiv.parser import parse_atom_feed
 from autopapertoppt.core.exceptions import (
     ParseError,
     RateLimitError,
@@ -20,6 +19,8 @@ from autopapertoppt.fetchers.base import Fetcher, FetcherConfig
 from autopapertoppt.fetchers.http import get_client
 from autopapertoppt.fetchers.rate_limit import RateLimit
 from autopapertoppt.utils.logging import get_logger
+
+from .parser import parse_atom_feed
 
 _LOG = get_logger(__name__)
 _ENDPOINT = "https://export.arxiv.org/api/query"

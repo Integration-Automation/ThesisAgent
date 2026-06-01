@@ -1,23 +1,10 @@
-"""Shared fixtures + sys.path injection so source plugins import like packages."""
+"""Shared fixtures for the AutoPaperToPPT test suite."""
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
-
-_ROOT = Path(__file__).resolve().parents[1]
-_SOURCES = _ROOT / "sources"
-
-
-def _ensure_sources_on_path() -> None:
-    sources_dir = str(_SOURCES)
-    if sources_dir not in sys.path:
-        sys.path.insert(0, sources_dir)
-
-
-_ensure_sources_on_path()
 
 
 @pytest.fixture()

@@ -27,7 +27,8 @@ from autopapertoppt.fetchers.base import Fetcher, FetcherConfig
 from autopapertoppt.fetchers.http import get_client
 from autopapertoppt.fetchers.rate_limit import RateLimit
 from autopapertoppt.utils.logging import get_logger
-from scholar.parser import parse_serp
+
+from .parser import parse_serp
 
 _LOG = get_logger(__name__)
 _SOURCE_NAME = "scholar"
@@ -96,7 +97,7 @@ class ScholarFetcher(Fetcher):
         WebRunner whenever ``je_web_runner`` is importable and
         ``AUTOPAPERTOPPT_DISABLE_WEBRUNNER`` is not set.
         """
-        from scholar import webrunner_backend
+        from . import webrunner_backend
 
         if webrunner_backend.is_available():
             try:

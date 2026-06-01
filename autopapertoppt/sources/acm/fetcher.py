@@ -16,7 +16,6 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from acm.parser import is_acm_record, parse_record
 from autopapertoppt.core.exceptions import (
     ParseError,
     RateLimitError,
@@ -27,6 +26,8 @@ from autopapertoppt.fetchers.base import Fetcher, FetcherConfig
 from autopapertoppt.fetchers.http import get_client
 from autopapertoppt.fetchers.rate_limit import RateLimit
 from autopapertoppt.utils.logging import get_logger
+
+from .parser import is_acm_record, parse_record
 
 _LOG = get_logger(__name__)
 _SOURCE_NAME = "acm"

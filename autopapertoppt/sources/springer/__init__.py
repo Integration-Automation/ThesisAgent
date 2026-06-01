@@ -1,6 +1,6 @@
 """Springer Nature source plugin. Exposes `fetcher_class` for the source registry."""
 
-from springer.fetcher import SpringerFetcher
+from .fetcher import SpringerFetcher
 
 fetcher_class = SpringerFetcher
 

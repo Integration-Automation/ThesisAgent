@@ -4,7 +4,7 @@ Crossref indexes every ACM DOI and offers a free, rate-friendly REST API,
 which lets us cover ACM without scraping ACM's site directly.
 """
 
-from acm.fetcher import AcmFetcher
+from .fetcher import AcmFetcher
 
 fetcher_class = AcmFetcher
 

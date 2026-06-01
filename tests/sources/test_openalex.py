@@ -6,11 +6,11 @@ from pathlib import Path
 
 import httpx
 import pytest
-from openalex.fetcher import OpenAlexFetcher
-from openalex.parser import _reconstruct_abstract, parse_work
 
 from autopapertoppt.core.models import Query
 from autopapertoppt.fetchers import http as http_module
+from autopapertoppt.sources.openalex.fetcher import OpenAlexFetcher
+from autopapertoppt.sources.openalex.parser import _reconstruct_abstract, parse_work
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "openalex"
 _FIXTURE_BYTES = (_FIXTURE_DIR / "llm_security.json").read_bytes()
@@ -42,7 +42,7 @@ def _install(monkeypatch, transport):
     async def fake_get_client(_source):
         return httpx.AsyncClient(transport=transport)
 
-    monkeypatch.setattr("openalex.fetcher.get_client", fake_get_client)
+    monkeypatch.setattr("autopapertoppt.sources.openalex.fetcher.get_client", fake_get_client)
 
 
 async def test_search_returns_papers(monkeypatch):

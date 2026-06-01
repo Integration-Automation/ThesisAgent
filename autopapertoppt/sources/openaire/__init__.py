@@ -1,6 +1,6 @@
 """OpenAIRE Graph source plugin. Exposes `fetcher_class` for the source registry."""
 
-from openaire.fetcher import OpenAireFetcher
+from .fetcher import OpenAireFetcher
 
 fetcher_class = OpenAireFetcher
 

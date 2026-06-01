@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from arxiv.parser import parse_atom_feed
+from autopapertoppt.sources.arxiv.parser import parse_atom_feed
 
 
 def test_parse_recorded_attention_feed(arxiv_fixture_path):

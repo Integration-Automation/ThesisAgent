@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import importlib
-import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from pathlib import Path
 
 from autopapertoppt.core.exceptions import ConfigError
 from autopapertoppt.core.models import Paper, Query
@@ -60,20 +58,11 @@ class Fetcher(ABC):
         )
 
 
-_SOURCES_DIR = Path(__file__).resolve().parents[2] / "sources"
-
-
-def _ensure_sources_on_path() -> None:
-    sources_dir = str(_SOURCES_DIR)
-    if sources_dir not in sys.path:
-        sys.path.insert(0, sources_dir)
-
 
 def load_fetcher(name: str) -> Fetcher:
     """Load and instantiate the fetcher plugin for the given source name."""
-    _ensure_sources_on_path()
     try:
-        module = importlib.import_module(name)
+        module = importlib.import_module(f"autopapertoppt.sources.{name}")
     except ImportError as err:
         raise ConfigError(f"unknown or unavailable source plugin: {name}") from err
     fetcher_class = getattr(module, "fetcher_class", None)
