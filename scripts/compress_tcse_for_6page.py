@@ -21,9 +21,8 @@ import copy
 from pathlib import Path
 
 from docx import Document
-from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-
+from docx.oxml.ns import qn
 
 SRC = Path("exports/TCSE_v2.3.docx")
 

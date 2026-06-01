@@ -38,7 +38,6 @@ from copy import deepcopy  # noqa: E402
 from pptx import Presentation  # noqa: E402
 from pptx.oxml.ns import qn  # noqa: E402
 
-
 SRC = Path("exports/fang2026disentangling-zh-tw.pptx")
 
 

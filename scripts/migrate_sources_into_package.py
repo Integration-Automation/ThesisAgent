@@ -37,7 +37,6 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -224,7 +223,7 @@ def step5_patch_conftest() -> None:
         text,
     )
     if new == text:
-        print(f"  warning: conftest.py — sys.path hack not found verbatim, "
+        print("  warning: conftest.py — sys.path hack not found verbatim, "
               "may need manual cleanup")
     else:
         conftest.write_text(new, encoding="utf-8")

@@ -20,14 +20,14 @@ already exists before applying.
 """
 from __future__ import annotations
 
+import contextlib
 import copy
 from pathlib import Path
 
 from docx import Document
-from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
-
 
 TCSE = Path("exports/TCSE_v2.3.docx")
 THESIS = Path("exports/論文_v1.8.docx")
@@ -97,10 +97,8 @@ def _new_paragraph_after(anchor_para, text: str, *,
     anchor_para._p.addnext(new_p_elem)
     para = Paragraph(new_p_elem, anchor_para._parent)
     if style_name is not None:
-        try:
+        with contextlib.suppress(KeyError):
             para.style = doc.styles[style_name]
-        except KeyError:
-            pass
     rpr_template = _content_rpr(clone_from) if clone_from is not None else _content_rpr(anchor_para)
     r = OxmlElement("w:r")
     if rpr_template is not None:
@@ -422,7 +420,7 @@ def update_thesis() -> None:
                                  clone_from=body_clone)
         print(f"  [{anchor_idx:3d}] §6.4.5 inserted (n)-(q): 4 new experiment skeletons")
     else:
-        print(f"  §6.4.5 skip — (n)-(q) already present")
+        print("  §6.4.5 skip — (n)-(q) already present")
 
     # ------------------------------------------------------------------
     # 3. §6.4.5 intro: "十三項" → "十七項" + append note
@@ -469,7 +467,7 @@ def update_thesis() -> None:
         print(f"  [{anchor_idx:3d}] §3.7.15-18: inserted 4 new subsections "
               f"({len(S3_7_NEW_SUBSECTIONS)} entries)")
     else:
-        print(f"  §3.7.15-18 skip — already inserted")
+        print("  §3.7.15-18 skip — already inserted")
 
     # ------------------------------------------------------------------
     # 6. §3.7.14 insert (h)-(p) AFTER (g), BEFORE closing
@@ -484,7 +482,7 @@ def update_thesis() -> None:
         print(f"  [{anchor_idx:3d}] §3.7.14: inserted (h)-(p) "
               f"({len(S3_7_14_NEW_SUBITEMS)} new sub-items)")
     else:
-        print(f"  §3.7.14 (h)-(p) skip — already inserted")
+        print("  §3.7.14 (h)-(p) skip — already inserted")
 
     # ------------------------------------------------------------------
     # 7. §3.7 intro: "之十三項機制" → "之十七項機制" + add numbering note

@@ -30,7 +30,6 @@ from pathlib import Path
 
 from pptx import Presentation
 
-
 SRC = Path("exports/fang2026disentangling-zh-tw.pptx")
 
 
@@ -136,6 +135,7 @@ def _rewrite_paragraph_as_single_run(para, new_text: str) -> None:
     not theme-default).
     """
     from copy import deepcopy
+
     from pptx.oxml.ns import qn
 
     p_elem = para._p

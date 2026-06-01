@@ -33,9 +33,8 @@ import copy
 from pathlib import Path
 
 from docx import Document
-from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-
+from docx.oxml.ns import qn
 
 SRC = Path("exports/TCSE_v2.3.docx")
 
@@ -106,7 +105,7 @@ def _find_para(doc, prefix: str) -> int:
     raise SystemExit(f"anchor not found: {prefix[:50]!r}")
 
 
-def _content_rpr(paragraph) -> "OxmlElement | None":
+def _content_rpr(paragraph) -> OxmlElement | None:
     for run in paragraph.runs:
         text = run.text or ""
         if text.strip() == "" and all(ch in "　 \t" for ch in text):
@@ -161,10 +160,8 @@ def _insert_paragraphs_after(doc, anchor_idx: int, paragraphs: list[str]):
 
 def _already_inserted(doc, marker_prefix: str) -> bool:
     needle = marker_prefix.lstrip("　 \t")[:40]
-    for p in doc.paragraphs:
-        if needle and p.text.lstrip("　 \t").startswith(needle):
-            return True
-    return False
+    return any(needle and p.text.lstrip("　 \t").startswith(needle)
+               for p in doc.paragraphs)
 
 
 # ---------------------------------------------------------------------------

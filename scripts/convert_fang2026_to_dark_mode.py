@@ -30,7 +30,6 @@ from pptx.dml.color import RGBColor  # noqa: E402
 
 from autopapertoppt.exporters.pptx import _apply_dark_mode  # noqa: E402
 
-
 SRC = Path("exports/fang2026disentangling-zh-tw.pptx")
 
 # Per `.claude/agents/deck-design.md` "No red text" contract: any run currently

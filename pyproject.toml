@@ -113,8 +113,17 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S311"]
-# Demo / regenerate scripts are full of CJK prose that overruns the line cap.
-"scripts/**" = ["E501"]
+# One-shot dev / regen scripts under scripts/ have different ergonomics from
+# production code:
+#   E501  CJK prose lines exceed the 100-char cap.
+#   C901  Mode-driven find/replace scripts are naturally branchy; decomposing
+#         them would obscure the per-anchor logic.
+#   N806  OOXML element names like `pPr` / `rPr` are domain identifiers from
+#         the WordprocessingML schema; lowercasing them loses readability.
+#   S112  `try / except / continue` is acceptable in best-effort dev loops.
+#   S603  `subprocess` calls use list-form (no shell) on repo-internal paths
+#         constructed from a fixed allowlist (e.g. `git mv sources/<name>`).
+"scripts/**" = ["E501", "C901", "N806", "S112", "S603"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

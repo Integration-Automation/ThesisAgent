@@ -35,9 +35,8 @@ import copy
 from pathlib import Path
 
 from docx import Document
-from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-
+from docx.oxml.ns import qn
 
 THESIS = Path("exports/論文_v1.8.docx")
 TCSE = Path("exports/TCSE_v2.3.docx")

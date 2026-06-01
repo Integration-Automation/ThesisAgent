@@ -37,14 +37,14 @@ paragraphs clone pPr + rPr from an existing Normal (Web) paragraph.
 """
 from __future__ import annotations
 
+import contextlib
 import copy
 from pathlib import Path
 
 from docx import Document
-from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
-
 
 SRC = Path("exports/論文_v1.8.docx")
 
@@ -61,7 +61,7 @@ def _find_para(doc, prefix: str) -> int:
     raise SystemExit(f"anchor not found: {prefix[:60]!r}")
 
 
-def _content_rpr(paragraph) -> "OxmlElement | None":
+def _content_rpr(paragraph) -> OxmlElement | None:
     for run in paragraph.runs:
         if (run.text or "").strip():
             rpr = run._r.find(qn("w:rPr"))
@@ -89,10 +89,8 @@ def _new_paragraph_after(anchor_para, text: str, *,
     anchor_para._p.addnext(new_p_elem)
     para = Paragraph(new_p_elem, anchor_para._parent)
     if style_name is not None:
-        try:
+        with contextlib.suppress(KeyError):
             para.style = doc.styles[style_name]
-        except KeyError:
-            pass  # fall back to default
 
     rpr_template = _content_rpr(clone_from) if clone_from is not None else _content_rpr(anchor_para)
     r = OxmlElement("w:r")
