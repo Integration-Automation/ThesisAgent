@@ -250,7 +250,7 @@ the template for any multi-paper search. The zh-tw companion is at
   (e.g. `內存` → `記憶體`, `魯棒性` → `穩健性`, `軟件` → `軟體`,
   `緩存` → `快取`). Same guard runs in reverse for zh-cn locale
   strings. Full rule + the regex catalogue live in
-  `.claude/agents/language-vocabulary-check.md`.
+  `.claude/agents/rules/language-vocabulary-check.md`.
 
 ## Quick start
 
@@ -361,7 +361,7 @@ returned DOM, decide which papers to dig into — five scripts under
 | `scripts/regen_*.py` | Worked example of hand-authored rich `PaperSummary` per paper → rich-tier `.pptx`. Look at `scripts/regen_speculative_decoding_zh_tw.py` for the canonical shape. |
 
 Full end-to-end runbook (search → rich deck) lives in
-`.claude/agents/paper-summary-author.md` — open it before starting a
+`.claude/agents/tasks/paper-summary-author.md` — open it before starting a
 new query so the LLM can run the flow without pausing for user input.
 
 ## MCP server

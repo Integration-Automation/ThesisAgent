@@ -113,7 +113,7 @@ _BRAND_DARK = RGBColor(0x1F, 0x3A, 0x66)
 #: for emphasis instead. The constant is kept around in case a future
 #: non-text accent shape (sparkline, badge, etc.) needs it, but every
 #: existing TEXT callsite has been migrated to _BRAND_HIGHLIGHT.
-#: See .claude/agents/deck-design.md "No red text" contract.
+#: See .claude/agents/rules/deck-design.md "No red text" contract.
 _BRAND_ACCENT = RGBColor(0xC0, 0x39, 0x2B)
 #: Emphasis text colour — teal-700 (#0E7490). Replaces the banned red
 #: _BRAND_ACCENT for KPI values, RQ question callouts, figure
@@ -1992,7 +1992,7 @@ def _swap_text_colors(shape_or_cell) -> None:
     near-black on screen) or pure black ``(0,0,0)``, promote to the
     dark-mode body colour ``#E5E7EB``. Without this fallback such runs
     would render as black-on-dark — invisible. See
-    ``.claude/agents/deck-design.md`` "Dark-mode contract".
+    ``.claude/agents/rules/deck-design.md`` "Dark-mode contract".
     """
     text_frame = getattr(shape_or_cell, "text_frame", None)
     if text_frame is None:

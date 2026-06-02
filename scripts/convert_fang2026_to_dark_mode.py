@@ -32,7 +32,7 @@ from autopapertoppt.exporters.pptx import _apply_dark_mode  # noqa: E402
 
 SRC = Path("exports/fang2026disentangling-zh-tw.pptx")
 
-# Per `.claude/agents/deck-design.md` "No red text" contract: any run currently
+# Per `.claude/agents/rules/deck-design.md` "No red text" contract: any run currently
 # painted `#C0392B` (the banned _BRAND_ACCENT red) must migrate to the
 # sanctioned emphasis colour. In dark mode that is `#2DD4BF` (teal-400, the
 # dark-mode equivalent of light-mode `_BRAND_HIGHLIGHT` teal-700). KPI values

@@ -249,7 +249,7 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   with VPN access, a silent fall-through to httpx is a bug, not an
   acceptable degradation. If you don't see a Chrome window open for an
   IEEE search, treat the result set as suspect. Full rule + audit
-  checklist: `.claude/agents/compliance-auditor.md`.
+  checklist: `.claude/agents/rules/compliance-auditor.md`.
 - **Slide-deck guards.** 16:9 widescreen, body between 1.5" and 7.0",
   `FOOTER_GUARD = 7.05"`. Every textbox runs through `_truncate(...)`
   with the per-layout cap. Don't add slides that balance "stacks + tail
@@ -268,17 +268,17 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
 - Slim overview + Git Commit hygiene + Browser-Automation hard rule:
   **`CLAUDE.md`** (top-level, always loaded).
 - Code-quality / SOLID / linter / SonarQube rule list:
-  `.claude/agents/code-quality-reviewer.md`.
+  `.claude/agents/rules/code-quality-reviewer.md`.
 - Network safety, core-vs-source-plugin boundary, browser-automation
   audit checklist, path-safety, suppression conventions, bandit-skip
-  config: `.claude/agents/compliance-auditor.md`.
+  config: `.claude/agents/rules/compliance-auditor.md`.
 - pptx rendering tiers, truncation caps, semantic shape names, i18n,
-  enrichment dispatch: `.claude/agents/slide-deck-rules.md`.
+  enrichment dispatch: `.claude/agents/rules/slide-deck-rules.md`.
 - Env vars + Python / `.venv` toolchain reference:
-  `.claude/agents/env-vars.md`.
-- DoD gate runner: `.claude/agents/dod-verify.md`.
-- LLM-as-agent thesis-style authoring: `.claude/agents/paper-summary-author.md`
-  + `post-author-audit.md` + `slide-overflow-check.md`.
+  `.claude/agents/rules/env-vars.md`.
+- DoD gate runner: `.claude/agents/tasks/dod-verify.md`.
+- LLM-as-agent thesis-style authoring: `.claude/agents/tasks/paper-summary-author.md`
+  + `tasks/post-author-audit.md` + `tasks/slide-overflow-check.md`.
 - Per-source plugin contract and recorded fixtures: `autopapertoppt/sources/<name>/`
   + `tests/fixtures/<name>/`.
 - LLM-as-agent flow examples: `scripts/regen_*.py`.

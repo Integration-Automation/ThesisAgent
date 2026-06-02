@@ -29,7 +29,10 @@ def _claude_rules_text() -> str:
     """
     parts = [_CLAUDE_MD.read_text(encoding="utf-8")]
     if _SUBAGENTS_DIR.is_dir():
-        for path in sorted(_SUBAGENTS_DIR.glob("*.md")):
+        # Recursive: subagent docs are organised into subfolders
+        # (``rules/`` references + ``tasks/`` runners). Claude Code itself
+        # scans ``.claude/agents/`` recursively, so this glob mirrors that.
+        for path in sorted(_SUBAGENTS_DIR.rglob("*.md")):
             parts.append(path.read_text(encoding="utf-8"))
     return "\n\n".join(parts)
 
