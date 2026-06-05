@@ -21,21 +21,22 @@ PyInstaller is not in the standard dev extras — install it on demand:
 pip install pyinstaller
 ```
 
-## The two project-specific gotchas
+## The project-specific gotcha
 
-1. **Source plugins are loaded by name at runtime.** The pipeline calls
-   `importlib.import_module("arxiv")` (and the other 10 source names)
-   via `thesisagents.fetchers.base.load_fetcher`. PyInstaller's
-   static analysis cannot see these imports, so without help it will
-   tree-shake the source packages away. The fix is `--hidden-import`
-   per source.
+**Source plugins are loaded by name at runtime.** The pipeline calls
+`importlib.import_module("thesisagents.sources.<name>")` via
+`thesisagents.fetchers.base.load_fetcher`. PyInstaller's static analysis
+cannot see these imports, so without help it tree-shakes the plugins
+away. The fix is `--collect-submodules thesisagents`, which collects every
+sub-module of the package (including `thesisagents.sources.*`).
 
-2. **The `sources/` directory must travel with the bundle.** The
-   runtime computes `_SOURCES_DIR = Path(__file__).resolve().parents[2]
-   / "sources"` to add it to `sys.path`. Inside a PyInstaller bundle,
-   `__file__` points into the temp extraction dir, so the same
-   relative path resolution still works **as long as you copy
-   `sources/` into the bundle as data**. That's `--add-data`.
+> **Note (2026-05 migration).** Older commands listed every plugin with
+> its own `--hidden-import arxiv …` and copied a sibling `sources/`
+> directory via `--add-data "sources;sources"` plus `--paths sources`.
+> All of that is obsolete: the plugins now live **inside** the package
+> (`thesisagents/sources/`), there is no sibling `sources/` directory, and
+> the old `sys.path` injection was removed. `--collect-submodules
+> thesisagents` replaces the whole lot.
 
 ## Build the CLI (`thesisagents`)
 
@@ -43,38 +44,21 @@ pip install pyinstaller
 pyinstaller `
   --onefile `
   --name thesisagents `
-  --paths sources `
-  --add-data "sources;sources" `
-  --hidden-import arxiv --hidden-import arxiv.fetcher --hidden-import arxiv.parser `
-  --hidden-import semantic_scholar --hidden-import semantic_scholar.fetcher --hidden-import semantic_scholar.parser `
-  --hidden-import openalex --hidden-import openalex.fetcher --hidden-import openalex.parser `
-  --hidden-import pubmed --hidden-import pubmed.fetcher --hidden-import pubmed.parser `
-  --hidden-import acm --hidden-import acm.fetcher --hidden-import acm.parser `
-  --hidden-import ieee --hidden-import ieee.fetcher --hidden-import ieee.parser `
-  --hidden-import scholar --hidden-import scholar.fetcher --hidden-import scholar.parser `
-  --hidden-import dblp --hidden-import dblp.fetcher --hidden-import dblp.parser `
-  --hidden-import crossref --hidden-import crossref.fetcher --hidden-import crossref.parser `
-  --hidden-import openaire --hidden-import openaire.fetcher --hidden-import openaire.parser `
-  --hidden-import springer --hidden-import springer.fetcher --hidden-import springer.parser `
-  --hidden-import europepmc --hidden-import europepmc.fetcher --hidden-import europepmc.parser `
-  --hidden-import doaj --hidden-import doaj.fetcher --hidden-import doaj.parser `
-  --hidden-import hal --hidden-import hal.fetcher --hidden-import hal.parser `
-  --hidden-import core --hidden-import core.fetcher --hidden-import core.parser `
+  --collect-submodules thesisagents `
   thesisagents/__main__.py
 ```
 
-On Linux / macOS, replace the `;` separator in `--add-data` with `:`
-(PyInstaller's argument separator follows the OS path separator):
+`--collect-submodules thesisagents` is the one flag that matters: the
+source plugins load dynamically via
+`importlib.import_module("thesisagents.sources.<name>")`, which
+PyInstaller's static analysis can't see, so it collects **every**
+sub-module of the package (including all of `thesisagents.sources.*`).
+That single flag replaces the long per-source `--hidden-import` list.
 
-```bash
-pyinstaller \
-  --onefile \
-  --name thesisagents \
-  --paths sources \
-  --add-data "sources:sources" \
-  --hidden-import arxiv ... \
-  thesisagents/__main__.py
-```
+The command is identical on Linux / macOS — there is no `--add-data`
+separator to worry about, because the plugins live inside the package
+(`thesisagents/sources/`) and travel with it; there is no sibling
+`sources/` directory to copy.
 
 The output binary lands at `dist/thesisagents` (or
 `dist/thesisagents.exe` on Windows).
@@ -85,15 +69,7 @@ The output binary lands at `dist/thesisagents` (or
 pyinstaller `
   --onefile `
   --name thesisagents-mcp `
-  --paths sources `
-  --add-data "sources;sources" `
-  --hidden-import arxiv --hidden-import semantic_scholar `
-  --hidden-import openalex --hidden-import pubmed `
-  --hidden-import acm --hidden-import ieee --hidden-import scholar `
-  --hidden-import dblp --hidden-import crossref `
-  --hidden-import openaire --hidden-import springer `
-  --hidden-import europepmc --hidden-import doaj `
-  --hidden-import hal --hidden-import core `
+  --collect-submodules thesisagents `
   thesisagents/mcp/__main__.py
 ```
 
@@ -111,21 +87,15 @@ A hand-tuned spec for this project:
 # Usage: pyinstaller thesisagents.spec
 from PyInstaller.utils.hooks import collect_submodules
 
-SOURCE_PLUGINS = (
-    "arxiv", "semantic_scholar", "openalex", "pubmed", "acm",
-    "ieee", "scholar", "dblp", "crossref", "openaire", "springer",
-    "europepmc", "doaj", "hal", "core",
-)
-
-hidden = []
-for plugin in SOURCE_PLUGINS:
-    hidden.extend(collect_submodules(plugin))
+# Source plugins load dynamically via importlib, so collect every
+# sub-module of the package (this pulls in thesisagents.sources.* too).
+hidden = collect_submodules("thesisagents")
 
 a = Analysis(
     ["thesisagents/__main__.py"],
-    pathex=["sources"],
+    pathex=[],
     binaries=[],
-    datas=[("sources", "sources")],
+    datas=[],
     hiddenimports=hidden,
     hookspath=[],
     runtime_hooks=[],

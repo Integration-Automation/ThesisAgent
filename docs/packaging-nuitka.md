@@ -28,19 +28,23 @@ Nuitka also needs a C compiler. On Windows you can use the
 MinGW-w64 toolchain that Nuitka offers to download on first run; on
 Linux any `gcc` works; on macOS install Xcode Command Line Tools.
 
-## The two project-specific gotchas
+## The project-specific gotcha
 
-Same shape as the PyInstaller doc, just different flags.
+**Source plugins are loaded by name at runtime.** The pipeline calls
+`importlib.import_module("thesisagents.sources.<name>")`, which Nuitka's
+static analysis can't follow. The fix is a single
+`--include-package=thesisagents`: it force-includes every sub-module of
+the package, including all of `thesisagents.sources.*`, so the dynamic
+import resolves at runtime.
 
-1. **Source plugins are loaded by name at runtime.** Nuitka's static
-   analysis also misses `importlib.import_module("arxiv")`. The fix
-   is `--include-package=<name>` per source.
-
-2. **The `sources/` directory must travel with the bundle.** The
-   runtime computes `_SOURCES_DIR = Path(__file__).resolve().parents[2]
-   / "sources"` to add it to `sys.path`. In a Nuitka onefile, that
-   path resolves into the temp unpack directory, so we ship
-   `sources/` as a data dir via `--include-data-dir=sources=sources`.
+> **Note (2026-05 migration).** Older build commands listed each source
+> with its own `--include-package=arxiv` flag and shipped a sibling
+> `sources/` directory via `--include-data-dir=sources=sources`. Both are
+> gone: the plugins now live **inside** the package
+> (`thesisagents/sources/`), there is no sibling `sources/` directory (so
+> `--include-data-dir=sources=sources` is a fatal "directory does not
+> exist" error), and the old `sys.path` injection was removed. One
+> `--include-package=thesisagents` replaces all of it.
 
 ## Build the CLI (`thesisagents`)
 
@@ -50,27 +54,21 @@ python -m nuitka `
   --onefile `
   --output-filename=thesisagents `
   --include-package=thesisagents `
-  --include-package=arxiv `
-  --include-package=semantic_scholar `
-  --include-package=openalex `
-  --include-package=pubmed `
-  --include-package=acm `
-  --include-package=ieee `
-  --include-package=scholar `
-  --include-package=dblp `
-  --include-package=crossref `
-  --include-package=openaire `
-  --include-package=springer `
-  --include-package=europepmc `
-  --include-package=doaj `
-  --include-package=hal `
-  --include-package=core `
-  --include-data-dir=sources=sources `
-  --include-package-data=python_pptx `
+  --include-package-data=pptx `
   --include-package-data=openpyxl `
   --assume-yes-for-downloads `
   thesisagents/__main__.py
 ```
+
+`--include-package=thesisagents` is what bundles the source plugins: the
+pipeline loads them dynamically via
+`importlib.import_module("thesisagents.sources.<name>")`, which Nuitka's
+static analysis can't see, but `--include-package` pulls in **every**
+sub-module of the package (including `thesisagents.sources.*`) regardless.
+So you do **not** list the sources individually, and there is **no**
+`--include-data-dir=sources=sources` — the plugins live inside the package
+(`thesisagents/sources/`) since the 2026-05 migration, not in a sibling
+`sources/` directory.
 
 Linux / macOS use the same command (Nuitka's flag syntax is
 OS-neutral; the `;` separator quirk that PyInstaller has does not
@@ -89,15 +87,6 @@ python -m nuitka `
   --onefile `
   --output-filename=thesisagents-mcp `
   --include-package=thesisagents `
-  --include-package=arxiv --include-package=semantic_scholar `
-  --include-package=openalex --include-package=pubmed `
-  --include-package=acm --include-package=ieee `
-  --include-package=scholar --include-package=dblp `
-  --include-package=crossref --include-package=openaire `
-  --include-package=springer --include-package=europepmc `
-  --include-package=doaj --include-package=hal `
-  --include-package=core `
-  --include-data-dir=sources=sources `
   --assume-yes-for-downloads `
   thesisagents/mcp/__main__.py
 ```
@@ -214,7 +203,6 @@ jobs:
           python -m nuitka --standalone --onefile \
             --output-filename=thesisagents \
             --include-package=thesisagents \
-            --include-data-dir=sources=sources \
             --assume-yes-for-downloads \
             thesisagents/__main__.py
       - uses: actions/upload-artifact@v4
