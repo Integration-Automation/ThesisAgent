@@ -27,6 +27,25 @@ def _canon_title(title: str) -> str:
     return _TITLE_NOISE_RE.sub("", title.lower())
 
 
+def _canon_author(name: str) -> str:
+    """Canonical surname token of an author name for dedup hashing.
+
+    Sources format the first author differently — ``"Vaswani, Ashish"``
+    (PubMed), ``"Ashish Vaswani"`` (arXiv), ``"A. Vaswani"`` (Crossref). Reduce
+    each to its surname so a DOI-less paper isn't split into duplicates by name
+    formatting: a comma form keeps the part before the comma, otherwise the last
+    whitespace-separated token. All three examples above collapse to
+    ``"vaswani"``.
+    """
+    name = name.strip().lower()
+    if not name:
+        return ""
+    if "," in name:
+        return name.split(",", 1)[0].strip()
+    parts = name.split()
+    return parts[-1] if parts else ""
+
+
 @dataclass(frozen=True, slots=True)
 class RqResult:
     """One research-question evaluation block: question + result table + bullets.
@@ -172,13 +191,16 @@ class Paper:
         * Title hashes strip punctuation and whitespace via
           :func:`_canon_title`, so ``"Attention Is All You Need"`` and
           ``"Attention is all you need."`` produce the same key.
+        * The first author is reduced to its surname via
+          :func:`_canon_author`, so ``"Vaswani, Ashish"`` / ``"Ashish
+          Vaswani"`` / ``"A. Vaswani"`` don't split one paper into duplicates.
         """
         if self.doi:
             return f"doi:{self.doi.lower()}"
         if self.arxiv_id:
             arxiv = re.sub(r"v\d+$", "", self.arxiv_id.strip().lower())
             return f"arxiv:{arxiv}"
-        first_author = self.authors[0].strip().lower() if self.authors else ""
+        first_author = _canon_author(self.authors[0]) if self.authors else ""
         seed = f"{_canon_title(self.title)}|{first_author}|{self.year or ''}"
         digest = hashlib.sha256(seed.encode("utf-8"), usedforsecurity=False).hexdigest()
         return f"hash:{digest[:16]}"

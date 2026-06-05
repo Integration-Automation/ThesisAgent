@@ -320,6 +320,28 @@ def test_cli_exclude_source_prunes_default_mix(tmp_path, monkeypatch, sample_pap
     assert captured["query"].sources == expected
 
 
+def test_cli_min_citations_flows_into_query(tmp_path, monkeypatch, sample_papers):
+    """--min-citations is parsed and passed through to the Query (it was
+    previously unreachable from the CLI)."""
+    captured: dict[str, Query] = {}
+
+    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
+        captured["query"] = query
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown() -> None:
+        return None
+
+    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
+    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
+    code = cli_module.main(
+        ["--query", "x", "--out", str(tmp_path), "--export", "bib",
+         "--min-citations", "50"]
+    )
+    assert code == 0
+    assert captured["query"].min_citations == 50
+
+
 def test_cli_exclude_unknown_source_errors(tmp_path):
     """A typo in --exclude-source must fail loudly, not silently no-op."""
     with pytest.raises(SystemExit):

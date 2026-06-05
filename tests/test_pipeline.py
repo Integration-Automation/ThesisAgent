@@ -295,6 +295,30 @@ async def test_run_search_min_citations_filters_all_sources(monkeypatch):
     assert "low" not in ids        # 5 < 50 filtered out
 
 
+async def test_run_search_year_range_pipeline_guard(monkeypatch):
+    """The pipeline enforces the year range even when a source returns
+    out-of-range papers (scrape sources filter loosely); unknown years kept."""
+    def _yr(sid, year):
+        return Paper(
+            source="arxiv", source_id=sid, title=sid, authors=(), year=year,
+            venue=None, abstract="", url=f"https://example.com/{sid}",
+        )
+
+    in_range = _yr("in", 2022)
+    too_old = _yr("old", 2010)
+    too_new = _yr("new", 2025)
+    unknown = _yr("unk", None)
+    pool = {"arxiv": _make_fetcher("arxiv", [in_range, too_old, too_new, unknown])}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(
+        keywords="x", sources=("arxiv",), max_results=10,
+        year_from=2020, year_to=2024,
+    )
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+    ids = {p.source_id for p in collection.papers}
+    assert ids == {"in", "unk"}  # in-range + unknown kept; old/new dropped
+
+
 async def test_enrich_collection_caps_concurrency(monkeypatch):
     """A semaphore bounds how many per-paper enrichments run at once, so a big
     collection doesn't fire one Anthropic call + one PDF download per paper."""

@@ -185,6 +185,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Latest publication year (inclusive).",
     )
     parser.add_argument(
+        "--min-citations",
+        type=int,
+        default=None,
+        help=(
+            "Drop papers with fewer than this many citations (enforced across "
+            "all sources). Papers whose source reports no citation count are "
+            "kept. Omit for no minimum."
+        ),
+    )
+    parser.add_argument(
         "--export",
         "-e",
         default=None,
@@ -622,6 +632,7 @@ async def _collect(args: argparse.Namespace):
         year_from=args.year_from,
         year_to=args.year_to,
         top_tier_only=args.top_tier_only,
+        min_citations=args.min_citations,
     )
     _LOG.info("Running search: %s across %s", keywords, ", ".join(sources))
     return await run_search(query, resolve_oa=args.resolve_oa)

@@ -99,6 +99,26 @@ def test_dedupe_collapses_arxiv_versions():
     assert len(dedupe([v1, v2])) == 1
 
 
+def test_dedupe_collapses_author_name_formats():
+    """Same DOI-less paper whose first author arrives in three different name
+    formats across sources collapses to one record (surname canonicalisation)."""
+    a = _paper(source_id="1", title="On Method X",
+               authors=("Ashish Vaswani",), year=2020)
+    b = _paper(source_id="2", title="On Method X",
+               authors=("Vaswani, Ashish",), year=2020)
+    c = _paper(source_id="3", title="On Method X",
+               authors=("A. Vaswani",), year=2020)
+    assert len(dedupe([a, b, c])) == 1
+
+
+def test_dedupe_distinguishes_different_surnames():
+    """Different first-author surnames (same title/year) stay distinct — the
+    surname canonicalisation must not over-merge."""
+    a = _paper(source_id="1", title="Common Title", authors=("Alice Smith",), year=2020)
+    b = _paper(source_id="2", title="Common Title", authors=("Bob Jones",), year=2020)
+    assert len(dedupe([a, b])) == 2
+
+
 def test_rank_prefers_recent_papers():
     old = _paper(source_id="old", year=2010)
     new = _paper(source_id="new", year=2024)

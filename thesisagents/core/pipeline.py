@@ -90,6 +90,21 @@ async def run_search(
             "min-citations(>=%d) filter kept %d / %d papers (unknown counts kept)",
             query.min_citations, len(ordered), before,
         )
+    if query.year_from is not None or query.year_to is not None:
+        # Pipeline-level year guard. Most source plugins already filter by year,
+        # but scrape sources (scholar / ieee) do it loosely, so enforce the
+        # range once here for ALL sources. Papers with an unknown year are KEPT
+        # (uncertainty must not silently drop a possibly-in-range paper).
+        before = len(ordered)
+        ordered = [
+            paper
+            for paper in ordered
+            if _in_year_range(paper.year, query.year_from, query.year_to)
+        ]
+        _LOG.info(
+            "year filter [%s..%s] kept %d / %d papers (unknown years kept)",
+            query.year_from or "", query.year_to or "", len(ordered), before,
+        )
     collection = PaperCollection(
         query=query, papers=tuple(ordered[: query.max_results])
     )
@@ -138,6 +153,23 @@ async def _safe_search(fetcher, query: Query) -> list[Paper]:
             _LOG.warning("Source %s failed: %s", source, err)
             return []
     return []
+
+
+def _in_year_range(
+    year: int | None, year_from: int | None, year_to: int | None
+) -> bool:
+    """True if ``year`` is within ``[year_from, year_to]`` (None bound = open).
+
+    Unlike the per-source ``in_year_range`` helpers (which drop year-less
+    records), this pipeline guard KEEPS a paper whose year is unknown — at this
+    stage the source already chose to return it, so an unknown year is treated
+    as "possibly in range" rather than silently filtered out.
+    """
+    if year is None:
+        return True
+    if year_from is not None and year < year_from:
+        return False
+    return not (year_to is not None and year > year_to)
 
 
 async def run_single_paper(identifier: PaperIdentifier) -> PaperCollection:
