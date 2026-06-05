@@ -59,7 +59,7 @@ class _CannedTransport(httpx.AsyncBaseTransport):
 def _install(monkeypatch, transport):
     http_module._CLIENTS.clear()  # noqa: SLF001
 
-    async def fake_get_client(_source):
+    async def fake_get_client(_source):  # NOSONAR async stub
         return httpx.AsyncClient(transport=transport)
 
     monkeypatch.setattr("thesisagents.sources.core.fetcher.get_client", fake_get_client)
@@ -132,7 +132,7 @@ async def test_search_respects_max_results(monkeypatch):
     assert len(papers) == 1
 
 
-async def test_missing_key_raises_config_error(monkeypatch):
+def test_missing_key_raises_config_error(monkeypatch):
     monkeypatch.delenv(_KEY_ENV, raising=False)
     from thesisagents.sources.core.fetcher import CoreFetcher
 

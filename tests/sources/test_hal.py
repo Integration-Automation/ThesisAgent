@@ -40,7 +40,7 @@ def _reset_clients():
 def _install(monkeypatch, transport):
     http_module._CLIENTS.clear()  # noqa: SLF001
 
-    async def fake_get_client(_source):
+    async def fake_get_client(_source):  # NOSONAR async stub
         return httpx.AsyncClient(transport=transport)
 
     monkeypatch.setattr("thesisagents.sources.hal.fetcher.get_client", fake_get_client)

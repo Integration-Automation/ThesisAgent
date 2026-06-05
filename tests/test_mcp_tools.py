@@ -258,7 +258,7 @@ def test_search_exclude_sources_prunes_mix(monkeypatch, server, sample_papers):
 
 def test_search_exclude_all_sources_errors(monkeypatch, server):
     """Excluding the only requested source surfaces a clean error."""
-    async def fake_shutdown():
+    async def fake_shutdown():  # NOSONAR async stub
         return None
 
     monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
@@ -280,11 +280,11 @@ def test_search_defaults_to_full_source_mix(monkeypatch, server, sample_papers):
 
     captured = {}
 
-    async def fake_run_search(query, **_kwargs):
+    async def fake_run_search(query, **_kwargs):  # NOSONAR async stub
         captured["query"] = query
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
-    async def fake_shutdown():
+    async def fake_shutdown():  # NOSONAR async stub
         return None
 
     monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
