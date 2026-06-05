@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thesisagents"
-version = "0.1.15"
+version = "0.1.16"
 description = "Keyword-driven paper search assistant that exports slides, summaries, and BibTeX."
 requires-python = ">=3.12"
 readme = { file = "README.md", content-type = "text/markdown" }
