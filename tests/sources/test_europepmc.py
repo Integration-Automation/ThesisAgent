@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import httpx
 import pytest
 
+from tests.sources._mock import MockTransport, install_mock
 from thesisagents.core.exceptions import ParseError, RateLimitError
 from thesisagents.core.models import Query
-from thesisagents.fetchers import http as http_module
 from thesisagents.sources.europepmc.fetcher import EuropePmcFetcher
 from thesisagents.sources.europepmc.parser import in_year_range, parse_result
 
@@ -17,39 +16,12 @@ _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "europepmc"
 _FIXTURE_BYTES = (_FIXTURE_DIR / "llm_security.json").read_bytes()
 
 
-class _CannedTransport(httpx.AsyncBaseTransport):
-    def __init__(self, body: bytes, status: int = 200):
-        self.body = body
-        self.status = status
-        self.requests: list[httpx.Request] = []
-
-    async def handle_async_request(self, request):
-        self.requests.append(request)
-        return httpx.Response(self.status, content=self.body, request=request)
-
-    async def aclose(self):
-        return None
-
-
-@pytest.fixture(autouse=True)
-def _reset_clients():
-    yield
-    http_module._CLIENTS.clear()  # noqa: SLF001
-
-
 def _install(monkeypatch, transport):
-    http_module._CLIENTS.clear()  # noqa: SLF001
-
-    async def fake_get_client(_source):  # NOSONAR async stub
-        return httpx.AsyncClient(transport=transport)
-
-    monkeypatch.setattr(
-        "thesisagents.sources.europepmc.fetcher.get_client", fake_get_client
-    )
+    install_mock(monkeypatch, "thesisagents.sources.europepmc.fetcher", transport)
 
 
 async def test_search_returns_papers(monkeypatch):
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     papers = await EuropePmcFetcher().search(
         Query(keywords="LLM Security", sources=("europepmc",), max_results=10)
@@ -71,7 +43,7 @@ async def test_search_returns_papers(monkeypatch):
 async def test_search_uses_author_string_fallback(monkeypatch):
     """The second record has no structured authorList — fall back to the
     flat authorString and drop its trailing period."""
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     papers = await EuropePmcFetcher().search(
         Query(keywords="LLM Security", sources=("europepmc",), max_results=10)
@@ -82,7 +54,7 @@ async def test_search_uses_author_string_fallback(monkeypatch):
 
 
 async def test_search_year_filter_drops_old_papers(monkeypatch):
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     papers = await EuropePmcFetcher().search(
         Query(
@@ -97,7 +69,7 @@ async def test_search_year_filter_drops_old_papers(monkeypatch):
 
 
 async def test_search_respects_max_results(monkeypatch):
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     papers = await EuropePmcFetcher().search(
         Query(keywords="LLM Security", sources=("europepmc",), max_results=1)
@@ -106,20 +78,19 @@ async def test_search_respects_max_results(monkeypatch):
 
 
 async def test_search_passes_query_params(monkeypatch):
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     await EuropePmcFetcher().search(
         Query(keywords="LLM Security", sources=("europepmc",), max_results=5)
     )
-    [request] = transport.requests
-    assert request.url.params.get("format") == "json"
-    assert request.url.params.get("resultType") == "core"
-    assert request.url.params.get("query") == "LLM Security"
-    assert int(request.url.params.get("pageSize") or "0") >= 5
+    assert transport.received_url.params.get("format") == "json"
+    assert transport.received_url.params.get("resultType") == "core"
+    assert transport.received_url.params.get("query") == "LLM Security"
+    assert int(transport.received_url.params.get("pageSize") or "0") >= 5
 
 
 async def test_search_raises_on_rate_limit(monkeypatch):
-    transport = _CannedTransport(b"", status=429)
+    transport = MockTransport(429, b"")
     _install(monkeypatch, transport)
     with pytest.raises(RateLimitError):
         await EuropePmcFetcher().search(
@@ -128,7 +99,7 @@ async def test_search_raises_on_rate_limit(monkeypatch):
 
 
 async def test_search_treats_5xx_as_rate_limit(monkeypatch):
-    transport = _CannedTransport(b"oops", status=503)
+    transport = MockTransport(503, b"oops")
     _install(monkeypatch, transport)
     with pytest.raises(RateLimitError):
         await EuropePmcFetcher().search(
@@ -137,7 +108,7 @@ async def test_search_treats_5xx_as_rate_limit(monkeypatch):
 
 
 async def test_search_raises_on_bad_json(monkeypatch):
-    transport = _CannedTransport(b"<html>not json</html>", status=200)
+    transport = MockTransport(200, b"<html>not json</html>")
     _install(monkeypatch, transport)
     with pytest.raises(ParseError):
         await EuropePmcFetcher().search(

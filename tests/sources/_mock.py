@@ -16,11 +16,13 @@ class MockTransport(httpx.AsyncBaseTransport):
         self.received_url: httpx.URL | None = None
         self.received_method: str | None = None
         self.received_body: bytes | None = None
+        self.received_headers: httpx.Headers | None = None
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         self.received_url = request.url
         self.received_method = request.method
         self.received_body = bytes(request.content) if request.content else None
+        self.received_headers = request.headers
         return httpx.Response(self._status, content=self._body, request=request)
 
     async def aclose(self) -> None:

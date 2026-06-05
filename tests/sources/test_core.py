@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import httpx
 import pytest
 
+from tests.sources._mock import MockTransport, install_mock
 from thesisagents.core.exceptions import (
     ConfigError,
     ParseError,
@@ -42,31 +42,12 @@ def _make_fetcher():
     return CoreFetcher()
 
 
-class _CannedTransport(httpx.AsyncBaseTransport):
-    def __init__(self, body: bytes, status: int = 200):
-        self.body = body
-        self.status = status
-        self.requests: list[httpx.Request] = []
-
-    async def handle_async_request(self, request):
-        self.requests.append(request)
-        return httpx.Response(self.status, content=self.body, request=request)
-
-    async def aclose(self):
-        return None
-
-
 def _install(monkeypatch, transport):
-    http_module._CLIENTS.clear()  # noqa: SLF001
-
-    async def fake_get_client(_source):  # NOSONAR async stub
-        return httpx.AsyncClient(transport=transport)
-
-    monkeypatch.setattr("thesisagents.sources.core.fetcher.get_client", fake_get_client)
+    install_mock(monkeypatch, "thesisagents.sources.core.fetcher", transport)
 
 
 async def test_search_returns_papers(monkeypatch):
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     papers = await _make_fetcher().search(
         Query(keywords="LLM Security", sources=("core",), max_results=10)
@@ -86,7 +67,7 @@ async def test_search_returns_papers(monkeypatch):
 async def test_search_venue_falls_back_to_publisher(monkeypatch):
     """The second record has no journals[] — venue falls back to publisher,
     and an empty downloadUrl yields no pdf_url."""
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     papers = await _make_fetcher().search(
         Query(keywords="LLM Security", sources=("core",), max_results=10)
@@ -97,19 +78,18 @@ async def test_search_venue_falls_back_to_publisher(monkeypatch):
 
 
 async def test_search_sends_bearer_header(monkeypatch):
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     await _make_fetcher().search(
         Query(keywords="LLM Security", sources=("core",), max_results=5)
     )
-    [request] = transport.requests
-    assert request.headers.get("authorization") == "Bearer test-key"
-    assert request.url.params.get("q") == "LLM Security"
-    assert int(request.url.params.get("limit") or "0") >= 5
+    assert transport.received_headers.get("authorization") == "Bearer test-key"
+    assert transport.received_url.params.get("q") == "LLM Security"
+    assert int(transport.received_url.params.get("limit") or "0") >= 5
 
 
 async def test_search_year_filter_drops_old_papers(monkeypatch):
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     papers = await _make_fetcher().search(
         Query(
@@ -124,7 +104,7 @@ async def test_search_year_filter_drops_old_papers(monkeypatch):
 
 
 async def test_search_respects_max_results(monkeypatch):
-    transport = _CannedTransport(_FIXTURE_BYTES)
+    transport = MockTransport(200, _FIXTURE_BYTES)
     _install(monkeypatch, transport)
     papers = await _make_fetcher().search(
         Query(keywords="LLM Security", sources=("core",), max_results=1)
@@ -141,7 +121,7 @@ def test_missing_key_raises_config_error(monkeypatch):
 
 
 async def test_search_raises_on_bad_key(monkeypatch):
-    transport = _CannedTransport(b"", status=401)
+    transport = MockTransport(401, b"")
     _install(monkeypatch, transport)
     with pytest.raises(ConfigError):
         await _make_fetcher().search(
@@ -150,7 +130,7 @@ async def test_search_raises_on_bad_key(monkeypatch):
 
 
 async def test_search_raises_on_rate_limit(monkeypatch):
-    transport = _CannedTransport(b"", status=429)
+    transport = MockTransport(429, b"")
     _install(monkeypatch, transport)
     with pytest.raises(RateLimitError):
         await _make_fetcher().search(
@@ -159,7 +139,7 @@ async def test_search_raises_on_rate_limit(monkeypatch):
 
 
 async def test_search_raises_on_server_error(monkeypatch):
-    transport = _CannedTransport(b"oops", status=503)
+    transport = MockTransport(503, b"oops")
     _install(monkeypatch, transport)
     with pytest.raises(SourceUnavailableError):
         await _make_fetcher().search(
@@ -168,7 +148,7 @@ async def test_search_raises_on_server_error(monkeypatch):
 
 
 async def test_search_raises_on_bad_json(monkeypatch):
-    transport = _CannedTransport(b"<html>not json</html>", status=200)
+    transport = MockTransport(200, b"<html>not json</html>")
     _install(monkeypatch, transport)
     with pytest.raises(ParseError):
         await _make_fetcher().search(
