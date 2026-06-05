@@ -43,16 +43,28 @@ def _stub_download_pdfs(monkeypatch, tmp_path):
 
 @pytest.fixture()
 def patched_pipeline(monkeypatch, sample_papers):
-    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
+    """Stub cli's run_search + shutdown_clients and return a dict that captures
+    the Query passed to run_search (``patched_pipeline["query"]``).
+
+    Tests that only need the pipeline stubbed ignore the return value; tests
+    that assert on the constructed Query read ``patched_pipeline["query"]``
+    instead of each re-rolling their own ``fake_run_search`` / ``fake_shutdown``
+    boilerplate.
+    """
+    captured: dict[str, Query] = {}
+
+    async def fake_run_search(query, **_kwargs):  # NOSONAR async stub
+        captured["query"] = query
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
-    async def fake_shutdown() -> None:
+    async def fake_shutdown():  # NOSONAR async stub
         return None
 
     monkeypatch.setattr(cli_module, "run_search", fake_run_search)
     monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
     # Leave the autouse ``_stub_download_pdfs`` in place so the new per-paper
     # PPT gate sees every paper as downloadable.
+    return captured
 
 
 def test_cli_runs_end_to_end(tmp_path: Path, patched_pipeline, capsys):
@@ -248,28 +260,16 @@ def test_cli_rejects_doi_identifier_until_resolver_lands(tmp_path):
     assert code == 2
 
 
-def test_cli_source_default_is_multi_source(tmp_path, monkeypatch, sample_papers):
+def test_cli_source_default_is_multi_source(tmp_path, patched_pipeline):
     """When --source is omitted, run_search must be invoked across the
     DEFAULT_SOURCES mix, not just arxiv."""
     from thesisagents.core.constants import DEFAULT_SOURCES
-
-    captured: dict[str, Query] = {}
-
-    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
-        captured["query"] = query
-        return PaperCollection(query=query, papers=tuple(sample_papers))
-
-    async def fake_shutdown() -> None:
-        return None
-
-    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
-    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
 
     code = cli_module.main(
         ["--query", "x", "--out", str(tmp_path), "--export", "bib"]
     )
     assert code == 0
-    assert captured["query"].sources == DEFAULT_SOURCES
+    assert patched_pipeline["query"].sources == DEFAULT_SOURCES
 
 
 def test_cli_list_sources(capsys):
@@ -293,53 +293,30 @@ def test_cli_list_exports(capsys):
     assert "pptx" in out
 
 
-def test_cli_exclude_source_prunes_default_mix(tmp_path, monkeypatch, sample_papers):
+def test_cli_exclude_source_prunes_default_mix(tmp_path, patched_pipeline):
     """--exclude-source subtracts from the resolved mix; the no-VPN path drops
     only ieee and keeps every other default source."""
     from thesisagents.core.constants import DEFAULT_SOURCES
-
-    captured: dict[str, Query] = {}
-
-    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:  # NOSONAR async stub
-        captured["query"] = query
-        return PaperCollection(query=query, papers=tuple(sample_papers))
-
-    async def fake_shutdown() -> None:  # NOSONAR async stub
-        return None
-
-    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
-    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
 
     code = cli_module.main(
         ["--query", "x", "--out", str(tmp_path), "--export", "bib",
          "--exclude-source", "ieee"]
     )
     assert code == 0
-    assert "ieee" not in captured["query"].sources
+    assert "ieee" not in patched_pipeline["query"].sources
     expected = tuple(s for s in DEFAULT_SOURCES if s != "ieee")
-    assert captured["query"].sources == expected
+    assert patched_pipeline["query"].sources == expected
 
 
-def test_cli_min_citations_flows_into_query(tmp_path, monkeypatch, sample_papers):
+def test_cli_min_citations_flows_into_query(tmp_path, patched_pipeline):
     """--min-citations is parsed and passed through to the Query (it was
     previously unreachable from the CLI)."""
-    captured: dict[str, Query] = {}
-
-    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:  # NOSONAR async stub
-        captured["query"] = query
-        return PaperCollection(query=query, papers=tuple(sample_papers))
-
-    async def fake_shutdown() -> None:  # NOSONAR async stub
-        return None
-
-    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
-    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
     code = cli_module.main(
         ["--query", "x", "--out", str(tmp_path), "--export", "bib",
          "--min-citations", "50"]
     )
     assert code == 0
-    assert captured["query"].min_citations == 50
+    assert patched_pipeline["query"].min_citations == 50
 
 
 def test_cli_exclude_unknown_source_errors(tmp_path):
@@ -359,33 +336,21 @@ def test_cli_exclude_all_sources_errors(tmp_path):
         )
 
 
-def test_cli_top_tier_filter_off_by_default(tmp_path, monkeypatch, sample_papers):
+def test_cli_top_tier_filter_off_by_default(tmp_path, patched_pipeline):
     """top_tier_only is OFF by default (broader coverage including IEEE / ACM
     workshops); --top-tier-only flips it on."""
-    captured: dict[str, Query] = {}
-
-    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
-        captured["query"] = query
-        return PaperCollection(query=query, papers=tuple(sample_papers))
-
-    async def fake_shutdown() -> None:
-        return None
-
-    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
-    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
-
     code = cli_module.main(
         ["--query", "x", "--out", str(tmp_path), "--export", "bib"]
     )
     assert code == 0
-    assert captured["query"].top_tier_only is False
+    assert patched_pipeline["query"].top_tier_only is False
 
-    captured.clear()
+    patched_pipeline.clear()
     code = cli_module.main(
         ["--query", "x", "--top-tier-only", "--out", str(tmp_path), "--export", "bib"]
     )
     assert code == 0
-    assert captured["query"].top_tier_only is True
+    assert patched_pipeline["query"].top_tier_only is True
 
 
 def test_cli_default_triggers_pdf_download(tmp_path, monkeypatch, sample_papers):
