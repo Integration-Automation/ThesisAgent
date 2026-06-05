@@ -31,6 +31,12 @@ from thesisagents.utils.logging import get_logger
 
 _LOG = get_logger(__name__)
 
+# Cap on simultaneous per-paper enrichment tasks. Each task fetches a PDF over
+# HTTPS and then calls the Anthropic API; without a cap a 25-paper search would
+# fire 25 concurrent API calls (an easy 429 from Anthropic) plus 25 concurrent
+# PDF downloads. 4 keeps throughput high while staying under typical API limits.
+_ENRICH_CONCURRENCY = 4
+
 
 async def run_search(
     query: Query, *, resolve_oa: bool = True
@@ -60,12 +66,29 @@ async def run_search(
     for source_papers in results:
         flat.extend(source_papers)
     unique = dedupe(flat)
-    ordered = rank(unique)
+    ordered = rank(unique, keywords=query.keywords)
     if query.top_tier_only:
         before = len(ordered)
         ordered = [paper for paper in ordered if is_top_tier(paper)]
         _LOG.info(
             "top-tier filter kept %d / %d papers", len(ordered), before
+        )
+    if query.min_citations is not None:
+        # Apply min_citations across EVERY source here, not just the one source
+        # (semantic_scholar) that supports it as an API parameter. Papers whose
+        # source doesn't report a citation count (citation_count is None — e.g.
+        # dblp / doaj / hal / arxiv) are KEPT: an unknown count must not be
+        # treated as zero and silently dropped.
+        before = len(ordered)
+        ordered = [
+            paper
+            for paper in ordered
+            if paper.citation_count is None
+            or paper.citation_count >= query.min_citations
+        ]
+        _LOG.info(
+            "min-citations(>=%d) filter kept %d / %d papers (unknown counts kept)",
+            query.min_citations, len(ordered), before,
         )
     collection = PaperCollection(
         query=query, papers=tuple(ordered[: query.max_results])
@@ -140,16 +163,29 @@ async def enrich_collection(
     *,
     language: str = "en",
     model: str | None = None,
+    concurrency: int = _ENRICH_CONCURRENCY,
 ) -> PaperCollection:
     """Download each paper's PDF, summarise it with an LLM, attach the result.
 
     Papers without a ``pdf_url`` or whose PDF can't be fetched / parsed pass
     through unchanged — the exporter then falls back to the abstract-based
-    deck. Each enrichment runs in its own asyncio task so total wall-clock
-    is roughly ``max(per-paper time)`` rather than the sum.
+    deck. Enrichments run concurrently but a semaphore caps how many run at
+    once (``concurrency``, default ``_ENRICH_CONCURRENCY``) so a large
+    collection doesn't fire one Anthropic API call + one PDF download per paper
+    all at once and trip the API's rate limit. Total wall-clock is roughly
+    ``ceil(n / concurrency) * per-paper time``.
+
+    Example: ``enrich_collection(coll, concurrency=2)`` processes at most two
+    papers in flight at a time.
     """
+    sem = asyncio.Semaphore(max(1, concurrency))
+
+    async def _bounded(paper: Paper) -> Paper:
+        async with sem:
+            return await _enrich_one(paper, language=language, model=model)
+
     enriched_papers = await asyncio.gather(
-        *(_enrich_one(paper, language=language, model=model) for paper in collection.papers)
+        *(_bounded(paper) for paper in collection.papers)
     )
     return PaperCollection(query=collection.query, papers=tuple(enriched_papers))
 
@@ -179,7 +215,7 @@ async def _enrich_one(
         summary = await asyncio.to_thread(
             summarise_paper, paper, pdf, language=language, model=model
         )
-    except (ThesisAgentsError, Exception) as err:  # noqa: BLE001  # API client raises various types
+    except Exception as err:  # noqa: BLE001  # anthropic client raises various, incl. ThesisAgentsError
         _LOG.warning("summarisation failed for %s: %s", paper.bibtex_key(), err)
         return paper
     if summary.is_empty():

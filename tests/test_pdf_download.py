@@ -340,3 +340,28 @@ async def test_cookies_only_attach_to_matching_host(
     cookie_header = transport.request_headers[0].get("cookie", "")
     assert "SECRET" not in cookie_header
     assert "do-not-leak" not in cookie_header
+
+
+async def test_download_pdfs_caps_concurrency(tmp_path: Path, monkeypatch):
+    """A semaphore bounds simultaneous downloads so a big collection doesn't
+    hammer a single publisher CDN with one request per paper at once."""
+    import asyncio
+
+    active = 0
+    peak = 0
+
+    async def fake_download_one(paper, pdf_dir):
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        await asyncio.sleep(0.01)
+        active -= 1
+        return pdf_download_module.PdfDownloadResult(
+            paper_key=paper.source_id, path=None, skipped_reason=None
+        )
+
+    monkeypatch.setattr(pdf_download_module, "_download_one", fake_download_one)
+    papers = [_paper(source_id=str(i), pdf_url="https://e/p.pdf") for i in range(8)]
+    results = await download_pdfs(_collection(*papers), tmp_path, concurrency=3)
+    assert len(results) == 8
+    assert 1 <= peak <= 3  # never more than the cap in flight at once

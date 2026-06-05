@@ -33,6 +33,13 @@ _PDF_SUBDIR: str = "pdfs"
 _MAX_PDF_BYTES: int = 50_000_000
 _MAX_FILENAME_LENGTH: int = 80
 
+#: Cap on simultaneously-downloading PDFs. Each per-source client already has
+#: its own token bucket, but several sources can hand back PDF URLs on the SAME
+#: publisher CDN (dl.acm.org, link.springer.com, …) under different source
+#: clients — bypassing any single bucket. A global cap keeps that burst from
+#: looking like a scrape and risking an IP block. 4 keeps the stage brisk.
+_DOWNLOAD_CONCURRENCY: int = 4
+
 #: Real browser User-Agent — many publisher CDNs (Elsevier, IEEE Xplore,
 #: Springer) return 403 to non-browser UAs even for open-access PDFs.
 _BROWSER_UA = (
@@ -52,17 +59,29 @@ class PdfDownloadResult:
 
 
 async def download_pdfs(
-    collection: PaperCollection, out_dir: str | Path
+    collection: PaperCollection,
+    out_dir: str | Path,
+    *,
+    concurrency: int = _DOWNLOAD_CONCURRENCY,
 ) -> list[PdfDownloadResult]:
     """Download every paper's PDF into ``{out_dir}/pdfs/``.
 
     Returns a result per paper so callers can summarise failures. Papers
-    without a ``pdf_url`` are skipped with reason ``no_pdf_url``.
+    without a ``pdf_url`` are skipped with reason ``no_pdf_url``. A semaphore
+    caps how many downloads run at once (``concurrency``, default
+    ``_DOWNLOAD_CONCURRENCY``) so a large collection doesn't hammer a single
+    publisher CDN with one request per paper simultaneously.
     """
     root = ensure_export_dir(out_dir)
     pdf_dir = ensure_export_dir(root / _PDF_SUBDIR)
+    sem = asyncio.Semaphore(max(1, concurrency))
+
+    async def _bounded(paper: Paper) -> PdfDownloadResult:
+        async with sem:
+            return await _download_one(paper, pdf_dir)
+
     results = await asyncio.gather(
-        *(_download_one(paper, pdf_dir) for paper in collection.papers)
+        *(_bounded(paper) for paper in collection.papers)
     )
     return list(results)
 

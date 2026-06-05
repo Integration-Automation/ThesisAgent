@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field, replace
 from typing import Any
 
@@ -11,6 +12,19 @@ from thesisagents.core.constants import (
     DEFAULT_PAGE_SIZE,
     MAX_RESULTS_PER_SOURCE,
 )
+
+_TITLE_NOISE_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _canon_title(title: str) -> str:
+    """Canonical title form for dedup hashing: lowercase with every
+    non-alphanumeric run (punctuation, whitespace) stripped.
+
+    ``"Attention Is All You Need"``, ``"Attention is all you need."`` and
+    ``"Attention—Is All You Need"`` all map to ``"attentionisallyouneed"``,
+    so cross-source punctuation/spacing noise collapses into one dedup key.
+    """
+    return _TITLE_NOISE_RE.sub("", title.lower())
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,13 +163,23 @@ class Paper:
         Why: Google Scholar and Semantic Scholar may return the same paper with
         different source-side IDs. DOI is best; arXiv ID next; otherwise hash
         title + first-author + year.
+
+        Each key component is *normalised* so cosmetic cross-source differences
+        don't split one paper into two records:
+
+        * arXiv IDs drop the version suffix — ``2401.00001v1`` and
+          ``2401.00001v2`` are the same paper (a revision), so they collapse.
+        * Title hashes strip punctuation and whitespace via
+          :func:`_canon_title`, so ``"Attention Is All You Need"`` and
+          ``"Attention is all you need."`` produce the same key.
         """
         if self.doi:
             return f"doi:{self.doi.lower()}"
         if self.arxiv_id:
-            return f"arxiv:{self.arxiv_id.lower()}"
-        first_author = self.authors[0].lower() if self.authors else ""
-        seed = f"{self.title.strip().lower()}|{first_author}|{self.year or ''}"
+            arxiv = re.sub(r"v\d+$", "", self.arxiv_id.strip().lower())
+            return f"arxiv:{arxiv}"
+        first_author = self.authors[0].strip().lower() if self.authors else ""
+        seed = f"{_canon_title(self.title)}|{first_author}|{self.year or ''}"
         digest = hashlib.sha256(seed.encode("utf-8"), usedforsecurity=False).hexdigest()
         return f"hash:{digest[:16]}"
 

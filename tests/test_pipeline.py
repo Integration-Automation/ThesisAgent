@@ -268,3 +268,57 @@ async def test_run_search_top_tier_only_default_false(monkeypatch):
     collection = await pipeline_module.run_search(query)
     assert len(collection.papers) == 1
     assert collection.papers[0].title == "Low paper"
+
+
+async def test_run_search_min_citations_filters_all_sources(monkeypatch):
+    """min_citations is enforced in the pipeline for every source (not only
+    semantic_scholar). Papers with an unknown (None) citation count are kept."""
+    def _cited(source_id, count):
+        return Paper(
+            source="arxiv", source_id=source_id, title=source_id, authors=(),
+            year=2024, venue=None, abstract="",
+            url=f"https://example.com/{source_id}", citation_count=count,
+        )
+
+    high = _cited("high", 100)
+    low = _cited("low", 5)
+    unknown = _cited("unknown", None)
+    pool = {"arxiv": _make_fetcher("arxiv", [high, low, unknown])}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(
+        keywords="x", sources=("arxiv",), max_results=10, min_citations=50
+    )
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+    ids = {p.source_id for p in collection.papers}
+    assert "high" in ids          # 100 >= 50
+    assert "unknown" in ids        # unknown count kept, not dropped
+    assert "low" not in ids        # 5 < 50 filtered out
+
+
+async def test_enrich_collection_caps_concurrency(monkeypatch):
+    """A semaphore bounds how many per-paper enrichments run at once, so a big
+    collection doesn't fire one Anthropic call + one PDF download per paper."""
+    import asyncio
+
+    from thesisagents.core.models import PaperCollection
+
+    active = 0
+    peak = 0
+
+    async def fake_enrich_one(paper, *, language, model):
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        await asyncio.sleep(0.01)
+        active -= 1
+        return paper
+
+    monkeypatch.setattr(pipeline_module, "_enrich_one", fake_enrich_one)
+    papers = tuple(_paper("arxiv", str(i), f"t{i}") for i in range(8))
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("arxiv",), max_results=8),
+        papers=papers,
+    )
+    out = await pipeline_module.enrich_collection(collection, concurrency=3)
+    assert len(out.papers) == 8
+    assert 1 <= peak <= 3  # never more than the cap in flight at once
