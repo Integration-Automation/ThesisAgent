@@ -393,7 +393,7 @@ S3_7_BLOCK = [
      + " max_findings_per_file 並注入 focused prompt 片段、REFACTOR 放大"
      + " budget 並注入等價檢查 hint。安全失敗方向：解析失敗 → UNKNOWN → 走"
      + "標準 pipeline。本機制屬框架設計貢獻；其分類正確率與品質提升本論文"
-     + "未予評估。"),
+     + "未予評估。"),  # NOSONAR repeated CJK prose phrase in a one-shot insert script; a constant adds no value
     ("Heading 3", "3.7.9  Reproducibility / 評論一致性訊號"),
     (None,
      "多數 backend 並未透過統一 API 暴露穩定之 per-token logprob。框架提"
