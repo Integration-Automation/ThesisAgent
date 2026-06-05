@@ -66,7 +66,7 @@ def _content_rpr(paragraph):
 def _rebuild_paragraph_text(paragraph, new_text: str) -> None:
     rpr_template = _content_rpr(paragraph)
     p_elem = paragraph._p
-    for r in list(p_elem.findall(qn("w:r"))):
+    for r in p_elem.findall(qn("w:r")):
         p_elem.remove(r)
     new_r = OxmlElement("w:r")
     if rpr_template is not None:
@@ -75,7 +75,7 @@ def _rebuild_paragraph_text(paragraph, new_text: str) -> None:
     t.text = new_text
     t.set(qn("xml:space"), "preserve")
     new_r.append(t)
-    pPr = p_elem.find(qn("w:pPr"))
+    pPr = p_elem.find(qn("w:pPr"))  # NOSONAR OOXML WordprocessingML identifier (pPr/rPr/rFonts); lowercasing loses schema meaning
     if pPr is not None:
         pPr.addnext(new_r)
     else:

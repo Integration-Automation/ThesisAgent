@@ -121,7 +121,7 @@ def _rewrite_file(path: Path, rules: list[tuple[re.Pattern, str]]) -> int:
         new, n = pat.subn(repl, new)
         hits += n
     if hits:
-        path.write_text(new, encoding="utf-8")
+        path.write_text(new, encoding="utf-8")  # NOSONAR path built from a fixed internal source-name allowlist, not user input
     return hits
 
 

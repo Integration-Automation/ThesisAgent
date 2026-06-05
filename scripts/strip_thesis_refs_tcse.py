@@ -87,7 +87,7 @@ def _substring_replace(paragraph, old: str, new: str) -> bool:
     rpr_template = _content_rpr(paragraph)
     new_text = text.replace(old, new, 1)
     p_elem = paragraph._p
-    for r in list(p_elem.findall(qn("w:r"))):
+    for r in p_elem.findall(qn("w:r")):
         p_elem.remove(r)
     new_r = OxmlElement("w:r")
     if rpr_template is not None:
@@ -96,7 +96,7 @@ def _substring_replace(paragraph, old: str, new: str) -> bool:
     t.text = new_text
     t.set(qn("xml:space"), "preserve")
     new_r.append(t)
-    pPr = p_elem.find(qn("w:pPr"))
+    pPr = p_elem.find(qn("w:pPr"))  # NOSONAR OOXML WordprocessingML identifier (pPr/rPr/rFonts); lowercasing loses schema meaning
     if pPr is not None:
         pPr.addnext(new_r)
     else:

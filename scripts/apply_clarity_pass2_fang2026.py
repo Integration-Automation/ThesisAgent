@@ -205,7 +205,7 @@ def _iter_text_frames(slide):
             yield shape.text_frame
 
 
-def apply_edit(slide, find_text: str, replace_text: str) -> str:
+def apply_edit(slide, find_text: str, replace_text: str) -> str:  # NOSONAR one-shot anchor-driven rewrite script; branchy by design (cf. ruff C901 scripts exemption)
     # Idempotency check.
     for tf in _iter_text_frames(slide):
         for para in tf.paragraphs:

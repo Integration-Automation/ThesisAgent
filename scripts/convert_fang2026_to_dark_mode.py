@@ -42,7 +42,7 @@ _BANNED_RED = RGBColor(0xC0, 0x39, 0x2B)
 _SANCTIONED_DARK_TEAL = RGBColor(0x2D, 0xD4, 0xBF)
 
 
-def _iter_text_runs(prs):
+def _iter_text_runs(prs):  # NOSONAR one-shot anchor-driven rewrite script; branchy by design (cf. ruff C901 scripts exemption)
     for slide in prs.slides:
         for shape in slide.shapes:
             if shape.has_table:

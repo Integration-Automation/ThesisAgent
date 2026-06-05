@@ -103,7 +103,7 @@ def _rewrite_paragraph_as_single_run(para, new_text: str) -> None:
     p_elem.append(new_r)
 
 
-def apply_edit(slide, find_text: str, replace_text: str) -> str:
+def apply_edit(slide, find_text: str, replace_text: str) -> str:  # NOSONAR one-shot anchor-driven rewrite script; branchy by design (cf. ruff C901 scripts exemption)
     full_text = "\n".join(
         p.text for sh in slide.shapes
         if sh.has_text_frame

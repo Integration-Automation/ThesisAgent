@@ -85,7 +85,7 @@ EDITS: list[tuple[int, str, str, str]] = [
 ]
 
 
-def apply_edit(slide, find_text: str, replace_text: str) -> str:
+def apply_edit(slide, find_text: str, replace_text: str) -> str:  # NOSONAR one-shot anchor-driven rewrite script; branchy by design (cf. ruff C901 scripts exemption)
     """Find the first run containing ``find_text`` and replace it.
 
     Returns ``"ok"``, ``"skip"`` (replacement already present, idempotency),

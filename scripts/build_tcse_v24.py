@@ -57,8 +57,8 @@ LAT_FONT = "Times New Roman"
 def _make_run(text: str, sz: int, bold: bool):
     """Build a <w:r> with the four-slot font set + size (half-points: 10pt→20)."""
     r = OxmlElement("w:r")
-    rPr = OxmlElement("w:rPr")
-    rFonts = OxmlElement("w:rFonts")
+    rPr = OxmlElement("w:rPr")  # NOSONAR OOXML WordprocessingML identifier (pPr/rPr/rFonts); lowercasing loses schema meaning
+    rFonts = OxmlElement("w:rFonts")  # NOSONAR OOXML WordprocessingML identifier (pPr/rPr/rFonts); lowercasing loses schema meaning
     rFonts.set(qn("w:ascii"), LAT_FONT)
     rFonts.set(qn("w:hAnsi"), LAT_FONT)
     rFonts.set(qn("w:cs"), LAT_FONT)
@@ -68,7 +68,7 @@ def _make_run(text: str, sz: int, bold: bool):
         rPr.append(OxmlElement("w:b"))
     for tag in ("w:sz", "w:szCs"):
         e = OxmlElement(tag)
-        e.set(qn("w:val"), str(sz))
+        e.set(qn("w:val"), str(sz))  # NOSONAR OOXML/Word style literal; a constant adds no value in this one-shot script
         rPr.append(e)
     r.append(rPr)
     t = OxmlElement("w:t")
