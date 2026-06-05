@@ -353,61 +353,33 @@ def test_cli_top_tier_filter_off_by_default(tmp_path, patched_pipeline):
     assert patched_pipeline["query"].top_tier_only is True
 
 
-def test_cli_default_triggers_pdf_download(tmp_path, monkeypatch, sample_papers):
+def test_cli_default_triggers_pdf_download(tmp_path, monkeypatch, patched_pipeline):
     """Default flag set should invoke download_pdfs; --no-pdf disables it."""
     calls: list[str] = []
 
-    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
-        return PaperCollection(query=query, papers=tuple(sample_papers))
-
-    async def fake_shutdown() -> None:
-        return None
-
-    async def fake_download(_collection, _out_dir):
+    async def fake_download(_collection, _out_dir):  # NOSONAR async stub
         calls.append("called")
         return []
 
-    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
-    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
     monkeypatch.setattr(cli_module, "download_pdfs", fake_download)
-
     code = cli_module.main(
-        [
-            "--query", "x",
-            "--source", "arxiv",
-            "--out", str(tmp_path),
-            "--export", "bib",
-        ]
+        ["--query", "x", "--source", "arxiv", "--out", str(tmp_path), "--export", "bib"]
     )
     assert code == 0
     assert calls == ["called"]
 
 
-def test_cli_no_pdf_flag_skips_download(tmp_path, monkeypatch, sample_papers):
+def test_cli_no_pdf_flag_skips_download(tmp_path, monkeypatch, patched_pipeline):
     calls: list[str] = []
 
-    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
-        return PaperCollection(query=query, papers=tuple(sample_papers))
-
-    async def fake_shutdown() -> None:
-        return None
-
-    async def fake_download(_collection, _out_dir):
+    async def fake_download(_collection, _out_dir):  # NOSONAR async stub
         calls.append("called")
         return []
 
-    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
-    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
     monkeypatch.setattr(cli_module, "download_pdfs", fake_download)
-
     code = cli_module.main(
-        [
-            "--query", "x",
-            "--source", "arxiv",
-            "--no-pdf",
-            "--out", str(tmp_path),
-            "--export", "bib",
-        ]
+        ["--query", "x", "--source", "arxiv", "--no-pdf",
+         "--out", str(tmp_path), "--export", "bib"]
     )
     assert code == 0
     assert calls == []
@@ -734,21 +706,9 @@ def _stub_enrich_collection(monkeypatch) -> list[str]:
     return calls
 
 
-def _fake_search_with_papers(monkeypatch, sample_papers):
-    async def fake_run_search(query, **_kwargs):
-        return PaperCollection(query=query, papers=tuple(sample_papers))
-
-    async def fake_shutdown():
-        return None
-
-    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
-    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
-
-
-def test_cli_auto_enriches_when_api_key_set(tmp_path, monkeypatch, sample_papers):
+def test_cli_auto_enriches_when_api_key_set(tmp_path, monkeypatch, patched_pipeline):
     """ANTHROPIC_API_KEY in env + no --lightweight = auto-enrich fires."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    _fake_search_with_papers(monkeypatch, sample_papers)
     calls = _stub_enrich_collection(monkeypatch)
     code = cli_module.main(
         ["--query", "x", "--source", "arxiv", "--out", str(tmp_path), "--export", "bib"]
@@ -757,10 +717,9 @@ def test_cli_auto_enriches_when_api_key_set(tmp_path, monkeypatch, sample_papers
     assert calls == ["called"]
 
 
-def test_cli_lightweight_skips_auto_enrich(tmp_path, monkeypatch, sample_papers):
+def test_cli_lightweight_skips_auto_enrich(tmp_path, monkeypatch, patched_pipeline):
     """--lightweight wins over the auto-enrich default."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    _fake_search_with_papers(monkeypatch, sample_papers)
     calls = _stub_enrich_collection(monkeypatch)
     code = cli_module.main(
         [
@@ -773,10 +732,9 @@ def test_cli_lightweight_skips_auto_enrich(tmp_path, monkeypatch, sample_papers)
     assert calls == []
 
 
-def test_cli_no_key_does_not_auto_enrich(tmp_path, monkeypatch, sample_papers):
+def test_cli_no_key_does_not_auto_enrich(tmp_path, monkeypatch, patched_pipeline):
     """No ANTHROPIC_API_KEY → no Anthropic call, lightweight deck."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    _fake_search_with_papers(monkeypatch, sample_papers)
     calls = _stub_enrich_collection(monkeypatch)
     code = cli_module.main(
         ["--query", "x", "--source", "arxiv", "--out", str(tmp_path), "--export", "bib"]
@@ -785,11 +743,10 @@ def test_cli_no_key_does_not_auto_enrich(tmp_path, monkeypatch, sample_papers):
     assert calls == []
 
 
-def test_cli_explicit_enrich_still_works(tmp_path, monkeypatch, sample_papers):
+def test_cli_explicit_enrich_still_works(tmp_path, monkeypatch, patched_pipeline):
     """--enrich runs even without a key in env (the explicit path used to
     error inside the API client; here we only check the CLI dispatch)."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    _fake_search_with_papers(monkeypatch, sample_papers)
     calls = _stub_enrich_collection(monkeypatch)
     code = cli_module.main(
         [
