@@ -250,16 +250,14 @@ jobs:
           pip install nuitka
 
       - name: Compile with Nuitka
-        # All 11 source plugins are force-included because they're
-        # imported dynamically by name at runtime (see
-        # thesisagents/fetchers/base.py::load_fetcher). The plugins
-        # live under sources/<name>/ and are NOT installed as Python
-        # packages, so we prepend sources/ to PYTHONPATH to make them
-        # importable during the build. At runtime the app does the
-        # equivalent sys.path injection itself.
-        #
-        # The sources/ directory ALSO ships as data so the runtime can
-        # read the unmodified .py files for its own sys.path lookup.
+        # The source plugins are imported dynamically by name at runtime
+        # (see thesisagents/fetchers/base.py::load_fetcher), so Nuitka's
+        # static analysis can't see them. A single
+        # --include-package=thesisagents force-includes every sub-module
+        # of the package, including all of thesisagents.sources.*. Since
+        # the 2026-05 migration the plugins live INSIDE the package
+        # (thesisagents/sources/), so there is no per-source flag list,
+        # no sources/ data dir, and no PYTHONPATH=sources to set.
         #
         # python-pptx imports as `pptx` (PyPI name -> module name
         # mismatch is normal); use the module name here.
@@ -284,8 +282,6 @@ jobs:
         # adds startup latency and trips antivirus heuristics on
         # locked-down corporate machines.
         shell: bash
-        env:
-          PYTHONPATH: sources
         run: |
           python -m nuitka \
             --standalone \
@@ -293,17 +289,6 @@ jobs:
             --output-filename=thesisagents.exe \
             --windows-icon-from-ico=assets/icon.ico \
             --include-package=thesisagents \
-            --include-package=arxiv \
-            --include-package=semantic_scholar \
-            --include-package=openalex \
-            --include-package=pubmed \
-            --include-package=acm \
-            --include-package=ieee \
-            --include-package=scholar \
-            --include-package=dblp \
-            --include-package=crossref \
-            --include-package=openaire \
-            --include-package=springer \
             --enable-plugin=pyside6 \
             --nofollow-import-to=pymupdf \
             --nofollow-import-to=uvicorn \
@@ -314,7 +299,6 @@ jobs:
             --nofollow-import-to=tornado \
             --lto=no \
             --jobs=2 \
-            --include-data-dir=./sources=sources \
             --include-package-data=pptx \
             --include-package-data=openpyxl \
             --assume-yes-for-downloads \
