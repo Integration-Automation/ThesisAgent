@@ -1,18 +1,19 @@
-# AutoPaperToPPT
+# ThesisAgents
 
-[![CI](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/ci.yml/badge.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/ci.yml)
-[![Release](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/release.yml)
-[![PyPI](https://img.shields.io/pypi/v/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
-[![Python](https://img.shields.io/pypi/pyversions/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
-[![License: MIT](https://img.shields.io/github/license/Integration-Automation/AutoPaperToPPT.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/blob/main/LICENSE)
-[![Docs](https://readthedocs.org/projects/autopapertoppt/badge/?version=latest)](https://autopapertoppt.readthedocs.io/en/latest/)
+[![CI](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/ci.yml/badge.svg)](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/ci.yml)
+[![Release](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/release.yml)
+[![PyPI](https://img.shields.io/pypi/v/thesisagents.svg)](https://pypi.org/project/thesisagents/)
+[![Python](https://img.shields.io/pypi/pyversions/thesisagents.svg)](https://pypi.org/project/thesisagents/)
+[![License: MIT](https://img.shields.io/github/license/Integration-Automation/ThesisAgents.svg)](https://github.com/Integration-Automation/ThesisAgents/blob/main/LICENSE)
+[![Docs](https://readthedocs.org/projects/thesisagents/badge/?version=latest)](https://thesisagents.readthedocs.io/en/latest/)
 
 > **Languages**: **English** · [繁體中文](readmes/README.zh-TW.md) · [简体中文](readmes/README.zh-CN.md) · [日本語](readmes/README.ja.md) · [Español](readmes/README.es.md) · [Français](readmes/README.fr.md) · [Deutsch](readmes/README.de.md) · [한국어](readmes/README.ko.md) · [Português](readmes/README.pt.md) · [Русский](readmes/README.ru.md) · [Italiano](readmes/README.it.md) · [Tiếng Việt](readmes/README.vi.md) · [हिन्दी](readmes/README.hi.md) · [Bahasa Indonesia](readmes/README.id.md)
-> **Documentation**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
+> **Documentation**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
 A keyword-driven paper search assistant that fetches results from arXiv,
 Semantic Scholar, OpenAlex, PubMed, ACM (via Crossref), IEEE Xplore,
-DBLP, generic Crossref, OpenAIRE, Springer Nature, and Google Scholar,
+DBLP, generic Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ,
+HAL, CORE, and Google Scholar,
 normalises them into one record shape, and exports the deduplicated set
 as a **thesis-style PowerPoint deck**, an **Excel workbook**, and a
 **BibTeX file** — all from one CLI call or one MCP tool call. Optionally
@@ -153,16 +154,21 @@ the template for any multi-paper search. The zh-tw companion is at
 
 ## Features
 
-- **Eleven pluggable sources**: `arxiv`, `semantic_scholar`, `openalex`,
+- **Fifteen pluggable sources**: `arxiv`, `semantic_scholar`, `openalex`,
   `pubmed`, `acm` (Crossref-scoped), `dblp`, `crossref` (unscoped),
-  `openaire`, `springer` (needs API key), `ieee` (default-on via visible
-  Chrome; API key adds official Xplore API), `scholar` (default-on via
-  visible Chrome). Each lives in `sources/<name>/` behind a `Fetcher`
+  `openaire`, `springer` (needs API key), `europepmc` (open, no key —
+  life-sciences + preprints + agriculture), `doaj` (open, no key —
+  open-access journals, usually with a direct PDF link), `hal` (open,
+  no key — France's CS / maths / physics archive with full-text PDFs),
+  `core` (needs free API key — largest open-access aggregator, 250M+
+  works), `ieee` (default-on via visible Chrome; API key adds official
+  Xplore API), `scholar` (default-on via visible Chrome). Each lives in
+  `sources/<name>/` behind a `Fetcher`
   adapter. A top-tier-venue whitelist filters results to flagship CS
   conferences/journals plus Nature/Science/PNAS by default; pass
   `--all-venues` to disable.
 - **Single-paper mode**: paste an arXiv ID, arXiv URL, DOI, PMID, or IEEE
-  document URL — AutoPaperToPPT resolves it via the right source and
+  document URL — ThesisAgents resolves it via the right source and
   emits the same export bundle. Useful for paper reading notes and thesis
   defence prep.
 - **Local PDF mode** (`--pdf <path>`): pass one PDF or a directory.
@@ -208,7 +214,7 @@ the template for any multi-paper search. The zh-tw companion is at
   - `.md` — full source / title / abstract list.
   - `.bib` — collision-free citation keys, LaTeX-escaped fields.
   - `.json` — raw payload for downstream tooling.
-- **PPT editing toolkit**: `autopapertoppt.exporters.pptx_edit`
+- **PPT editing toolkit**: `thesisagents.exporters.pptx_edit`
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   works against any deck the exporter produces, plus the equivalent
   `pptx_*` MCP tools so an LLM agent can iterate on a generated deck.
@@ -227,7 +233,7 @@ the template for any multi-paper search. The zh-tw companion is at
   and every paywalled-PDF download (ieeexplore / dl.acm / link.springer
   / sciencedirect / wiley / oup / nature / science / …) run inside a
   real visible Chrome session via `selenium`. The user solves captcha
-  / completes SSO in the live window once; `AUTOPAPERTOPPT_CHROME_PROFILE_DIR`
+  / completes SSO in the live window once; `THESISAGENTS_CHROME_PROFILE_DIR`
   persists the cookies across runs.
 - **LLM-as-agent flow** (`scripts/llm_*.py`): when the LLM in your editor
   wants to drive the browser itself (rather than let `asyncio.gather` do
@@ -256,7 +262,7 @@ the template for any multi-paper search. The zh-tw companion is at
 
 ```powershell
 git clone <repo-url>
-cd AutoPaperToPPT
+cd ThesisAgents
 python -m venv .venv
 .venv\Scripts\Activate.ps1            # Windows PowerShell
 # source .venv/bin/activate           # Linux / macOS
@@ -268,7 +274,7 @@ pip install -e .[dev]
 Search arXiv and export deck + workbook + BibTeX (default for `--query`):
 
 ```powershell
-py -m autopapertoppt --query "diffusion models" --source arxiv --max 10 `
+py -m thesisagents --query "diffusion models" --source arxiv --max 10 `
                       --out .\exports\
 ```
 
@@ -276,7 +282,7 @@ Fetch a single paper by URL — defaults to `.pptx + .bib` (the `.xlsx`
 makes less sense for one row):
 
 ```powershell
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --filename-stem attention `
                       --out .\exports\
 ```
@@ -284,7 +290,7 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 Render the deck in 繁體中文:
 
 ```powershell
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --lang zh-tw --out .\exports\
 ```
 
@@ -292,7 +298,7 @@ LLM-pipeline enrichment (Python calls Anthropic itself — needs API key):
 
 ```powershell
 $env:ANTHROPIC_API_KEY = "sk-ant-..."
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --enrich --lang zh-tw --out .\exports\
 ```
 
@@ -305,7 +311,7 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | `--source` / `-s` | Comma-separated source list. Default `arxiv`. |
 | `--max` / `-n` | Max results per source (1..200). Default 25. |
 | `--year-from` / `--year-to` | Inclusive year filter. |
-| `--export` / `-e` | Formats: any of `pptx,xlsx,md,bib,json`. Default depends on mode (see below). |
+| `--export` / `-e` | Formats: any of `pptx,xlsx,md,bib,json,ris,csv,csl`. Default depends on mode (see below). |
 | `--out` / `-o` | Output directory. Default `./exports`. |
 | `--filename-stem` | Override the generated filename stem. |
 | `--no-abstract` | Omit abstract content from exports. |
@@ -327,20 +333,20 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | Variable | Used by | Purpose |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | `--enrich` | LLM auth. Not needed for the LLM-as-agent path over MCP. |
-| `AUTOPAPERTOPPT_LLM_MODEL` | `--enrich` | Override the default `claude-opus-4-7`. |
-| `AUTOPAPERTOPPT_S2_API_KEY` | Semantic Scholar + OA resolver | Higher rate limit; also used by the OA resolver's S2 `openAccessPdf` step. Free key at <https://www.semanticscholar.org/product/api>. |
-| `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Raises NCBI's anonymous limit (3/s) to 10/s. Optional. |
-| `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex, **Unpaywall** | Polite-pool tag + enables the OA resolver's Unpaywall step (biggest PDF-coverage win for IEEE / ACM / Springer / Elsevier-paywalled papers; typical lift 40-70 pp). |
-| `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (API path) | Official IEEE Xplore API; surfaces `pdf_url` for in-scope papers. |
-| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE is default-ON via visible Chrome.** Set `=1` to opt out (e.g. CI without Chrome). The httpx scrape branch only runs as a fallback when WebRunner is unavailable. |
-| `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref Plus subscriber token (Bearer header). Optional. |
-| `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Required; free key from <https://dev.springernature.com/>. Plugin raises `ConfigError` without it. |
-| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar is default-ON via visible Chrome.** Set `=1` to opt out (Google's ToS forbids automated access — default-on for coverage, opt-out to avoid captcha / IP-block risk). |
-| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO / Google sign-in once; subsequent runs inherit the cookies so IEEE returns paywalled metadata and Scholar serves un-throttled SERPs. |
-| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. Useful for CI / Docker without a Chrome binary; otherwise leave unset. |
-| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step (200M+ institutional / regional OA items). Other OA strategies (Unpaywall, S2, arXiv) still run without it. |
-| `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF downloader | Netscape `cookies.txt`. Off by default. Use only with publishers you have institutional rights to. |
-| `AUTOPAPERTOPPT_LOG_LEVEL` | logger | `INFO` default; `DEBUG` for verbose tracing. |
+| `THESISAGENTS_LLM_MODEL` | `--enrich` | Override the default `claude-opus-4-7`. |
+| `THESISAGENTS_S2_API_KEY` | Semantic Scholar + OA resolver | Higher rate limit; also used by the OA resolver's S2 `openAccessPdf` step. Free key at <https://www.semanticscholar.org/product/api>. |
+| `THESISAGENTS_NCBI_API_KEY` | PubMed | Raises NCBI's anonymous limit (3/s) to 10/s. Optional. |
+| `THESISAGENTS_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex, **Unpaywall** | Polite-pool tag + enables the OA resolver's Unpaywall step (biggest PDF-coverage win for IEEE / ACM / Springer / Elsevier-paywalled papers; typical lift 40-70 pp). |
+| `THESISAGENTS_IEEE_API_KEY` | IEEE (API path) | Official IEEE Xplore API; surfaces `pdf_url` for in-scope papers. |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE is default-ON via visible Chrome.** Set `=1` to opt out (e.g. CI without Chrome). The httpx scrape branch only runs as a fallback when WebRunner is unavailable. |
+| `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref Plus subscriber token (Bearer header). Optional. |
+| `THESISAGENTS_SPRINGER_API_KEY` | Springer | Required; free key from <https://dev.springernature.com/>. Plugin raises `ConfigError` without it. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar is default-ON via visible Chrome.** Set `=1` to opt out (Google's ToS forbids automated access — default-on for coverage, opt-out to avoid captcha / IP-block risk). |
+| `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO / Google sign-in once; subsequent runs inherit the cookies so IEEE returns paywalled metadata and Scholar serves un-throttled SERPs. |
+| `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. Useful for CI / Docker without a Chrome binary; otherwise leave unset. |
+| `THESISAGENTS_CORE_API_KEY` | OA resolver + `core` search source | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk OA-lookup step (200M+ institutional / regional OA items) **and** the `core` search source. Without it, the `core` source is silently skipped and the other OA strategies (Unpaywall, S2, arXiv) still run. |
+| `THESISAGENTS_PDF_COOKIES_FILE` | PDF downloader | Netscape `cookies.txt`. Off by default. Use only with publishers you have institutional rights to. |
+| `THESISAGENTS_LOG_LEVEL` | logger | `INFO` default; `DEBUG` for verbose tracing. |
 
 Defaults: `--query` → `pptx,xlsx,bib`. `--paper` → `pptx,bib`. Always
 overridable with explicit `--export`.
@@ -369,7 +375,7 @@ new query so the LLM can run the flow without pausing for user input.
 Register with Claude Code:
 
 ```powershell
-claude mcp add autopapertoppt -- ".venv\Scripts\python.exe" -m autopapertoppt.mcp
+claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 ```
 
 Or write to your settings file:
@@ -377,9 +383,9 @@ Or write to your settings file:
 ```json
 {
   "mcpServers": {
-    "autopapertoppt": {
+    "thesisagents": {
       "command": ".venv\\Scripts\\python.exe",
-      "args": ["-m", "autopapertoppt.mcp"]
+      "args": ["-m", "thesisagents.mcp"]
     }
   }
 }
@@ -394,7 +400,7 @@ Tools:
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |
-| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `true` — the project's dark-deck post-pass; pass `false` for the printable light variant). |
+| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `true` — the project's dark-deck post-pass; pass `false` for the printable light variant). |
 | `pptx_inspect` | Read slide / shape structure of an existing deck. |
 | `pptx_update_slide` | Replace `title` / `body` / `meta` (by shape name) or arbitrary shapes by index. |
 | `pptx_delete_slide` | Remove a slide and its part relationship. |
@@ -418,11 +424,11 @@ Full reference in [`docs/mcp.md`](docs/mcp.md).
 ## Project layout
 
 ```
-AutoPaperToPPT/
-├── autopapertoppt/                 # main package
+ThesisAgents/
+├── thesisagents/                 # main package
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
-│   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · pptx_edit · i18n
+│   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── mcp/                         # FastMCP server (11 tools)
 │   ├── utils/                       # logging, path safety
@@ -430,7 +436,8 @@ AutoPaperToPPT/
 │   └── __main__.py
 ├── sources/                         # plugin folders: arxiv, semantic_scholar,
 │                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer
+│                                    #   dblp, crossref, openaire, springer,
+│                                    #   europepmc, doaj, hal, core
 ├── tests/                           # pytest suite + recorded fixtures (no live HTTP)
 ├── docs/                            # Sphinx (14 language trees)
 ├── scripts/                         # one-off regen scripts
@@ -442,7 +449,7 @@ AutoPaperToPPT/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r autopapertoppt/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
 ```
 
 The `-c` flag on bandit is required — without it bandit ignores the
@@ -454,8 +461,8 @@ overflow check (see `CLAUDE.md` "Slide Deck Rules").
 A native desktop interface ships behind the `[gui]` extra:
 
 ```powershell
-pip install autopapertoppt[gui]
-autopapertoppt-gui                 # or: autopapertoppt gui
+pip install thesisagents[gui]
+thesisagents-gui                 # or: thesisagents gui
 ```
 
 The window has four tabs — **Search**, **Settings** (persists API keys
@@ -463,7 +470,7 @@ via QSettings), **Enrich** (drives the LLM-as-agent / Python-pipeline
 enrichment over a `collection_ready` signal), and **Deck** (the Light
 mode toggle + slide-cap + max-figures controls flow through to
 `ExportOptions`). The Windows release zip ships the Nuitka-compiled
-bundle with PySide6 included, so `autopapertoppt.exe gui` works
+bundle with PySide6 included, so `thesisagents.exe gui` works
 without a separate Python install.
 **UI ships in all 14 languages** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
@@ -516,9 +523,9 @@ Two GitHub Actions workflows live under `.github/workflows/`:
   3. **`create-draft-release`** — open a *draft* GitHub release at
      tag `v<version>` with auto-generated notes.
   4. **`build-nuitka`** — compile a Nuitka standalone bundle on a
-     Windows runner (entry point: `python -m autopapertoppt` via
+     Windows runner (entry point: `python -m thesisagents` via
      `--python-flag=-m`), smoke-test it, zip the resulting
-     `autopapertoppt.dist/` folder, and attach the zip + a `.sha256`
+     `thesisagents.dist/` folder, and attach the zip + a `.sha256`
      checksum to the draft release. Standalone (not onefile) by
      design: onefile self-extracts to `%TEMP%` on every launch,
      adding startup latency and tripping antivirus heuristics on

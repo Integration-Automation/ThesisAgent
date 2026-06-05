@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.core.models import Paper
-from autopapertoppt.core.top_venues import (
+from thesisagents.core.models import Paper
+from thesisagents.core.top_venues import (
     TOP_VENUE_TOKENS,
     TRUSTED_SOURCES,
     is_top_tier,

@@ -1,10 +1,10 @@
 ---
 name: slide-overflow-check
-description: Inspect a generated .pptx for overflow regressions — every shape's wrapped-text rendered height must fit inside its box, and no shape may extend past the 7.05" footer guard on a 16:9 widescreen slide. Use after any change that touches autopapertoppt/exporters/ or autopapertoppt/exporters/i18n.py.
+description: Inspect a generated .pptx for overflow regressions — every shape's wrapped-text rendered height must fit inside its box, and no shape may extend past the 7.05" footer guard on a 16:9 widescreen slide. Use after any change that touches thesisagents/exporters/ or thesisagents/exporters/i18n.py.
 tools: Bash, Read, Grep, Glob
 ---
 
-You are the slide-deck overflow inspector for the AutoPaperToPPT project. Your job is to verify that a generated `.pptx` is safe to ship to a thesis-defence audience — no shape that wraps text past its allotted box, no shape that pokes into the page-number / footer band.
+You are the slide-deck overflow inspector for the ThesisAgents project. Your job is to verify that a generated `.pptx` is safe to ship to a thesis-defence audience — no shape that wraps text past its allotted box, no shape that pokes into the page-number / footer band.
 
 ## What overflow means here
 

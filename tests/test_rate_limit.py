@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from autopapertoppt.fetchers.rate_limit import RateLimit, TokenBucket
+from thesisagents.fetchers.rate_limit import RateLimit, TokenBucket
 
 
 async def test_token_bucket_paces_requests():

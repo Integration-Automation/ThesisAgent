@@ -42,14 +42,14 @@ Same shape as the PyInstaller doc, just different flags.
    path resolves into the temp unpack directory, so we ship
    `sources/` as a data dir via `--include-data-dir=sources=sources`.
 
-## Build the CLI (`autopapertoppt`)
+## Build the CLI (`thesisagents`)
 
 ```powershell
 python -m nuitka `
   --standalone `
   --onefile `
-  --output-filename=autopapertoppt `
-  --include-package=autopapertoppt `
+  --output-filename=thesisagents `
+  --include-package=thesisagents `
   --include-package=arxiv `
   --include-package=semantic_scholar `
   --include-package=openalex `
@@ -65,26 +65,26 @@ python -m nuitka `
   --include-package-data=python_pptx `
   --include-package-data=openpyxl `
   --assume-yes-for-downloads `
-  autopapertoppt/__main__.py
+  thesisagents/__main__.py
 ```
 
 Linux / macOS use the same command (Nuitka's flag syntax is
 OS-neutral; the `;` separator quirk that PyInstaller has does not
 apply here).
 
-The binary lands at `./autopapertoppt` (or `.exe` on Windows) in the
+The binary lands at `./thesisagents` (or `.exe` on Windows) in the
 working directory. Subsequent rebuilds reuse the cache under
 `./<entrypoint>.build/` so the first build is slow but later builds
 are 2–3 minutes.
 
-## Build the MCP server (`autopapertoppt-mcp`)
+## Build the MCP server (`thesisagents-mcp`)
 
 ```powershell
 python -m nuitka `
   --standalone `
   --onefile `
-  --output-filename=autopapertoppt-mcp `
-  --include-package=autopapertoppt `
+  --output-filename=thesisagents-mcp `
+  --include-package=thesisagents `
   --include-package=arxiv --include-package=semantic_scholar `
   --include-package=openalex --include-package=pubmed `
   --include-package=acm --include-package=ieee `
@@ -93,14 +93,14 @@ python -m nuitka `
   --include-package=springer `
   --include-data-dir=sources=sources `
   --assume-yes-for-downloads `
-  autopapertoppt/mcp/__main__.py
+  thesisagents/mcp/__main__.py
 ```
 
 ## Standalone vs onefile
 
 Nuitka has two modes worth knowing:
 
-- `--standalone` — build a directory (`autopapertoppt.dist/`) that
+- `--standalone` — build a directory (`thesisagents.dist/`) that
   contains the exe plus every DLL/SO it needs. Distribute the whole
   folder. **No unpack delay on launch.** Best for users who can
   install a folder.
@@ -116,7 +116,7 @@ instead.
 ## Verify the executable works
 
 ```powershell
-.\autopapertoppt.exe --query "transformer" --source arxiv --max 3 `
+.\thesisagents.exe --query "transformer" --source arxiv --max 3 `
                      --out .\smoke-nuitka\
 ```
 
@@ -167,7 +167,7 @@ ensure `libxml2-dev` and `libxslt1-dev` are installed.
   with:
     path: |
       ~/.nuitka
-      autopapertoppt.build
+      thesisagents.build
     key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
 ```
 
@@ -202,21 +202,21 @@ jobs:
         with:
           path: |
             ~/.nuitka
-            autopapertoppt.build
+            thesisagents.build
           key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
       - run: |
           python -m nuitka --standalone --onefile \
-            --output-filename=autopapertoppt \
-            --include-package=autopapertoppt \
+            --output-filename=thesisagents \
+            --include-package=thesisagents \
             --include-data-dir=sources=sources \
             --assume-yes-for-downloads \
-            autopapertoppt/__main__.py
+            thesisagents/__main__.py
       - uses: actions/upload-artifact@v4
         with:
-          name: autopapertoppt-${{ matrix.os }}
+          name: thesisagents-${{ matrix.os }}
           path: |
-            autopapertoppt
-            autopapertoppt.exe
+            thesisagents
+            thesisagents.exe
 ```
 
 ## When to pick which

@@ -1,16 +1,16 @@
-"""Move sources/<name>/ → autopapertoppt/sources/<name>/ and rewrite imports.
+"""Move sources/<name>/ → thesisagents/sources/<name>/ and rewrite imports.
 
-Motivation: with the dual-directory layout, ``pip install autopapertoppt``
-ships only the ``autopapertoppt/`` tree — the dynamic loader in
-``autopapertoppt/fetchers/base.py::load_fetcher`` then can't find the
+Motivation: with the dual-directory layout, ``pip install thesisagents``
+ships only the ``thesisagents/`` tree — the dynamic loader in
+``thesisagents/fetchers/base.py::load_fetcher`` then can't find the
 plugins on the install target. Physically relocating the plugins under
-``autopapertoppt/sources/`` makes them part of the installed wheel.
+``thesisagents/sources/`` makes them part of the installed wheel.
 
 What this script does, in order:
 
-  1. ``git mv sources/<name> autopapertoppt/sources/<name>`` (preserves
+  1. ``git mv sources/<name> thesisagents/sources/<name>`` (preserves
      rename detection in git log / blame).
-  2. Creates ``autopapertoppt/sources/__init__.py`` (package marker +
+  2. Creates ``thesisagents/sources/__init__.py`` (package marker +
      short module docstring).
   3. Rewrites intra-source imports in every moved file:
      - ``from <name>.fetcher import X`` → ``from .fetcher import X``
@@ -19,12 +19,12 @@ What this script does, in order:
        ``from .             import webrunner_backend``
   4. Rewrites test-file imports:
      - ``from <name>.<mod> import X`` →
-       ``from autopapertoppt.sources.<name>.<mod> import X``
+       ``from thesisagents.sources.<name>.<mod> import X``
      - ``from <name> import webrunner_backend`` →
-       ``from autopapertoppt.sources.<name> import webrunner_backend``
-  5. Patches ``autopapertoppt/fetchers/base.py`` — drops the sys.path
+       ``from thesisagents.sources.<name> import webrunner_backend``
+  5. Patches ``thesisagents/fetchers/base.py`` — drops the sys.path
      hack, changes ``import_module(name)`` →
-     ``import_module(f"autopapertoppt.sources.{name}")``.
+     ``import_module(f"thesisagents.sources.{name}")``.
   6. Patches ``tests/conftest.py`` — drops the matching sys.path hack.
   7. Deletes the now-empty ``sources/`` directory and any leftover
      ``__pycache__``.
@@ -41,7 +41,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OLD_SOURCES = ROOT / "sources"
-NEW_SOURCES = ROOT / "autopapertoppt" / "sources"
+NEW_SOURCES = ROOT / "thesisagents" / "sources"
 
 SOURCE_NAMES = [
     "acm", "arxiv", "crossref", "dblp", "ieee",
@@ -80,9 +80,9 @@ def step1_move_directories() -> None:
         '"""Built-in source plugins.\n\n'
         "Each subpackage exposes a ``fetcher_class`` attribute pointing at a\n"
         "``Fetcher`` subclass. Plugins are discovered dynamically by\n"
-        "``autopapertoppt.fetchers.base.load_fetcher(name)`` via\n"
-        '``importlib.import_module(f"autopapertoppt.sources.{name}")``.\n\n'
-        "Adding a new source: create ``autopapertoppt/sources/<name>/__init__.py``\n"
+        "``thesisagents.fetchers.base.load_fetcher(name)`` via\n"
+        '``importlib.import_module(f"thesisagents.sources.{name}")``.\n\n'
+        "Adding a new source: create ``thesisagents/sources/<name>/__init__.py``\n"
         "with ``from .fetcher import <Name>Fetcher; fetcher_class = <Name>Fetcher``.\n"
         '"""\n',
         encoding="utf-8",
@@ -150,17 +150,17 @@ def step2_rewrite_intra_source_imports() -> None:
 def step3_rewrite_test_imports() -> None:
     tests_dir = ROOT / "tests"
     name_alt = "|".join(re.escape(n) for n in SOURCE_NAMES)
-    # `from <name>.<mod> import …` → `from autopapertoppt.sources.<name>.<mod> import …`
+    # `from <name>.<mod> import …` → `from thesisagents.sources.<name>.<mod> import …`
     pat_with_mod = re.compile(
         rf"^from ({name_alt})\.(\w+) import", re.MULTILINE
     )
-    # `from <name> import webrunner_backend` → `from autopapertoppt.sources.<name> import webrunner_backend`
+    # `from <name> import webrunner_backend` → `from thesisagents.sources.<name> import webrunner_backend`
     pat_bare = re.compile(rf"^from ({name_alt}) import", re.MULTILINE)
     for py in tests_dir.rglob("*.py"):
         text = py.read_text(encoding="utf-8")
         new = text
-        new, n1 = pat_with_mod.subn(r"from autopapertoppt.sources.\1.\2 import", new)
-        new, n2 = pat_bare.subn(r"from autopapertoppt.sources.\1 import", new)
+        new, n1 = pat_with_mod.subn(r"from thesisagents.sources.\1.\2 import", new)
+        new, n2 = pat_bare.subn(r"from thesisagents.sources.\1 import", new)
         if n1 + n2:
             py.write_text(new, encoding="utf-8")
             print(f"  rewrote {n1+n2} import(s) in {py.relative_to(ROOT)}")
@@ -170,7 +170,7 @@ def step3_rewrite_test_imports() -> None:
 # Step 4 — patch base.py
 # ---------------------------------------------------------------------------
 def step4_patch_base_py() -> None:
-    base_py = ROOT / "autopapertoppt" / "fetchers" / "base.py"
+    base_py = ROOT / "thesisagents" / "fetchers" / "base.py"
     text = base_py.read_text(encoding="utf-8")
 
     # Remove the sys + Path imports if they were added only for the hack.
@@ -195,7 +195,7 @@ def step4_patch_base_py() -> None:
     # Rewrite the import target.
     text = text.replace(
         'module = importlib.import_module(name)',
-        'module = importlib.import_module(f"autopapertoppt.sources.{name}")',
+        'module = importlib.import_module(f"thesisagents.sources.{name}")',
     )
 
     base_py.write_text(text, encoding="utf-8")

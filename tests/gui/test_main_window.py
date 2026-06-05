@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from autopapertoppt.gui.main_window import MainWindow
+from thesisagents.gui.main_window import MainWindow
 
 
 def test_main_window_has_four_tabs(qtbot):
@@ -14,7 +14,7 @@ def test_main_window_has_four_tabs(qtbot):
 def test_main_window_title_is_localised(qtbot):
     window = MainWindow(ui_language="zh-tw")
     qtbot.addWidget(window)
-    assert window.windowTitle() == "AutoPaperToPPT"
+    assert window.windowTitle() == "ThesisAgents"
 
 
 def test_search_tab_exposes_search_page(qtbot):

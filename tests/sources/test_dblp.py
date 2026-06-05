@@ -7,11 +7,11 @@ from pathlib import Path
 import httpx
 import pytest
 
-from autopapertoppt.core.exceptions import ParseError, RateLimitError
-from autopapertoppt.core.models import Query
-from autopapertoppt.fetchers import http as http_module
-from autopapertoppt.sources.dblp.fetcher import DblpFetcher
-from autopapertoppt.sources.dblp.parser import in_year_range, parse_hit
+from thesisagents.core.exceptions import ParseError, RateLimitError
+from thesisagents.core.models import Query
+from thesisagents.fetchers import http as http_module
+from thesisagents.sources.dblp.fetcher import DblpFetcher
+from thesisagents.sources.dblp.parser import in_year_range, parse_hit
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "dblp"
 _FIXTURE_BYTES = (_FIXTURE_DIR / "llm_security.json").read_bytes()
@@ -43,7 +43,7 @@ def _install(monkeypatch, transport):
     async def fake_get_client(_source):
         return httpx.AsyncClient(transport=transport)
 
-    monkeypatch.setattr("autopapertoppt.sources.dblp.fetcher.get_client", fake_get_client)
+    monkeypatch.setattr("thesisagents.sources.dblp.fetcher.get_client", fake_get_client)
 
 
 async def test_search_returns_papers(monkeypatch):

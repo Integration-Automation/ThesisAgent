@@ -1,4 +1,4 @@
-AutoPaperToPPT 사용자 가이드
+ThesisAgents 사용자 가이드
 ============================
 
 키워드 기반 논문 검색 어시스턴트. arXiv, Semantic Scholar, OpenAlex,
@@ -105,7 +105,7 @@ Python **3.12+** 필요.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -121,19 +121,19 @@ Python **3.12+** 필요.
 .. code-block:: bash
 
    # arXiv 검색 → 덱 + 워크북 + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # URL 로 단일 논문 → 덱 + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # 덱을 한국어로 렌더링
-   autopapertoppt --paper 1706.03762 --lang ko --out ./exports/
+   thesisagents --paper 1706.03762 --lang ko --out ./exports/
 
    # Python 파이프라인 enrichment (Anthropic 키 필요)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang ko --out ./exports/
 
 CLI 플래그 전체 표: :doc:`/cli`.

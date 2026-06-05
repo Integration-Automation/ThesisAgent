@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from autopapertoppt.core.exceptions import (
+from tests.sources._mock import MockTransport, install_mock
+from thesisagents.core.exceptions import (
     ConfigError,
     ParseError,
     SourceUnavailableError,
 )
-from autopapertoppt.core.models import Query
-from tests.sources._mock import MockTransport, install_mock
+from thesisagents.core.models import Query
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "scholar"
 
@@ -32,32 +32,32 @@ def _isolate_scholar_env(monkeypatch):
     Also reset the process-level captcha cooldown between tests so a
     previous test's lockout doesn't bleed into the next.
     """
-    monkeypatch.delenv("AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING", raising=False)
-    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
-    import autopapertoppt.sources.scholar.fetcher as scholar_mod
+    monkeypatch.delenv("THESISAGENTS_DISABLE_SCHOLAR_SCRAPING", raising=False)
+    monkeypatch.setenv("THESISAGENTS_DISABLE_WEBRUNNER", "1")
+    import thesisagents.sources.scholar.fetcher as scholar_mod
     scholar_mod._captcha_locked_until = 0.0  # noqa: SLF001
     yield
     scholar_mod._captcha_locked_until = 0.0  # noqa: SLF001
 
 
 def _new_fetcher():
-    from autopapertoppt.sources.scholar.fetcher import ScholarFetcher
+    from thesisagents.sources.scholar.fetcher import ScholarFetcher
 
     return ScholarFetcher()
 
 
 async def test_opt_out_disables_plugin(monkeypatch):
-    """AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1 raises ConfigError so the
+    """THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1 raises ConfigError so the
     pipeline silently skips Scholar for users who explicitly opted out."""
-    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING", "1")
-    from autopapertoppt.sources.scholar.fetcher import ScholarFetcher
+    monkeypatch.setenv("THESISAGENTS_DISABLE_SCHOLAR_SCRAPING", "1")
+    from thesisagents.sources.scholar.fetcher import ScholarFetcher
 
     with pytest.raises(ConfigError):
         ScholarFetcher()
 
 
 def test_captcha_detection_matches_known_markers():
-    from autopapertoppt.sources.scholar.fetcher import _is_captcha_response
+    from thesisagents.sources.scholar.fetcher import _is_captcha_response
 
     # /sorry/ URL is the canonical lockout endpoint.
     assert _is_captcha_response(
@@ -81,8 +81,8 @@ def test_captcha_detection_matches_known_markers():
 
 async def test_captcha_cooldown_engages_after_captcha_response(monkeypatch):
     """After one captcha hit, subsequent calls raise immediately."""
-    import autopapertoppt.sources.scholar.fetcher as scholar_mod
-    from autopapertoppt.core.exceptions import SourceUnavailableError
+    import thesisagents.sources.scholar.fetcher as scholar_mod
+    from thesisagents.core.exceptions import SourceUnavailableError
 
     # Reset the process-level flag in case a prior test set it.
     scholar_mod._captcha_locked_until = 0.0
@@ -119,7 +119,7 @@ async def test_captcha_cooldown_engages_after_captcha_response(monkeypatch):
 
 async def test_search_parses_serp(monkeypatch):
     transport = MockTransport(200, _fixture("serp.html"))
-    install_mock(monkeypatch, "autopapertoppt.sources.scholar.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.scholar.fetcher", transport)
     papers = await _new_fetcher().search(
         Query(keywords="attention", sources=("scholar",), max_results=10)
     )
@@ -133,7 +133,7 @@ async def test_search_parses_serp(monkeypatch):
 
 async def test_search_captcha_raises_unavailable(monkeypatch):
     transport = MockTransport(200, _fixture("captcha.html"))
-    install_mock(monkeypatch, "autopapertoppt.sources.scholar.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.scholar.fetcher", transport)
     with pytest.raises(SourceUnavailableError):
         await _new_fetcher().search(
             Query(keywords="x", sources=("scholar",), max_results=1)
@@ -142,14 +142,14 @@ async def test_search_captcha_raises_unavailable(monkeypatch):
 
 async def test_fetch_by_id_unsupported(monkeypatch):
     transport = MockTransport(200, "")
-    install_mock(monkeypatch, "autopapertoppt.sources.scholar.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.scholar.fetcher", transport)
     with pytest.raises(ParseError):
         await _new_fetcher().fetch_by_id("anything")
 
 
 async def test_search_403_surfaces_unavailable(monkeypatch):
     transport = MockTransport(403, "Forbidden")
-    install_mock(monkeypatch, "autopapertoppt.sources.scholar.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.scholar.fetcher", transport)
     with pytest.raises(SourceUnavailableError):
         await _new_fetcher().search(
             Query(keywords="x", sources=("scholar",), max_results=1)
@@ -159,7 +159,7 @@ async def test_search_403_surfaces_unavailable(monkeypatch):
 async def test_webrunner_backend_used_when_available(monkeypatch):
     """When je_web_runner is importable, search() uses the real-browser
     backend instead of httpx."""
-    from autopapertoppt.sources.scholar import webrunner_backend
+    from thesisagents.sources.scholar import webrunner_backend
 
     monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
 
@@ -179,7 +179,7 @@ async def test_webrunner_backend_used_when_available(monkeypatch):
 
 async def test_webrunner_failure_falls_back_to_httpx(monkeypatch):
     """If WebRunner crashes (Chrome unavailable etc.), the httpx path runs."""
-    from autopapertoppt.sources.scholar import webrunner_backend
+    from thesisagents.sources.scholar import webrunner_backend
 
     monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
 
@@ -189,7 +189,7 @@ async def test_webrunner_failure_falls_back_to_httpx(monkeypatch):
     monkeypatch.setattr(webrunner_backend, "fetch_serp_html", explode)
 
     transport = MockTransport(200, _fixture("serp.html"))
-    install_mock(monkeypatch, "autopapertoppt.sources.scholar.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.scholar.fetcher", transport)
     papers = await _new_fetcher().search(
         Query(keywords="attention", sources=("scholar",), max_results=1)
     )
@@ -198,19 +198,19 @@ async def test_webrunner_failure_falls_back_to_httpx(monkeypatch):
 
 
 def test_webrunner_is_available_respects_disable_env(monkeypatch):
-    """AUTOPAPERTOPPT_DISABLE_WEBRUNNER=1 forces the httpx path even
+    """THESISAGENTS_DISABLE_WEBRUNNER=1 forces the httpx path even
     when je_web_runner is installed."""
-    from autopapertoppt.sources.scholar import webrunner_backend
+    from thesisagents.sources.scholar import webrunner_backend
 
-    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
+    monkeypatch.setenv("THESISAGENTS_DISABLE_WEBRUNNER", "1")
     assert webrunner_backend.is_available() is False
 
 
 def test_chrome_args_always_visible_no_profile(monkeypatch):
     """Always-visible policy: no --headless flag ever, profile only when set."""
-    from autopapertoppt.sources.scholar import webrunner_backend
+    from thesisagents.sources.scholar import webrunner_backend
 
-    monkeypatch.delenv("AUTOPAPERTOPPT_CHROME_PROFILE_DIR", raising=False)
+    monkeypatch.delenv("THESISAGENTS_CHROME_PROFILE_DIR", raising=False)
     args = webrunner_backend._build_chrome_args()  # noqa: SLF001
     assert "--headless=new" not in args
     assert not any(a.startswith("--headless") for a in args)
@@ -219,9 +219,9 @@ def test_chrome_args_always_visible_no_profile(monkeypatch):
 
 
 def test_chrome_args_with_profile_dir_passes_user_data_dir(monkeypatch):
-    from autopapertoppt.sources.scholar import webrunner_backend
+    from thesisagents.sources.scholar import webrunner_backend
 
-    monkeypatch.setenv("AUTOPAPERTOPPT_CHROME_PROFILE_DIR", "D:/scholar-profile")
+    monkeypatch.setenv("THESISAGENTS_CHROME_PROFILE_DIR", "D:/scholar-profile")
     args = webrunner_backend._build_chrome_args()  # noqa: SLF001
     assert "--user-data-dir=D:/scholar-profile" in args
     # Still no headless flag — visible is mandatory.

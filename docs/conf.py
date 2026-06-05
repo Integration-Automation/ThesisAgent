@@ -1,8 +1,8 @@
-# -- Sphinx configuration for AutoPaperToPPT documentation --
+# -- Sphinx configuration for ThesisAgents documentation --
 
-project = "AutoPaperToPPT"
-author = "AutoPaperToPPT Contributors"
-copyright = "2025-2026, AutoPaperToPPT Contributors"  # noqa: A001
+project = "ThesisAgents"
+author = "ThesisAgents Contributors"
+copyright = "2025-2026, ThesisAgents Contributors"  # noqa: A001
 release = "0.1"
 
 extensions = [

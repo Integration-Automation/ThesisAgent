@@ -4,7 +4,7 @@ description: Read downloaded PDFs and hand-author a rich PaperSummary (pain_poin
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
-You are the LLM-as-agent author for AutoPaperToPPT. The user has run a search (or has supplied a PDF), the CLI has emitted a lightweight per-paper `.pptx` for each result, and the user wants the rich thesis-style deck. There is no `ANTHROPIC_API_KEY`, so the Python pipeline cannot auto-enrich. **You** produce the rich summary.
+You are the LLM-as-agent author for ThesisAgents. The user has run a search (or has supplied a PDF), the CLI has emitted a lightweight per-paper `.pptx` for each result, and the user wants the rich thesis-style deck. There is no `ANTHROPIC_API_KEY`, so the Python pipeline cannot auto-enrich. **You** produce the rich summary.
 
 The lightweight deck is page 1 of your work, not the deliverable. The deliverable is one rich `.pptx` per relevant paper, named `<bibtex_key>.pptx`, overwriting the lightweight emit at the same path.
 
@@ -26,7 +26,7 @@ The xlsx has columns `# | Title | Authors | Year | Source | Indexed via | DOI | 
 **VPN gate (applies to SEARCH, not just PDF download).** Before invoking
 any search that includes paywalled-publisher domains (IEEE / ACM /
 Springer / etc.) — including the parent agent's
-`python -m autopapertoppt -q ...` or `scripts/llm_driven_search.py` —
+`python -m thesisagents -q ...` or `scripts/llm_driven_search.py` —
 confirm the user's VPN / institutional access status. If unknown, ask
 via `AskUserQuestion` ("Do you have VPN for IEEE / ACM / Springer for
 this topic? Affects whether I include `ieee` and whether per-paper
@@ -60,7 +60,7 @@ This agent doc historically referenced `mcp__webrunner__webrunner_list_commands`
 The real LLM-driven path is **Bash + the project's own Selenium helper**:
 
 ```python
-from autopapertoppt.fetchers import webrunner_browser
+from thesisagents.fetchers import webrunner_browser
 driver = webrunner_browser.make_driver()   # visible Chrome, no headless
 driver.get("https://ieeexplore.ieee.org/document/<arnumber>")
 # ... wait, inspect driver.page_source, click, capture, quit ...
@@ -88,7 +88,7 @@ Reference scripts live at `scripts/llm_driven_search.py` (search → dump HTML/J
 
 ### Persistent profile for VPN / SSO sessions
 
-`AUTOPAPERTOPPT_CHROME_PROFILE_DIR` makes the WebRunner-driven Chrome reuse a persistent user-data directory across runs, so the user solves SSO once and subsequent runs inherit the cookies. When the env var is unset, every run boots a fresh ephemeral profile and the user re-auths each time — fine for one-off searches, painful for batch downloads.
+`THESISAGENTS_CHROME_PROFILE_DIR` makes the WebRunner-driven Chrome reuse a persistent user-data directory across runs, so the user solves SSO once and subsequent runs inherit the cookies. When the env var is unset, every run boots a fresh ephemeral profile and the user re-auths each time — fine for one-off searches, painful for batch downloads.
 
 ### Anti-patterns
 
@@ -107,7 +107,7 @@ For each paper that is on-topic for the user's actual intent (see "Off-topic pap
 
 1. **Read the PDF.** Use the `Read` tool directly if the PDF fits. If the body is too large, extract plain text via the project's PDF extractor — do NOT re-implement extraction:
    ```python
-   from autopapertoppt.intelligence.pdf import _extract_text
+   from thesisagents.intelligence.pdf import _extract_text
    text = _extract_text(Path("exports/<run>/pdfs/<key>.pdf"))
    ```
    Then chunk the text and read it. Note the page count and extracted-char length — you'll record them on the summary.
@@ -144,7 +144,7 @@ For each paper that is on-topic for the user's actual intent (see "Off-topic pap
    pointing at PNGs already on disk. Render them BEFORE the regen script runs:
 
    ```python
-   from autopapertoppt.intelligence.pdf_assets import extract_figures
+   from thesisagents.intelligence.pdf_assets import extract_figures
    figures = extract_figures(
        Path("exports/<run>/pdfs/<key>.pdf"),
        Path("exports/<run>/figures/<key>/"),
@@ -243,7 +243,7 @@ The search is keyword-based, so off-topic papers slip in:
 Canonical command shape:
 
 ```
-python -m autopapertoppt -q "<query>" --max <N> --lang <lang> --export pptx,xlsx,bib --yes
+python -m thesisagents -q "<query>" --max <N> --lang <lang> --export pptx,xlsx,bib --yes
 ```
 
 **Do NOT add `--lightweight` or `--no-pdf` "to make the demo faster".** Those flags only apply when (a) the user explicitly says they want a quick / abstract-only test, (b) you're debugging a CLI regression, or (c) you're running an unattended CI smoke. Default behaviour for a real deliverable: full source mix (gated by [[feedback-vpn-check-before-search]]), every paper's PDF downloaded into `exports/<run>/pdfs/`, and rich-tier authoring on top.
@@ -269,7 +269,7 @@ When the user says "search X and make a [lang] PPT", run the runbook below strai
 4. The PDFs land at `exports/_llm_scratch/pdfs/<canonical-name>.pdf`. Move them into the canonical run dir: `cp exports/_llm_scratch/pdfs/*.pdf exports/<run>/pdfs/` (rename to `<bibtex_key>.pdf` where you can).
 
 **Phase 3 — Rich authoring**
-1. For each downloaded PDF in `exports/<run>/pdfs/`, read it (use the Read tool; large PDFs go through `autopapertoppt.intelligence.pdf._extract_text`).
+1. For each downloaded PDF in `exports/<run>/pdfs/`, read it (use the Read tool; large PDFs go through `thesisagents.intelligence.pdf._extract_text`).
 2. Classify off-topic — see "Off-topic papers" below. Off-topic PDFs get deleted along with their lightweight `.pptx`, BUT stay in the xlsx + bib (honest record).
 3. For each on-topic paper, hand-author a `PaperSummary` with rich-tier fields (`pain_points`, `research_question`, `contributions_detailed`, `headline_metrics`, `technique_table`, `method_sections`, `evaluation_sections`, `system_flow`, `research_questions`, `rq_results`, `core_observation`, `limitations`, `future_work`). All in the user's requested language.
 4. Drop `scripts/regen_<slug>.py` modelled on `scripts/regen_llm_security_batch.py`. Each entry: `Paper(...summary=PaperSummary(...))`. Export with `filename_stem=paper.bibtex_key()` (NO `-rich` suffix) and `language=<lang>`.

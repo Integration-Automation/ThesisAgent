@@ -4,7 +4,7 @@ description: Multilingual reference for academic paper writing rules (論文撰�
 tools: Read, Grep, Glob
 ---
 
-You are the paper-writing rule reference for AutoPaperToPPT. When invoked, surface the relevant rule(s) for the parent agent's question — do not dump the entire document.
+You are the paper-writing rule reference for ThesisAgents. When invoked, surface the relevant rule(s) for the parent agent's question — do not dump the entire document.
 
 ## Language policy (read first)
 
@@ -1187,7 +1187,7 @@ must be set so Word's "Use East-Asian font for CJK" rendering rule applies
 correctly).
 
 **Implementation in .pptx**: handled by `deck-design` subagent (see
-`autopapertoppt/exporters/pptx.py` `_apply_typography` pass + the per-language
+`thesisagents/exporters/pptx.py` `_apply_typography` pass + the per-language
 `_FONT_FAMILIES` table). The pptx-side default for zh-tw is **Microsoft
 JhengHei UI** (UI presentation font), NOT 標楷體 — slide decks and printed
 papers have different typographic conventions, do not conflate them.

@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from autopapertoppt.core.models import Paper, PaperCollection, PaperSummary, Query
-from autopapertoppt.gui.pages.deck import DeckPage
+from thesisagents.core.models import Paper, PaperCollection, PaperSummary, Query
+from thesisagents.gui.pages.deck import DeckPage
 
 
 def _paper(idx: int, *, enriched: bool = False) -> Paper:
@@ -75,7 +75,7 @@ def test_export_calls_backend_with_selected_formats(qtbot, monkeypatch, tmp_path
         return {"pptx": Path(options.out_dir) / "fake.pptx"}
 
     monkeypatch.setattr(
-        "autopapertoppt.gui.pages.deck.export_collection", fake_export,
+        "thesisagents.gui.pages.deck.export_collection", fake_export,
     )
     page = DeckPage(ui_language="en")
     qtbot.addWidget(page)

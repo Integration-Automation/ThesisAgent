@@ -8,5 +8,5 @@ from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("PySide6", reason="install autopapertoppt[gui]")
-pytest.importorskip("pytestqt", reason="install autopapertoppt[dev]")
+pytest.importorskip("PySide6", reason="install thesisagents[gui]")
+pytest.importorskip("pytestqt", reason="install thesisagents[dev]")

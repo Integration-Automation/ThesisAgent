@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from autopapertoppt.core.models import Paper, PaperCollection, Query
-from autopapertoppt.gui.models.papers_table_model import PapersTableModel
+from thesisagents.core.models import Paper, PaperCollection, Query
+from thesisagents.gui.models.papers_table_model import PapersTableModel
 
 
 def _paper(**overrides) -> Paper:

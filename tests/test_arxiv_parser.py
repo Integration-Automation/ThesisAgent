@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from autopapertoppt.sources.arxiv.parser import parse_atom_feed
+from thesisagents.sources.arxiv.parser import parse_atom_feed
 
 
 def test_parse_recorded_attention_feed(arxiv_fixture_path):
@@ -38,7 +38,7 @@ def test_parse_empty_feed():
 def test_parse_invalid_xml_raises():
     import pytest
 
-    from autopapertoppt.core.exceptions import ParseError
+    from thesisagents.core.exceptions import ParseError
 
     with pytest.raises(ParseError):
         parse_atom_feed("<not><valid>")

@@ -1,4 +1,4 @@
-AutoPaperToPPT उपयोगकर्ता मार्गदर्शिका
+ThesisAgents उपयोगकर्ता मार्गदर्शिका
 =======================================
 
 कीवर्ड-संचालित शोध-पत्र खोज सहायक। arXiv, Semantic Scholar, OpenAlex,
@@ -106,7 +106,7 @@ Python **3.12+** आवश्यक।
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -122,19 +122,19 @@ Python **3.12+** आवश्यक।
 .. code-block:: bash
 
    # arXiv खोजें → डेक + वर्कबुक + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # URL से एक शोध-पत्र → डेक + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # डेक हिंदी में रेंडर करें
-   autopapertoppt --paper 1706.03762 --lang hi --out ./exports/
+   thesisagents --paper 1706.03762 --lang hi --out ./exports/
 
    # Python pipeline समृद्धि (Anthropic key आवश्यक)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang hi --out ./exports/
 
 CLI फ़्लैग की पूरी तालिका: :doc:`/cli`।

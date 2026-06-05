@@ -1,0 +1,60 @@
+{
+  "total": 3,
+  "page": 1,
+  "pageSize": 10,
+  "results": [
+    {
+      "id": "doaj0000001",
+      "bibjson": {
+        "title": "Open Defences Against Prompt Injection",
+        "year": "2025",
+        "month": "4",
+        "author": [
+          {"name": "Andersson, Alice"},
+          {"name": "Bertelsen, Bob"}
+        ],
+        "abstract": "An open-access study of prompt-injection defences for LLMs.",
+        "journal": {"title": "Journal of Open Security Research", "publisher": "OA Press"},
+        "identifier": [
+          {"type": "pissn", "id": "1234-5678"},
+          {"type": "doi", "id": "10.5555/joa.2025.0001"}
+        ],
+        "link": [
+          {"type": "fulltext", "url": "https://example.org/article/1", "content_type": "text/html"},
+          {"type": "fulltext", "url": "https://example.org/article/1.pdf", "content_type": "application/pdf"}
+        ]
+      }
+    },
+    {
+      "id": "doaj0000002",
+      "bibjson": {
+        "title": "Survey of Model Watermarking",
+        "year": "2025",
+        "author": [
+          {"name": "Chen, Carol"}
+        ],
+        "abstract": "A survey of watermarking schemes.",
+        "journal": {"title": "Open AI Review"},
+        "identifier": [
+          {"type": "doi", "id": "10.5555/joa.2025.0002"}
+        ],
+        "link": [
+          {"type": "fulltext", "url": "https://example.org/article/2", "content_type": "text/html"}
+        ]
+      }
+    },
+    {
+      "id": "doaj0000003",
+      "bibjson": {
+        "title": "Legacy Robustness Methods",
+        "year": "2018",
+        "author": [
+          {"name": "Doe, Dan"}
+        ],
+        "abstract": "Older robustness methods.",
+        "journal": {"title": "Old Open Journal"},
+        "identifier": []
+      }
+    }
+  ]
+}

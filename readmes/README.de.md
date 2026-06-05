@@ -1,14 +1,14 @@
-# AutoPaperToPPT
+# ThesisAgents
 
-[![CI](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/ci.yml/badge.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/ci.yml)
-[![Release](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/release.yml)
-[![PyPI](https://img.shields.io/pypi/v/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
-[![Python](https://img.shields.io/pypi/pyversions/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
-[![License: MIT](https://img.shields.io/github/license/Integration-Automation/AutoPaperToPPT.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/blob/main/LICENSE)
-[![Docs](https://readthedocs.org/projects/autopapertoppt/badge/?version=latest)](https://autopapertoppt.readthedocs.io/en/latest/)
+[![CI](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/ci.yml/badge.svg)](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/ci.yml)
+[![Release](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/release.yml)
+[![PyPI](https://img.shields.io/pypi/v/thesisagents.svg)](https://pypi.org/project/thesisagents/)
+[![Python](https://img.shields.io/pypi/pyversions/thesisagents.svg)](https://pypi.org/project/thesisagents/)
+[![License: MIT](https://img.shields.io/github/license/Integration-Automation/ThesisAgents.svg)](https://github.com/Integration-Automation/ThesisAgents/blob/main/LICENSE)
+[![Docs](https://readthedocs.org/projects/thesisagents/badge/?version=latest)](https://thesisagents.readthedocs.io/en/latest/)
 
 > **Sprachen**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · **Deutsch** · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
-> **Dokumentation**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
+> **Dokumentation**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
 Stichwortgesteuerter Paper-Such-Assistent, der Ergebnisse von arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (via Crossref), IEEE Xplore, DBLP, generischem Crossref, OpenAIRE, Springer Nature und Google Scholar abruft, in ein einheitliches Datensatzformat normalisiert und die deduplizierte Ergebnismenge als **Paper-Review PowerPoint im Thesis-Stil**, **Excel-Arbeitsmappe** und **BibTeX-Datei** exportiert — alles aus einem CLI-Aufruf oder einem MCP-Tool-Aufruf. Kann optional jedes Paper anreichern, indem es das PDF liest und eine strukturierte Zusammenfassung erstellt, entweder im Kontext (LLM-as-agent-Pfad) oder über die Anthropic-API (Python-Pipeline-Pfad).
 
@@ -77,7 +77,7 @@ Zwei in der Produktion so entdeckte Fabrikationen: falsche AAAI-Ausgabe (`v39i23
 ## Funktionen
 
 - **Elf einsteckbare Quellen**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (ACM-beschränkt via Crossref), `dblp`, `crossref` (generisch), `openaire`, `springer` (API-Schlüssel erforderlich), `ieee` (API-Schlüssel oder Scraping-Opt-In), `scholar` (Scraping-Opt-In). Jede liegt unter `sources/<name>/` hinter einem `Fetcher`-Adapter. Eine Whitelist erstklassiger Venues filtert die Ergebnisse standardmäßig auf führende CS-Konferenzen/Zeitschriften plus Nature/Science/PNAS; `--all-venues` deaktiviert sie.
-- **Einzel-Paper-Modus**: fügen Sie eine arXiv-ID, arXiv-URL, DOI, PMID oder eine IEEE-Dokument-URL ein — AutoPaperToPPT löst sie über die passende Quelle auf und erzeugt dasselbe Export-Bundle. Nützlich für Leseskizzen und Verteidigungsvorbereitung.
+- **Einzel-Paper-Modus**: fügen Sie eine arXiv-ID, arXiv-URL, DOI, PMID oder eine IEEE-Dokument-URL ein — ThesisAgents löst sie über die passende Quelle auf und erzeugt dasselbe Export-Bundle. Nützlich für Leseskizzen und Verteidigungsvorbereitung.
 - **Lokaler PDF-Modus** (`--pdf <pfad>`): geben Sie ein PDF oder ein Verzeichnis an. Ein heuristischer Extractor zieht **Titel, Autoren, Jahr, arXiv-ID, DOI und das echte Abstract** direkt aus dem Vorspann jedes PDFs (verankert am expliziten `Abstract` / `ABSTRACT` / `摘要`-Header, nicht an einem blinden Präfix). `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` überschreiben bei einem Einzel-PDF-Aufruf; im Verzeichnismodus gewinnt die per-File-Extraktion, sodass jedes Paper ein eigenes Deck mit seinem BibTeX-Schlüssel als Namen erhält.
 - **Fünf Exporter**:
   - `.pptx` — 16:9-Breitformat, mit Seitenzahlen, drei Rendering-Stufen (light nur-Abstract · enriched-flat · **Thesis-Stil** mit Pain-Point-Quadranten, KPI-Callouts, Technik-Vergleichstabellen, RQ-spezifischen Ergebnistabellen, Beitragszusammenfassung, Kernbeobachtung, Einschränkungen & Künftige Arbeiten, Q&A, Literatur). Alle Template-Strings sind in **14 Sprachen** i18n: English, 繁體中文, 简体中文, 日本語, Español, Français, Deutsch, 한국어, Português, Русский, Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia.
@@ -87,7 +87,7 @@ Zwei in der Produktion so entdeckte Fabrikationen: falsche AAAI-Ausgabe (`v39i23
   - `.json` — Rohpayload für nachgelagertes Tooling.
   - **Gestaltete visuelle Identität** (nicht der Calibri-auf-Weiß-Standardlook): pro Sprache eigene Typografie (Inter für Latin; Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI für CJK + Hindi), programmatische Akzentgeometrie (oberer Akzentbalken auf jeder Inhaltsfolie + linker Band auf der Titelfolie), akademisch gestaltete Tabellen (schwarzes Standardgitter entfernt, Navy-Headerlinie, weiche Zeilentrenner, alternierende Zeilenfärbung, vertikal mittige Ausrichtung, erste Spalte fett). 5-Farb-Palette (navy / teal / grey / light / white) — **rote Textfarbe ist verboten**; nutze **fett + teal `#0E7490`** zur Hervorhebung.
   - **Dark Mode ist Standard**. Wird mit heller Palette gebaut, anschließend tauscht ein Post-Build-Pass die RGB-Werte von Text + Füllung + Zellenrand in die dunkle Variante (Folienhintergrund `#12151B`, Body-Text `#E5E7EB`, hellerer Teal-Akzent `#2DD4BF`). Optimal für OLED-Beamer und dunkle Räume. Für Druck oder helle Räume: `--light-mode` (CLI), Häkchen bei **Light mode** im Deck-Tab der GUI entfernen, oder `ExportOptions(dark_mode=False)` in Python.
-- **PPT-Edit-Toolkit**: `autopapertoppt.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) arbeitet mit jedem vom Exporter erzeugten Deck, plus die äquivalenten `pptx_*` MCP-Tools, mit denen ein LLM-Agent über ein erzeugtes Deck iterieren kann.
+- **PPT-Edit-Toolkit**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) arbeitet mit jedem vom Exporter erzeugten Deck, plus die äquivalenten `pptx_*` MCP-Tools, mit denen ein LLM-Agent über ein erzeugtes Deck iterieren kann.
 - **MCP-Server**: 11 Tools — `list_sources` (Discovery), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export` und die fünf `pptx_*`-Edit-Tools. Erlaubt jedem MCP-fähigen LLM (Claude Code, Claude Desktop, Cursor, …) den gesamten Workflow zu steuern.
 - **Zwei Anreicherungspfade**, um über das Abstract hinaus zu einem echten Thesis-Stil-Deck zu kommen:
   - **LLM-as-agent (kein API-Schlüssel)** — das aufrufende LLM liest den PDF-Text via `fetch_pdf_text`, schreibt eine strukturierte Zusammenfassung im Kontext und übergibt sie an `export`.
@@ -98,7 +98,7 @@ Zwei in der Produktion so entdeckte Fabrikationen: falsche AAAI-Ausgabe (`v39i23
 
 ```powershell
 git clone <repo-url>
-cd AutoPaperToPPT
+cd ThesisAgents
 python -m venv .venv
 .venv\Scripts\Activate.ps1            # Windows PowerShell
 # source .venv/bin/activate           # Linux / macOS
@@ -110,14 +110,14 @@ pip install -e .[dev]
 arXiv durchsuchen und Deck + Workbook + BibTeX exportieren (Default für `--query`):
 
 ```powershell
-py -m autopapertoppt --query "diffusion models" --source arxiv --max 10 `
+py -m thesisagents --query "diffusion models" --source arxiv --max 10 `
                       --out .\exports\
 ```
 
 Einzelnes Paper per URL holen — Default `.pptx + .bib` (ein einzeiliges `.xlsx` ist wenig sinnvoll):
 
 ```powershell
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --filename-stem attention `
                       --out .\exports\
 ```
@@ -125,7 +125,7 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 Deck auf Deutsch rendern:
 
 ```powershell
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --lang de --out .\exports\
 ```
 
@@ -133,7 +133,7 @@ LLM-Pipeline-Anreicherung (Python ruft Anthropic — API-Schlüssel erforderlich
 
 ```powershell
 $env:ANTHROPIC_API_KEY = "sk-ant-..."
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --enrich --lang de --out .\exports\
 ```
 
@@ -165,20 +165,20 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | Variable | Verwendet von | Zweck |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | `--enrich` | LLM-Auth. Nicht nötig für den LLM-as-agent-Pfad über MCP. |
-| `AUTOPAPERTOPPT_LLM_MODEL` | `--enrich` | Überschreibt das Standardmodell `claude-opus-4-7`. |
-| `AUTOPAPERTOPPT_S2_API_KEY` | Semantic Scholar | Höheres Rate-Limit. Optional. |
-| `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | Erhöht NCBIs anonymes Limit (3/s) auf 10/s. Optional. |
-| `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Setzt Anfragen in Crossrefs „Polite Pool". |
-| `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE (API-Pfad) | Offizielle IEEE-Xplore-API; legt `pdf_url` für abgedeckte Paper offen. |
-| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE (Scraping-Pfad) | `=1` aktiviert Scraping. Nicht nötig, wenn der API-Schlüssel gesetzt ist. |
-| `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref-Plus-Abonnement-Token (Bearer-Header). Optional. |
-| `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | Pflicht; kostenloser Schlüssel über <https://dev.springernature.com/>. Ohne Schlüssel wird das Plugin still übersprungen. |
-| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
-| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
-| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` aktiviert Scraping. Default aus — Scholars ToS verbietet Scraping. |
-| `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF-Downloader | `cookies.txt` im Netscape-Format. Default aus. Nur bei Verlagen verwenden, für die Sie institutionelle Zugriffsrechte haben. |
-| `AUTOPAPERTOPPT_LOG_LEVEL` | Logger | `INFO` als Default; `DEBUG` für verbose Traces. |
+| `THESISAGENTS_LLM_MODEL` | `--enrich` | Überschreibt das Standardmodell `claude-opus-4-7`. |
+| `THESISAGENTS_S2_API_KEY` | Semantic Scholar | Höheres Rate-Limit. Optional. |
+| `THESISAGENTS_NCBI_API_KEY` | PubMed | Erhöht NCBIs anonymes Limit (3/s) auf 10/s. Optional. |
+| `THESISAGENTS_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Setzt Anfragen in Crossrefs „Polite Pool". |
+| `THESISAGENTS_IEEE_API_KEY` | IEEE (API-Pfad) | Offizielle IEEE-Xplore-API; legt `pdf_url` für abgedeckte Paper offen. |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE (Scraping-Pfad) | `=1` aktiviert Scraping. Nicht nötig, wenn der API-Schlüssel gesetzt ist. |
+| `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref-Plus-Abonnement-Token (Bearer-Header). Optional. |
+| `THESISAGENTS_SPRINGER_API_KEY` | Springer | Pflicht; kostenloser Schlüssel über <https://dev.springernature.com/>. Ohne Schlüssel wird das Plugin still übersprungen. |
+| `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` aktiviert Scraping. Default aus — Scholars ToS verbietet Scraping. |
+| `THESISAGENTS_PDF_COOKIES_FILE` | PDF-Downloader | `cookies.txt` im Netscape-Format. Default aus. Nur bei Verlagen verwenden, für die Sie institutionelle Zugriffsrechte haben. |
+| `THESISAGENTS_LOG_LEVEL` | Logger | `INFO` als Default; `DEBUG` für verbose Traces. |
 
 Defaults: `--query` → `pptx,xlsx,bib`. `--paper` → `pptx,bib`. Immer mit explizitem `--export` überschreibbar.
 
@@ -187,7 +187,7 @@ Defaults: `--query` → `pptx,xlsx,bib`. `--paper` → `pptx,bib`. Immer mit exp
 In Claude Code registrieren:
 
 ```powershell
-claude mcp add autopapertoppt -- ".venv\Scripts\python.exe" -m autopapertoppt.mcp
+claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 ```
 
 Oder die Settings-Datei manuell bearbeiten:
@@ -195,9 +195,9 @@ Oder die Settings-Datei manuell bearbeiten:
 ```json
 {
   "mcpServers": {
-    "autopapertoppt": {
+    "thesisagents": {
       "command": ".venv\\Scripts\\python.exe",
-      "args": ["-m", "autopapertoppt.mcp"]
+      "args": ["-m", "thesisagents.mcp"]
     }
   }
 }
@@ -236,8 +236,8 @@ Vollständige Referenz in [`docs/mcp.md`](docs/mcp.md).
 ## Projektstruktur
 
 ```
-AutoPaperToPPT/
-├── autopapertoppt/                 # Hauptpaket
+ThesisAgents/
+├── thesisagents/                 # Hauptpaket
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket Rate-Limit
 │   ├── exporters/                   # pptx (Thesis-Stil) · xlsx · bib · md · json · pptx_edit · i18n
@@ -260,7 +260,7 @@ AutoPaperToPPT/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r autopapertoppt/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
 ```
 
 Das `-c`-Flag bei bandit ist obligatorisch — ohne es ignoriert bandit die Skip-Konfiguration des Projekts. Beim Bearbeiten des pptx-Exporters auch eine Overflow-Prüfung laufen lassen (siehe `CLAUDE.md` „Slide Deck Rules").

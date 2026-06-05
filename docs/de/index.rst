@@ -1,4 +1,4 @@
-AutoPaperToPPT Benutzerhandbuch
+ThesisAgents Benutzerhandbuch
 ================================
 
 Stichwortgesteuerter Paper-Such-Assistent. Ruft Ergebnisse von arXiv,
@@ -112,7 +112,7 @@ Python **3.12+** erforderlich.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -128,19 +128,19 @@ Schnellstart
 .. code-block:: bash
 
    # arXiv durchsuchen → Deck + Workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Einzelnes Paper per URL → Deck + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Deck auf Deutsch rendern
-   autopapertoppt --paper 1706.03762 --lang de --out ./exports/
+   thesisagents --paper 1706.03762 --lang de --out ./exports/
 
    # Python-Pipeline-Anreicherung (Anthropic-Schlüssel erforderlich)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang de --out ./exports/
 
 Vollständige CLI-Flag-Tabelle: :doc:`/cli`.

@@ -1,10 +1,10 @@
 ---
 name: deck-design
-description: Visual-design rules for the pptx exporter — typography (per-language font stack), brand palette, accent geometry, master-slide expectations, and the anti-patterns that make a deck obviously machine-generated (default Calibri, blank backgrounds, centered-only covers, text-only walls). Use BEFORE any change to `autopapertoppt/exporters/pptx.py`'s visual surface, when authoring a new template file under `assets/template/`, or when investigating a "this deck looks AI-made" complaint. Read-only audit + design reference.
+description: Visual-design rules for the pptx exporter — typography (per-language font stack), brand palette, accent geometry, master-slide expectations, and the anti-patterns that make a deck obviously machine-generated (default Calibri, blank backgrounds, centered-only covers, text-only walls). Use BEFORE any change to `thesisagents/exporters/pptx.py`'s visual surface, when authoring a new template file under `assets/template/`, or when investigating a "this deck looks AI-made" complaint. Read-only audit + design reference.
 tools: Read, Grep, Glob, Bash
 ---
 
-You are the deck-design auditor for AutoPaperToPPT. The sibling
+You are the deck-design auditor for ThesisAgents. The sibling
 `slide-deck-rules` subagent owns *geometry / overflow* (15-pt headers,
 7.05" footer guard, `_BULLETS_PER_CELL_MAX`, etc.); this agent owns
 *visual identity* — typography, colour, accent shapes, master-slide
@@ -32,7 +32,7 @@ The exporter MUST set a typeface on every run.
 | ru | Inter (Latin) | — | Inter has full Cyrillic |
 | hi | Inter (Latin) | Nirmala UI | Win Devanagari default |
 
-Implementation pattern (`autopapertoppt/exporters/pptx.py`):
+Implementation pattern (`thesisagents/exporters/pptx.py`):
 - Module-level `_FONT_FAMILIES: dict[str, tuple[str, str | None]]` keyed
   by language → `(latin_family, east_asian_family)`.
 - `_apply_typography(prs, language)` post-build pass walks every slide,
@@ -241,7 +241,7 @@ Combined with a small font + default vertical-top alignment, the result
 looks like a quick screenshot from Excel, not a thesis-defence visual.
 
 The exporter ships an academic-style replacement in
-`autopapertoppt/exporters/pptx.py::_add_table` → `_style_table_cell`.
+`thesisagents/exporters/pptx.py::_add_table` → `_style_table_cell`.
 The rules:
 
 | Element | Spec |

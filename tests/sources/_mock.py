@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import httpx
 
-from autopapertoppt.fetchers import http as http_module
+from thesisagents.fetchers import http as http_module
 
 
 class MockTransport(httpx.AsyncBaseTransport):

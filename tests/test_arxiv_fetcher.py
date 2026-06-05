@@ -7,14 +7,14 @@ from pathlib import Path
 import httpx
 import pytest
 
-from autopapertoppt.core.exceptions import (
+from thesisagents.core.exceptions import (
     ParseError,
     RateLimitError,
     SourceUnavailableError,
 )
-from autopapertoppt.core.models import Query
-from autopapertoppt.fetchers import http as http_module
-from autopapertoppt.sources.arxiv.fetcher import ArxivFetcher
+from thesisagents.core.models import Query
+from thesisagents.fetchers import http as http_module
+from thesisagents.sources.arxiv.fetcher import ArxivFetcher
 
 
 @pytest.fixture()
@@ -51,7 +51,7 @@ async def _install_mock(monkeypatch, transport: _MockTransport) -> None:
         return httpx.AsyncClient(transport=transport, base_url="https://export.arxiv.org")
 
     monkeypatch.setattr(
-        "autopapertoppt.sources.arxiv.fetcher.get_client",
+        "thesisagents.sources.arxiv.fetcher.get_client",
         fake_get_client,
     )
 

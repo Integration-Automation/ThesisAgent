@@ -1,6 +1,6 @@
 ---
 name: language-vocabulary-check
-description: Audit localised content (READMEs, deck strings, regen-script PaperSummary fields, i18n keys, agent docs) for **language-correct vocabulary** — not just orthography. Catches Simplified-Chinese-only loan words that happen to use traditional characters (內存, 魯棒性, 視頻, 屏幕), Simplified hanzi leaking into Traditional surfaces, and language-confusion patterns across the project's 14 supported locales. Use after any change that touches `readmes/`, `docs/<lang>/`, `scripts/regen_*<lang>*.py`, `autopapertoppt/gui/i18n.py`, or any text rendered in `.pptx` / `.md` / `.xlsx`. Read-only.
+description: Audit localised content (READMEs, deck strings, regen-script PaperSummary fields, i18n keys, agent docs) for **language-correct vocabulary** — not just orthography. Catches Simplified-Chinese-only loan words that happen to use traditional characters (內存, 魯棒性, 視頻, 屏幕), Simplified hanzi leaking into Traditional surfaces, and language-confusion patterns across the project's 14 supported locales. Use after any change that touches `readmes/`, `docs/<lang>/`, `scripts/regen_*<lang>*.py`, `thesisagents/gui/i18n.py`, or any text rendered in `.pptx` / `.md` / `.xlsx`. Read-only.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -564,7 +564,7 @@ human pass during translation:
    scripts/regen_*<lang>*.py
    readmes/README.<LANG>.md            # zh-TW / zh-CN use mixed case
    docs/<lang>/index.rst
-   autopapertoppt/gui/i18n.py          # per-key check
+   thesisagents/gui/i18n.py          # per-key check
    ```
 
 2. **Grep for the anti-pattern set.** Reuse the regexes in
@@ -598,7 +598,7 @@ human pass during translation:
   actually S-only — `自動化` is fine in both T and S; over-aggressive
   patterns produce noise.
 - Do NOT translate API names, env var names, or filenames. `cookies`,
-  `pdf_url`, `AUTOPAPERTOPPT_*` stay English regardless of language.
+  `pdf_url`, `THESISAGENTS_*` stay English regardless of language.
 - Do NOT enforce zh-tw vocabulary on zh-cn files (or vice versa). Each
   language has its own anti-pattern set.
 - Do NOT use machine-translation to "fix" lexicon issues — it tends to

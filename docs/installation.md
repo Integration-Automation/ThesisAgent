@@ -1,6 +1,6 @@
 # Installation
 
-AutoPaperToPPT targets **Python 3.12+** on Windows, macOS, and Linux.
+ThesisAgents targets **Python 3.12+** on Windows, macOS, and Linux.
 This page covers every supported install path; pick the one that
 matches how you plan to use the project.
 
@@ -8,16 +8,16 @@ matches how you plan to use the project.
 
 | Use case | Command | Pulls in |
 |---|---|---|
-| CLI only | `pip install autopapertoppt` | The 10-package core runtime — enough to search and emit `.pptx` / `.xlsx` / `.bib`. |
-| CLI + MCP server | `pip install "autopapertoppt[mcp]"` | Adds the `mcp` SDK so `autopapertoppt-mcp` works. |
-| CLI + PDF + LLM enrichment | `pip install "autopapertoppt[intelligence]"` | Adds `pypdf` + `pymupdf` + `anthropic` for the `--enrich` flow. |
-| CLI + desktop GUI | `pip install "autopapertoppt[gui]"` | Adds PySide6 for `autopapertoppt-gui` / `autopapertoppt gui`. |
-| Everything | `pip install "autopapertoppt[intelligence,mcp,gui]"` | All three extras. |
+| CLI only | `pip install thesisagents` | The 10-package core runtime — enough to search and emit `.pptx` / `.xlsx` / `.bib`. |
+| CLI + MCP server | `pip install "thesisagents[mcp]"` | Adds the `mcp` SDK so `thesisagents-mcp` works. |
+| CLI + PDF + LLM enrichment | `pip install "thesisagents[intelligence]"` | Adds `pypdf` + `pymupdf` + `anthropic` for the `--enrich` flow. |
+| CLI + desktop GUI | `pip install "thesisagents[gui]"` | Adds PySide6 for `thesisagents-gui` / `thesisagents gui`. |
+| Everything | `pip install "thesisagents[intelligence,mcp,gui]"` | All three extras. |
 | Developer / contributor | `pip install -e ".[dev]"` from a clone | Full toolchain — pytest, pytest-asyncio, pytest-httpx, pytest-qt, ruff, bandit + every runtime extra. |
 
-The published distribution name on PyPI is `autopapertoppt`. The
-console scripts installed are `autopapertoppt` (CLI),
-`autopapertoppt-mcp` (MCP server), `autopapertoppt-gui` (desktop UI).
+The published distribution name on PyPI is `thesisagents`. The
+console scripts installed are `thesisagents` (CLI),
+`thesisagents-mcp` (MCP server), `thesisagents-gui` (desktop UI).
 
 ## Supported runtimes
 
@@ -34,7 +34,7 @@ backport gymnastics that we chose not to take on.
 
 ## The full dependency surface
 
-### Core (`pip install autopapertoppt`)
+### Core (`pip install thesisagents`)
 
 These come with every install. None has a heavy native step:
 
@@ -108,8 +108,8 @@ doesn't pollute the system Python:
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/Integration-Automation/AutoPaperToPPT.git
-cd AutoPaperToPPT
+git clone https://github.com/Integration-Automation/ThesisAgents.git
+cd ThesisAgents
 
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -117,34 +117,34 @@ python -m pip install --upgrade pip
 pip install -e ".[dev]"
 
 # Sanity-check
-python -m autopapertoppt --version
+python -m thesisagents --version
 python -m pytest tests/
 ```
 
 ### macOS / Linux (bash / zsh)
 
 ```bash
-git clone https://github.com/Integration-Automation/AutoPaperToPPT.git
-cd AutoPaperToPPT
+git clone https://github.com/Integration-Automation/ThesisAgents.git
+cd ThesisAgents
 
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
 
-python -m autopapertoppt --version
+python -m thesisagents --version
 python -m pytest tests/
 ```
 
 After installation, the activated venv exposes three console
-scripts: `autopapertoppt` (CLI), `autopapertoppt-mcp` (MCP
-server), `autopapertoppt-gui` (desktop UI). All three also work
+scripts: `thesisagents` (CLI), `thesisagents-mcp` (MCP
+server), `thesisagents-gui` (desktop UI). All three also work
 as `python -m` invocations:
 
 ```
-python -m autopapertoppt ...
-python -m autopapertoppt.mcp
-python -m autopapertoppt.gui.app
+python -m thesisagents ...
+python -m thesisagents.mcp
+python -m thesisagents.gui.app
 ```
 
 ## Linux: extra system packages for the GUI
@@ -173,19 +173,19 @@ buffer instead of an X server.
 ## Windows: prebuilt `.exe`
 
 Every release ships a self-contained Windows zip built with
-Nuitka. Download `autopapertoppt-windows-x86_64.zip` from the
-[GitHub Releases page](https://github.com/Integration-Automation/AutoPaperToPPT/releases),
-unzip anywhere, and run `autopapertoppt.exe` directly. The bundle
+Nuitka. Download `thesisagents-windows-x86_64.zip` from the
+[GitHub Releases page](https://github.com/Integration-Automation/ThesisAgents/releases),
+unzip anywhere, and run `thesisagents.exe` directly. The bundle
 includes Python, every dependency (including PySide6), and the 11
 source plugins — no separate Python install is needed.
 
-The bundle entry point is `python -m autopapertoppt`, so all the
+The bundle entry point is `python -m thesisagents`, so all the
 same CLI flags work:
 
 ```powershell
-.\autopapertoppt.exe --query "diffusion models" --max 10 --out .\exports\
-.\autopapertoppt.exe --paper "https://arxiv.org/abs/1706.03762" --out .\exports\
-.\autopapertoppt.exe gui     # opens the desktop UI
+.\thesisagents.exe --query "diffusion models" --max 10 --out .\exports\
+.\thesisagents.exe --paper "https://arxiv.org/abs/1706.03762" --out .\exports\
+.\thesisagents.exe gui     # opens the desktop UI
 ```
 
 A `.sha256` companion is attached to every release for integrity
@@ -195,7 +195,7 @@ checking.
 
 ```bash
 # From a Git ref directly
-pip install "git+https://github.com/Integration-Automation/AutoPaperToPPT@dev"
+pip install "git+https://github.com/Integration-Automation/ThesisAgents@dev"
 
 # From a local clone (editable — picks up your changes live)
 pip install -e .
@@ -208,15 +208,15 @@ take effect on the next `import` without a reinstall.
 ## Verifying an install
 
 ```bash
-autopapertoppt --version       # prints package version + Python info
-autopapertoppt --help          # full CLI flag list
-python -c "import autopapertoppt; print(autopapertoppt.__file__)"
+thesisagents --version       # prints package version + Python info
+thesisagents --help          # full CLI flag list
+python -c "import thesisagents; print(thesisagents.__file__)"
 ```
 
 If the MCP extra is installed:
 
 ```bash
-python -c "from autopapertoppt.mcp import build_server; import asyncio; \
+python -c "from thesisagents.mcp import build_server; import asyncio; \
     print(sorted(t.name for t in asyncio.run(build_server().list_tools())))"
 ```
 
@@ -228,23 +228,23 @@ You should see all eleven tool names: `list_sources`, `search`,
 If the GUI extra is installed:
 
 ```bash
-autopapertoppt gui             # opens the window
-# or: python -m autopapertoppt.gui.app
+thesisagents gui             # opens the window
+# or: python -m thesisagents.gui.app
 ```
 
 ## Uninstall
 
 ```bash
-pip uninstall autopapertoppt
+pip uninstall thesisagents
 ```
 
 Saved API keys / cookies-file paths live in your platform's
 QSettings store and are not removed by `pip uninstall`. To clear
 them too:
 
-- **Windows**: `HKEY_CURRENT_USER\Software\AutoPaperToPPT\AutoPaperToPPT`
-- **macOS**: `~/Library/Preferences/com.AutoPaperToPPT.AutoPaperToPPT.plist`
-- **Linux**: `~/.config/AutoPaperToPPT/AutoPaperToPPT.conf`
+- **Windows**: `HKEY_CURRENT_USER\Software\ThesisAgents\ThesisAgents`
+- **macOS**: `~/Library/Preferences/com.ThesisAgents.ThesisAgents.plist`
+- **Linux**: `~/.config/ThesisAgents/ThesisAgents.conf`
 
 ## Common install failures
 
@@ -255,7 +255,7 @@ a matching prebuilt wheel. Make sure you're on Python 3.12, 3.13,
 or 3.14 — that covers every wheel published. If you're on a
 prerelease Python, downgrade or install the MSVC C++ Build Tools.
 
-**`No matching distribution found for autopapertoppt`**
+**`No matching distribution found for thesisagents`**
 
 `pip` is older than `pip install` needs to resolve a project with
 `[project]` metadata. Upgrade:

@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 # Running this file directly puts `scripts/` on sys.path[0]; the project
-# root needs to be there to import `autopapertoppt.*`.
+# root needs to be there to import `thesisagents.*`.
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
@@ -28,7 +28,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from pptx import Presentation  # noqa: E402
 from pptx.dml.color import RGBColor  # noqa: E402
 
-from autopapertoppt.exporters.pptx import _apply_dark_mode  # noqa: E402
+from thesisagents.exporters.pptx import _apply_dark_mode  # noqa: E402
 
 SRC = Path("exports/fang2026disentangling-zh-tw.pptx")
 

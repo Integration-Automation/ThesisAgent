@@ -1,4 +1,4 @@
-Panduan Pengguna AutoPaperToPPT
+Panduan Pengguna ThesisAgents
 ================================
 
 Asisten pencarian makalah berbasis kata kunci. Mengambil hasil dari
@@ -108,7 +108,7 @@ Perlu Python **3.12+**.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -124,19 +124,19 @@ Mulai cepat
 .. code-block:: bash
 
    # Cari arXiv → deck + workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Satu makalah by URL → deck + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Render deck dalam Bahasa Indonesia
-   autopapertoppt --paper 1706.03762 --lang id --out ./exports/
+   thesisagents --paper 1706.03762 --lang id --out ./exports/
 
    # Pengayaan Python pipeline (butuh key Anthropic)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang id --out ./exports/
 
 Tabel flag CLI lengkap: :doc:`/cli`.

@@ -1,10 +1,10 @@
 ---
 name: slide-deck-rules
-description: Reference for the pptx exporter — rendering tiers, layout geometry (16:9 widescreen, FOOTER_GUARD), truncation caps, per-slide content caps, semantic shape names, i18n keys, and the LLM-as-agent-vs-Python-pipeline enrichment dispatch. Invoke when editing `autopapertoppt/exporters/pptx.py`, `autopapertoppt/exporters/i18n.py`, `autopapertoppt/exporters/pptx_edit.py`, or any `scripts/regen_*.py`. For overflow regression specifically, use `slide-overflow-check` instead.
+description: Reference for the pptx exporter — rendering tiers, layout geometry (16:9 widescreen, FOOTER_GUARD), truncation caps, per-slide content caps, semantic shape names, i18n keys, and the LLM-as-agent-vs-Python-pipeline enrichment dispatch. Invoke when editing `thesisagents/exporters/pptx.py`, `thesisagents/exporters/i18n.py`, `thesisagents/exporters/pptx_edit.py`, or any `scripts/regen_*.py`. For overflow regression specifically, use `slide-overflow-check` instead.
 tools: Read, Grep, Glob
 ---
 
-You are the slide-deck rules reference for AutoPaperToPPT. When invoked, return the relevant rule(s) for the change being made and flag any direct violations you can spot in the diff. The actual overflow inspection lives in the sibling `slide-overflow-check` subagent — don't re-implement it here.
+You are the slide-deck rules reference for ThesisAgents. When invoked, return the relevant rule(s) for the change being made and flag any direct violations you can spot in the diff. The actual overflow inspection lives in the sibling `slide-overflow-check` subagent — don't re-implement it here.
 
 **Scope split** — this agent owns *geometry* and *content safety*
 (slide dimensions, footer guard, truncation caps, per-slide content
@@ -12,7 +12,7 @@ caps, semantic shape names, i18n keys, rendering-tier dispatch). The
 sibling `deck-design` subagent owns *visual identity* (typography per
 language, brand palette, accent geometry, "looks AI-generated"
 anti-patterns). Both apply to any change to
-`autopapertoppt/exporters/pptx.py` — consult the appropriate one for
+`thesisagents/exporters/pptx.py` — consult the appropriate one for
 the concern at hand.
 
 ## Slide Deck Rules
@@ -54,7 +54,7 @@ Every textbox is named with one of: `title` / `meta` / `body` / `subhead` / `foo
 
 ### 6. i18n
 
-All template strings (section labels, "Paper N of M", "References", footer copy, "n.d." for missing years) flow through `autopapertoppt/exporters/i18n.py`.
+All template strings (section labels, "Paper N of M", "References", footer copy, "n.d." for missing years) flow through `thesisagents/exporters/i18n.py`.
 
 ```
 SUPPORTED_LANGUAGES = (
@@ -129,16 +129,16 @@ No API key needed. The MCP server's `export` tool accepts the rich schema.
 
 ### Path B — Python pipeline (`ANTHROPIC_API_KEY` set)
 
-The Python process calls Anthropic itself via `autopapertoppt/intelligence/summarise.py`. Auto-enrichment is the default when the env var is present.
+The Python process calls Anthropic itself via `thesisagents/intelligence/summarise.py`. Auto-enrichment is the default when the env var is present.
 
 - `--lightweight` skips it (no API calls).
 - `--enrich` flag fails loud if the env var is missing, rather than falling back.
-- Default model `claude-opus-4-7`; override via `--llm-model` or `AUTOPAPERTOPPT_LLM_MODEL`.
+- Default model `claude-opus-4-7`; override via `--llm-model` or `THESISAGENTS_LLM_MODEL`.
 - Requires the `[intelligence]` extra (`pypdf` + `anthropic`).
 
 ### Rule
 
-Do not collapse these into a single path. The dispatch lives in `autopapertoppt/cli.py` and `autopapertoppt/intelligence/__init__.py` — keep them separate.
+Do not collapse these into a single path. The dispatch lives in `thesisagents/cli.py` and `thesisagents/intelligence/__init__.py` — keep them separate.
 
 **When you (the LLM) drive the session and there's no key,** rich thesis-style PPT is the default deliverable — lightweight is a fallback. **Delegate to the `paper-summary-author` subagent**, which owns the full authoring procedure (PDF reading, URL-from-xlsx rule, contributions cap, paywalled-PDF WebRunner MCP path, anti-patterns) and chains `post-author-audit` + `slide-overflow-check` before the deck ships. Do NOT tell the user "set `ANTHROPIC_API_KEY` for a rich deck" — you ARE the LLM that could write the summaries.
 

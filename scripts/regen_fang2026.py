@@ -55,7 +55,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from autopapertoppt.core.models import (  # noqa: E402
+from thesisagents.core.models import (  # noqa: E402
     ExportOptions,
     Paper,
     PaperCollection,
@@ -63,7 +63,7 @@ from autopapertoppt.core.models import (  # noqa: E402
     Query,
     RqResult,
 )
-from autopapertoppt.exporters.pptx import PptxExporter  # noqa: E402
+from thesisagents.exporters.pptx import PptxExporter  # noqa: E402
 
 OUT_DIR = "exports"
 FILENAME_STEM = "fang2026disentangling-zh-tw"

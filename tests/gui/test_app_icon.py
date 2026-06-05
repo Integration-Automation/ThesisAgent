@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from autopapertoppt.gui import app as gui_app
+from thesisagents.gui import app as gui_app
 
 
 def test_icon_file_exists_in_repo():

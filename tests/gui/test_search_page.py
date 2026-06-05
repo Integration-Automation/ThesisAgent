@@ -1,14 +1,14 @@
 """Tests for the Search page.
 
-Network is mocked: ``autopapertoppt.gui.pages.search.run_search`` is
+Network is mocked: ``thesisagents.gui.pages.search.run_search`` is
 monkey-patched to return a canned ``PaperCollection`` so we never hit
 arxiv.org from the test suite.
 """
 
 from __future__ import annotations
 
-from autopapertoppt.core.models import Paper, PaperCollection, Query
-from autopapertoppt.gui.pages.search import SearchPage
+from thesisagents.core.models import Paper, PaperCollection, Query
+from thesisagents.gui.pages.search import SearchPage
 
 
 def _canned_collection() -> PaperCollection:
@@ -42,10 +42,10 @@ def test_search_button_runs_and_populates_table(qtbot, monkeypatch):
         return None
 
     monkeypatch.setattr(
-        "autopapertoppt.gui.pages.search.run_search", fake_run_search
+        "thesisagents.gui.pages.search.run_search", fake_run_search
     )
     monkeypatch.setattr(
-        "autopapertoppt.gui.pages.search.shutdown_clients", fake_shutdown
+        "thesisagents.gui.pages.search.shutdown_clients", fake_shutdown
     )
 
     page.set_query_text("attention")

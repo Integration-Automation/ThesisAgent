@@ -2,7 +2,7 @@
 
 Adding a new academic source — your own institution's repository,
 a vendor API, a regional preprint server — without touching the
-core engine. Plugins are how AutoPaperToPPT stays extensible
+core engine. Plugins are how ThesisAgents stays extensible
 while keeping its dependency surface small.
 
 ## When to write a plugin
@@ -38,7 +38,7 @@ underscores allowed (e.g. `semantic_scholar`).
 
 The pipeline finds your plugin by injecting `sources/` into
 `sys.path` at startup. The injection is done by
-`autopapertoppt.app.source_manager` for runtime and by
+`thesisagents.app.source_manager` for runtime and by
 `tests/conftest.py` for the test suite — you don't need to touch
 either.
 
@@ -46,7 +46,7 @@ either.
 
 ### 1. Pick a name and register it
 
-Add your source name to `autopapertoppt/core/constants.py`:
+Add your source name to `thesisagents/core/constants.py`:
 
 ```python
 PLUGIN_SOURCES: tuple[str, ...] = (
@@ -71,7 +71,7 @@ construction.
 `sources/your_name/config.py`:
 
 ```python
-from autopapertoppt.fetchers.rate_limit import RateLimit
+from thesisagents.fetchers.rate_limit import RateLimit
 
 ENDPOINT = "https://api.your-source.example/v1/search"
 
@@ -81,7 +81,7 @@ RATE_LIMIT = RateLimit(
     jitter_seconds=0.2,        # random delay added per request
 )
 
-USER_AGENT = "AutoPaperToPPT/0.1 (+https://github.com/Integration-Automation/AutoPaperToPPT)"
+USER_AGENT = "ThesisAgents/0.1 (+https://github.com/Integration-Automation/ThesisAgents)"
 ```
 
 Pick a conservative rate limit. The bucket is the only thing
@@ -98,7 +98,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from autopapertoppt.core.models import Paper
+from thesisagents.core.models import Paper
 
 
 def parse_search_payload(payload: dict[str, Any]) -> list[Paper]:
@@ -153,12 +153,12 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from autopapertoppt.core.exceptions import (
+from thesisagents.core.exceptions import (
     ConfigError, ParseError, RateLimitError, SourceUnavailableError,
 )
-from autopapertoppt.core.models import Paper, Query
-from autopapertoppt.fetchers.base import Fetcher
-from autopapertoppt.fetchers.http import get_client
+from thesisagents.core.models import Paper, Query
+from thesisagents.fetchers.base import Fetcher
+from thesisagents.fetchers.http import get_client
 
 from .config import ENDPOINT, RATE_LIMIT, USER_AGENT
 from .parser import parse_search_payload
@@ -174,10 +174,10 @@ class YourFetcher(Fetcher):
     def __init__(self) -> None:
         # OPTIONAL: enforce env-var presence here. The pipeline will
         # catch ConfigError and silently skip your plugin.
-        self._api_key = os.environ.get("AUTOPAPERTOPPT_YOUR_NAME_API_KEY")
+        self._api_key = os.environ.get("THESISAGENTS_YOUR_NAME_API_KEY")
         if self._api_key is None:
             raise ConfigError(
-                "AUTOPAPERTOPPT_YOUR_NAME_API_KEY not set; YourSource plugin disabled"
+                "THESISAGENTS_YOUR_NAME_API_KEY not set; YourSource plugin disabled"
             )
 
     async def fetch(self, query: Query) -> list[Paper]:
@@ -253,7 +253,7 @@ import json
 from pathlib import Path
 
 import pytest
-from autopapertoppt.core.models import Query
+from thesisagents.core.models import Query
 from your_name.fetcher import YourFetcher
 
 
@@ -264,7 +264,7 @@ def transformer_fixture():
 
 
 def test_fetcher_parses_transformer_results(http_recorder, transformer_fixture, monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_YOUR_NAME_API_KEY", "test-key")
+    monkeypatch.setenv("THESISAGENTS_YOUR_NAME_API_KEY", "test-key")
     http_recorder.add_response(
         url="https://api.your-source.example/v1/search",
         params={"q": "transformer attention", "limit": 5},
@@ -305,12 +305,12 @@ Run the full chain:
 python -m pytest tests/sources/your_name/
 
 # Integration: plugin shows up in the source list
-python -c "from autopapertoppt.app.source_manager import list_sources; \
+python -c "from thesisagents.app.source_manager import list_sources; \
     print('your_name' in [s.name for s in list_sources()])"
 
 # Live smoke (only if you have credentials):
-AUTOPAPERTOPPT_YOUR_NAME_API_KEY=... \
-    autopapertoppt --query "diffusion models" --source your_name --max 5 \
+THESISAGENTS_YOUR_NAME_API_KEY=... \
+    thesisagents --query "diffusion models" --source your_name --max 5 \
                    --out ./smoke/your_name/
 
 # Lint + security
@@ -345,10 +345,10 @@ within a day.
 
 ### Hardcoding an API key
 
-**Don't.** Load from `os.environ.get("AUTOPAPERTOPPT_..._API_KEY")`
+**Don't.** Load from `os.environ.get("THESISAGENTS_..._API_KEY")`
 and document the variable in [Configuration](configuration.md).
 The GUI's Settings page picks up any variable matching the
-`AUTOPAPERTOPPT_..._API_KEY` pattern automatically when extended.
+`THESISAGENTS_..._API_KEY` pattern automatically when extended.
 
 ### Returning records without `source_id`
 
@@ -384,7 +384,7 @@ unsafe usage at lint time.
 
 If your plugin needs to parse HTML with `bs4` selectors, those
 selectors live in `sources/your_name/parser.py`. They never go
-under `autopapertoppt/core/`.
+under `thesisagents/core/`.
 
 ## When a plugin should be promoted to core
 
@@ -395,7 +395,7 @@ You'll know it's time when:
 - The upstream has stable rate limits and a stable contract.
 - The plugin has had no breaking changes in 6+ months.
 
-To promote: move the code into `autopapertoppt/core/<source>/`,
+To promote: move the code into `thesisagents/core/<source>/`,
 update the import paths in `core_manager`, and remove the entry
 from `PLUGIN_SOURCES` in `core/constants.py`. The user-visible
 interface (the `--source <name>` flag) doesn't change.

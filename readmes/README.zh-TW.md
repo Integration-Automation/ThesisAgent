@@ -1,14 +1,14 @@
-# AutoPaperToPPT
+# ThesisAgents
 
-[![CI](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/ci.yml/badge.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/ci.yml)
-[![Release](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/Integration-Automation/AutoPaperToPPT/actions/workflows/release.yml)
-[![PyPI](https://img.shields.io/pypi/v/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
-[![Python](https://img.shields.io/pypi/pyversions/autopapertoppt.svg)](https://pypi.org/project/autopapertoppt/)
-[![License: MIT](https://img.shields.io/github/license/Integration-Automation/AutoPaperToPPT.svg)](https://github.com/Integration-Automation/AutoPaperToPPT/blob/main/LICENSE)
-[![Docs](https://readthedocs.org/projects/autopapertoppt/badge/?version=latest)](https://autopapertoppt.readthedocs.io/en/latest/)
+[![CI](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/ci.yml/badge.svg)](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/ci.yml)
+[![Release](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/Integration-Automation/ThesisAgents/actions/workflows/release.yml)
+[![PyPI](https://img.shields.io/pypi/v/thesisagents.svg)](https://pypi.org/project/thesisagents/)
+[![Python](https://img.shields.io/pypi/pyversions/thesisagents.svg)](https://pypi.org/project/thesisagents/)
+[![License: MIT](https://img.shields.io/github/license/Integration-Automation/ThesisAgents.svg)](https://github.com/Integration-Automation/ThesisAgents/blob/main/LICENSE)
+[![Docs](https://readthedocs.org/projects/thesisagents/badge/?version=latest)](https://thesisagents.readthedocs.io/en/latest/)
 
 > **語言**: [English](../README.md) · **繁體中文** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
-> **文件**: [autopapertoppt.readthedocs.io](https://autopapertoppt.readthedocs.io/en/latest/)
+> **文件**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
 以關鍵字驅動的論文搜尋助手。從 arXiv、Semantic Scholar、OpenAlex、PubMed、ACM(走 Crossref)、IEEE Xplore、DBLP、通用 Crossref、OpenAIRE、Springer Nature、Google Scholar 抓論文,正規化成統一的 record,並把去重後的結果集匯出為 **論文口試級的 PowerPoint 投影片**、**Excel 工作簿**、**BibTeX 檔** —— 一次 CLI 呼叫或一次 MCP 工具呼叫即可完成全部。另可選擇讓 AI 讀 PDF 本文後產出每篇論文的結構化摘要(LLM-as-agent 路徑)或透過 Anthropic API 自動產(Python pipeline 路徑)。
 
@@ -93,7 +93,7 @@ for key in irrelevant_keys:
 ## 功能
 
 - **十一種可外掛來源**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref 限縮 ACM)、`dblp`、`crossref`(通用)、`openaire`、`springer`(需 API key)、`ieee`(API key 或 opt-in 爬取)、`scholar`(opt-in 爬取)。每個都在 `sources/<name>/` 後面以 `Fetcher` 介面實作。預設啟用「頂級期刊白名單」過濾器,保留旗艦級 CS 會議/期刊 + Nature/Science/PNAS 等;傳 `--all-venues` 可關閉。
-- **單篇論文模式**: 貼上 arXiv ID、arXiv URL、DOI、PMID、或 IEEE 文件 URL,AutoPaperToPPT 會走對應 source plugin 拉那一篇並出同一套匯出包。適合做論文閱讀筆記或口試準備。
+- **單篇論文模式**: 貼上 arXiv ID、arXiv URL、DOI、PMID、或 IEEE 文件 URL,ThesisAgents 會走對應 source plugin 拉那一篇並出同一套匯出包。適合做論文閱讀筆記或口試準備。
 - **本機 PDF 模式** (`--pdf <path>`): 傳一個 PDF 或一整個資料夾。內建啟發式抽取器會從每個 PDF 的首頁直接撈出 **標題、作者、年份、arXiv ID、DOI、真正的摘要**(以「Abstract」/「ABSTRACT」/「摘要」標題為錨點,不是隨便切前 N 字)。單一 PDF 時 `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` 會覆寫抽取結果;資料夾模式下以每個檔自己的抽取結果為準,每篇都會出一份以 BibTeX key 命名的投影片。
 - **五種匯出器**:
   - `.pptx` —— 16:9 寬螢幕、附頁碼。三種 rendering tier(輕量摘要 / 扁平結構化 / **論文口試級 thesis-style**:痛點四宮格、研究問題 callout、KPI 區、技術比較表、文獻定位表、系統總覽、方法細節、每題 RQ 結果表、貢獻總結、核心觀察、限制與未來工作、Q&A、參考文獻)。所有樣板字串都做 i18n,共 **14 種語言**:English、繁體中文、简体中文、日本語、Español、Français、Deutsch、한국어、Português、Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia。
@@ -103,7 +103,7 @@ for key in irrelevant_keys:
   - `.md` —— 完整來源/標題/摘要清單。
   - `.bib` —— 不會撞 key、LaTeX 特殊字元已跳脫。
   - `.json` —— 原始 payload 供下游處理。
-- **PPT 編輯工具箱**: `autopapertoppt.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)能對 exporter 產生的任何投影片做編輯,對應的 `pptx_*` MCP 工具也讓 LLM agent 能繼續對 deck 做迭代。
+- **PPT 編輯工具箱**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)能對 exporter 產生的任何投影片做編輯,對應的 `pptx_*` MCP 工具也讓 LLM agent 能繼續對 deck 做迭代。
 - **MCP server**: 11 個工具 —— `list_sources`(來源探索)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`(批次下載)、`export`,以及五個 `pptx_*` 編輯工具。任何支援 MCP 的 LLM(Claude Code、Claude Desktop、Cursor…)都能驅動整套流程。
 - **兩條 enrichment 路徑** 把 deck 從「只有摘要」升級到「真的讀過全文」:
   - **LLM-as-agent(不需要 API key)** —— 呼叫端的 LLM 透過 `fetch_pdf_text` 拿 PDF 本文,在自己 context 裡產 structured summary,再丟給 `export`。
@@ -114,7 +114,7 @@ for key in irrelevant_keys:
 
 ```powershell
 git clone <repo-url>
-cd AutoPaperToPPT
+cd ThesisAgents
 python -m venv .venv
 .venv\Scripts\Activate.ps1            # Windows PowerShell
 # source .venv/bin/activate           # Linux / macOS
@@ -126,14 +126,14 @@ pip install -e .[dev]
 搜尋 arXiv 並輸出 deck + workbook + BibTeX(`--query` 預設):
 
 ```powershell
-py -m autopapertoppt --query "diffusion models" --source arxiv --max 10 `
+py -m thesisagents --query "diffusion models" --source arxiv --max 10 `
                       --out .\exports\
 ```
 
 抓單篇論文 —— 預設只出 `.pptx + .bib`(單篇沒必要出 `.xlsx`):
 
 ```powershell
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --filename-stem attention `
                       --out .\exports\
 ```
@@ -141,7 +141,7 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 把 deck 改成繁體中文:
 
 ```powershell
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --lang zh-tw --out .\exports\
 ```
 
@@ -149,7 +149,7 @@ LLM-pipeline enrichment(Python 自己打 Anthropic,需要 API key):
 
 ```powershell
 $env:ANTHROPIC_API_KEY = "sk-ant-..."
-py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
+py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --enrich --lang zh-tw --out .\exports\
 ```
 
@@ -184,27 +184,27 @@ py -m autopapertoppt --paper "https://arxiv.org/abs/1706.03762" `
 | 變數 | 用於 | 用途 |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | `--enrich` | LLM 認證。MCP 上的 LLM-as-agent 路徑不需要。 |
-| `AUTOPAPERTOPPT_LLM_MODEL` | `--enrich` | 蓋掉預設的 `claude-opus-4-7`。 |
-| `AUTOPAPERTOPPT_S2_API_KEY` | Semantic Scholar | 提高速率限制,選用。 |
-| `AUTOPAPERTOPPT_NCBI_API_KEY` | PubMed | 把 NCBI 匿名限額(3/s)拉到 10/s,選用。 |
-| `AUTOPAPERTOPPT_CONTACT_EMAIL` | PubMed、ACM、Crossref、OpenAlex | 讓 Crossref 等把請求放進「客氣池」。 |
-| `AUTOPAPERTOPPT_IEEE_API_KEY` | IEEE(API 路徑) | 切換到官方 Xplore API,訂閱範圍內會帶 `pdf_url`。 |
-| `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING` | IEEE(爬取路徑) | 設 `=1` 才會啟用爬取。若已設 API key,此變數不需要。 |
-| `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` | ACM、Crossref | Crossref Plus 訂閱 token(Bearer header),選用。 |
-| `AUTOPAPERTOPPT_SPRINGER_API_KEY` | Springer | 必填;免費 key 申請 <https://dev.springernature.com/>。沒設則該 plugin 會被靜默跳過。 |
-| `AUTOPAPERTOPPT_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
-| `AUTOPAPERTOPPT_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
-| `AUTOPAPERTOPPT_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | 設 `=1` 才會啟用。預設關閉(Scholar ToS 禁止爬取)。 |
-| `AUTOPAPERTOPPT_PDF_COOKIES_FILE` | PDF 下載器 | Netscape `cookies.txt`,預設關閉。請只用在你有合法存取權的出版商。 |
-| `AUTOPAPERTOPPT_LOG_LEVEL` | logger | 預設 `INFO`;`DEBUG` 可看更詳細。 |
+| `THESISAGENTS_LLM_MODEL` | `--enrich` | 蓋掉預設的 `claude-opus-4-7`。 |
+| `THESISAGENTS_S2_API_KEY` | Semantic Scholar | 提高速率限制,選用。 |
+| `THESISAGENTS_NCBI_API_KEY` | PubMed | 把 NCBI 匿名限額(3/s)拉到 10/s,選用。 |
+| `THESISAGENTS_CONTACT_EMAIL` | PubMed、ACM、Crossref、OpenAlex | 讓 Crossref 等把請求放進「客氣池」。 |
+| `THESISAGENTS_IEEE_API_KEY` | IEEE(API 路徑) | 切換到官方 Xplore API,訂閱範圍內會帶 `pdf_url`。 |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE(爬取路徑) | 設 `=1` 才會啟用爬取。若已設 API key,此變數不需要。 |
+| `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM、Crossref | Crossref Plus 訂閱 token(Bearer header),選用。 |
+| `THESISAGENTS_SPRINGER_API_KEY` | Springer | 必填;免費 key 申請 <https://dev.springernature.com/>。沒設則該 plugin 會被靜默跳過。 |
+| `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
+| `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
+| `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | 設 `=1` 才會啟用。預設關閉(Scholar ToS 禁止爬取)。 |
+| `THESISAGENTS_PDF_COOKIES_FILE` | PDF 下載器 | Netscape `cookies.txt`,預設關閉。請只用在你有合法存取權的出版商。 |
+| `THESISAGENTS_LOG_LEVEL` | logger | 預設 `INFO`;`DEBUG` 可看更詳細。 |
 
 ## MCP server
 
 註冊到 Claude Code:
 
 ```powershell
-claude mcp add autopapertoppt -- ".venv\Scripts\python.exe" -m autopapertoppt.mcp
+claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 ```
 
 或寫到 settings:
@@ -212,9 +212,9 @@ claude mcp add autopapertoppt -- ".venv\Scripts\python.exe" -m autopapertoppt.mc
 ```json
 {
   "mcpServers": {
-    "autopapertoppt": {
+    "thesisagents": {
       "command": ".venv\\Scripts\\python.exe",
-      "args": ["-m", "autopapertoppt.mcp"]
+      "args": ["-m", "thesisagents.mcp"]
     }
   }
 }
@@ -253,8 +253,8 @@ LLM-as-agent 流程(不需要 `ANTHROPIC_API_KEY`,因為 LLM 自己就是 agent)
 ## 專案結構
 
 ```
-AutoPaperToPPT/
-├── autopapertoppt/                 # 主套件
+ThesisAgents/
+├── thesisagents/                 # 主套件
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # HTTPS-only async client、token-bucket 限流
 │   ├── exporters/                   # pptx(thesis-style)/ xlsx / bib / md / json / pptx_edit / i18n
@@ -277,7 +277,7 @@ AutoPaperToPPT/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r autopapertoppt/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
 ```
 
 bandit 的 `-c` 旗標是必要的 —— 沒有它 bandit 不會讀專案 skip 設定。動到 pptx exporter 時,還要跑 overflow check(見 `CLAUDE.md` 的「Slide Deck Rules」一節)。

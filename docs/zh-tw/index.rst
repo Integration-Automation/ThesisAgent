@@ -1,4 +1,4 @@
-AutoPaperToPPT 使用手冊
+ThesisAgents 使用手冊
 ========================
 
 以關鍵字驅動的論文搜尋助手。從 arXiv(以及可外掛的其他來源)抓取結果,
@@ -97,13 +97,13 @@ xlsx 寫在 ``exports/<run>/<slug>-<timestamp>.xlsx``\ ,第 7 欄是 DOI、
 安裝
 ----
 
-AutoPaperToPPT 鎖定 Python **3.12+**\ (以 3.14 開發),支援 Windows、
+ThesisAgents 鎖定 Python **3.12+**\ (以 3.14 開發),支援 Windows、
 macOS、Linux。建議使用專案內的 virtualenv:
 
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -125,7 +125,7 @@ macOS、Linux。建議使用專案內的 virtualenv:
      - 解鎖什麼
    * - ``[mcp]``
      - 只裝 ``mcp``\ SDK。用在 production 安裝 ——
-       想要 ``autopapertoppt-mcp``\ 但不想要測試工具鏈時。
+       想要 ``thesisagents-mcp``\ 但不想要測試工具鏈時。
    * - ``[intelligence]``
      - ``pypdf``\ + ``anthropic``\ 。Python ``--enrich``\ 路徑用
        (抓 PDF + 打 Anthropic API)。**MCP 上的 LLM-as-agent 流程
@@ -142,7 +142,7 @@ macOS、Linux。建議使用專案內的 virtualenv:
 CLI
 ---
 
-``python -m autopapertoppt``\ (也安裝為 ``autopapertoppt``)是入口程式。
+``python -m thesisagents``\ (也安裝為 ``thesisagents``)是入口程式。
 有兩個互斥的模式:
 
 搜尋模式
@@ -151,15 +151,15 @@ CLI
 .. code-block:: bash
 
    # 預設 25 筆結果,預設匯出(pptx、xlsx、bib)
-   autopapertoppt --query "diffusion models" --source arxiv
+   thesisagents --query "diffusion models" --source arxiv
 
    # 10 筆結果,全部匯出格式,自訂目錄
-   autopapertoppt --query "transformer attention" --source arxiv \
+   thesisagents --query "transformer attention" --source arxiv \
                 --max 10 --export pptx,xlsx,md,bib,json \
                 --out ./exports/
 
    # 限制在近年論文
-   autopapertoppt --query "graph neural networks drug discovery" \
+   thesisagents --query "graph neural networks drug discovery" \
                 --year-from 2022 --year-to 2025 \
                 --max 15 --out ./exports/
 
@@ -169,22 +169,22 @@ CLI
 .. code-block:: bash
 
    # arXiv ID —— 單篇預設只出 pptx + bib
-   autopapertoppt --paper 1706.03762 --out ./exports/
+   thesisagents --paper 1706.03762 --out ./exports/
 
    # arXiv URL
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                 --filename-stem attention --out ./exports/
 
    # DOI(透過 Semantic Scholar resolve)
-   autopapertoppt --paper "10.1145/3411764.3445005" --out ./exports/
+   thesisagents --paper "10.1145/3411764.3445005" --out ./exports/
 
    # PubMed PMID / URL
-   autopapertoppt --paper "https://pubmed.ncbi.nlm.nih.gov/34567890/" \
+   thesisagents --paper "https://pubmed.ncbi.nlm.nih.gov/34567890/" \
                 --out ./exports/
 
    # IEEE document URL(需 opt-in env var)
-   AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1 \
-   autopapertoppt --paper "https://ieeexplore.ieee.org/document/10965643" \
+   THESISAGENTS_DISABLE_IEEE_SCRAPING=1 \
+   thesisagents --paper "https://ieeexplore.ieee.org/document/10965643" \
                 --out ./exports/
 
 可用的 source plugin
@@ -203,18 +203,18 @@ plugin 也會加進來:
      - Env var
      - 備註
    * - ``ieee``
-     - ``AUTOPAPERTOPPT_IEEE_API_KEY``\ (建議)**或**\
-       ``AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1``
+     - ``THESISAGENTS_IEEE_API_KEY``\ (建議)**或**\
+       ``THESISAGENTS_DISABLE_IEEE_SCRAPING=1``
      - 官方 Xplore API 在訂閱範圍內會帶 ``pdf_url``;沒 key 時可用
        fallback 爬取路徑。
    * - ``springer``
-     - ``AUTOPAPERTOPPT_SPRINGER_API_KEY``
+     - ``THESISAGENTS_SPRINGER_API_KEY``
      - 免費 key 申請 https://dev.springernature.com/。
        涵蓋 Nature、Scientific Reports、LNCS 等 Springer 全系。
        沒 key 時 plugin 會在建構時拋 ``ConfigError``,被 pipeline
        靜默跳過。
    * - ``scholar``
-     - ``AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1``
+     - ``THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1``
      - Google Scholar ToS 禁止爬取,預設關閉。
 
 搜尋管線預設套用「頂級期刊白名單」(旗艦級 CS 會議 + Nature / Science /
@@ -226,11 +226,11 @@ PNAS / CACM / LNCS);傳 ``--all-venues`` 可關閉。
 .. code-block:: bash
 
    # 把投影片樣板字串改成繁體中文
-   autopapertoppt --paper 1706.03762 --lang zh-tw --out ./exports/
+   thesisagents --paper 1706.03762 --lang zh-tw --out ./exports/
 
    # Python pipeline 走 enrichment(PDF + Anthropic API → thesis-style)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                 --enrich --lang zh-tw --out ./exports/
 
 完整參數表: :doc:`/cli`。
@@ -285,7 +285,7 @@ PPTX 配置
   核心觀察、限制與未來工作、Q&A、參考文獻)。每篇 20+ 張投影片。
 
 所有樣板字串(議程 / 參考文獻 / 第 N 篇 / 頁尾)都走
-``autopapertoppt.exporters.i18n``\ ,跟 ``--lang``\ 連動。支援的語言:
+``thesisagents.exporters.i18n``\ ,跟 ``--lang``\ 連動。支援的語言:
 ``en``\ (預設)、``zh-tw``\ 、``zh-cn``\ 、``ja``\ 、``es``\ 、
 ``fr``\ 、``de``\ 、``ko``\ 、``pt``\ 、``ru``\ 、``it``\ 、``vi``\ 、
 ``hi``\ 、``id``\ ,共 14 種。傳其他值會靜默 fallback 到 ``en``\ 。
@@ -300,7 +300,7 @@ PPTX 配置
 MCP server
 ----------
 
-AutoPaperToPPT 附帶一個暴露 **11 個工具** 的 MCP server —— 來源探索
+ThesisAgents 附帶一個暴露 **11 個工具** 的 MCP server —— 來源探索
 (``list_sources``)、搜尋、單篇抓取、單一 PDF 本文擷取
 (``fetch_pdf_text``)、批次 PDF 下載(``download_pdfs``)、匯出,
 以及 5 個 PPTX 編輯操作。任何支援 MCP 的 LLM client(Claude Code、
@@ -310,7 +310,7 @@ Claude Desktop、Cursor …)都能驅動整套流程。
 
 .. code-block:: powershell
 
-   claude mcp add autopapertoppt -- ".venv\Scripts\python.exe" -m autopapertoppt.mcp
+   claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 
 或直接編輯 settings 檔:
 
@@ -318,9 +318,9 @@ Claude Desktop、Cursor …)都能驅動整套流程。
 
    {
      "mcpServers": {
-       "autopapertoppt": {
+       "thesisagents": {
          "command": ".venv\\Scripts\\python.exe",
-         "args": ["-m", "autopapertoppt.mcp"]
+         "args": ["-m", "thesisagents.mcp"]
        }
      }
    }
@@ -383,12 +383,12 @@ LLM-as-agent enrichment 流程(不需要 Anthropic API key):
 編輯產生好的投影片
 ------------------
 
-投影片產出後,``pptx_*``\ 工具(或 ``autopapertoppt.exporters.pptx_edit``
+投影片產出後,``pptx_*``\ 工具(或 ``thesisagents.exporters.pptx_edit``
 Python 模組)讓你在不重跑搜尋的情況下繼續對它做迭代:
 
 .. code-block:: python
 
-   from autopapertoppt.exporters import pptx_edit
+   from thesisagents.exporters import pptx_edit
 
    pptx_edit.update_slide(
        "exports/attention.pptx", slide_index=1,
@@ -414,8 +414,8 @@ Python 模組)讓你在不重跑搜尋的情況下繼續對它做迭代:
 
 ::
 
-   AutoPaperToPPT/
-   ├── autopapertoppt/                 # 主套件
+   ThesisAgents/
+   ├── thesisagents/                 # 主套件
    │   ├── core/                     # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
    │   ├── fetchers/                 # HTTPS-only http client、token bucket、Fetcher base
    │   ├── exporters/                # pptx(thesis-style + lightweight)、xlsx、
@@ -424,7 +424,7 @@ Python 模組)讓你在不重跑搜尋的情況下繼續對它做迭代:
    │   ├── mcp/                      # 註冊 11 個工具的 FastMCP server
    │   ├── utils/                    # logging、path safety
    │   ├── cli.py                    # argparse CLI
-   │   └── __main__.py               # `python -m autopapertoppt`
+   │   └── __main__.py               # `python -m thesisagents`
    ├── sources/                      # 各來源 plugin(arxiv、semantic_scholar、
    │                                 #   openalex、pubmed、acm、ieee、scholar、
    │                                 #   dblp、crossref、openaire、springer)
@@ -436,7 +436,7 @@ Python 模組)讓你在不重跑搜尋的情況下繼續對它做迭代:
 核心 vs 來源外掛
 ^^^^^^^^^^^^^^^^
 
-``autopapertoppt/``\ (核心)與 ``sources/<name>/``\ (外掛)的分界線是
+``thesisagents/``\ (核心)與 ``sources/<name>/``\ (外掛)的分界線是
 **相依負擔與失敗隔離**,不是「跟來源有關的東西全丟外掛」:
 
 * **核心**\ 跑在預設相依集
@@ -455,12 +455,12 @@ Python 模組)讓你在不重跑搜尋的情況下繼續對它做迭代:
 * **Python pipeline(``--enrich``\ )** —— 給沒有 LLM 在外面的自動化用。
   需要 ``ANTHROPIC_API_KEY``\ 與 ``[intelligence]``\ extra,預設模型
   ``claude-opus-4-7``\ ,可用 ``--llm-model``\ 或
-  ``AUTOPAPERTOPPT_LLM_MODEL``\ 蓋掉。
+  ``THESISAGENTS_LLM_MODEL``\ 蓋掉。
 
 網路安全
 ^^^^^^^^
 
-所有對外的 HTTP 都走 ``autopapertoppt.fetchers.http.get_client(source)``,
+所有對外的 HTTP 都走 ``thesisagents.fetchers.http.get_client(source)``,
 回傳一個用 HTTPS-only transport 包起來的 per-source ``httpx.AsyncClient``\ 。
 純 HTTP 請求一律被拒(包括 redirect 後變 HTTP)。每個來源宣告自己的
 ``RateLimit``\ 政策,由 token bucket 強制執行;arXiv 預設為
@@ -480,7 +480,7 @@ Definition of Done
 
    .venv\Scripts\python.exe -m pytest tests/
    .venv\Scripts\python.exe -m ruff check .
-   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r autopapertoppt/ sources/
+   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
 
 bandit 的 ``-c``\ 旗標是 **必要的**\ —— 沒它 bandit 不會讀專案 skip 設定,
 跑出來會充滿假警報。
@@ -489,7 +489,7 @@ bandit 的 ``-c``\ 旗標是 **必要的**\ —— 沒它 bandit 不會讀專案
 ^^^^
 
 測試結構鏡像 production: 每個 production 模組
-``autopapertoppt/<area>/<feature>.py``\ 都有一個對應的
+``thesisagents/<area>/<feature>.py``\ 都有一個對應的
 ``tests/test_<feature>.py``\ 。來源外掛測試在 ``tests/sources/<name>/``\ 。
 
 測試是 **hermetic**\ —— 每個 fetcher 測試都透過 monkeypatched HTTP
@@ -545,7 +545,7 @@ DOI 可以被解析但 resolver 還沒接上。等 Semantic Scholar / Crossref
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 內建 token bucket 已限制在 1/3s。如果還是被 429,可能是同時跑了多個
-AutoPaperToPPT process 對同一個 arXiv endpoint —— 統一走一個 process,
+ThesisAgents process 對同一個 arXiv endpoint —— 統一走一個 process,
 或調低 ``--max``\ 。
 
 ----

@@ -1,6 +1,6 @@
 # MCP server
 
-AutoPaperToPPT ships a [Model Context Protocol](https://modelcontextprotocol.io/)
+ThesisAgents ships a [Model Context Protocol](https://modelcontextprotocol.io/)
 server so any MCP-aware LLM agent can run the same search / export /
 pptx-edit operations as the CLI. The server is headless and runs over
 stdio.
@@ -38,7 +38,7 @@ text and writes the structured summary itself; this path requires
 
 ## Install
 
-The server lives in `autopapertoppt.mcp.server`. The `mcp` SDK is the
+The server lives in `thesisagents.mcp.server`. The `mcp` SDK is the
 only extra dependency:
 
 ```bash
@@ -46,15 +46,15 @@ pip install -e .[mcp]    # only the SDK
 pip install -e .[dev]    # SDK + test deps (recommended)
 ```
 
-That installs an `autopapertoppt-mcp` console script. `python -m
-autopapertoppt.mcp` works too.
+That installs an `thesisagents-mcp` console script. `python -m
+thesisagents.mcp` works too.
 
 ## Configure your MCP client
 
 Add via Claude Code's CLI:
 
 ```powershell
-claude mcp add autopapertoppt -- ".venv\Scripts\python.exe" -m autopapertoppt.mcp
+claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 ```
 
 Or hand-edit `~/.claude.json` (or project-local `.claude/settings.json`):
@@ -62,9 +62,9 @@ Or hand-edit `~/.claude.json` (or project-local `.claude/settings.json`):
 ```json
 {
   "mcpServers": {
-    "autopapertoppt": {
+    "thesisagents": {
       "command": ".venv\\Scripts\\python.exe",
-      "args": ["-m", "autopapertoppt.mcp"]
+      "args": ["-m", "thesisagents.mcp"]
     }
   }
 }
@@ -76,14 +76,14 @@ venv-resolved binary directly:
 ```json
 {
   "mcpServers": {
-    "autopapertoppt": {
-      "command": ".venv\\Scripts\\autopapertoppt-mcp.exe"
+    "thesisagents": {
+      "command": ".venv\\Scripts\\thesisagents-mcp.exe"
     }
   }
 }
 ```
 
-(Linux / macOS: `.venv/bin/autopapertoppt-mcp`.)
+(Linux / macOS: `.venv/bin/thesisagents-mcp`.)
 
 ## Tools
 
@@ -111,12 +111,12 @@ Returns:
     {"name": "arxiv",            "in_default_mix": true,  "needs_env_var": [],
      "enabled": true},
     {"name": "springer",         "in_default_mix": true,  "enabled": false,
-     "needs_env_var": ["AUTOPAPERTOPPT_SPRINGER_API_KEY"]},
+     "needs_env_var": ["THESISAGENTS_SPRINGER_API_KEY"]},
     {"name": "ieee",             "in_default_mix": true,  "enabled": true,
-     "opt_out_env_var": "AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING",
-     "needs_env_var":   ["AUTOPAPERTOPPT_IEEE_API_KEY"]},
+     "opt_out_env_var": "THESISAGENTS_DISABLE_IEEE_SCRAPING",
+     "needs_env_var":   ["THESISAGENTS_IEEE_API_KEY"]},
     {"name": "scholar",          "in_default_mix": true,  "enabled": true,
-     "opt_out_env_var": "AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING"}
+     "opt_out_env_var": "THESISAGENTS_DISABLE_SCHOLAR_SCRAPING"}
   ]
 }
 ```
@@ -408,12 +408,12 @@ optional `meta`, and optional `body` textboxes.
 target through `Path.expanduser().resolve()` and refuses to operate on
 a non-existent file (delete / update / inspect) or on a path that is
 not a directory when one is expected. Export paths go through
-`autopapertoppt.utils.path_safety.ensure_export_dir`, which rejects
+`thesisagents.utils.path_safety.ensure_export_dir`, which rejects
 collisions with non-directory files.
 
 ## Adding a new tool
 
-1. Open `autopapertoppt/mcp/server.py` and find the right group helper
+1. Open `thesisagents/mcp/server.py` and find the right group helper
    (`_register_search_tools`, `_register_export_tool`,
    `_register_pptx_tools`). Add a new helper if the tool doesn't fit
    any existing group — `build_server` is intentionally kept under

@@ -1,6 +1,6 @@
 # Desktop GUI (PySide6)
 
-AutoPaperToPPT ships an optional desktop interface built on
+ThesisAgents ships an optional desktop interface built on
 [PySide6](https://doc.qt.io/qtforpython-6/). It wraps the existing
 CLI flow (search → results table → export) in a window so users who
 don't want a terminal can still drive the project.
@@ -11,13 +11,13 @@ The GUI is gated behind a separate extra to avoid forcing PySide6
 (~80 MB) on CLI / MCP users who don't need it:
 
 ```powershell
-pip install autopapertoppt[gui]
+pip install thesisagents[gui]
 ```
 
 If you also want the rich-tier enrichment path:
 
 ```powershell
-pip install autopapertoppt[gui,intelligence,mcp]
+pip install thesisagents[gui,intelligence,mcp]
 ```
 
 ## Launch
@@ -25,12 +25,12 @@ pip install autopapertoppt[gui,intelligence,mcp]
 Three equivalent entry points:
 
 ```powershell
-autopapertoppt-gui                    # PyPI console script
-autopapertoppt gui                    # CLI subcommand
-py -m autopapertoppt gui              # module entry, useful while developing
+thesisagents-gui                    # PyPI console script
+thesisagents gui                    # CLI subcommand
+py -m thesisagents gui              # module entry, useful while developing
 ```
 
-The Windows release `.exe` also accepts `autopapertoppt.exe gui` —
+The Windows release `.exe` also accepts `thesisagents.exe gui` —
 the bundle includes PySide6 and the source plugins so no extra
 install is needed.
 
@@ -76,13 +76,13 @@ Fields:
 | UI label | Env var written |
 |---|---|
 | Anthropic API key | `ANTHROPIC_API_KEY` |
-| Semantic Scholar API key | `AUTOPAPERTOPPT_S2_API_KEY` |
-| NCBI / PubMed API key | `AUTOPAPERTOPPT_NCBI_API_KEY` |
-| IEEE Xplore API key | `AUTOPAPERTOPPT_IEEE_API_KEY` |
-| Springer Nature API key | `AUTOPAPERTOPPT_SPRINGER_API_KEY` |
-| Crossref Plus token | `AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN` |
-| Contact email | `AUTOPAPERTOPPT_CONTACT_EMAIL` |
-| PDF cookies file | `AUTOPAPERTOPPT_PDF_COOKIES_FILE` |
+| Semantic Scholar API key | `THESISAGENTS_S2_API_KEY` |
+| NCBI / PubMed API key | `THESISAGENTS_NCBI_API_KEY` |
+| IEEE Xplore API key | `THESISAGENTS_IEEE_API_KEY` |
+| Springer Nature API key | `THESISAGENTS_SPRINGER_API_KEY` |
+| Crossref Plus token | `THESISAGENTS_CROSSREF_PLUS_TOKEN` |
+| Contact email | `THESISAGENTS_CONTACT_EMAIL` |
+| PDF cookies file | `THESISAGENTS_PDF_COOKIES_FILE` |
 
 Empty values clear the corresponding env var. **Restart the app**
 to refresh fetcher singletons that cached the env value at
@@ -150,8 +150,8 @@ supported code (e.g. `zh_TW` → `zh-tw`, `es_ES` → `es`,
 
 Two separate i18n tables live in the repo:
 
-- `autopapertoppt/gui/i18n.py` — UI labels (this page).
-- `autopapertoppt/exporters/i18n.py` — slide-deck output strings.
+- `thesisagents/gui/i18n.py` — UI labels (this page).
+- `thesisagents/exporters/i18n.py` — slide-deck output strings.
 
 They're kept in lockstep by `tests/gui/test_i18n.py::test_supported
 _languages_match_deck_table`. Adding a key is a single-file change;

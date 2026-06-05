@@ -1,4 +1,4 @@
-"""Shared fixtures for the AutoPaperToPPT test suite."""
+"""Shared fixtures for the ThesisAgents test suite."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pytest
 
 @pytest.fixture()
 def sample_papers():
-    from autopapertoppt.core.models import Paper
+    from thesisagents.core.models import Paper
 
     return [
         Paper(

@@ -7,15 +7,15 @@ from pathlib import Path
 import httpx
 import pytest
 
-from autopapertoppt.core.exceptions import (
+from thesisagents.core.exceptions import (
     ParseError,
     RateLimitError,
     SourceUnavailableError,
 )
-from autopapertoppt.core.models import Query
-from autopapertoppt.fetchers import http as http_module
-from autopapertoppt.sources.crossref.fetcher import CrossrefFetcher
-from autopapertoppt.sources.crossref.parser import parse_record
+from thesisagents.core.models import Query
+from thesisagents.fetchers import http as http_module
+from thesisagents.sources.crossref.fetcher import CrossrefFetcher
+from thesisagents.sources.crossref.parser import parse_record
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "crossref"
 _FIXTURE_BYTES = (_FIXTURE_DIR / "llm_security.json").read_bytes()
@@ -47,7 +47,7 @@ def _install(monkeypatch, transport):
     async def fake_get_client(_source):
         return httpx.AsyncClient(transport=transport)
 
-    monkeypatch.setattr("autopapertoppt.sources.crossref.fetcher.get_client", fake_get_client)
+    monkeypatch.setattr("thesisagents.sources.crossref.fetcher.get_client", fake_get_client)
 
 
 async def test_search_returns_papers(monkeypatch):
@@ -98,7 +98,7 @@ async def test_search_respects_max_results(monkeypatch):
 
 
 async def test_search_attaches_mailto_when_env_set(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_CONTACT_EMAIL", "test@example.com")
+    monkeypatch.setenv("THESISAGENTS_CONTACT_EMAIL", "test@example.com")
     transport = _CannedTransport(_FIXTURE_BYTES)
     _install(monkeypatch, transport)
     await CrossrefFetcher().search(
@@ -109,7 +109,7 @@ async def test_search_attaches_mailto_when_env_set(monkeypatch):
 
 
 async def test_search_attaches_plus_token_header(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN", "secret-plus-token")
+    monkeypatch.setenv("THESISAGENTS_CROSSREF_PLUS_TOKEN", "secret-plus-token")
     transport = _CannedTransport(_FIXTURE_BYTES)
     _install(monkeypatch, transport)
     await CrossrefFetcher().search(

@@ -6,8 +6,8 @@ the project's invariants.
 ## Quick start
 
 ```bash
-git clone https://github.com/Integration-Automation/AutoPaperToPPT.git
-cd AutoPaperToPPT
+git clone https://github.com/Integration-Automation/ThesisAgents.git
+cd ThesisAgents
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1            # Windows PowerShell
 # source .venv/bin/activate             # macOS / Linux
@@ -30,19 +30,19 @@ the gates pass.
 2. **`pytest tests/` runs clean.** Pre-existing skips are OK; new
    skips need a written reason.
 3. **`ruff check .` reports no new errors.**
-4. **`bandit -c pyproject.toml -r autopapertoppt/ sources/`**
+4. **`bandit -c pyproject.toml -r thesisagents/ sources/`**
    reports `No issues identified`. The `-c` flag is **mandatory** —
    without it bandit ignores the project skip config.
 5. **End-to-end smoke** for changes touching `sources/`,
-   `autopapertoppt/exporters/`, `autopapertoppt/intelligence/`, or
-   `autopapertoppt/mcp/`:
-   - Search: `autopapertoppt --query "transformer attention" --source arxiv --max 3 --out ./exports/smoke/`
+   `thesisagents/exporters/`, `thesisagents/intelligence/`, or
+   `thesisagents/mcp/`:
+   - Search: `thesisagents --query "transformer attention" --source arxiv --max 3 --out ./exports/smoke/`
      — confirm `.pptx`, `.xlsx`, `.bib` land on disk and the deck
      opens without warnings.
    - PPTX changes: also regenerate an enriched / thesis-style deck
      against a known paper (see `scripts/regen_*.py`) and run the
      headless overflow check.
-   - MCP changes: `python -c "from autopapertoppt.mcp import build_server; import asyncio; print(asyncio.run(build_server().list_tools()))"`
+   - MCP changes: `python -c "from thesisagents.mcp import build_server; import asyncio; print(asyncio.run(build_server().list_tools()))"`
      — every documented tool present.
 6. **No live network calls in tests.** Use recorded fixtures
    under `tests/fixtures/<source>/`. Re-recording is a manual
@@ -136,7 +136,7 @@ default rule sets:
 - Never `except Exception: pass` without a logged reason + comment.
 - Never catch `BaseException` directly.
 - Use specific exception types from
-  `autopapertoppt.core.exceptions`. Chain with `raise X from err`
+  `thesisagents.core.exceptions`. Chain with `raise X from err`
   to preserve context (ruff `B904`).
 - Never use `assert` for runtime validation (assertions are
   stripped under `python -O`). Use explicit `raise` instead.
@@ -146,7 +146,7 @@ default rule sets:
 - No unused imports / variables / params (prefix unused params
   with `_`).
 - No commented-out code (git preserves history).
-- No `print()` in production code; use `autopapertoppt.utils.logging`.
+- No `print()` in production code; use `thesisagents.utils.logging`.
 - No `TODO` / `FIXME` / `XXX` in merged code — file a ticket.
 - No magic numbers — extract to `UPPER_CASE` constants.
   Exceptions: 0, 1, -1, 2 in obvious contexts.
@@ -223,7 +223,7 @@ Before pushing, reproduce each gate locally:
 
 ```bash
 # bandit (the -c flag is mandatory)
-python -m bandit -c pyproject.toml -r autopapertoppt/ sources/
+python -m bandit -c pyproject.toml -r thesisagents/ sources/
 
 # ruff
 python -m ruff check .
@@ -232,13 +232,13 @@ python -m ruff check .
 python -m pytest tests/
 
 # search-mode smoke
-autopapertoppt --query "diffusion models" --source arxiv --max 3 --out ./smoke/
+thesisagents --query "diffusion models" --source arxiv --max 3 --out ./smoke/
 
 # single-paper smoke
-autopapertoppt --paper "https://arxiv.org/abs/1706.03762" --out ./smoke/single/
+thesisagents --paper "https://arxiv.org/abs/1706.03762" --out ./smoke/single/
 
 # (only when touching pptx / i18n) overflow check
-python -c "from autopapertoppt.exporters.pptx import inspect_overflow; \
+python -c "from thesisagents.exporters.pptx import inspect_overflow; \
            inspect_overflow('./smoke/your-deck.pptx')"
 ```
 
@@ -251,12 +251,12 @@ that pass on Windows locally, the Ubuntu cells will catch it.
 | Adding... | Goes to... |
 |---|---|
 | A new source | `sources/<name>/` — see [Source plugin authoring](source_plugins.md). |
-| A new export format | `autopapertoppt/exporters/<name>.py` + `tests/exporters/test_<name>.py`. Don't import from `autopapertoppt/fetchers/` — exporters consume `PaperCollection` only. |
-| A new MCP tool | `autopapertoppt/mcp/server.py` (add the `@server.tool` registration), document in `docs/mcp.md`, smoke-test by listing tools. |
-| A new CLI flag | `autopapertoppt/cli.py` (add to `build_parser`), document in `docs/cli.md`. Don't add `--<service>-key` flags — use env vars. |
-| A new GUI tab | `autopapertoppt/gui/pages/<tab>.py`, register in `autopapertoppt/gui/main_window.py`, add a `pytest-qt` smoke test. |
+| A new export format | `thesisagents/exporters/<name>.py` + `tests/exporters/test_<name>.py`. Don't import from `thesisagents/fetchers/` — exporters consume `PaperCollection` only. |
+| A new MCP tool | `thesisagents/mcp/server.py` (add the `@server.tool` registration), document in `docs/mcp.md`, smoke-test by listing tools. |
+| A new CLI flag | `thesisagents/cli.py` (add to `build_parser`), document in `docs/cli.md`. Don't add `--<service>-key` flags — use env vars. |
+| A new GUI tab | `thesisagents/gui/pages/<tab>.py`, register in `thesisagents/gui/main_window.py`, add a `pytest-qt` smoke test. |
 | A new i18n key | Both tables (UI + deck) if user-facing on both surfaces; one if surface-specific. Always fill all 14 languages in one commit — the coverage tests block partial PRs. |
-| A new env var | `autopapertoppt/utils/config.py` (or wherever it's consumed), document in `docs/configuration.md`, update `README.md`'s env-var table if user-facing. |
+| A new env var | `thesisagents/utils/config.py` (or wherever it's consumed), document in `docs/configuration.md`, update `README.md`'s env-var table if user-facing. |
 
 ## What NOT to add
 
@@ -269,7 +269,7 @@ that pass on Windows locally, the Ubuntu cells will catch it.
 - A feature flag for the auto-bump / release flow. The pipeline
   is intentionally minimal-state.
 - A new top-level entry point (console script). The three we have
-  (`autopapertoppt`, `autopapertoppt-mcp`, `autopapertoppt-gui`)
+  (`thesisagents`, `thesisagents-mcp`, `thesisagents-gui`)
   cover every surface; new functionality goes as subcommands or
   tools.
 
@@ -294,6 +294,6 @@ See [Releases](releases.md) for the auto-bump flow, the
 ## Asking for help
 
 Open an issue at
-<https://github.com/Integration-Automation/AutoPaperToPPT/issues>
+<https://github.com/Integration-Automation/ThesisAgents/issues>
 or a draft PR with a question label. The maintainers are happy
 to weigh in on design questions before you write the code.

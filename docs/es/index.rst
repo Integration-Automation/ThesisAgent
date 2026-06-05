@@ -1,4 +1,4 @@
-Guía de usuario de AutoPaperToPPT
+Guía de usuario de ThesisAgents
 ==================================
 
 Asistente de búsqueda de artículos guiado por palabras clave. Recupera
@@ -111,7 +111,7 @@ Requiere Python **3.12+**.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -127,19 +127,19 @@ Inicio rápido
 .. code-block:: bash
 
    # Buscar arXiv → deck + workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Un solo artículo por URL → deck + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Renderizar deck en español
-   autopapertoppt --paper 1706.03762 --lang es --out ./exports/
+   thesisagents --paper 1706.03762 --lang es --out ./exports/
 
    # Enriquecimiento Python pipeline (requiere API key Anthropic)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang es --out ./exports/
 
 Tabla completa de flags CLI: :doc:`/cli`.

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Cross-agent guide for **AutoPaperToPPT**. Mirrored from `CLAUDE.md`, kept
+Cross-agent guide for **ThesisAgents**. Mirrored from `CLAUDE.md`, kept
 short so any agent (Codex CLI, Cursor, Aider, Windsurf, Cline, Continue,
 or a future tool) can pick up the must-know rules without parsing the
 full project guide. `CLAUDE.md` remains the canonical, deeper reference
@@ -70,17 +70,17 @@ search.
 ### Per-paper flow
 
 1. Get the PDF into the exports dir, one of two ways:
-   * `py -m autopapertoppt --paper <url-or-id> --out ./exports/<run>/` to
+   * `py -m thesisagents --paper <url-or-id> --out ./exports/<run>/` to
      fetch metadata and download the PDF (`./exports/<run>/pdfs/<key>.pdf`
      lands automatically); or
-   * `py -m autopapertoppt --pdf <local-path> --out ./exports/<run>/`
+   * `py -m thesisagents --pdf <local-path> --out ./exports/<run>/`
      when the user supplied a PDF themselves — the file is copied into
      `./exports/<run>/pdfs/` and a stub `Paper` (with `source="local"`)
      is built. Use `--title --authors --year --venue --doi --arxiv-id`
      to override metadata when the filename / heuristic isn't right.
 2. Read the PDF yourself. If your editor's Read tool can't handle the
    full file, dump plain text via the project's internal extractor —
-   `from autopapertoppt.intelligence.pdf import _extract_text` — then
+   `from thesisagents.intelligence.pdf import _extract_text` — then
    chunk the output. Do not re-implement PDF extraction.
 3. Hand-author a `PaperSummary` populated with the rich-tier fields
    (`pain_points`, `research_question`, `contributions_detailed`,
@@ -127,7 +127,7 @@ Concrete workflow:
 
 ```python
 # After running the search the user requested:
-#   py -m autopapertoppt --query "..." --out ./exports/<run>/
+#   py -m thesisagents --query "..." --out ./exports/<run>/
 # the aggregate xlsx sits at exports/<run>/<slug>-<timestamp>.xlsx
 # with columns: # | Title | Authors | Year | Source | Indexed via |
 #               DOI | URL | PDF | Citations | Abstract
@@ -206,21 +206,21 @@ Default mix (no env vars required): `arxiv`, `semantic_scholar`, `openalex`,
 
 Opt-in plugins (need an env var or explicit flag):
 - `ieee` — **on by default**, search and document fetch go through
-  **visible Chrome via WebRunner** (`autopapertoppt/sources/ieee/webrunner_backend.py`).
+  **visible Chrome via WebRunner** (`thesisagents/sources/ieee/webrunner_backend.py`).
   See "IEEE / paywalled domains use WebRunner" below — this is a hard
-  rule, not a perf hint. Set `AUTOPAPERTOPPT_IEEE_API_KEY` to switch
+  rule, not a perf hint. Set `THESISAGENTS_IEEE_API_KEY` to switch
   to the official Xplore API path; set
-  `AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1` to opt out entirely
+  `THESISAGENTS_DISABLE_IEEE_SCRAPING=1` to opt out entirely
   (CI / no-Chrome environments only).
-- `springer` — set `AUTOPAPERTOPPT_SPRINGER_API_KEY` (free key from
+- `springer` — set `THESISAGENTS_SPRINGER_API_KEY` (free key from
   https://dev.springernature.com/). Required — the plugin raises
   `ConfigError` without it.
-- `scholar` — set `AUTOPAPERTOPPT_ENABLE_SCHOLAR_SCRAPING=1`. Google
+- `scholar` — set `THESISAGENTS_ENABLE_SCHOLAR_SCRAPING=1`. Google
   Scholar ToS forbids scraping; off by default. When on, also goes
   through WebRunner (visible Chrome), not httpx.
 
 For top-tier-only searches (the default), the filter in
-`autopapertoppt/core/top_venues.py` accepts arXiv passthrough plus a
+`thesisagents/core/top_venues.py` accepts arXiv passthrough plus a
 curated whitelist of CS conferences/journals and multidisciplinary
 flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
 `--all-venues` to disable the filter.
@@ -231,7 +231,7 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   fixtures under `tests/fixtures/<source>/`. Re-recording is a
   separate manual step (`scripts/record_fixture.py`).
 - **HTTPS-only.** All outbound HTTP goes through
-  `autopapertoppt/fetchers/http.py::get_client(source)`. The transport
+  `thesisagents/fetchers/http.py::get_client(source)`. The transport
   rejects non-HTTPS requests, including mid-flight redirects. Do not
   call `httpx.get` / `requests.get` directly.
 - **Per-paper PPT gate.** When `--query` results trigger pptx
@@ -260,7 +260,7 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   detail.)
 - **Definition of Done.** Every change must pass `py -m pytest tests/`,
   `py -m ruff check .`, and
-  `py -m bandit -c pyproject.toml -r autopapertoppt/` before
+  `py -m bandit -c pyproject.toml -r thesisagents/` before
   it can be committed. New code requires new tests.
 
 ## Where to look for the rest
@@ -279,6 +279,6 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
 - DoD gate runner: `.claude/agents/tasks/dod-verify.md`.
 - LLM-as-agent thesis-style authoring: `.claude/agents/tasks/paper-summary-author.md`
   + `tasks/post-author-audit.md` + `tasks/slide-overflow-check.md`.
-- Per-source plugin contract and recorded fixtures: `autopapertoppt/sources/<name>/`
+- Per-source plugin contract and recorded fixtures: `thesisagents/sources/<name>/`
   + `tests/fixtures/<name>/`.
 - LLM-as-agent flow examples: `scripts/regen_*.py`.

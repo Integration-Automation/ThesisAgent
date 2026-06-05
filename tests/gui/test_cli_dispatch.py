@@ -1,8 +1,8 @@
-"""Verify ``autopapertoppt gui`` dispatches to the GUI entry point."""
+"""Verify ``thesisagents gui`` dispatches to the GUI entry point."""
 
 from __future__ import annotations
 
-from autopapertoppt import cli as cli_module
+from thesisagents import cli as cli_module
 
 
 def test_gui_subcommand_calls_gui_main(monkeypatch):
@@ -13,7 +13,7 @@ def test_gui_subcommand_calls_gui_main(monkeypatch):
         return 0
 
     monkeypatch.setattr(
-        "autopapertoppt.gui.app.main", fake_gui_main
+        "thesisagents.gui.app.main", fake_gui_main
     )
     rc = cli_module.main(["gui", "--debug"])
     assert rc == 0
@@ -27,7 +27,7 @@ def test_gui_subcommand_handles_missing_extra(monkeypatch):
     real_import = builtins.__import__
 
     def fake_import(name, *args, **kwargs):
-        if name == "autopapertoppt.gui.app":
+        if name == "thesisagents.gui.app":
             raise ImportError("PySide6 not installed (faked)")
         return real_import(name, *args, **kwargs)
 

@@ -12,13 +12,13 @@ import os
 
 import pytest
 
-from autopapertoppt.core.models import (
+from thesisagents.core.models import (
     Paper,
     PaperCollection,
     PaperSummary,
     Query,
 )
-from autopapertoppt.gui.pages.enrich import EnrichPage
+from thesisagents.gui.pages.enrich import EnrichPage
 
 
 def _paper(idx: int, *, with_pdf: bool = True) -> Paper:
@@ -91,10 +91,10 @@ def test_enrich_happy_path_attaches_summaries(qtbot, monkeypatch):
         )
 
     monkeypatch.setattr(
-        "autopapertoppt.intelligence.pdf.fetch_and_extract", fake_fetch,
+        "thesisagents.intelligence.pdf.fetch_and_extract", fake_fetch,
     )
     monkeypatch.setattr(
-        "autopapertoppt.intelligence.summarise.summarise_paper",
+        "thesisagents.intelligence.summarise.summarise_paper",
         fake_summarise,
     )
 

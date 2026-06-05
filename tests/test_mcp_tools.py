@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from autopapertoppt import mcp as mcp_pkg
-from autopapertoppt.core.models import PaperCollection, Query
+from thesisagents import mcp as mcp_pkg
+from thesisagents.core.models import PaperCollection, Query
 
 
 @pytest.fixture()
@@ -42,8 +42,8 @@ def test_search_tool(monkeypatch, server, sample_papers):
     async def fake_shutdown():
         return None
 
-    monkeypatch.setattr("autopapertoppt.mcp.server.run_search", fake_run_search)
-    monkeypatch.setattr("autopapertoppt.mcp.server.shutdown_clients", fake_shutdown)
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
     payload = asyncio.run(
         _call(server, "search", keywords="attention", sources=["arxiv"], max_results=5)
     )
@@ -53,7 +53,7 @@ def test_search_tool(monkeypatch, server, sample_papers):
 
 def test_fetch_pdf_text_tool(monkeypatch, server):
     """fetch_pdf_text wraps intelligence.pdf.fetch_and_extract for MCP callers."""
-    from autopapertoppt.intelligence.pdf import ExtractedPdf
+    from thesisagents.intelligence.pdf import ExtractedPdf
 
     async def fake_fetch(pdf_url, source="intelligence"):
         return ExtractedPdf(
@@ -61,7 +61,7 @@ def test_fetch_pdf_text_tool(monkeypatch, server):
         )
 
     monkeypatch.setattr(
-        "autopapertoppt.intelligence.pdf.fetch_and_extract", fake_fetch
+        "thesisagents.intelligence.pdf.fetch_and_extract", fake_fetch
     )
     payload = asyncio.run(
         _call(server, "fetch_pdf_text", pdf_url="https://arxiv.org/pdf/x")
@@ -81,8 +81,8 @@ def test_fetch_paper_tool(monkeypatch, server, sample_papers):
     async def fake_shutdown():
         return None
 
-    monkeypatch.setattr("autopapertoppt.mcp.server.run_single_paper", fake_single)
-    monkeypatch.setattr("autopapertoppt.mcp.server.shutdown_clients", fake_shutdown)
+    monkeypatch.setattr("thesisagents.mcp.server.run_single_paper", fake_single)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
     payload = asyncio.run(_call(server, "fetch_paper", identifier="2401.08741"))
     assert payload["paper"]["title"] == "Sample Paper on Attention"
     assert payload["identifier"]["kind"] == "arxiv"
@@ -145,10 +145,11 @@ def test_list_sources_tool(server, monkeypatch):
     # Clear every gating var so the default-on / opt-in semantics are
     # exercised without contamination from the host shell.
     for var in (
-        "AUTOPAPERTOPPT_IEEE_API_KEY",
-        "AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING",
-        "AUTOPAPERTOPPT_SPRINGER_API_KEY",
-        "AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING",
+        "THESISAGENTS_IEEE_API_KEY",
+        "THESISAGENTS_DISABLE_IEEE_SCRAPING",
+        "THESISAGENTS_SPRINGER_API_KEY",
+        "THESISAGENTS_DISABLE_SCHOLAR_SCRAPING",
+        "THESISAGENTS_CORE_API_KEY",
     ):
         monkeypatch.delenv(var, raising=False)
     payload = asyncio.run(_call(server, "list_sources"))
@@ -157,7 +158,7 @@ def test_list_sources_tool(server, monkeypatch):
     for required in (
         "arxiv", "semantic_scholar", "openalex", "pubmed",
         "acm", "dblp", "crossref", "openaire",
-        "ieee", "springer", "scholar",
+        "ieee", "springer", "scholar", "europepmc", "doaj", "hal", "core",
     ):
         assert required in names, f"list_sources missing {required!r}"
     # Plugins that need no env var must be enabled.
@@ -165,20 +166,41 @@ def test_list_sources_tool(server, monkeypatch):
     assert names["dblp"]["enabled"] is True
     # IEEE + Scholar are now default-ON (no opt-out env var set).
     assert names["ieee"]["enabled"] is True
-    assert names["ieee"]["opt_out_env_var"] == ["AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING"]
+    assert names["ieee"]["opt_out_env_var"] == ["THESISAGENTS_DISABLE_IEEE_SCRAPING"]
     assert names["scholar"]["enabled"] is True
-    assert names["scholar"]["opt_out_env_var"] == ["AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING"]
+    assert names["scholar"]["opt_out_env_var"] == ["THESISAGENTS_DISABLE_SCHOLAR_SCRAPING"]
     # Springer still opt-IN — without the API key it is disabled.
     assert names["springer"]["enabled"] is False
-    assert names["springer"]["opt_in_env_var"] == ["AUTOPAPERTOPPT_SPRINGER_API_KEY"]
+    assert names["springer"]["opt_in_env_var"] == ["THESISAGENTS_SPRINGER_API_KEY"]
+    # CORE is opt-IN too — disabled without its key.
+    assert names["core"]["enabled"] is False
+    assert names["core"]["opt_in_env_var"] == ["THESISAGENTS_CORE_API_KEY"]
     assert "default_sources" in payload
     # Default mix now includes scholar (alongside ieee + the others).
     assert "scholar" in payload["default_sources"]
     assert "ieee" in payload["default_sources"]
 
 
+def test_list_exports_tool(server):
+    """list_exports reports every registered format with a description."""
+    from thesisagents.core.constants import ALL_EXPORTS
+
+    payload = asyncio.run(_call(server, "list_exports"))
+    by_format = {entry["format"]: entry for entry in payload["formats"]}
+    # Every format the exporter layer knows about must be advertised.
+    for fmt in ALL_EXPORTS:
+        assert fmt in by_format, f"list_exports missing {fmt!r}"
+        assert by_format[fmt]["description"]
+    # The new interchange formats are present and flagged as aggregate.
+    assert by_format["ris"]["aggregate"] is True
+    assert by_format["csv"]["aggregate"] is True
+    # pptx + pdf are per-paper, not aggregate.
+    assert by_format["pptx"]["aggregate"] is False
+    assert by_format["pdf"]["aggregate"] is False
+
+
 def test_list_sources_reflects_springer_key(server, monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_SPRINGER_API_KEY", "test-key")
+    monkeypatch.setenv("THESISAGENTS_SPRINGER_API_KEY", "test-key")
     payload = asyncio.run(_call(server, "list_sources"))
     by_name = {entry["name"]: entry for entry in payload["sources"]}
     assert by_name["springer"]["enabled"] is True
@@ -195,8 +217,8 @@ def test_search_passes_top_tier_and_min_citations(monkeypatch, server, sample_pa
     async def fake_shutdown():
         return None
 
-    monkeypatch.setattr("autopapertoppt.mcp.server.run_search", fake_run_search)
-    monkeypatch.setattr("autopapertoppt.mcp.server.shutdown_clients", fake_shutdown)
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
     asyncio.run(
         _call(
             server,
@@ -212,9 +234,9 @@ def test_search_passes_top_tier_and_min_citations(monkeypatch, server, sample_pa
     assert captured["query"].min_citations == 10
 
 
-def test_search_defaults_to_full_source_mix(monkeypatch, server, sample_papers):
-    """When sources is omitted, the search defaults to DEFAULT_SOURCES."""
-    from autopapertoppt.core.constants import DEFAULT_SOURCES
+def test_search_exclude_sources_prunes_mix(monkeypatch, server, sample_papers):
+    """exclude_sources is subtracted from the resolved mix before the Query."""
+    from thesisagents.core.constants import DEFAULT_SOURCES
 
     captured = {}
 
@@ -225,8 +247,48 @@ def test_search_defaults_to_full_source_mix(monkeypatch, server, sample_papers):
     async def fake_shutdown():
         return None
 
-    monkeypatch.setattr("autopapertoppt.mcp.server.run_search", fake_run_search)
-    monkeypatch.setattr("autopapertoppt.mcp.server.shutdown_clients", fake_shutdown)
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    asyncio.run(_call(server, "search", keywords="x", exclude_sources=["ieee"]))
+    assert "ieee" not in captured["query"].sources
+    assert captured["query"].sources == tuple(
+        s for s in DEFAULT_SOURCES if s != "ieee"
+    )
+
+
+def test_search_exclude_all_sources_errors(monkeypatch, server):
+    """Excluding the only requested source surfaces a clean error."""
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    with pytest.raises(Exception):  # noqa: B017,PT011  # FastMCP wraps the ThesisAgentsError
+        asyncio.run(
+            _call(
+                server,
+                "search",
+                keywords="x",
+                sources=["arxiv"],
+                exclude_sources=["arxiv"],
+            )
+        )
+
+
+def test_search_defaults_to_full_source_mix(monkeypatch, server, sample_papers):
+    """When sources is omitted, the search defaults to DEFAULT_SOURCES."""
+    from thesisagents.core.constants import DEFAULT_SOURCES
+
+    captured = {}
+
+    async def fake_run_search(query, **_kwargs):
+        captured["query"] = query
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
     asyncio.run(_call(server, "search", keywords="x"))
     assert captured["query"].sources == DEFAULT_SOURCES
 
@@ -293,7 +355,7 @@ def test_export_treats_zero_as_unlimited(server, sample_papers, tmp_path):
 
 def test_download_pdfs_tool(monkeypatch, server, sample_papers, tmp_path):
     """download_pdfs forwards to core.pdf_download and returns per-paper results."""
-    from autopapertoppt.core.pdf_download import PdfDownloadResult
+    from thesisagents.core.pdf_download import PdfDownloadResult
 
     async def fake_download(collection, out_dir):
         return [
@@ -311,9 +373,9 @@ def test_download_pdfs_tool(monkeypatch, server, sample_papers, tmp_path):
         return None
 
     monkeypatch.setattr(
-        "autopapertoppt.mcp.server.core_download_pdfs", fake_download
+        "thesisagents.mcp.server.core_download_pdfs", fake_download
     )
-    monkeypatch.setattr("autopapertoppt.mcp.server.shutdown_clients", fake_shutdown)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
     papers = [p.to_dict() for p in sample_papers]
     payload = asyncio.run(
         _call(

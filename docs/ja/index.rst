@@ -1,4 +1,4 @@
-AutoPaperToPPT ユーザーガイド
+ThesisAgents ユーザーガイド
 =============================
 
 キーワード駆動の論文検索アシスタント。arXiv、Semantic Scholar、OpenAlex、
@@ -105,7 +105,7 @@ Python **3.12+** が必要です。
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -123,19 +123,19 @@ Python **3.12+** が必要です。
 .. code-block:: bash
 
    # arXiv で検索 → デッキ + ワークブック + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # 単一論文を URL で取得 → デッキ + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # 日本語でデッキを描画
-   autopapertoppt --paper 1706.03762 --lang ja --out ./exports/
+   thesisagents --paper 1706.03762 --lang ja --out ./exports/
 
    # Python パイプライン経由のエンリッチ(Anthropic API キー必須)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang ja --out ./exports/
 
 CLI フラグの完全な表は :doc:`/cli` を参照してください。

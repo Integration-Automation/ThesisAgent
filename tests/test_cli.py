@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from autopapertoppt import cli as cli_module
-from autopapertoppt.core.identifiers import PaperIdentifier
-from autopapertoppt.core.models import PaperCollection, Query
+from thesisagents import cli as cli_module
+from thesisagents.core.identifiers import PaperIdentifier
+from thesisagents.core.models import PaperCollection, Query
 
 
 @pytest.fixture(autouse=True)
@@ -17,7 +17,7 @@ def _stub_download_pdfs(monkeypatch, tmp_path):
     the new per-paper PPT gate passes. Tests exercising the gate's
     paywall / failure branches override this fixture by re-patching
     ``cli_module.download_pdfs``."""
-    from autopapertoppt.core.pdf_download import PdfDownloadResult
+    from thesisagents.core.pdf_download import PdfDownloadResult
 
     async def _fake_success(collection, out_dir):
         pdf_dir = Path(out_dir) / "pdfs"
@@ -118,7 +118,7 @@ def test_cli_search_default_exports(tmp_path, patched_pipeline):
 
 def test_cli_single_paper_default_exports(tmp_path, monkeypatch, sample_papers):
     """When --paper is given without --export, default to pptx,bib (no xlsx)."""
-    from autopapertoppt.core.models import PaperCollection, Query
+    from thesisagents.core.models import PaperCollection, Query
 
     async def fake_single(identifier: PaperIdentifier) -> PaperCollection:
         query = Query(keywords=identifier.value, sources=("arxiv",), max_results=1)
@@ -140,7 +140,7 @@ def test_cli_single_paper_default_exports(tmp_path, monkeypatch, sample_papers):
 
 def test_cli_single_paper_explicit_export_wins(tmp_path, monkeypatch, sample_papers):
     """Explicit --export overrides the single-paper default."""
-    from autopapertoppt.core.models import PaperCollection, Query
+    from thesisagents.core.models import PaperCollection, Query
 
     async def fake_single(identifier: PaperIdentifier) -> PaperCollection:
         query = Query(keywords=identifier.value, sources=("arxiv",), max_results=1)
@@ -208,13 +208,13 @@ def test_cli_rejects_both_query_and_paper(tmp_path):
 
 
 def test_cli_bare_invocation_dispatches_gui(monkeypatch):
-    """`autopapertoppt` with no args MUST route to the GUI dispatcher.
+    """`thesisagents` with no args MUST route to the GUI dispatcher.
 
     Regression: the bare command used to crash with `one of the arguments
     --query/-q --paper/-p --pdf is required` because the mutex group is
     `required=True`. Users expected a "just open the app" gesture, and
     the GUI extras' own entry point already does that — so the bare
-    CLI now mirrors `autopapertoppt gui`.
+    CLI now mirrors `thesisagents gui`.
     """
     called: dict[str, list[str]] = {}
 
@@ -228,7 +228,7 @@ def test_cli_bare_invocation_dispatches_gui(monkeypatch):
 
 
 def test_cli_gui_subcommand_dispatches_gui(monkeypatch):
-    """`autopapertoppt gui` still routes to the GUI dispatcher, with any
+    """`thesisagents gui` still routes to the GUI dispatcher, with any
     trailing tokens forwarded to the GUI's own argv parser."""
     called: dict[str, list[str]] = {}
 
@@ -251,7 +251,7 @@ def test_cli_rejects_doi_identifier_until_resolver_lands(tmp_path):
 def test_cli_source_default_is_multi_source(tmp_path, monkeypatch, sample_papers):
     """When --source is omitted, run_search must be invoked across the
     DEFAULT_SOURCES mix, not just arxiv."""
-    from autopapertoppt.core.constants import DEFAULT_SOURCES
+    from thesisagents.core.constants import DEFAULT_SOURCES
 
     captured: dict[str, Query] = {}
 
@@ -270,6 +270,71 @@ def test_cli_source_default_is_multi_source(tmp_path, monkeypatch, sample_papers
     )
     assert code == 0
     assert captured["query"].sources == DEFAULT_SOURCES
+
+
+def test_cli_list_sources(capsys):
+    """--list-sources prints the catalog (incl. the newest plugins) and exits 0
+    without needing a query/paper/pdf mode."""
+    code = cli_module.main(["--list-sources"])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "europepmc" in out
+    assert "doaj" in out
+    assert "[default]" in out
+
+
+def test_cli_list_exports(capsys):
+    """--list-exports prints every format, including the new ris / csv."""
+    code = cli_module.main(["--list-exports"])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "ris" in out
+    assert "csv" in out
+    assert "pptx" in out
+
+
+def test_cli_exclude_source_prunes_default_mix(tmp_path, monkeypatch, sample_papers):
+    """--exclude-source subtracts from the resolved mix; the no-VPN path drops
+    only ieee and keeps every other default source."""
+    from thesisagents.core.constants import DEFAULT_SOURCES
+
+    captured: dict[str, Query] = {}
+
+    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
+        captured["query"] = query
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown() -> None:
+        return None
+
+    monkeypatch.setattr(cli_module, "run_search", fake_run_search)
+    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
+
+    code = cli_module.main(
+        ["--query", "x", "--out", str(tmp_path), "--export", "bib",
+         "--exclude-source", "ieee"]
+    )
+    assert code == 0
+    assert "ieee" not in captured["query"].sources
+    expected = tuple(s for s in DEFAULT_SOURCES if s != "ieee")
+    assert captured["query"].sources == expected
+
+
+def test_cli_exclude_unknown_source_errors(tmp_path):
+    """A typo in --exclude-source must fail loudly, not silently no-op."""
+    with pytest.raises(SystemExit):
+        cli_module.main(
+            ["--query", "x", "--out", str(tmp_path), "--exclude-source", "nope"]
+        )
+
+
+def test_cli_exclude_all_sources_errors(tmp_path):
+    """Excluding the only requested source leaves an empty mix -> error."""
+    with pytest.raises(SystemExit):
+        cli_module.main(
+            ["--query", "x", "--out", str(tmp_path),
+             "--source", "arxiv", "--exclude-source", "arxiv"]
+        )
 
 
 def test_cli_top_tier_filter_off_by_default(tmp_path, monkeypatch, sample_papers):
@@ -368,7 +433,7 @@ def test_cli_no_pdf_flag_skips_download(tmp_path, monkeypatch, sample_papers):
 
 
 def _build_paper(source_id: str, *, pdf_url: str | None):
-    from autopapertoppt.core.models import Paper
+    from thesisagents.core.models import Paper
 
     return Paper(
         source="arxiv",
@@ -384,7 +449,7 @@ def _build_paper(source_id: str, *, pdf_url: str | None):
 
 
 def _patch_search(monkeypatch, papers):
-    from autopapertoppt.core.models import PaperCollection
+    from thesisagents.core.models import PaperCollection
 
     async def fake_run_search(query, **_kwargs):
         return PaperCollection(query=query, papers=tuple(papers))
@@ -423,7 +488,7 @@ def test_cli_per_paper_pptx_one_per_accessible_paper(
 
 def test_cli_aggregate_xlsx_bib_only_over_accessible(tmp_path, monkeypatch):
     """xlsx + bib aggregate over the accessible subset, not the full result set."""
-    from autopapertoppt.core.pdf_download import PdfDownloadResult
+    from thesisagents.core.pdf_download import PdfDownloadResult
 
     accessible = _build_paper("good", pdf_url="https://example.com/good.pdf")
     paywalled = _build_paper("bad", pdf_url=None)
@@ -517,7 +582,7 @@ def test_cli_paywall_prompt_blocks_without_yes(tmp_path, monkeypatch):
 
 def test_cli_paywall_below_threshold_does_not_prompt(tmp_path, monkeypatch):
     """If only 1 of 10 is paywalled (10% < 30%), proceed silently."""
-    from autopapertoppt.core.pdf_download import PdfDownloadResult
+    from thesisagents.core.pdf_download import PdfDownloadResult
 
     papers = [
         _build_paper(str(i), pdf_url=f"https://example.com/{i}.pdf")
@@ -576,7 +641,7 @@ def test_cli_paywall_below_threshold_does_not_prompt(tmp_path, monkeypatch):
 def _stub_pdf_extract(monkeypatch, text: str = "Extracted paper body."):
     """Replace the pypdf-backed text extractor so tests don't need a real PDF."""
     monkeypatch.setattr(
-        "autopapertoppt.intelligence.pdf._extract_text",
+        "thesisagents.intelligence.pdf._extract_text",
         lambda body, source="local": (text, 1),  # noqa: ARG005  # signature mirror
     )
 
@@ -804,8 +869,8 @@ def test_cli_single_paper_mode_aborts_without_pdf(
     tmp_path, monkeypatch, sample_papers
 ):
     """--paper mode must error when the single paper's PDF is not retrievable."""
-    from autopapertoppt.core.models import PaperCollection, Query
-    from autopapertoppt.core.pdf_download import PdfDownloadResult
+    from thesisagents.core.models import PaperCollection, Query
+    from thesisagents.core.pdf_download import PdfDownloadResult
 
     paper_no_pdf = _build_paper("nope", pdf_url=None)
 

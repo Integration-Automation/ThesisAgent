@@ -1,6 +1,6 @@
 # Architecture
 
-How AutoPaperToPPT is organised, why those boundaries exist, and
+How ThesisAgents is organised, why those boundaries exist, and
 how a single keyword turns into a thesis-style `.pptx`.
 
 ## One-paragraph summary
@@ -47,8 +47,8 @@ fetcher** — it only consumes a `PaperCollection`.
 ## Top-level layout
 
 ```
-AutoPaperToPPT/
-├── autopapertoppt/                 # main package — core runtime
+ThesisAgents/
+├── thesisagents/                 # main package — core runtime
 │   ├── core/                       # domain (Paper, Query, dedup, rank, pipeline)
 │   ├── fetchers/                   # HTTPS-only http client + Fetcher base
 │   ├── exporters/                  # pptx / xlsx / bib / md / json + pptx_edit + i18n
@@ -57,7 +57,7 @@ AutoPaperToPPT/
 │   ├── gui/                        # PySide6 desktop UI ([gui] extra)
 │   ├── utils/                      # logging, path safety, async helpers
 │   ├── cli.py                      # argparse CLI
-│   └── __main__.py                 # `python -m autopapertoppt`
+│   └── __main__.py                 # `python -m thesisagents`
 ├── sources/<name>/                 # per-source plugins (arxiv, pubmed, …)
 │   ├── __init__.py                 # exports `fetcher_class`
 │   ├── fetcher.py                  # Fetcher subclass
@@ -71,7 +71,7 @@ AutoPaperToPPT/
 
 ## Core vs source plugins
 
-The split between `autopapertoppt/` and `sources/<name>/` is
+The split between `thesisagents/` and `sources/<name>/` is
 **dependency surface and failure isolation**, not "anything
 source-related is a plugin."
 
@@ -147,7 +147,7 @@ came back.
 
 ### OA PDF resolution
 
-`autopapertoppt.core.oa_resolver` runs after dedup + rank + top-tier
+`thesisagents.core.oa_resolver` runs after dedup + rank + top-tier
 filter. For every paper still missing `pdf_url`, five strategies fire
 in order, returning the first hit:
 
@@ -157,14 +157,14 @@ in order, returning the first hit:
    `https://arxiv.org/pdf/{arxiv_id}.pdf` directly. Zero network
    round-trip; highest precision; fastest.
 2. **Unpaywall** (https://api.unpaywall.org/v2/{doi}) — free, no API
-   key; needs `AUTOPAPERTOPPT_CONTACT_EMAIL` for politeness. ~50M
+   key; needs `THESISAGENTS_CONTACT_EMAIL` for politeness. ~50M
    papers indexed.
 3. **Semantic Scholar OA index** — S2's `openAccessPdf` field is
    partially disjoint from Unpaywall; when one misses, the other
    often hits. Free, no API key required (rate-limited).
 4. **CORE.ac.uk** — aggregator of 200M+ OA repository items
    (institutional repos, regional preprint servers, OA journals).
-   Needs `AUTOPAPERTOPPT_CORE_API_KEY` (free); skipped silently when
+   Needs `THESISAGENTS_CORE_API_KEY` (free); skipped silently when
    unset.
 5. **arXiv title search** — for papers without a DOI / arxiv_id, search
    arXiv by the paper's title. Exact-match on the normalised title.
@@ -178,7 +178,7 @@ Disabled per-run via the CLI's `--no-oa-resolve` flag or
 
 ### Dedup
 
-`autopapertoppt.core.dedup` is a three-pass merge:
+`thesisagents.core.dedup` is a three-pass merge:
 
 1. Strong-ID pass — papers sharing a DOI or arXiv ID are merged
    into one, keeping the most complete record (longest abstract,
@@ -213,7 +213,7 @@ Two distinct paths. The decision tree:
 ```
 ANTHROPIC_API_KEY set?
 ├── yes → Python pipeline: pypdf/pymupdf extracts text,
-│         autopapertoppt.intelligence.summarise calls the
+│         thesisagents.intelligence.summarise calls the
 │         Anthropic API, returns a structured PaperSummary
 │         (motivation, contributions, method, results,
 │         limitations + the rich tier).
@@ -245,20 +245,20 @@ trivially safe to fan out across asyncio tasks.
 
 Each surface is a thin adapter over the same pipeline.
 
-### CLI (`autopapertoppt.cli`)
+### CLI (`thesisagents.cli`)
 
 `argparse` parses flags into a `Query` / single-paper identifier.
 The CLI is the only surface that does its own `asyncio.run`; the
 library APIs return coroutines.
 
-### MCP server (`autopapertoppt.mcp`)
+### MCP server (`thesisagents.mcp`)
 
 FastMCP registers eleven tools. The agent calls them in sequence
 (`list_sources` → `search` → `fetch_pdf_text` per paper →
 `export`); the server is stateless across tool calls so the
 agent's context is the only place state lives. See [MCP doc](mcp.md).
 
-### Desktop GUI (`autopapertoppt.gui`)
+### Desktop GUI (`thesisagents.gui`)
 
 PySide6 widgets call the same `run_search` / `export_collection`
 that the CLI does, but on a `QThreadPool` worker so the UI thread
@@ -266,15 +266,15 @@ stays responsive. See [GUI doc](gui.md).
 
 ### Python library
 
-Anything in `autopapertoppt.core.pipeline` is importable from
+Anything in `thesisagents.core.pipeline` is importable from
 your own code:
 
 ```python
 import asyncio
-from autopapertoppt.core.models import Query
-from autopapertoppt.core.pipeline import run_search
-from autopapertoppt.exporters import export_collection
-from autopapertoppt.core.models import ExportOptions
+from thesisagents.core.models import Query
+from thesisagents.core.pipeline import run_search
+from thesisagents.exporters import export_collection
+from thesisagents.core.models import ExportOptions
 
 async def main():
     q = Query(keywords="transformer", sources=("arxiv",), max_results=10)
@@ -292,7 +292,7 @@ asyncio.run(main())
 
 ### HTTPS-only HTTP client
 
-`autopapertoppt.fetchers.http.get_client(source)` returns a
+`thesisagents.fetchers.http.get_client(source)` returns a
 per-source `httpx.AsyncClient` that:
 
 - Refuses any URL whose scheme isn't `https` (refused both at
@@ -310,7 +310,7 @@ already closed (test-suite isolation requirement).
 
 ### Rate limiting
 
-Token bucket in `autopapertoppt.fetchers.rate_limit`. Each source
+Token bucket in `thesisagents.fetchers.rate_limit`. Each source
 declares its bucket parameters in `sources/<name>/config.py`:
 
 ```python
@@ -327,7 +327,7 @@ deleting code from the source plugin.
 
 ### Cache
 
-`autopapertoppt.core.cache` provides an SHA-256-keyed disk cache
+`thesisagents.core.cache` provides an SHA-256-keyed disk cache
 for raw responses. Default TTL is 24h; override per-source if
 needed. Tests redirect the cache root to `tmp_path` so they never
 touch the user's cache.
@@ -336,11 +336,11 @@ touch the user's cache.
 
 Two separate tables to balance scope:
 
-- `autopapertoppt.exporters.i18n` — slide-deck strings ("Agenda",
+- `thesisagents.exporters.i18n` — slide-deck strings ("Agenda",
   "References", "Paper N of M", "Background", etc.) in all 14
   supported languages. Coverage enforced by
   `tests/test_i18n.py::test_every_language_has_every_key`.
-- `autopapertoppt.gui.i18n` — UI label strings, identical
+- `thesisagents.gui.i18n` — UI label strings, identical
   language set, coverage enforced by `tests/gui/test_i18n.py`.
 
 Adding a new key requires filling in all 14 languages.
@@ -355,7 +355,7 @@ A source plugin lives at `sources/<name>/` and must expose:
 - `sources/<name>/config.py` declaring the `RateLimit`.
 
 The pipeline finds plugins by injecting `sources/` into
-`sys.path` at startup (`autopapertoppt.app.source_manager`). At
+`sys.path` at startup (`thesisagents.app.source_manager`). At
 fetch time it imports `<name>`, reads `fetcher_class`, and
 instantiates it with the shared HTTP client + cache.
 
@@ -434,5 +434,5 @@ near-white text inside a near-white-filled callout), and
   cost when `--enrich` is on — typically 5–15 s per paper. The
   pipeline batches these with a per-source semaphore.
 
-See `autopapertoppt/utils/profiling.py` for `with section("name"):`
+See `thesisagents/utils/profiling.py` for `with section("name"):`
 helpers if you're chasing a regression.

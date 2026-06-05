@@ -1,4 +1,4 @@
-AutoPaperToPPT Documentation
+ThesisAgents Documentation
 =============================
 
 A keyword-driven paper search assistant that fetches results from
@@ -100,7 +100,7 @@ Contributing
 Quick links
 -----------
 
-* `GitHub repo <https://github.com/Integration-Automation/AutoPaperToPPT>`_
-* `PyPI package <https://pypi.org/project/autopapertoppt/>`_
-* `Latest release <https://github.com/Integration-Automation/AutoPaperToPPT/releases/latest>`_
-* `Issue tracker <https://github.com/Integration-Automation/AutoPaperToPPT/issues>`_
+* `GitHub repo <https://github.com/Integration-Automation/ThesisAgents>`_
+* `PyPI package <https://pypi.org/project/thesisagents/>`_
+* `Latest release <https://github.com/Integration-Automation/ThesisAgents/releases/latest>`_
+* `Issue tracker <https://github.com/Integration-Automation/ThesisAgents/issues>`_

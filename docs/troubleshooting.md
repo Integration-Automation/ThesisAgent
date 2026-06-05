@@ -47,13 +47,13 @@ is `pptx` (PyPI ↔ module mismatch is intentional from python-pptx).
 The GUI extra is not installed. Run:
 
 ```bash
-pip install "autopapertoppt[gui]"
+pip install "thesisagents[gui]"
 ```
 
 If you're using the Windows release `.exe`, this means the bundle
 was built without `[gui]` — re-download the latest release zip.
 
-### `ModuleNotFoundError: No module named 'autopapertoppt.gui'` from `autopapertoppt gui`
+### `ModuleNotFoundError: No module named 'thesisagents.gui'` from `thesisagents gui`
 
 Same root cause. The `gui` subcommand short-circuits to a helpful
 error when this happens; if you see the bare `ModuleNotFoundError`
@@ -127,7 +127,7 @@ The full LLM-as-agent workflow is in
 `--enrich` needs `pypdf` + `anthropic` + `pymupdf`:
 
 ```bash
-pip install "autopapertoppt[intelligence]"
+pip install "thesisagents[intelligence]"
 ```
 
 ### `Warning: 18/20 papers (90%) have no public PDF URL`
@@ -153,7 +153,7 @@ Bypass options:
 The bundled token bucket already paces requests at 1 / 3s. If
 you're still seeing 429s:
 
-- You may be running multiple AutoPaperToPPT processes in parallel
+- You may be running multiple ThesisAgents processes in parallel
   against the same arXiv endpoint. Coordinate through a single
   process or lower `--max`.
 - Confirm no proxy / VPN is rewriting your client IP into a
@@ -161,7 +161,7 @@ you're still seeing 429s:
 
 ### `Springer plugin raises ConfigError`
 
-The plugin requires `AUTOPAPERTOPPT_SPRINGER_API_KEY` at
+The plugin requires `THESISAGENTS_SPRINGER_API_KEY` at
 construction. With the key unset, the pipeline silently skips
 Springer; with `--source springer` explicitly requested, the
 error surfaces. Get a free key at
@@ -188,7 +188,7 @@ files indicate a failed prior download.
 Check the MCP server can be built locally:
 
 ```bash
-python -c "from autopapertoppt.mcp import build_server; import asyncio; \
+python -c "from thesisagents.mcp import build_server; import asyncio; \
     print(sorted(t.name for t in asyncio.run(build_server().list_tools())))"
 ```
 
@@ -196,13 +196,13 @@ You should see all 11 tool names. If the import itself fails, the
 `[mcp]` extra is not installed:
 
 ```bash
-pip install "autopapertoppt[mcp]"
+pip install "thesisagents[mcp]"
 ```
 
 Then re-add the MCP server in your client config:
 
 ```powershell
-claude mcp add autopapertoppt -- ".venv\Scripts\python.exe" -m autopapertoppt.mcp
+claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 ```
 
 ### `download_pdfs` returns mostly `skipped`
@@ -242,7 +242,7 @@ A text box rendered taller than the 7.05" cap. Causes:
 Run the headless overflow check:
 
 ```bash
-python -c "from autopapertoppt.exporters.pptx import inspect_overflow; \
+python -c "from thesisagents.exporters.pptx import inspect_overflow; \
            inspect_overflow('exports/your.pptx')"
 ```
 
@@ -271,7 +271,7 @@ Set environment variables before launching:
 ```powershell
 $env:QT_ENABLE_HIGHDPI_SCALING = "1"
 $env:QT_SCALE_FACTOR_ROUNDING_POLICY = "PassThrough"
-autopapertoppt gui
+thesisagents gui
 ```
 
 These are also pinned by `app.py` if unset, but a host
@@ -292,15 +292,15 @@ Devanagari on Windows. On Linux / macOS:
 
 QSettings can't write its store. Check:
 
-- Linux: `~/.config/AutoPaperToPPT/` exists and is writable.
+- Linux: `~/.config/ThesisAgents/` exists and is writable.
 - macOS: `~/Library/Preferences/` is writable.
 - Windows: registry write permission on
-  `HKCU\Software\AutoPaperToPPT`.
+  `HKCU\Software\ThesisAgents`.
 
 ### `Search` button does nothing
 
 Open the developer console (or run with
-`AUTOPAPERTOPPT_LOG_LEVEL=DEBUG`) and check for:
+`THESISAGENTS_LOG_LEVEL=DEBUG`) and check for:
 
 - An empty Sources selection — the page silently rejects because
   the search would have no targets.
@@ -382,11 +382,11 @@ def test_real_window_geometry(qtbot):
 
 If none of the above matches:
 
-1. Run with `AUTOPAPERTOPPT_LOG_LEVEL=DEBUG` to surface the full
+1. Run with `THESISAGENTS_LOG_LEVEL=DEBUG` to surface the full
    request / response cycle.
 2. Copy the **smallest** reproducer (CLI command, MCP tool call
    sequence, or Python snippet) and the **complete** stack trace.
 3. Open an issue at
-   <https://github.com/Integration-Automation/AutoPaperToPPT/issues>
+   <https://github.com/Integration-Automation/ThesisAgents/issues>
    with the above + `python --version` + `pip freeze | grep -E
-   "autopapertoppt|httpx|python-pptx|PySide6"`.
+   "thesisagents|httpx|python-pptx|PySide6"`.

@@ -6,7 +6,7 @@ import dataclasses
 
 import pytest
 
-from autopapertoppt.core.identifiers import (
+from thesisagents.core.identifiers import (
     IdentifierKind,
     PaperIdentifier,
     parse_identifier,

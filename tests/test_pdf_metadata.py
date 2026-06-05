@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from autopapertoppt.intelligence.pdf_metadata import (
+from thesisagents.intelligence.pdf_metadata import (
     ExtractedMetadata,
     extract_metadata,
 )

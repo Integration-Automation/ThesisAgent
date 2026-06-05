@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from autopapertoppt.exporters.i18n import (
+from thesisagents.exporters.i18n import (
     DEFAULT_LANGUAGE,
     SUPPORTED_LANGUAGES,
     normalise_language,

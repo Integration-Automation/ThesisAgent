@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "autopapertoppt"
+name = "thesisagents"
 version = "0.1.0"
 description = "Keyword-driven paper search assistant that exports slides, summaries, and BibTeX."
 requires-python = ">=3.12"
@@ -45,7 +45,7 @@ dependencies = [
     "lxml>=5.2",
     "markdown-it-py>=3.0",
     # Real-browser backend for the Google Scholar plugin. Default-on so
-    # the out-of-box `pip install autopapertoppt` gets the captcha-resilient
+    # the out-of-box `pip install thesisagents` gets the captcha-resilient
     # Scholar path. Users who don't have Chrome on PATH automatically
     # fall through to the httpx scrape path with no breakage.
     "je_web_runner>=0.0.60",
@@ -83,13 +83,13 @@ dev = [
 ]
 
 [project.scripts]
-autopapertoppt = "autopapertoppt.__main__:main"
-autopapertoppt-mcp = "autopapertoppt.mcp.__main__:main"
-autopapertoppt-gui = "autopapertoppt.gui.app:main"
+thesisagents = "thesisagents.__main__:main"
+thesisagents-mcp = "thesisagents.mcp.__main__:main"
+thesisagents-gui = "thesisagents.gui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["autopapertoppt*"]
+include = ["thesisagents*"]
 
 [tool.ruff]
 line-length = 100

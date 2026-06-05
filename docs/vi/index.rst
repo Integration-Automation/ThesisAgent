@@ -1,4 +1,4 @@
-Hướng dẫn người dùng AutoPaperToPPT
+Hướng dẫn người dùng ThesisAgents
 ====================================
 
 Trợ lý tìm kiếm bài báo theo từ khóa. Lấy kết quả từ arXiv, Semantic
@@ -106,7 +106,7 @@ Yêu cầu Python **3.12+**.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -122,19 +122,19 @@ Bắt đầu nhanh
 .. code-block:: bash
 
    # Tìm arXiv → deck + workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Một bài theo URL → deck + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Render deck bằng tiếng Việt
-   autopapertoppt --paper 1706.03762 --lang vi --out ./exports/
+   thesisagents --paper 1706.03762 --lang vi --out ./exports/
 
    # Làm giàu Python pipeline (cần key Anthropic)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang vi --out ./exports/
 
 Bảng cờ CLI đầy đủ: :doc:`/cli`.
