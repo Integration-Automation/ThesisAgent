@@ -10,7 +10,7 @@
 > **語言**: [English](../README.md) · **繁體中文** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **文件**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
-以關鍵字驅動的論文搜尋助手。從 arXiv、Semantic Scholar、OpenAlex、PubMed、ACM(走 Crossref)、IEEE Xplore、DBLP、通用 Crossref、OpenAIRE、Springer Nature、Google Scholar 抓論文,正規化成統一的 record,並把去重後的結果集匯出為 **論文口試級的 PowerPoint 投影片**、**Excel 工作簿**、**BibTeX 檔** —— 一次 CLI 呼叫或一次 MCP 工具呼叫即可完成全部。另可選擇讓 AI 讀 PDF 本文後產出每篇論文的結構化摘要(LLM-as-agent 路徑)或透過 Anthropic API 自動產(Python pipeline 路徑)。
+以關鍵字驅動的論文搜尋助手。從 arXiv、Semantic Scholar、OpenAlex、PubMed、ACM(走 Crossref)、IEEE Xplore、DBLP、通用 Crossref、OpenAIRE、Springer Nature、Europe PMC、DOAJ、HAL、CORE、Google Scholar 抓論文,正規化成統一的 record,並把去重後的結果集匯出為 **論文口試級的 PowerPoint 投影片**、**Excel 工作簿**、**BibTeX 檔** —— 一次 CLI 呼叫或一次 MCP 工具呼叫即可完成全部。另可選擇讓 AI 讀 PDF 本文後產出每篇論文的結構化摘要(LLM-as-agent 路徑)或透過 Anthropic API 自動產(Python pipeline 路徑)。
 
 ## 給驅動本專案的 AI agent 看
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-11 個 MCP 工具(包含 `list_sources`、`download_pdfs`、`pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 等)的完整參考在 [`docs/mcp.md`](docs/mcp.md)。
+12 個 MCP 工具(包含 `list_sources`、`download_pdfs`、`pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 等)的完整參考在 [`docs/mcp.md`](docs/mcp.md)。
 
 ### 必做:交付前驗證 URL / DOI
 
@@ -92,7 +92,7 @@ for key in irrelevant_keys:
 
 ## 功能
 
-- **十一種可外掛來源**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref 限縮 ACM)、`dblp`、`crossref`(通用)、`openaire`、`springer`(需 API key)、`ieee`(API key 或 opt-in 爬取)、`scholar`(opt-in 爬取)。每個都在 `sources/<name>/` 後面以 `Fetcher` 介面實作。預設啟用「頂級期刊白名單」過濾器,保留旗艦級 CS 會議/期刊 + Nature/Science/PNAS 等;傳 `--all-venues` 可關閉。
+- **十五種可外掛來源**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref 限縮 ACM)、`dblp`、`crossref`(通用)、`openaire`、`europepmc`、`doaj`、`hal`、`core`、`springer`(需 API key)、`ieee`(API key 或 opt-in 爬取)、`scholar`(opt-in 爬取)。每個都在 `sources/<name>/` 後面以 `Fetcher` 介面實作。預設啟用「頂級期刊白名單」過濾器,保留旗艦級 CS 會議/期刊 + Nature/Science/PNAS 等;傳 `--all-venues` 可關閉。
 - **單篇論文模式**: 貼上 arXiv ID、arXiv URL、DOI、PMID、或 IEEE 文件 URL,ThesisAgents 會走對應 source plugin 拉那一篇並出同一套匯出包。適合做論文閱讀筆記或口試準備。
 - **本機 PDF 模式** (`--pdf <path>`): 傳一個 PDF 或一整個資料夾。內建啟發式抽取器會從每個 PDF 的首頁直接撈出 **標題、作者、年份、arXiv ID、DOI、真正的摘要**(以「Abstract」/「ABSTRACT」/「摘要」標題為錨點,不是隨便切前 N 字)。單一 PDF 時 `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` 會覆寫抽取結果;資料夾模式下以每個檔自己的抽取結果為準,每篇都會出一份以 BibTeX key 命名的投影片。
 - **五種匯出器**:
@@ -104,7 +104,7 @@ for key in irrelevant_keys:
   - `.bib` —— 不會撞 key、LaTeX 特殊字元已跳脫。
   - `.json` —— 原始 payload 供下游處理。
 - **PPT 編輯工具箱**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)能對 exporter 產生的任何投影片做編輯,對應的 `pptx_*` MCP 工具也讓 LLM agent 能繼續對 deck 做迭代。
-- **MCP server**: 11 個工具 —— `list_sources`(來源探索)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`(批次下載)、`export`,以及五個 `pptx_*` 編輯工具。任何支援 MCP 的 LLM(Claude Code、Claude Desktop、Cursor…)都能驅動整套流程。
+- **MCP server**: 12 個工具 —— `list_sources`(來源探索)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`(批次下載)、`export`,以及五個 `pptx_*` 編輯工具。任何支援 MCP 的 LLM(Claude Code、Claude Desktop、Cursor…)都能驅動整套流程。
 - **兩條 enrichment 路徑** 把 deck 從「只有摘要」升級到「真的讀過全文」:
   - **LLM-as-agent(不需要 API key)** —— 呼叫端的 LLM 透過 `fetch_pdf_text` 拿 PDF 本文,在自己 context 裡產 structured summary,再丟給 `export`。
   - **Python pipeline(`--enrich`)** —— CLI 自己打 Anthropic API,預設模型 `claude-opus-4-7`。
@@ -162,7 +162,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--source` / `-s` | 用逗號分隔的來源列表。預設 `arxiv`。 |
 | `--max` / `-n` | 每個來源的最大結果數(1..200)。預設 25。 |
 | `--year-from` / `--year-to` | 年份過濾(含端點)。 |
-| `--export` / `-e` | 格式: `pptx,xlsx,md,bib,json` 任意組合。預設依模式不同(見下)。 |
+| `--export` / `-e` | 格式: `pptx,xlsx,md,bib,json,ris,csv,csl` 任意組合。預設依模式不同(見下)。 |
 | `--out` / `-o` | 匯出目錄。預設 `./exports`。 |
 | `--filename-stem` | 蓋掉自動產生的檔名 stem。 |
 | `--no-abstract` | 不要把摘要寫進匯出檔。 |
@@ -229,7 +229,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別碼 → 單篇論文。 |
 | `fetch_pdf_text` | 抓單一 PDF 並回傳擷取的本文。**MCP 路徑下「讓我讀過論文」的入口。** |
 | `download_pdfs` | 批次把一組論文的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX key 為索引的逐篇結果。 |
-| `export` | 論文列表 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json`。每篇可附 `summary` 欄位走 thesis-style;支援 `max_slides_per_paper`(預設 25)。 |
+| `export` | 論文列表 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇可附 `summary` 欄位走 thesis-style;支援 `max_slides_per_paper`(預設 25)。 |
 | `pptx_inspect` | 讀既有投影片檔的 slide / shape 結構。 |
 | `pptx_update_slide` | 取代 `title` / `body` / `meta`(透過 shape name)或任意 shape(透過 index)。 |
 | `pptx_delete_slide` | 刪掉一張 slide 以及它的 part relationship。 |
@@ -259,13 +259,13 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client、token-bucket 限流
 │   ├── exporters/                   # pptx(thesis-style)/ xlsx / bib / md / json / pptx_edit / i18n
 │   ├── intelligence/                # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
-│   ├── mcp/                         # FastMCP server(11 個工具)
+│   ├── mcp/                         # FastMCP server(12 個工具)
 │   ├── utils/                       # logging、path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
 ├── sources/                         # plugin 資料夾: arxiv、semantic_scholar、
 │                                    #   openalex、pubmed、acm、ieee、scholar、
-│                                    #   dblp、crossref、openaire、springer
+│                                    #   dblp、crossref、openaire、springer、europepmc、doaj、hal、core
 ├── tests/                           # pytest suite + 錄製 fixture(不打活 HTTP)
 ├── docs/                            # Sphinx(en + zh-tw + zh-cn)
 ├── scripts/                         # 一次性 regen 腳本

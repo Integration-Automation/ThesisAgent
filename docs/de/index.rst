@@ -3,7 +3,7 @@ ThesisAgents Benutzerhandbuch
 
 Stichwortgesteuerter Paper-Such-Assistent. Ruft Ergebnisse von arXiv,
 Semantic Scholar, OpenAlex, PubMed, ACM, IEEE Xplore, DBLP, Crossref,
-OpenAIRE, Springer Nature und Google Scholar ab; exportiert als
+OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE und Google Scholar ab; exportiert als
 PowerPoint-Präsentation im Thesis-Stil, Excel-Arbeitsmappe und
 BibTeX-Datei. Alles aus einem CLI-Aufruf oder einem MCP-Tool-Aufruf.
 
@@ -51,7 +51,7 @@ MCP-Workflow in 6 Schritten
    5. (Sie lesen jedes PDF und erzeugen strukturierten Summary-Dict)
    6. export(papers=[{...paper, "summary": {...}}], language="de", ...)
 
-Alle 11 MCP-Tools: :doc:`/mcp`.
+Alle 12 MCP-Tools: :doc:`/mcp`.
 
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -151,7 +151,7 @@ Weiterführende Quellen
 ----------------------
 
 * CLI-Flags und Umgebungsvariablen: :doc:`/cli`
-* 11 MCP-Server-Tools: :doc:`/mcp`
+* 12 MCP-Server-Tools: :doc:`/mcp`
 * PPTX-Edit-Toolkit: :doc:`/pptx_editing`
 * Die Datei ``readmes/README.de.md`` im Repo-Root enthält die vollständige
   Feature-Liste.

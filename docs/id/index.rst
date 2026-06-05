@@ -3,7 +3,7 @@ Panduan Pengguna ThesisAgents
 
 Asisten pencarian makalah berbasis kata kunci. Mengambil hasil dari
 arXiv, Semantic Scholar, OpenAlex, PubMed, ACM, IEEE Xplore, DBLP,
-Crossref, OpenAIRE, Springer Nature, dan Google Scholar; dan mengekspor
+Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE, dan Google Scholar; dan mengekspor
 sebagai presentasi PowerPoint gaya tesis, buku kerja Excel, dan berkas
 BibTeX. Semua dari satu panggilan CLI atau satu panggilan tool MCP.
 
@@ -50,7 +50,7 @@ Alur MCP 6 langkah
    5. (Anda membaca tiap PDF dan menghasilkan dict ringkasan terstruktur)
    6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 
-11 tool MCP lengkap: :doc:`/mcp`.
+12 tool MCP lengkap: :doc:`/mcp`.
 
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -147,7 +147,7 @@ Bacaan lebih lanjut
 -------------------
 
 * Flag CLI dan variabel lingkungan: :doc:`/cli`
-* 11 tool server MCP: :doc:`/mcp`
+* 12 tool server MCP: :doc:`/mcp`
 * Toolkit edit PPTX: :doc:`/pptx_editing`
 * Berkas ``readmes/README.id.md`` di akar repo berisi daftar fitur lengkap.
 * Referensi teknis mendalam (arsitektur plugin, kebijakan keamanan,

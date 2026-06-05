@@ -10,7 +10,7 @@
 > **言語**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · **日本語** · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **ドキュメント**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
-キーワード駆動の論文検索アシスタント。arXiv、Semantic Scholar、OpenAlex、PubMed、ACM(Crossref 経由)、IEEE Xplore、DBLP、汎用 Crossref、OpenAIRE、Springer Nature、Google Scholar から論文を取得し、統一されたレコード形式に正規化、重複排除後の結果集合を **論文発表用 PowerPoint スライド**、**Excel ワークブック**、**BibTeX ファイル** として出力します — CLI 1 回または MCP ツール呼び出し 1 回で完結。各論文の PDF を読んで構造化サマリを生成することも可能で、LLM-as-agent パスまたは Anthropic API パスから選べます。
+キーワード駆動の論文検索アシスタント。arXiv、Semantic Scholar、OpenAlex、PubMed、ACM(Crossref 経由)、IEEE Xplore、DBLP、汎用 Crossref、OpenAIRE、Springer Nature、Europe PMC、DOAJ、HAL、CORE、Google Scholar から論文を取得し、統一されたレコード形式に正規化、重複排除後の結果集合を **論文発表用 PowerPoint スライド**、**Excel ワークブック**、**BibTeX ファイル** として出力します — CLI 1 回または MCP ツール呼び出し 1 回で完結。各論文の PDF を読んで構造化サマリを生成することも可能で、LLM-as-agent パスまたは Anthropic API パスから選べます。
 
 ## このプロジェクトを駆動する AI エージェントへ
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="ja", ...)
 ```
 
-11 個の MCP ツール(`list_sources`、`download_pdfs`、`pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 等)の完全な参照は [`docs/mcp.md`](docs/mcp.md) にあります。
+12 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 等)の完全な参照は [`docs/mcp.md`](docs/mcp.md) にあります。
 
 ### 必須: 納品前に URL / DOI を検証
 
@@ -76,7 +76,7 @@ for p in ALL_PAPERS:
 
 ## 機能
 
-- **11 個のプラガブルソース**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref スコープ)、`dblp`、`crossref`(汎用)、`openaire`、`springer`(API キー必須)、`ieee`(API キーまたはスクレイピングオプトイン)、`scholar`(スクレイピングオプトイン)。各々が `sources/<name>/` 配下で `Fetcher` アダプタとして実装されています。デフォルトでは旗艦級 CS 学会誌 + Nature/Science/PNAS をホワイトリストし、`--all-venues` で無効化可能。
+- **15 個のプラガブルソース**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref スコープ)、`dblp`、`crossref`(汎用)、`openaire`、`europepmc`、`doaj`、`hal`、`core`、`springer`(API キー必須)、`ieee`(API キーまたはスクレイピングオプトイン)、`scholar`(スクレイピングオプトイン)。各々が `sources/<name>/` 配下で `Fetcher` アダプタとして実装されています。デフォルトでは旗艦級 CS 学会誌 + Nature/Science/PNAS をホワイトリストし、`--all-venues` で無効化可能。
 - **単一論文モード**: arXiv ID、arXiv URL、DOI、PMID、または IEEE 文書 URL を貼り付けると、ThesisAgents が対応するソース経由でそれを解決し、同じエクスポートバンドルを生成します。論文読書ノート・修論発表準備に最適。
 - **ローカル PDF モード** (`--pdf <path>`): PDF 1 つまたはディレクトリを渡す。ヒューリスティック抽出器が各 PDF の先頭から **タイトル、著者、年度、arXiv ID、DOI、本物の要約** を引き出し(明示的な `Abstract` / `ABSTRACT` / `摘要` ヘッダーを基準とし、適当な前置切りではない)。単一 PDF では `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` で上書き可能。ディレクトリでは各ファイル独自の抽出結果が優先され、各論文は自身の BibTeX キー名でデッキを生成。
 - **5 つのエクスポータ**:
@@ -88,7 +88,7 @@ for p in ALL_PAPERS:
   - **デザイン済みのビジュアルアイデンティティ**(デフォルトの Calibri-on-white ではありません):言語ごとのタイポグラフィ(Latin に Inter、CJK + Hindi に Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI)、プログラム生成のアクセント幾何(コンテンツスライド上端のアクセントバー + カバーの左帯)、学術風テーブル(デフォルトの黒グリッド除去、navy ヘッダールール、淡色の行間 divider、交互の行ストライプ、垂直中央揃え、行ラベルは太字)。5 色 palette(navy / teal / grey / light / white)— テキストの赤色は禁止、強調は **太字 + teal `#0E7490`** で。
   - **ダークモードがデフォルト**。light palette で構築してから post-build pass で text + fill + cell-border の RGB をダークに置換(slide bg `#12151B`、本文 `#E5E7EB`、teal accent はより明るい `#2DD4BF` に)。OLED プロジェクター/暗所での発表を想定。明るい会場や印刷用には `--light-mode`(CLI)、GUI の Deck タブの **Light mode** チェック、または `ExportOptions(dark_mode=False)`(プログラム)でオプトアウト。
 - **PPT 編集ツールキット**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)はエクスポータが生成した任意のデッキに対して動作。LLM エージェントが生成済みデッキで反復できる `pptx_*` MCP ツールも同梱。
-- **MCP サーバー**: 11 ツール — `list_sources`(発見)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 5 個の `pptx_*` 編集ツール。MCP 対応 LLM(Claude Code、Claude Desktop、Cursor、…)から全ワークフローを駆動可能。
+- **MCP サーバー**: 12 ツール — `list_sources`(発見)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 5 個の `pptx_*` 編集ツール。MCP 対応 LLM(Claude Code、Claude Desktop、Cursor、…)から全ワークフローを駆動可能。
 - **2 つのエンリッチパス**(要約だけでなく本物の論文発表級デッキへ):
   - **LLM-as-agent(API キー不要)** — 呼び出し側 LLM が `fetch_pdf_text` で本文を読み、構造化サマリをコンテキスト内で書き、`export` に渡す。
   - **Python パイプライン (`--enrich`)** — CLI が Anthropic API を直接呼ぶ。デフォルトモデルは `claude-opus-4-7`。
@@ -146,7 +146,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--source` / `-s` | カンマ区切りのソースリスト。デフォルト `arxiv`。 |
 | `--max` / `-n` | ソースごとの最大件数(1..200)。デフォルト 25。 |
 | `--year-from` / `--year-to` | 年度フィルタ(両端含む)。 |
-| `--export` / `-e` | 形式: `pptx,xlsx,md,bib,json` の任意組合せ。デフォルトはモードによる(下記参照)。 |
+| `--export` / `-e` | 形式: `pptx,xlsx,md,bib,json,ris,csv,csl` の任意組合せ。デフォルトはモードによる(下記参照)。 |
 | `--out` / `-o` | 出力ディレクトリ。デフォルト `./exports`。 |
 | `--filename-stem` | 自動生成ファイル名の stem を上書き。 |
 | `--no-abstract` | エクスポートから要約内容を除外。 |
@@ -212,7 +212,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別子 → 単一論文。 |
 | `fetch_pdf_text` | 単一 PDF をダウンロード、抽出した本文を返す。**MCP 経由で「論文を読んだ」状態に至る入口。** |
 | `download_pdfs` | 論文リストの PDF を `{out_dir}/pdfs/` に一括ダウンロード。BibTeX キーをキーとする論文ごとの結果を返す。 |
-| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json` を書き出し。リッチ thesis-style スキーマの `summary` フィールドと、`max_slides_per_paper`(デフォルト 25)を受理。 |
+| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出し。リッチ thesis-style スキーマの `summary` フィールドと、`max_slides_per_paper`(デフォルト 25)を受理。 |
 | `pptx_inspect` | 既存デッキのスライド / シェイプ構造を読む。 |
 | `pptx_update_slide` | `title` / `body` / `meta`(シェイプ名経由)または任意のシェイプ(インデックス経由)を置換。 |
 | `pptx_delete_slide` | スライドとその part relationship を削除。 |
@@ -240,15 +240,15 @@ ThesisAgents/
 ├── thesisagents/                 # メインパッケージ
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # HTTPS-only async クライアント、トークンバケットレート制限
-│   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · pptx_edit · i18n
+│   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF 取得 + Anthropic 要約([intelligence] extra)
-│   ├── mcp/                         # FastMCP サーバー(11 ツール)
+│   ├── mcp/                         # FastMCP サーバー(12 ツール)
 │   ├── utils/                       # logging、path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
 ├── sources/                         # プラグインフォルダ: arxiv, semantic_scholar,
 │                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer
+│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # pytest スイート + 記録済み fixture(ライブ HTTP 不可)
 ├── docs/                            # Sphinx(14 言語ツリー)
 ├── scripts/                         # 一回限りの regen スクリプト

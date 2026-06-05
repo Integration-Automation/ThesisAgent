@@ -269,7 +269,7 @@ class ExportOptions:
 
 | Field | Notes |
 |---|---|
-| `formats` | Validated against `ALL_EXPORTS = ("pptx", "xlsx", "bibtex", "markdown", "json")`. |
+| `formats` | Validated against `ALL_EXPORTS = ("bib", "md", "pptx", "xlsx", "pdf", "json", "ris", "csv", "csl")`. |
 | `out_dir` | Created if missing. Path-traversal-safe (resolved via `utils.path_safety`). |
 | `filename_stem` | When `None`, the pipeline generates `{slug-of-query}-{YYYYMMDD-HHMMSS}`. Hand-authored regen scripts typically set this to the BibTeX key. |
 | `include_abstract` | False produces a deck that's title + authors + link slides only — useful when you want a one-sentence summary deck for hundreds of papers. |

@@ -13,7 +13,7 @@ exclusive modes:
 
 ```
 thesisagents (--query KEYWORDS | --paper IDENTIFIER)
-                [--source SOURCES]
+                [--source SOURCES] [--exclude-source SOURCES]
                 [--max N]
                 [--year-from YEAR] [--year-to YEAR]
                 [--export FORMATS]
@@ -35,10 +35,12 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
 |---|---|---|
 | `--query` / `-q` | — | Keywords; mutually exclusive with `--paper`. |
 | `--paper` / `-p` | — | arXiv (`2401.08741` / `https://arxiv.org/abs/...`), DOI (`10.x/y`), PMID (`12345678` or `https://pubmed.ncbi.nlm.nih.gov/...`), or IEEE document URL (`https://ieeexplore.ieee.org/document/...`). |
-| `--source` / `-s` | default mix | Comma-separated. Available: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm`, `dblp`, `crossref`, `openaire`, `ieee`, `springer`, `scholar`. **Default-on**: the first 8 + `ieee` + `scholar` (the latter two run visible Chrome via WebRunner; opt out with `THESISAGENTS_DISABLE_IEEE_SCRAPING=1` / `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1`). `springer` joins only when `THESISAGENTS_SPRINGER_API_KEY` is set. `THESISAGENTS_IEEE_API_KEY` switches IEEE to the official Xplore API (anonymous-safe, no Chrome needed). |
+| `--source` / `-s` | default mix | Comma-separated. Available: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm`, `dblp`, `crossref`, `openaire`, `europepmc`, `doaj`, `hal`, `ieee`, `springer`, `core`, `scholar` (15 total). **Default-on**: every open source (incl. `europepmc`, `doaj`, `hal`) + `ieee` + `scholar` (the latter two run visible Chrome via WebRunner; opt out with `THESISAGENTS_DISABLE_IEEE_SCRAPING=1` / `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1`). `springer` joins only when `THESISAGENTS_SPRINGER_API_KEY` is set; `core` only when `THESISAGENTS_CORE_API_KEY` is set. `THESISAGENTS_IEEE_API_KEY` switches IEEE to the official Xplore API (anonymous-safe, no Chrome needed). |
+| `--exclude-source` / `-x` | — | Comma-separated sources to remove from the mix, subtracted **after** `--source` resolves. The no-VPN gesture is to leave `--source` at its default and pass `--exclude-source ieee` — every other default source stays in. An unknown name (or excluding the whole mix) is an error. |
 | `--max` / `-n` | `25` | Range 1..200. |
 | `--year-from`, `--year-to` | — | Inclusive year filter. |
-| `--export` / `-e` | mode-specific | Any of `pptx`, `xlsx`, `md`, `bib`, `json`. **Default with `--query` is `pptx,xlsx,bib`; default with `--paper` is `pptx,bib`** (one-row Excel is busy work). Explicit `--export` always wins. |
+| `--export` / `-e` | mode-specific | Any of `pptx`, `xlsx`, `md`, `bib`, `json`, `ris`, `csv`, `csl`. **Default with `--query` is `pptx,xlsx,bib`; default with `--paper` is `pptx,bib`** (one-row Excel is busy work). Explicit `--export` always wins. `ris` (Zotero/Mendeley/EndNote), `csv` (flat table) and `csl` (CSL-JSON for Pandoc, written as `<stem>.csl.json`) are the interchange formats. |
+| `--list-sources`, `--list-exports` | — | Print the available search sources / export formats and exit (no query needed). |
 | `--out` / `-o` | `./exports` | Created if missing. |
 | `--filename-stem` | auto | `{first-32-chars-of-query}-{YYYYMMDD-HHMMSS}` by default. |
 | `--no-abstract` | off | Drops abstracts and any LLM summary content; the deck shows only title / author / link slides. |

@@ -3,7 +3,7 @@ Guía de usuario de ThesisAgents
 
 Asistente de búsqueda de artículos guiado por palabras clave. Recupera
 resultados de arXiv, Semantic Scholar, OpenAlex, PubMed, ACM, IEEE
-Xplore, DBLP, Crossref, OpenAIRE, Springer Nature y Google Scholar; y
+Xplore, DBLP, Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE y Google Scholar; y
 los exporta como presentación PowerPoint estilo tesis, libro Excel y
 archivo BibTeX. Todo desde una llamada CLI o una llamada de
 herramienta MCP.
@@ -51,7 +51,7 @@ Flujo MCP de 6 pasos
    5. (lee cada PDF y produce dict summary estructurado)
    6. export(papers=[{...paper, "summary": {...}}], language="es", ...)
 
-Las 11 herramientas MCP completas están en :doc:`/mcp`.
+Las 12 herramientas MCP completas están en :doc:`/mcp`.
 
 Obligatorio: verificación URL / DOI antes de entregar
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -150,7 +150,7 @@ Dónde buscar más
 ----------------
 
 * Flags CLI y variables de entorno: :doc:`/cli`
-* 11 herramientas del servidor MCP: :doc:`/mcp`
+* 12 herramientas del servidor MCP: :doc:`/mcp`
 * Kit de edición PPTX: :doc:`/pptx_editing`
 * El archivo ``readmes/README.es.md`` en la raíz del repo tiene la lista
   completa de funcionalidades del proyecto.

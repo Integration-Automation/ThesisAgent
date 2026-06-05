@@ -3,7 +3,7 @@ Guia de uso ThesisAgents
 
 Assistente de busca de artigos guiado por palavras-chave. Recupera
 resultados de arXiv, Semantic Scholar, OpenAlex, PubMed, ACM, IEEE
-Xplore, DBLP, Crossref, OpenAIRE, Springer Nature e Google Scholar; e
+Xplore, DBLP, Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE e Google Scholar; e
 exporta como apresentação PowerPoint estilo tese, planilha Excel e
 arquivo BibTeX. Tudo a partir de uma chamada CLI ou uma chamada de
 ferramenta MCP.

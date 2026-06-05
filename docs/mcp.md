@@ -87,7 +87,7 @@ venv-resolved binary directly:
 
 ## Tools
 
-The server exposes eleven tools, grouped into five concerns.
+The server exposes twelve tools, grouped into five concerns.
 
 ### `list_sources`
 
@@ -121,6 +121,38 @@ Returns:
 }
 ```
 
+The full plugin set is `arxiv`, `semantic_scholar`, `openalex`, `pubmed`,
+`acm`, `dblp`, `crossref`, `openaire`, `europepmc`, `doaj`, `hal`, `ieee`,
+`springer`, `core`, `scholar` (15). `core` is opt-in via
+`THESISAGENTS_CORE_API_KEY`, like `springer`.
+
+### `list_exports`
+
+Discovery tool symmetric to `list_sources`: report every export format the
+`export` tool accepts, each with a one-line description and an `aggregate`
+flag. Call it once before `export` so the agent passes only recognised
+formats.
+
+```json
+{}
+```
+
+Returns (abridged):
+
+```json
+{
+  "formats": [
+    {"format": "pptx", "description": "Thesis-style PowerPoint deck ...", "aggregate": false},
+    {"format": "ris",  "description": "RIS interchange for Zotero / Mendeley / EndNote / RefWorks.", "aggregate": true},
+    {"format": "csv",  "description": "Flat one-row-per-paper CSV ...", "aggregate": true},
+    {"format": "csl",  "description": "CSL-JSON for Pandoc / citeproc ...", "aggregate": true}
+  ]
+}
+```
+
+`aggregate: true` writes one file for the whole run (`xlsx`, `md`, `bib`,
+`json`, `ris`, `csv`, `csl`); `pptx` and `pdf` are emitted per paper.
+
 ### `search`
 
 Run a keyword search across one or more sources. Returns a JSON
@@ -128,15 +160,19 @@ payload whose `papers` list is in the same shape as `Paper.to_dict()`
 — pass it straight to `export`.
 
 When `sources` is omitted, the search runs against the full default
-mix (every plugin that needs no API key). `top_tier_only` (default
-`true`) keeps only papers whose venue matches the curated whitelist
-(flagship CS conferences + Nature / Science / PNAS / CACM / LNCS);
-pass `false` for a broader net. arXiv preprints always pass through.
+mix (every plugin that needs no API key). `exclude_sources` is
+subtracted **after** `sources` resolves — the no-VPN gesture is to omit
+`sources` and pass `exclude_sources: ["ieee"]`, keeping every other
+default source. `top_tier_only` (default `true`) keeps only papers whose
+venue matches the curated whitelist (flagship CS conferences + Nature /
+Science / PNAS / CACM / LNCS); pass `false` for a broader net. arXiv
+preprints always pass through.
 
 ```json
 {
   "keywords": "attention is all you need",
   "sources": ["arxiv", "openalex", "crossref"],
+  "exclude_sources": ["ieee"],
   "max_results": 10,
   "year_from": 2017,
   "year_to": null,
@@ -240,7 +276,8 @@ matching reason string.
 ### `export`
 
 Render a papers list to any combination of `.pptx`, `.xlsx`, `.md`,
-`.bib`, `.json` files.
+`.bib`, `.json`, `.ris`, `.csv`, `.csl.json` files. Call `list_exports`
+for the format catalogue.
 
 ```json
 {

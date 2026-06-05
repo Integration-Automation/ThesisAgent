@@ -10,7 +10,7 @@
 > **Bahasa**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · **Bahasa Indonesia**
 > **Dokumentasi**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
-Asisten pencarian makalah berbasis kata kunci. Mengambil hasil dari arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (via Crossref), IEEE Xplore, DBLP, Crossref umum, OpenAIRE, Springer Nature, dan Google Scholar; menormalkannya ke satu format catatan; dan mengekspor kumpulan yang telah dideduplikasi sebagai **slide PowerPoint gaya tesis**, **buku kerja Excel**, dan **berkas BibTeX** — semua dari satu panggilan CLI atau satu panggilan tool MCP. Opsional, dapat memperkaya setiap makalah dengan membaca PDF-nya dan menghasilkan ringkasan terstruktur, baik dalam konteks (alur LLM-as-agent) atau via API Anthropic (alur Python pipeline).
+Asisten pencarian makalah berbasis kata kunci. Mengambil hasil dari arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (via Crossref), IEEE Xplore, DBLP, Crossref umum, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE, dan Google Scholar; menormalkannya ke satu format catatan; dan mengekspor kumpulan yang telah dideduplikasi sebagai **slide PowerPoint gaya tesis**, **buku kerja Excel**, dan **berkas BibTeX** — semua dari satu panggilan CLI atau satu panggilan tool MCP. Opsional, dapat memperkaya setiap makalah dengan membaca PDF-nya dan menghasilkan ringkasan terstruktur, baik dalam konteks (alur LLM-as-agent) atau via API Anthropic (alur Python pipeline).
 
 ## Untuk agen AI yang menjalankan proyek ini
 
@@ -37,7 +37,7 @@ Deliverable default adalah **satu `.pptx` gaya tesis yang diperkaya per makalah*
 6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 ```
 
-Sebelas tool MCP (termasuk `list_sources`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` dll.) didokumentasikan di [`docs/mcp.md`](docs/mcp.md).
+Dua belas tool MCP (termasuk `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` dll.) didokumentasikan di [`docs/mcp.md`](docs/mcp.md).
 
 ### Wajib: verifikasi URL / DOI sebelum penyerahan
 
@@ -76,7 +76,7 @@ Dua fabrikasi yang tertangkap dengan cara ini di produksi: volume AAAI salah (`v
 
 ## Fitur
 
-- **Sebelas sumber pluggable**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (dibatasi ACM via Crossref), `dblp`, `crossref` (umum), `openaire`, `springer` (perlu API key), `ieee` (API key atau scraping opt-in), `scholar` (scraping opt-in). Masing-masing berada di `sources/<name>/` di balik adapter `Fetcher`. Whitelist venue tingkat-atas menyaring hasil ke konferensi/jurnal CS unggulan + Nature/Science/PNAS secara default; `--all-venues` menonaktifkannya.
+- **Lima belas sumber pluggable**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (dibatasi ACM via Crossref), `dblp`, `crossref` (umum), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (perlu API key), `ieee` (API key atau scraping opt-in), `scholar` (scraping opt-in). Masing-masing berada di `sources/<name>/` di balik adapter `Fetcher`. Whitelist venue tingkat-atas menyaring hasil ke konferensi/jurnal CS unggulan + Nature/Science/PNAS secara default; `--all-venues` menonaktifkannya.
 - **Mode makalah tunggal**: tempel arXiv ID, URL arXiv, DOI, PMID, atau URL dokumen IEEE — ThesisAgents menyelesaikannya via sumber yang tepat dan menghasilkan bundle ekspor yang sama. Berguna untuk catatan bacaan dan persiapan sidang.
 - **Mode PDF lokal** (`--pdf <path>`): teruskan satu PDF atau direktori. Ekstraktor heuristik menarik **judul, penulis, tahun, arXiv ID, DOI, dan abstrak nyata** langsung dari awal setiap PDF (terikat ke header eksplisit `Abstract` / `ABSTRACT` / `摘要`, bukan prefiks buta). `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` meng-override pada panggilan PDF tunggal; di mode direktori, ekstraksi per-file menang — setiap makalah mendapat deck-nya sendiri dengan nama kunci BibTeX-nya.
 - **Lima eksportir**:
@@ -88,7 +88,7 @@ Dua fabrikasi yang tertangkap dengan cara ini di produksi: volume AAAI salah (`v
   - **Identitas visual yang dirancang** (bukan tampilan default Calibri-on-white): tipografi per bahasa (Inter untuk Latin; Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI untuk CJK + Hindi), geometri aksen secara programatik (bar atas di setiap slide konten + band kiri di sampul), tabel bergaya akademik (grid hitam default dihapus, navy header rule, divider lembut antar baris, baris bergantian, alignment vertikal tengah, kolom pertama tebal). Palet 5 warna (navy / teal / grey / light / white) — merah **dilarang** sebagai warna teks; gunakan **bold + teal `#0E7490`** untuk penekanan.
   - **Mode gelap sebagai default**. Dibangun dengan palet terang lalu post-build pass menukar RGB teks + fill + border sel ke mode gelap (latar slide `#12151B`, teks body `#E5E7EB`, teal accent lebih terang `#2DD4BF`). Dirancang untuk proyektor OLED dan ruang minim cahaya. Untuk cetak atau ruang terang, gunakan `--light-mode` (CLI), hilangkan centang **Light mode** di tab Deck GUI, atau berikan `ExportOptions(dark_mode=False)` di Python.
 - **Toolkit edit PPT**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) bekerja terhadap deck apa pun yang dihasilkan eksportir, plus tool MCP setara `pptx_*` agar agen LLM dapat beriterasi di atas deck yang sudah dibuat.
-- **Server MCP**: 11 tool — `list_sources` (discovery), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, dan lima tool edit `pptx_*`. Memungkinkan LLM apa pun yang kompatibel MCP (Claude Code, Claude Desktop, Cursor, …) menjalankan seluruh alur.
+- **Server MCP**: 12 tool — `list_sources` + `list_exports` (discovery), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, dan lima tool edit `pptx_*`. Memungkinkan LLM apa pun yang kompatibel MCP (Claude Code, Claude Desktop, Cursor, …) menjalankan seluruh alur.
 - **Dua jalur pengayaan** untuk melampaui abstrak menuju deck gaya tesis sejati:
   - **LLM-as-agent (tanpa API key)** — LLM pemanggil membaca teks PDF via `fetch_pdf_text`, menulis ringkasan terstruktur dalam konteks, dan meneruskannya ke `export`.
   - **Pipeline Python (`--enrich`)** — CLI memanggil API Anthropic sendiri; model default `claude-opus-4-7`.
@@ -146,7 +146,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--source` / `-s` | Daftar sumber dipisah koma. Default `arxiv`. |
 | `--max` / `-n` | Hasil maksimum per sumber (1..200). Default 25. |
 | `--year-from` / `--year-to` | Filter tahun inklusif. |
-| `--export` / `-e` | Format: kombinasi dari `pptx,xlsx,md,bib,json`. Default bergantung mode (lihat bawah). |
+| `--export` / `-e` | Format: kombinasi dari `pptx,xlsx,md,bib,json,ris,csv,csl`. Default bergantung mode (lihat bawah). |
 | `--out` / `-o` | Direktori output. Default `./exports`. |
 | `--filename-stem` | Override stem nama file yang dihasilkan. |
 | `--no-abstract` | Hilangkan konten abstrak dari ekspor. |
@@ -212,7 +212,7 @@ Tool:
 | `fetch_paper` | Identifier arXiv / DOI / PMID / IEEE → satu makalah. |
 | `fetch_pdf_text` | Unduh satu PDF, kembalikan teks tubuh hasil ekstraksi. **Jalur MCP menuju "saya membaca makalahnya".** |
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per makalah berindeks kunci BibTeX. |
-| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json`. Menerima field `summary` per makalah (skema gaya tesis kaya) dan `max_slides_per_paper` (default 25). |
+| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah (skema gaya tesis kaya) dan `max_slides_per_paper` (default 25). |
 | `pptx_inspect` | Membaca struktur slide / shape deck yang ada. |
 | `pptx_update_slide` | Mengganti `title` / `body` / `meta` (berdasarkan nama shape) atau shape sembarang berdasarkan indeks. |
 | `pptx_delete_slide` | Menghapus slide dan part relationship-nya. |
@@ -240,15 +240,15 @@ ThesisAgents/
 ├── thesisagents/                 # paket utama
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # client async HTTPS-only, rate limit token bucket
-│   ├── exporters/                   # pptx (gaya tesis) · xlsx · bib · md · json · pptx_edit · i18n
+│   ├── exporters/                   # pptx (gaya tesis) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # unduh PDF + summarizer Anthropic ([intelligence] extra)
-│   ├── mcp/                         # server FastMCP (11 tool)
+│   ├── mcp/                         # server FastMCP (12 tool)
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # CLI argparse
 │   └── __main__.py
 ├── sources/                         # folder plugin: arxiv, semantic_scholar,
 │                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer
+│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # suite pytest + fixture terekam (tanpa HTTP langsung)
 ├── docs/                            # Sphinx (14 pohon bahasa)
 ├── scripts/                         # skrip regen sekali pakai

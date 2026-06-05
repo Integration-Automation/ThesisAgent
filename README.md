@@ -64,8 +64,9 @@ it.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-All eleven MCP tools (including `list_sources`, `download_pdfs`,
-`pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` / etc.) are
+All twelve MCP tools (including `list_sources`, `list_exports`,
+`download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide`
+/ etc.) are
 documented in [`docs/mcp.md`](docs/mcp.md).
 
 ### Mandatory: URL / DOI verification before shipping
@@ -179,7 +180,7 @@ the template for any multi-paper search. The zh-tw companion is at
   `--arxiv-id` override on a single-PDF call; on a directory, per-file
   extraction wins so every paper gets its own deck named after its
   BibTeX key.
-- **Five exporters**:
+- **Eight exporters**:
   - `.pptx` — 16:9 widescreen, page-numbered, three rendering tiers
     (lightweight abstract-only · enriched-flat · **thesis-style** with
     pain-point quadrants, KPI callouts, technique-comparison tables,
@@ -214,13 +215,21 @@ the template for any multi-paper search. The zh-tw companion is at
   - `.md` — full source / title / abstract list.
   - `.bib` — collision-free citation keys, LaTeX-escaped fields.
   - `.json` — raw payload for downstream tooling.
+  - `.ris` — RIS interchange imported by Zotero / Mendeley / EndNote /
+    RefWorks (the BibTeX sibling for non-LaTeX reference managers).
+  - `.csv` — flat one-row-per-paper table for spreadsheets / quick grep
+    triage (RFC-4180 quoting, so commas in titles never shift columns).
+  - `.csl.json` — CSL-JSON for Pandoc / citeproc; render a bibliography
+    in any CSL style (APA, IEEE, Nature, …). The `.csl.json` extension
+    keeps it distinct from the plain `.json` dump.
 - **PPT editing toolkit**: `thesisagents.exporters.pptx_edit`
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   works against any deck the exporter produces, plus the equivalent
   `pptx_*` MCP tools so an LLM agent can iterate on a generated deck.
-- **MCP server**: 11 tools — `list_sources` (discovery),
-  `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`,
-  `export`, and the five `pptx_*` editing tools. Lets any MCP-aware LLM
+- **MCP server**: 12 tools — `list_sources` + `list_exports`
+  (discovery), `search`, `fetch_paper`, `fetch_pdf_text`,
+  `download_pdfs`, `export`, and the five `pptx_*` editing tools. Lets
+  any MCP-aware LLM
   (Claude Code, Claude Desktop, Cursor, …) drive the whole workflow.
 - **Two enrichment paths** for going beyond the abstract into a true
   thesis-style deck:
@@ -430,7 +439,7 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
-│   ├── mcp/                         # FastMCP server (11 tools)
+│   ├── mcp/                         # FastMCP server (12 tools)
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py

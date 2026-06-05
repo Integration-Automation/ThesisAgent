@@ -45,7 +45,7 @@ MCP 6 步流程
    5. (你逐篇读 PDF,自己产 structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-cn", ...)
 
-共 11 个 MCP 工具,完整参考见 :doc:`/mcp`。
+共 12 个 MCP 工具,完整参考见 :doc:`/mcp`。
 
 必做:交付前验证 URL / DOI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -155,7 +155,7 @@ CLI
 
    # 10 条结果,全部导出格式,自定义目录
    thesisagents --query "transformer attention" --source arxiv \
-                --max 10 --export pptx,xlsx,md,bib,json \
+                --max 10 --export pptx,xlsx,md,bib,json,ris,csv,csl \
                 --out ./exports/
 
    # 限制在近年论文
@@ -299,7 +299,7 @@ PPTX 布局
 MCP server
 ----------
 
-ThesisAgents 附带一个暴露 **11 个工具** 的 MCP server —— 来源发现
+ThesisAgents 附带一个暴露 **12 个工具** 的 MCP server —— 来源发现
 (``list_sources``)、搜索、单篇抓取、单个 PDF 正文提取
 (``fetch_pdf_text``)、批量 PDF 下载(``download_pdfs``)、导出,
 以及 5 个 PPTX 编辑操作。任何支持 MCP 的 LLM client(Claude Code、
@@ -347,7 +347,7 @@ Claude Desktop、Cursor …)都能驱动整套流程。
      - 把一组论文的 PDF 批量下载到 ``{out_dir}/pdfs/``\ 。返回以
        BibTeX key 为索引的逐篇结果。
    * - ``export``
-     - 论文列表 + 格式 → 写出 ``.pptx/.xlsx/.md/.bib/.json``\ 。每篇
+     - 论文列表 + 格式 → 写出 ``.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json``\ 。每篇
        论文可附 ``summary``\ 字段走 thesis-style;支持 ``language``\
        走 i18n,以及 ``max_slides_per_paper``\ (默认 25;传 ``0``\
        代表不限)。
@@ -420,7 +420,7 @@ Python 模块)让你在不重跑搜索的情况下继续对它做迭代:
    │   ├── exporters/                # pptx(thesis-style + lightweight)、xlsx、
    │   │                             #   bibtex、markdown、json + pptx_edit + i18n
    │   ├── intelligence/             # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
-   │   ├── mcp/                      # 注册 11 个工具的 FastMCP server
+   │   ├── mcp/                      # 注册 12 个工具的 FastMCP server
    │   ├── utils/                    # logging、path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`

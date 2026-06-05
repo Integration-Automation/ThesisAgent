@@ -2,7 +2,7 @@ ThesisAgents उपयोगकर्ता मार्गदर्शिका
 =======================================
 
 कीवर्ड-संचालित शोध-पत्र खोज सहायक। arXiv, Semantic Scholar, OpenAlex,
-PubMed, ACM, IEEE Xplore, DBLP, Crossref, OpenAIRE, Springer Nature और
+PubMed, ACM, IEEE Xplore, DBLP, Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE और
 Google Scholar से परिणाम लाता है; और इन्हें थीसिस-शैली PowerPoint
 प्रस्तुति, Excel वर्कबुक तथा BibTeX फ़ाइल के रूप में निर्यात करता है। एक
 CLI कॉल या एक MCP टूल कॉल से सब कुछ।
@@ -49,7 +49,7 @@ MCP 6 चरण
    5. (आप प्रत्येक PDF पढ़ें और संरचित summary dict तैयार करें)
    6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 
-11 MCP उपकरण: :doc:`/mcp`।
+12 MCP उपकरण: :doc:`/mcp`।
 
 अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -145,7 +145,7 @@ CLI फ़्लैग की पूरी तालिका: :doc:`/cli`।
 --------------
 
 * CLI फ़्लैग और पर्यावरण चर: :doc:`/cli`
-* 11 MCP सर्वर उपकरण: :doc:`/mcp`
+* 12 MCP सर्वर उपकरण: :doc:`/mcp`
 * PPTX संपादन टूलकिट: :doc:`/pptx_editing`
 * repo जड़ में ``readmes/README.hi.md`` फ़ाइल में सुविधाओं की पूरी सूची है।
 * गहन तकनीकी संदर्भ (प्लगइन वास्तुकला, सुरक्षा नीतियाँ, Definition of

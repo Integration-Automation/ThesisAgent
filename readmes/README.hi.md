@@ -10,7 +10,7 @@
 > **भाषाएँ**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · **हिन्दी** · [Bahasa Indonesia](README.id.md)
 > **दस्तावेज़ीकरण**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
-कीवर्ड-संचालित शोध-पत्र खोज सहायक। arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (Crossref के माध्यम से), IEEE Xplore, DBLP, सामान्य Crossref, OpenAIRE, Springer Nature और Google Scholar से परिणाम लाता है; उन्हें एकल रिकॉर्ड प्रारूप में सामान्यीकृत करता है; और डुप्लीकेट-मुक्त समूह को **थीसिस-शैली PowerPoint स्लाइड**, **Excel वर्कबुक** और **BibTeX फ़ाइल** के रूप में निर्यात करता है — एक CLI कॉल या एक MCP टूल कॉल से सब कुछ। वैकल्पिक रूप से प्रत्येक शोध-पत्र को उसकी PDF पढ़कर समृद्ध कर सकता है, या तो संदर्भ में (LLM-as-agent पथ) या Anthropic API के माध्यम से (Python pipeline पथ)।
+कीवर्ड-संचालित शोध-पत्र खोज सहायक। arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (Crossref के माध्यम से), IEEE Xplore, DBLP, सामान्य Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE और Google Scholar से परिणाम लाता है; उन्हें एकल रिकॉर्ड प्रारूप में सामान्यीकृत करता है; और डुप्लीकेट-मुक्त समूह को **थीसिस-शैली PowerPoint स्लाइड**, **Excel वर्कबुक** और **BibTeX फ़ाइल** के रूप में निर्यात करता है — एक CLI कॉल या एक MCP टूल कॉल से सब कुछ। वैकल्पिक रूप से प्रत्येक शोध-पत्र को उसकी PDF पढ़कर समृद्ध कर सकता है, या तो संदर्भ में (LLM-as-agent पथ) या Anthropic API के माध्यम से (Python pipeline पथ)।
 
 ## इस परियोजना को चलाने वाले AI एजेंट के लिए
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 ```
 
-ग्यारह MCP उपकरण (`list_sources`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` आदि सहित) [`docs/mcp.md`](docs/mcp.md) में प्रलेखित हैं।
+बारह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` आदि सहित) [`docs/mcp.md`](docs/mcp.md) में प्रलेखित हैं।
 
 ### अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 
@@ -76,7 +76,7 @@ for p in ALL_PAPERS:
 
 ## विशेषताएँ
 
-- **ग्यारह प्लग-इन योग्य स्रोत**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (Crossref के माध्यम से ACM तक सीमित), `dblp`, `crossref` (सामान्य), `openaire`, `springer` (API key आवश्यक), `ieee` (API key या स्क्रैपिंग opt-in), `scholar` (स्क्रैपिंग opt-in)। प्रत्येक `sources/<name>/` के अंतर्गत एक `Fetcher` एडाप्टर के पीछे रहता है। शीर्ष-स्तर वेन्यू श्वेतसूची डिफ़ॉल्ट रूप से परिणामों को प्रमुख CS सम्मेलनों/जर्नल + Nature/Science/PNAS तक फ़िल्टर करती है; `--all-venues` से अक्षम।
+- **पंद्रह प्लग-इन योग्य स्रोत**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (Crossref के माध्यम से ACM तक सीमित), `dblp`, `crossref` (सामान्य), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (API key आवश्यक), `ieee` (API key या स्क्रैपिंग opt-in), `scholar` (स्क्रैपिंग opt-in)। प्रत्येक `sources/<name>/` के अंतर्गत एक `Fetcher` एडाप्टर के पीछे रहता है। शीर्ष-स्तर वेन्यू श्वेतसूची डिफ़ॉल्ट रूप से परिणामों को प्रमुख CS सम्मेलनों/जर्नल + Nature/Science/PNAS तक फ़िल्टर करती है; `--all-venues` से अक्षम।
 - **एकल-शोध-पत्र मोड**: arXiv ID, arXiv URL, DOI, PMID, या IEEE दस्तावेज़ URL चिपकाएँ — ThesisAgents इसे सही स्रोत के माध्यम से हल करता है और वही निर्यात बंडल जारी करता है। पठन नोट्स और रक्षा तैयारी के लिए उपयोगी।
 - **स्थानीय PDF मोड** (`--pdf <पथ>`): एक PDF या निर्देशिका पास करें। एक हेयूरिस्टिक एक्सट्रैक्टर प्रत्येक PDF के आरंभ से **शीर्षक, लेखक, वर्ष, arXiv ID, DOI और वास्तविक सार** निकालता है (स्पष्ट `Abstract` / `ABSTRACT` / `摘要` हेडर पर एंकर, अंधे उपसर्ग पर नहीं)। `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` एकल-PDF कॉल पर ओवरराइड करते हैं; निर्देशिका मोड में, प्रति-फ़ाइल निष्कर्षण जीतता है — प्रत्येक शोध-पत्र अपनी BibTeX कुंजी के नाम पर अपना डेक प्राप्त करता है।
 - **पाँच एक्सपोर्टर**:
@@ -88,7 +88,7 @@ for p in ALL_PAPERS:
   - **डिज़ाइन की गई विज़ुअल आइडेंटिटी** (डिफ़ॉल्ट Calibri-on-white जैसा नहीं): प्रति भाषा टाइपोग्राफी (Latin के लिए Inter; CJK + Hindi के लिए Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI), प्रोग्रामेटिक accent geometry (हर content slide के ऊपर accent bar + cover के बाएँ band), academic-style tables (default काली grid हटी, navy header rule, soft inter-row dividers, alternating row stripe, vertical middle alignment, पहली column bold)। 5-color palette (navy / teal / grey / light / white) — टेक्स्ट रंग के रूप में लाल **प्रतिबंधित**; emphasis के लिए **bold + teal `#0E7490`** उपयोग करें।
   - **Dark mode डिफ़ॉल्ट है**। light palette पर बनता है, फिर post-build pass text + fill + cell-border के RGB को dark mode पर swap करता है (slide bg `#12151B`, body text `#E5E7EB`, अधिक चमकीला teal accent `#2DD4BF`)। OLED projectors और low-light venues के लिए डिज़ाइन। प्रिंट या उज्ज्वल कमरे के लिए: `--light-mode` (CLI), GUI के Deck tab में **Light mode** uncheck करें, या Python में `ExportOptions(dark_mode=False)` पास करें।
 - **PPT संपादन टूलकिट**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) एक्सपोर्टर द्वारा उत्पन्न किसी भी डेक पर काम करता है, साथ ही समकक्ष `pptx_*` MCP उपकरण ताकि एक LLM एजेंट उत्पन्न डेक पर पुनरावृत्ति कर सके।
-- **MCP सर्वर**: 11 उपकरण — `list_sources` (खोज), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, और पाँच `pptx_*` संपादन उपकरण। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
+- **MCP सर्वर**: 12 उपकरण — `list_sources` (खोज), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, और पाँच `pptx_*` संपादन उपकरण। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
 - **दो समृद्धि पथ** सार से आगे एक वास्तविक थीसिस-शैली डेक तक:
   - **LLM-as-agent (कोई API key नहीं)** — कॉलिंग LLM `fetch_pdf_text` के माध्यम से PDF टेक्स्ट पढ़ता है, संदर्भ में संरचित सारांश लिखता है, और `export` को पास करता है।
   - **Python pipeline (`--enrich`)** — CLI स्वयं Anthropic API कॉल करती है; डिफ़ॉल्ट मॉडल `claude-opus-4-7`।
@@ -146,7 +146,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--source` / `-s` | अल्पविराम-पृथक स्रोत सूची। डिफ़ॉल्ट `arxiv`। |
 | `--max` / `-n` | प्रति स्रोत अधिकतम परिणाम (1..200)। डिफ़ॉल्ट 25। |
 | `--year-from` / `--year-to` | समावेशी वर्ष फ़िल्टर। |
-| `--export` / `-e` | प्रारूप: `pptx,xlsx,md,bib,json` में से कोई भी। डिफ़ॉल्ट मोड पर निर्भर (नीचे देखें)। |
+| `--export` / `-e` | प्रारूप: `pptx,xlsx,md,bib,json,ris,csv,csl` में से कोई भी। डिफ़ॉल्ट मोड पर निर्भर (नीचे देखें)। |
 | `--out` / `-o` | आउटपुट निर्देशिका। डिफ़ॉल्ट `./exports`। |
 | `--filename-stem` | उत्पन्न फ़ाइल नाम stem ओवरराइड। |
 | `--no-abstract` | निर्यात से सार सामग्री छोड़ें। |
@@ -212,7 +212,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE पहचानकर्ता → एकल शोध-पत्र। |
 | `fetch_pdf_text` | एक PDF डाउनलोड करें, निकाला गया मुख्य पाठ लौटाएँ। **"मैंने शोध-पत्र पढ़ा" तक का MCP पथ।** |
 | `download_pdfs` | शोध-पत्र सूची की PDFs को `{out_dir}/pdfs/` में बैच डाउनलोड करें। BibTeX कुंजी द्वारा अनुक्रमित प्रति-शोध-पत्र परिणाम लौटाता है। |
-| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json` लिखता है। प्रति-शोध-पत्र `summary` फ़ील्ड (rich thesis-style schema) और `max_slides_per_paper` (डिफ़ॉल्ट 25) स्वीकार करता है। |
+| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। प्रति-शोध-पत्र `summary` फ़ील्ड (rich thesis-style schema) और `max_slides_per_paper` (डिफ़ॉल्ट 25) स्वीकार करता है। |
 | `pptx_inspect` | मौजूदा डेक की स्लाइड / शेप संरचना पढ़ें। |
 | `pptx_update_slide` | `title` / `body` / `meta` (शेप नाम से) या मनमाने शेप (अनुक्रमणिका से) प्रतिस्थापित करें। |
 | `pptx_delete_slide` | एक स्लाइड और उसका part relationship हटाएँ। |
@@ -240,15 +240,15 @@ ThesisAgents/
 ├── thesisagents/                 # मुख्य पैकेज
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
-│   ├── exporters/                   # pptx (थीसिस-शैली) · xlsx · bib · md · json · pptx_edit · i18n
+│   ├── exporters/                   # pptx (थीसिस-शैली) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF डाउनलोड + Anthropic सारांश ([intelligence] extra)
-│   ├── mcp/                         # FastMCP सर्वर (11 उपकरण)
+│   ├── mcp/                         # FastMCP सर्वर (12 उपकरण)
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
 ├── sources/                         # plugin फ़ोल्डर: arxiv, semantic_scholar,
 │                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer
+│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # pytest सूट + रिकॉर्डेड fixtures (कोई लाइव HTTP नहीं)
 ├── docs/                            # Sphinx (14 भाषा वृक्ष)
 ├── scripts/                         # एक-बार regen स्क्रिप्ट

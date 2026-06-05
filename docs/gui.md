@@ -45,9 +45,9 @@ The core search → export flow.
 - **Query** — keyword string (UTF-8; CJK works).
 - **Sources** — checkbox grid; pre-selected to the same default set
   as the CLI (`arxiv`, `semantic_scholar`, `openalex`, `pubmed`,
-  `dblp`, `crossref`, `openaire`). Opt-in plugins (`scholar`,
-  `ieee`) are unchecked until you tick them and have the
-  corresponding env var set in **Settings**.
+  `dblp`, `crossref`, `openaire`, `europepmc`, `doaj`, `hal`). Opt-in
+  plugins (`scholar`, `ieee`, `springer`, `core`) are unchecked until
+  you tick them and have the corresponding env var set in **Settings**.
 - **Slide language** — picks the language for any `.pptx` exported
   from this run. Defaults to English.
 - **Max results per source** — 1 … 200 (same as the CLI `--max`).

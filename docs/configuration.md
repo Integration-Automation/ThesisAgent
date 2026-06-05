@@ -33,7 +33,7 @@ each value into `os.environ` before any fetcher initialises.
 | `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | unset | **Scholar plugin is now default-ON.** Set `=1` to opt out. Google's ToS forbids automated access; default-on for coverage, opt-out if you'd rather not take the captcha / IP-block risk. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | unset | **Scholar + IEEE plugins + the PDF downloader for paywalled publisher CDNs all default to driving a real visible Chrome through WebRunner** (`je_web_runner` is a default dependency) — publisher bot-detection is far less aggressive on real browsers. PDF download host list includes `ieeexplore.ieee.org`, `dl.acm.org`, `link.springer.com`, `sciencedirect.com`, `onlinelibrary.wiley.com`, `tandfonline.com`, `academic.oup.com`, `nature.com`, `science.org`, plus a few engineering-society CDNs. Set `=1` to force the httpx paths instead (useful for CI / Docker without a Chrome binary). |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | unset | When set, passes `--user-data-dir=<path>` to Chrome so cookies / login state survive across CLI invocations. Used by **both** Scholar (one-time Google sign-in suppresses Scholar captchas) and IEEE (institutional auth cookies surface paywalled metadata). |
-| `THESISAGENTS_CORE_API_KEY` | unset | Free key from <https://core.ac.uk/services/api>. Enables the OA resolver's CORE.ac.uk lookup step (200M+ institutional / regional OA repository items). Skipped silently when unset (the other OA strategies — Unpaywall, Semantic Scholar, arXiv — still run). |
+| `THESISAGENTS_CORE_API_KEY` | unset | Free key from <https://core.ac.uk/services/api>. Enables both the OA resolver's CORE.ac.uk lookup step (200M+ institutional / regional OA repository items) **and** the `core` search source. Skipped silently when unset — the `core` source drops out and the other OA strategies (Unpaywall, Semantic Scholar, arXiv) still run. |
 | `THESISAGENTS_CONTACT_EMAIL` | unset | Sent to Crossref / OpenAlex as the `mailto=` parameter (entry into their polite pool), to NCBI as `tool` / `email` headers, **and to Unpaywall as `email=`** for the post-dedup OA PDF resolver. Highly recommended — without it the resolver skips Unpaywall lookups entirely, which is the single biggest PDF coverage win for IEEE / ACM / Springer / Elsevier paywalled papers (typical lift 40-70%). |
 
 ### PDF download
@@ -142,9 +142,13 @@ defaults match each upstream's published or observed soft limit:
 | `dblp` | 1 req / 2 s | 0.5 s | Conservative — DBLP is single-server. |
 | `crossref` | 50 req / s | 0.05 s | Polite pool with `mailto`. |
 | `openaire` | 2 req / s | 0.2 s | Conservative — OpenAIRE rate limits are not published. |
+| `europepmc` | 5 req / s | 0.2 s | Half of Europe PMC's stated 10 req/s ceiling. |
+| `doaj` | 2 req / s | 0.3 s | DOAJ asks for ≤ 2 req/s from a single client. |
+| `hal` | 2 req / s | 0.3 s | Polite — HAL publishes no per-second cap. |
 | `ieee` (API) | 10 req / s | 0.1 s | Per the IEEE Xplore API ToS. |
 | `ieee` (scrape) | 1 req / 5 s | 1.0 s | ToS-grey — extra-conservative. |
 | `springer` | 5 req / s | 0.2 s | Per the Springer Meta API ToS. |
+| `core` | 1 req / s | 0.3 s | Free-tier headroom; needs `THESISAGENTS_CORE_API_KEY`. |
 | `scholar` | 1 req / 10 s | 2.0 s | ToS forbids scraping — extra-conservative. |
 
 These are enforced by a decorator on the HTTP client; retries on

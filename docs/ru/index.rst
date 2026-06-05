@@ -3,7 +3,7 @@
 
 Поисковый ассистент статей, управляемый ключевыми словами. Получает
 результаты из arXiv, Semantic Scholar, OpenAlex, PubMed, ACM, IEEE
-Xplore, DBLP, Crossref, OpenAIRE, Springer Nature и Google Scholar; и
+Xplore, DBLP, Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE и Google Scholar; и
 экспортирует как презентацию PowerPoint в стиле дипломной работы,
 книгу Excel и файл BibTeX. Всё за один CLI-вызов или один вызов
 MCP-инструмента.
@@ -51,7 +51,7 @@ MCP в 6 шагов
    5. (вы читаете каждый PDF и составляете структурированный dict сводки)
    6. export(papers=[{...paper, "summary": {...}}], language="ru", ...)
 
-Все 11 MCP-инструментов: :doc:`/mcp`.
+Все 12 MCP-инструментов: :doc:`/mcp`.
 
 Обязательно: проверка URL / DOI перед сдачей
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

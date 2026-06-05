@@ -10,7 +10,7 @@
 > **언어**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · **한국어** · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **문서**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
-키워드 기반 논문 검색 어시스턴트. arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (Crossref 경유), IEEE Xplore, DBLP, 일반 Crossref, OpenAIRE, Springer Nature, Google Scholar 에서 결과를 가져와 단일 레코드 형식으로 정규화하고, 중복 제거된 결과를 **논문 발표용 PowerPoint 슬라이드**, **Excel 워크북**, **BibTeX 파일** 로 내보냅니다 — CLI 호출 한 번 또는 MCP 도구 호출 한 번으로 끝납니다. 각 논문의 PDF 를 읽고 구조화된 요약을 생성할 수도 있으며 (LLM-as-agent 경로), 또는 Anthropic API 경유 (Python 파이프라인 경로) 가능합니다.
+키워드 기반 논문 검색 어시스턴트. arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (Crossref 경유), IEEE Xplore, DBLP, 일반 Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE, Google Scholar 에서 결과를 가져와 단일 레코드 형식으로 정규화하고, 중복 제거된 결과를 **논문 발표용 PowerPoint 슬라이드**, **Excel 워크북**, **BibTeX 파일** 로 내보냅니다 — CLI 호출 한 번 또는 MCP 도구 호출 한 번으로 끝납니다. 각 논문의 PDF 를 읽고 구조화된 요약을 생성할 수도 있으며 (LLM-as-agent 경로), 또는 Anthropic API 경유 (Python 파이프라인 경로) 가능합니다.
 
 ## 본 프로젝트를 구동하는 AI 에이전트에게
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="ko", ...)
 ```
 
-11 개의 MCP 도구 (`list_sources`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 등) 의 전체 참조는 [`docs/mcp.md`](docs/mcp.md) 에 있습니다.
+12 개의 MCP 도구 (`list_sources`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 등) 의 전체 참조는 [`docs/mcp.md`](docs/mcp.md) 에 있습니다.
 
 ### 필수: 인도 전 URL / DOI 검증
 
@@ -76,7 +76,7 @@ for p in ALL_PAPERS:
 
 ## 기능
 
-- **11 개 플러그인형 소스**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (Crossref 로 ACM 한정), `dblp`, `crossref` (일반), `openaire`, `springer` (API 키 필요), `ieee` (API 키 또는 스크래핑 opt-in), `scholar` (스크래핑 opt-in). 각각 `sources/<name>/` 아래에서 `Fetcher` 어댑터로 구현됩니다. 최상위급 출판처 화이트리스트가 기본적으로 결과를 주요 CS 학회/저널 + Nature/Science/PNAS 로 필터링하며, `--all-venues` 로 비활성화 가능.
+- **15 개 플러그인형 소스**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (Crossref 로 ACM 한정), `dblp`, `crossref` (일반), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (API 키 필요), `ieee` (API 키 또는 스크래핑 opt-in), `scholar` (스크래핑 opt-in). 각각 `sources/<name>/` 아래에서 `Fetcher` 어댑터로 구현됩니다. 최상위급 출판처 화이트리스트가 기본적으로 결과를 주요 CS 학회/저널 + Nature/Science/PNAS 로 필터링하며, `--all-venues` 로 비활성화 가능.
 - **단일 논문 모드**: arXiv ID, arXiv URL, DOI, PMID, 또는 IEEE 문서 URL 을 붙여 넣으면 ThesisAgents 가 적절한 소스로 해당 논문을 가져와 동일한 내보내기 번들을 생성합니다. 논문 읽기 노트 및 학위 심사 준비에 유용.
 - **로컬 PDF 모드** (`--pdf <경로>`): PDF 하나 또는 디렉토리를 전달. 휴리스틱 추출기가 각 PDF 의 앞부분에서 **제목, 저자, 연도, arXiv ID, DOI, 진짜 초록** 을 끌어냅니다 (명시적 `Abstract` / `ABSTRACT` / `摘要` 헤더에 고정, 임의 prefix 가 아님). 단일 PDF 호출에서는 `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` 가 override 합니다. 디렉토리 모드에서는 파일별 추출이 이깁니다 — 각 논문은 자신의 BibTeX 키 이름으로 덱이 생성됩니다.
 - **5 개 내보내기**:
@@ -88,7 +88,7 @@ for p in ALL_PAPERS:
   - **디자인된 시각 정체성** (기본 Calibri-on-white 모습이 아님): 언어별 타이포그래피 (Latin 은 Inter, CJK + Hindi 는 Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI), 프로그램으로 그리는 accent geometry (모든 콘텐츠 슬라이드 상단의 accent bar + 표지 좌측 띠), 학술 스타일 표 (기본 검정 그리드 제거, navy 헤더 룰, 부드러운 행간 divider, 교대 행 stripe, 수직 중앙 정렬, 첫 열 굵게). 5색 팔레트 (navy / teal / grey / light / white) — 빨간 텍스트는 **금지**, 강조는 **굵게 + teal `#0E7490`** 으로.
   - **다크 모드가 기본**. light palette 로 빌드한 다음 post-build pass 가 text + fill + cell-border 의 RGB 를 다크 모드로 교체 (슬라이드 배경 `#12151B`, 본문 `#E5E7EB`, teal accent 은 더 밝은 `#2DD4BF` 로). OLED 프로젝터와 어두운 발표장을 위한 기본. 인쇄나 밝은 환경에서는 `--light-mode` (CLI), GUI Deck 탭의 **Light mode** 체크 해제, 또는 Python 에서 `ExportOptions(dark_mode=False)` 로 opt out.
 - **PPT 편집 툴킷**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) 는 익스포터가 생성한 모든 덱에 대해 작동. 동등한 `pptx_*` MCP 도구로 LLM 에이전트가 생성된 덱을 반복적으로 수정 가능.
-- **MCP 서버**: 11 개 도구 — `list_sources` (디스커버리), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, 그리고 5 개의 `pptx_*` 편집 도구. MCP 호환 LLM (Claude Code, Claude Desktop, Cursor, …) 이 전체 워크플로를 구동 가능.
+- **MCP 서버**: 12 개 도구 — `list_sources` (디스커버리), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, 그리고 5 개의 `pptx_*` 편집 도구. MCP 호환 LLM (Claude Code, Claude Desktop, Cursor, …) 이 전체 워크플로를 구동 가능.
 - **두 가지 enrichment 경로** 초록을 넘어 진짜 논문 발표 스타일 덱으로:
   - **LLM-as-agent (API 키 불필요)** — 호출 LLM 이 `fetch_pdf_text` 로 PDF 본문을 읽고, 컨텍스트 내에서 구조화 요약을 작성, `export` 에 전달.
   - **Python 파이프라인 (`--enrich`)** — CLI 가 Anthropic API 를 직접 호출. 기본 모델 `claude-opus-4-7`.
@@ -146,7 +146,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--source` / `-s` | 쉼표로 구분된 소스 목록. 기본 `arxiv`. |
 | `--max` / `-n` | 소스당 최대 결과 (1..200). 기본 25. |
 | `--year-from` / `--year-to` | 양 끝 포함 연도 필터. |
-| `--export` / `-e` | 포맷: `pptx,xlsx,md,bib,json` 중 임의. 기본은 모드에 따름 (아래 참조). |
+| `--export` / `-e` | 포맷: `pptx,xlsx,md,bib,json,ris,csv,csl` 중 임의. 기본은 모드에 따름 (아래 참조). |
 | `--out` / `-o` | 출력 디렉토리. 기본 `./exports`. |
 | `--filename-stem` | 생성되는 파일명 stem 을 override. |
 | `--no-abstract` | 내보내기에서 초록 내용을 생략. |
@@ -212,7 +212,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 식별자 → 단일 논문. |
 | `fetch_pdf_text` | 단일 PDF 다운로드, 추출된 본문 반환. **MCP 경유 "논문을 읽었음" 진입점.** |
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 에 일괄 다운로드. BibTeX 키로 인덱싱된 논문별 결과 반환. |
-| `export` | 논문 목록 + 포맷 → `.pptx/.xlsx/.md/.bib/.json` 작성. 논문별 `summary` 필드 (논문 발표 스타일 스키마) 와 `max_slides_per_paper` (기본 25) 수용. |
+| `export` | 논문 목록 + 포맷 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 작성. 논문별 `summary` 필드 (논문 발표 스타일 스키마) 와 `max_slides_per_paper` (기본 25) 수용. |
 | `pptx_inspect` | 기존 덱의 슬라이드 / 셰이프 구조 읽기. |
 | `pptx_update_slide` | `title` / `body` / `meta` (셰이프 이름으로) 또는 임의 셰이프 (인덱스로) 교체. |
 | `pptx_delete_slide` | 슬라이드와 그 part relationship 제거. |
@@ -240,15 +240,15 @@ ThesisAgents/
 ├── thesisagents/                 # 메인 패키지
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # HTTPS-only async 클라이언트, 토큰 버킷 레이트 리미트
-│   ├── exporters/                   # pptx (논문 발표 스타일) · xlsx · bib · md · json · pptx_edit · i18n
+│   ├── exporters/                   # pptx (논문 발표 스타일) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF 다운로드 + Anthropic 요약기 ([intelligence] extra)
-│   ├── mcp/                         # FastMCP 서버 (11 도구)
+│   ├── mcp/                         # FastMCP 서버 (12 도구)
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
 ├── sources/                         # 플러그인 폴더: arxiv, semantic_scholar,
 │                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer
+│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # pytest 스위트 + 녹화된 fixture (live HTTP 없음)
 ├── docs/                            # Sphinx (14 개 언어 트리)
 ├── scripts/                         # 일회용 regen 스크립트

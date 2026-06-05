@@ -106,7 +106,8 @@ You passed `--source` a name not in `ALL_SOURCES`. The valid set:
 
 ```
 arxiv, semantic_scholar, openalex, pubmed, acm, dblp,
-crossref, openaire, ieee, springer, scholar
+crossref, openaire, europepmc, doaj, hal, ieee, springer,
+core, scholar
 ```
 
 ### `Lightweight deck — no ANTHROPIC_API_KEY in env.`
@@ -146,7 +147,9 @@ Bypass options:
 - `--paywall-threshold 0.95` to disable the warning (bad — you'll
   generate empty decks for paywalled papers).
 - Switch sources to ones with more open access (`arxiv`,
-  `openalex`, `openaire`, `pubmed`).
+  `openalex`, `openaire`, `pubmed`, `europepmc`, `doaj`, `hal` —
+  the last three are open by definition and usually carry a direct
+  PDF link).
 
 ### `arXiv rate-limit hits`
 
@@ -192,7 +195,7 @@ python -c "from thesisagents.mcp import build_server; import asyncio; \
     print(sorted(t.name for t in asyncio.run(build_server().list_tools())))"
 ```
 
-You should see all 11 tool names. If the import itself fails, the
+You should see all 12 tool names. If the import itself fails, the
 `[mcp]` extra is not installed:
 
 ```bash

@@ -417,3 +417,13 @@ turns out to be the right home for most sources permanently.
   fragile by necessity.
 - `sources/springer/` — `ConfigError` at construction when key is
   missing. Good example of soft-skip integration.
+- `sources/europepmc/` — open REST API, no key, JSON. Clean example of
+  the over-fetch-then-year-post-filter pattern + structured-vs-flat
+  author fallback.
+- `sources/doaj/` — open API where the **query rides in the URL path**
+  (percent-encoded), not a query parameter. Good example of a
+  non-standard endpoint shape.
+- `sources/hal/` — Solr-backed API whose fields are arrays even when
+  single-valued. Good example of defensive array-or-scalar unwrapping.
+- `sources/core/` — opt-in via `THESISAGENTS_CORE_API_KEY` passed as a
+  Bearer header. Good example of header-based auth + soft-skip.

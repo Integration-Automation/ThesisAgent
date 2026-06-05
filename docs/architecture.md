@@ -12,7 +12,8 @@ shared `Paper` record, deduplicates by DOI / arXiv-ID / fuzzy
 title, ranks by recency + citation count, optionally enriches
 each paper with a structured `PaperSummary`, and hands the
 resulting `PaperCollection` to one or more **Exporter** plugins
-(`.pptx`, `.xlsx`, `.bib`, `.md`, `.json`). All outbound HTTP
+(`.pptx`, `.xlsx`, `.bib`, `.md`, `.json`, `.ris`, `.csv`, `.csl.json`).
+All outbound HTTP
 goes through one HTTPS-only client per source, all per-source
 rate limits live in a token bucket, and every fetcher test uses
 a recorded fixture (zero live HTTP in the test suite).
@@ -51,9 +52,9 @@ ThesisAgents/
 ├── thesisagents/                 # main package — core runtime
 │   ├── core/                       # domain (Paper, Query, dedup, rank, pipeline)
 │   ├── fetchers/                   # HTTPS-only http client + Fetcher base
-│   ├── exporters/                  # pptx / xlsx / bib / md / json + pptx_edit + i18n
+│   ├── exporters/                  # pptx / xlsx / bib / md / json / ris / csv / csl + pptx_edit + i18n
 │   ├── intelligence/               # PDF + Anthropic summariser ([intelligence] extra)
-│   ├── mcp/                        # FastMCP server registering 11 tools ([mcp] extra)
+│   ├── mcp/                        # FastMCP server registering 12 tools ([mcp] extra)
 │   ├── gui/                        # PySide6 desktop UI ([gui] extra)
 │   ├── utils/                      # logging, path safety, async helpers
 │   ├── cli.py                      # argparse CLI
@@ -141,7 +142,7 @@ came back.
                   │
                   ▼
           ┌───────────────┐
-          │ Exporter      │  pptx, xlsx, bibtex, md, json
+          │ Exporter      │  pptx, xlsx, bibtex, md, json, ris, csv, csl
           └───────────────┘
 ```
 
@@ -253,7 +254,7 @@ library APIs return coroutines.
 
 ### MCP server (`thesisagents.mcp`)
 
-FastMCP registers eleven tools. The agent calls them in sequence
+FastMCP registers twelve tools. The agent calls them in sequence
 (`list_sources` → `search` → `fetch_pdf_text` per paper →
 `export`); the server is stateless across tool calls so the
 agent's context is the only place state lives. See [MCP doc](mcp.md).

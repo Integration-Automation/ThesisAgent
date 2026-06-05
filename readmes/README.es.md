@@ -10,7 +10,7 @@
 > **Idiomas**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · **Español** · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **Documentación**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
-Asistente de búsqueda de artículos guiado por palabras clave que recupera resultados de arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (vía Crossref), IEEE Xplore, DBLP, Crossref genérico, OpenAIRE, Springer Nature y Google Scholar; los normaliza a un único formato de registro y exporta el conjunto deduplicado como una **presentación PowerPoint estilo tesis**, un **libro Excel** y un **archivo BibTeX** — todo desde una llamada CLI o una llamada de herramienta MCP. Opcionalmente enriquece cada artículo leyendo su PDF y produciendo un resumen estructurado, ya sea en contexto (flujo LLM-as-agent) o mediante la API de Anthropic (flujo Python pipeline).
+Asistente de búsqueda de artículos guiado por palabras clave que recupera resultados de arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (vía Crossref), IEEE Xplore, DBLP, Crossref genérico, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE y Google Scholar; los normaliza a un único formato de registro y exporta el conjunto deduplicado como una **presentación PowerPoint estilo tesis**, un **libro Excel** y un **archivo BibTeX** — todo desde una llamada CLI o una llamada de herramienta MCP. Opcionalmente enriquece cada artículo leyendo su PDF y produciendo un resumen estructurado, ya sea en contexto (flujo LLM-as-agent) o mediante la API de Anthropic (flujo Python pipeline).
 
 ## Para agentes de IA que dirigen este proyecto
 
@@ -37,7 +37,7 @@ El entregable por defecto es **un `.pptx` enriquecido estilo tesis por artículo
 6. export(papers=[{...paper, "summary": {...}}], language="es", ...)
 ```
 
-Las once herramientas MCP (incluyendo `list_sources`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` / etc.) están documentadas en [`docs/mcp.md`](docs/mcp.md).
+Las doce herramientas MCP (incluyendo `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` / etc.) están documentadas en [`docs/mcp.md`](docs/mcp.md).
 
 ### Obligatorio: verificación de URL / DOI antes de entregar
 
@@ -76,7 +76,7 @@ Dos fabricaciones detectadas así en producción: volumen AAAI incorrecto (`v39i
 
 ## Funcionalidades
 
-- **Once fuentes pluggables**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (limitado a ACM vía Crossref), `dblp`, `crossref` (genérico), `openaire`, `springer` (requiere API key), `ieee` (API key o scraping opt-in), `scholar` (scraping opt-in). Cada una vive bajo `sources/<name>/` detrás de un adaptador `Fetcher`. Una lista blanca de revistas de primer nivel filtra los resultados a conferencias/revistas CS bandera más Nature/Science/PNAS por defecto; pase `--all-venues` para desactivar.
+- **Quince fuentes pluggables**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (limitado a ACM vía Crossref), `dblp`, `crossref` (genérico), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (requiere API key), `ieee` (API key o scraping opt-in), `scholar` (scraping opt-in). Cada una vive bajo `sources/<name>/` detrás de un adaptador `Fetcher`. Una lista blanca de revistas de primer nivel filtra los resultados a conferencias/revistas CS bandera más Nature/Science/PNAS por defecto; pase `--all-venues` para desactivar.
 - **Modo de artículo único**: pegue un ID arXiv, URL arXiv, DOI, PMID o URL de documento IEEE — ThesisAgents lo resuelve vía la fuente correcta y emite el mismo paquete de exportación. Útil para notas de lectura y preparación de defensa.
 - **Modo PDF local** (`--pdf <path>`): pase un PDF o un directorio. Un extractor heurístico obtiene **título, autores, año, ID arXiv, DOI y el resumen real** directamente del prefacio de cada PDF (anclado en el encabezado explícito `Abstract` / `ABSTRACT` / `摘要`, no en un prefijo ciego). `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` sobrescriben en una llamada de un solo PDF; en modo directorio, la extracción por archivo gana, así cada artículo obtiene su propia presentación nombrada con su clave BibTeX.
 - **Cinco exportadores**:
@@ -88,7 +88,7 @@ Dos fabricaciones detectadas así en producción: volumen AAAI incorrecto (`v39i
   - **Identidad visual diseñada** (no la apariencia por defecto Calibri-on-white): tipografía por idioma (Latin con Inter; CJK + Hindi con Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI), geometría de acento programática (barra superior en cada diapositiva de contenido + banda izquierda en la portada), tablas de estilo académico (sin rejilla negra, regla navy de cabecera, separadores suaves entre filas, franjas alternas, alineación vertical centrada, primera columna en negrita). Paleta de 5 colores (navy / teal / grey / light / white) — el rojo está **prohibido** como color de texto; usa **negrita + teal `#0E7490`** para enfatizar.
   - **Modo oscuro por defecto**. Se construye con la paleta clara y luego un post-pass intercambia los RGB de texto + relleno + borde de celda al modo oscuro (fondo `#12151B`, texto `#E5E7EB`, teal más brillante `#2DD4BF`). Diseñado para proyectores OLED y salas con poca luz. Para imprimir o salas iluminadas, usa `--light-mode` (CLI), desmarca **Light mode** en la pestaña Deck de la GUI, o pasa `ExportOptions(dark_mode=False)` en Python.
 - **Kit de edición PPT**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) funciona contra cualquier presentación que el exportador produzca, más las herramientas MCP equivalentes `pptx_*` para que un agente LLM pueda iterar sobre la presentación.
-- **Servidor MCP**: 11 herramientas — `list_sources` (descubrimiento), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export` y las cinco de edición `pptx_*`. Permite a cualquier LLM compatible con MCP (Claude Code, Claude Desktop, Cursor, …) dirigir el flujo completo.
+- **Servidor MCP**: 12 herramientas — `list_sources` (descubrimiento), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export` y las cinco de edición `pptx_*`. Permite a cualquier LLM compatible con MCP (Claude Code, Claude Desktop, Cursor, …) dirigir el flujo completo.
 - **Dos rutas de enriquecimiento** para ir más allá del resumen hacia una presentación auténtica estilo tesis:
   - **LLM-as-agent (sin API key)** — el LLM que llama lee el texto del PDF vía `fetch_pdf_text`, escribe un resumen estructurado en contexto y lo pasa a `export`.
   - **Pipeline Python (`--enrich`)** — la CLI llama a la API de Anthropic directamente; modelo por defecto `claude-opus-4-7`.
@@ -146,7 +146,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--source` / `-s` | Lista de fuentes separadas por coma. Default `arxiv`. |
 | `--max` / `-n` | Resultados máximos por fuente (1..200). Default 25. |
 | `--year-from` / `--year-to` | Filtro de año inclusivo. |
-| `--export` / `-e` | Formatos: cualquiera de `pptx,xlsx,md,bib,json`. Default depende del modo (ver abajo). |
+| `--export` / `-e` | Formatos: cualquiera de `pptx,xlsx,md,bib,json,ris,csv,csl`. Default depende del modo (ver abajo). |
 | `--out` / `-o` | Directorio de salida. Default `./exports`. |
 | `--filename-stem` | Sobrescribe el stem de nombre generado. |
 | `--no-abstract` | Omite contenido del resumen en las exportaciones. |
@@ -212,7 +212,7 @@ Herramientas:
 | `fetch_paper` | Identificador arXiv / DOI / PMID / IEEE → un solo artículo. |
 | `fetch_pdf_text` | Descarga un PDF, retorna el texto extraído. **La ruta MCP para "leí el artículo".** |
 | `download_pdfs` | Descarga por lotes los PDFs de una lista de artículos a `{out_dir}/pdfs/`. Retorna resultados por artículo indexados por clave BibTeX. |
-| `export` | Lista de artículos + formatos → escribe `.pptx/.xlsx/.md/.bib/.json`. Acepta un campo `summary` por artículo para el schema estilo tesis enriquecido y `max_slides_per_paper` (default 25). |
+| `export` | Lista de artículos + formatos → escribe `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Acepta un campo `summary` por artículo para el schema estilo tesis enriquecido y `max_slides_per_paper` (default 25). |
 | `pptx_inspect` | Lee la estructura de slide / shape de una presentación existente. |
 | `pptx_update_slide` | Reemplaza `title` / `body` / `meta` (por nombre de shape) o shapes arbitrarios por índice. |
 | `pptx_delete_slide` | Elimina una diapositiva y su part relationship. |
@@ -240,15 +240,15 @@ ThesisAgents/
 ├── thesisagents/                 # paquete principal
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # cliente async solo-HTTPS, rate limit token bucket
-│   ├── exporters/                   # pptx (estilo tesis) · xlsx · bib · md · json · pptx_edit · i18n
+│   ├── exporters/                   # pptx (estilo tesis) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # descarga PDF + resumidor Anthropic ([intelligence] extra)
-│   ├── mcp/                         # servidor FastMCP (11 herramientas)
+│   ├── mcp/                         # servidor FastMCP (12 herramientas)
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # CLI argparse
 │   └── __main__.py
 ├── sources/                         # carpetas plugin: arxiv, semantic_scholar,
 │                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer
+│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # suite pytest + fixtures grabadas (sin HTTP vivo)
 ├── docs/                            # Sphinx (14 árboles de idiomas)
 ├── scripts/                         # scripts regen únicos

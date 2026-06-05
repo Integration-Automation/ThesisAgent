@@ -51,7 +51,7 @@ Decision tree
    5. (you read each PDF and produce a structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-tw", ...)
 
-Eleven MCP tools total; full reference at :doc:`/mcp`.
+Twelve MCP tools total; full reference at :doc:`/mcp`.
 
 Mandatory: URL / DOI verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -169,7 +169,7 @@ Search mode
 
    # 10 results, every export format, custom dir
    thesisagents --query "transformer attention" --source arxiv \
-                --max 10 --export pptx,xlsx,md,bib,json \
+                --max 10 --export pptx,xlsx,md,bib,json,ris,csv,csl \
                 --out ./exports/
 
    # Restrict to recent work
@@ -207,8 +207,10 @@ Available source plugins
 The default mix used when ``--source`` is omitted is every plugin that
 needs no paid API key plus ``ieee`` + ``scholar`` (both default-on via
 visible Chrome): ``arxiv``, ``semantic_scholar``, ``openalex``,
-``pubmed``, ``acm``, ``dblp``, ``crossref``, ``openaire``, ``ieee``,
-``scholar``. One more plugin joins when its env var is set:
+``pubmed``, ``acm``, ``dblp``, ``crossref``, ``openaire``,
+``europepmc``, ``doaj``, ``hal``, ``ieee``, ``scholar`` (15 plugins
+total). Two more join when their env var is set (``springer`` and
+``core``):
 
 .. list-table::
    :header-rows: 1
@@ -230,6 +232,12 @@ visible Chrome): ``arxiv``, ``semantic_scholar``, ``openalex``,
        Scientific Reports, Lecture Notes in CS, all Springer journals.
        The plugin raises ``ConfigError`` at construction without a key,
        which the pipeline silently skips.
+   * - ``core``
+     - ``THESISAGENTS_CORE_API_KEY``
+     - Free key from https://core.ac.uk/services/api. The largest
+       open-access aggregator (250M+ works); the same key also drives the
+       OA resolver's CORE lookup. Soft-skipped (``ConfigError``) without
+       a key, like ``springer``.
    * - ``scholar``
      - default-on; ``THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1`` opts out
      - SERP fetch runs in visible Chrome. Google ToS forbids automation;
@@ -377,7 +385,7 @@ reverse for zh-cn strings. Full rule + the regex catalogue live in
 MCP server
 ----------
 
-ThesisAgents ships an MCP server exposing **eleven tools** — source
+ThesisAgents ships an MCP server exposing **twelve tools** — source
 discovery (``list_sources``), search, single-paper fetch, single-PDF
 text extraction (``fetch_pdf_text``), batch PDF download
 (``download_pdfs``), export, and five PPTX edit operations. Any
@@ -429,7 +437,7 @@ Tools at a glance:
      - Batch-download a papers list's PDFs into ``{out_dir}/pdfs/``.
        Returns per-paper results keyed by BibTeX key.
    * - ``export``
-     - Papers list + formats → writes ``.pptx/.xlsx/.md/.bib/.json``.
+     - Papers list + formats → writes ``.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json``.
        Accepts a ``summary`` field per paper that can carry the
        full thesis-style schema; accepts ``language`` for i18n,
        ``max_slides_per_paper`` (default 25; pass ``0`` for unlimited),
@@ -524,13 +532,13 @@ Architecture
    │   ├── exporters/                # pptx (thesis-style + lightweight), xlsx,
    │   │                             #   bibtex, markdown, json + pptx_edit + i18n
    │   ├── intelligence/             # PDF fetch + Anthropic summariser ([intelligence] extra)
-   │   ├── mcp/                      # FastMCP server registering 11 tools
+   │   ├── mcp/                      # FastMCP server registering 12 tools
    │   ├── utils/                    # logging, path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`
    ├── sources/                      # per-source plugins (arxiv, semantic_scholar,
    │                                 #   openalex, pubmed, acm, ieee, scholar,
-   │                                 #   dblp, crossref, openaire, springer)
+   │                                 #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core)
    ├── tests/                        # pytest suite + recorded fixtures, no live HTTP
    ├── docs/                         # this Sphinx tree (en + zh-tw + zh-cn)
    ├── scripts/                      # one-off regen / fixture-record scripts

@@ -10,7 +10,7 @@
 > **Языки**: [English](../README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · **Русский** · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **Документация**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
-Поисковый ассистент статей, управляемый ключевыми словами. Получает результаты из arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (через Crossref), IEEE Xplore, DBLP, общего Crossref, OpenAIRE, Springer Nature и Google Scholar; нормализует в единый формат записи; и экспортирует дедуплицированный набор как **слайды PowerPoint в стиле дипломной презентации**, **книгу Excel** и **файл BibTeX** — всё за один CLI-вызов или один вызов MCP-инструмента. Опционально обогащает каждую статью, читая её PDF и порождая структурированную сводку — либо в контексте (поток LLM-as-agent), либо через API Anthropic (Python pipeline).
+Поисковый ассистент статей, управляемый ключевыми словами. Получает результаты из arXiv, Semantic Scholar, OpenAlex, PubMed, ACM (через Crossref), IEEE Xplore, DBLP, общего Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE и Google Scholar; нормализует в единый формат записи; и экспортирует дедуплицированный набор как **слайды PowerPoint в стиле дипломной презентации**, **книгу Excel** и **файл BibTeX** — всё за один CLI-вызов или один вызов MCP-инструмента. Опционально обогащает каждую статью, читая её PDF и порождая структурированную сводку — либо в контексте (поток LLM-as-agent), либо через API Anthropic (Python pipeline).
 
 ## Для ИИ-агентов, управляющих этим проектом
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="ru", ...)
 ```
 
-Все одиннадцать MCP-инструментов (включая `list_sources`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` / т. д.) задокументированы в [`docs/mcp.md`](docs/mcp.md).
+Все двенадцать MCP-инструментов (включая `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` / т. д.) задокументированы в [`docs/mcp.md`](docs/mcp.md).
 
 ### Обязательно: проверка URL / DOI перед сдачей
 
@@ -76,7 +76,7 @@ for p in ALL_PAPERS:
 
 ## Возможности
 
-- **Одиннадцать подключаемых источников**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (ограничен ACM через Crossref), `dblp`, `crossref` (общий), `openaire`, `springer` (нужен API-ключ), `ieee` (API-ключ или scraping-opt-in), `scholar` (scraping-opt-in). Каждый лежит под `sources/<name>/` за адаптером `Fetcher`. Whitelist топовых площадок фильтрует результаты до флагманских CS-конференций/журналов + Nature/Science/PNAS по умолчанию; `--all-venues` отключает.
+- **Пятнадцать подключаемых источников**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (ограничен ACM через Crossref), `dblp`, `crossref` (общий), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (нужен API-ключ), `ieee` (API-ключ или scraping-opt-in), `scholar` (scraping-opt-in). Каждый лежит под `sources/<name>/` за адаптером `Fetcher`. Whitelist топовых площадок фильтрует результаты до флагманских CS-конференций/журналов + Nature/Science/PNAS по умолчанию; `--all-venues` отключает.
 - **Режим одной статьи**: вставьте arXiv ID, arXiv URL, DOI, PMID или URL документа IEEE — ThesisAgents разрешит через нужный источник и выдаст тот же экспорт-пакет. Полезно для заметок чтения и подготовки защиты.
 - **Локальный PDF-режим** (`--pdf <путь>`): передайте один PDF или каталог. Эвристический экстрактор вытаскивает **заголовок, авторов, год, arXiv ID, DOI и настоящую аннотацию** прямо из начала каждого PDF (привязка к явному заголовку `Abstract` / `ABSTRACT` / `摘要`, а не слепому префиксу). `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` переопределяют при одиночном PDF; в режиме каталога побеждает per-file извлечение — каждая статья получает свой дек, названный по её BibTeX-ключу.
 - **Пять экспортёров**:
@@ -146,7 +146,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--source` / `-s` | Список источников через запятую. Default `arxiv`. |
 | `--max` / `-n` | Макс. результатов на источник (1..200). Default 25. |
 | `--year-from` / `--year-to` | Включающий фильтр по году. |
-| `--export` / `-e` | Форматы: любое подмножество `pptx,xlsx,md,bib,json`. Default зависит от режима (см. ниже). |
+| `--export` / `-e` | Форматы: любое подмножество `pptx,xlsx,md,bib,json,ris,csv,csl`. Default зависит от режима (см. ниже). |
 | `--out` / `-o` | Каталог выхода. Default `./exports`. |
 | `--filename-stem` | Переопределяет сгенерированный stem имени файла. |
 | `--no-abstract` | Не включать содержимое аннотации в экспорт. |
@@ -212,7 +212,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | Идентификатор arXiv / DOI / PMID / IEEE → одна статья. |
 | `fetch_pdf_text` | Скачать один PDF, вернуть извлечённый текст. **Точка входа MCP для «я прочитал статью».** |
 | `download_pdfs` | Пакетная загрузка PDF из списка статей в `{out_dir}/pdfs/`. Возвращает результаты по каждой статье, индексированные BibTeX-ключом. |
-| `export` | Список статей + форматы → пишет `.pptx/.xlsx/.md/.bib/.json`. Принимает поле `summary` (rich thesis-style schema) и `max_slides_per_paper` (default 25). |
+| `export` | Список статей + форматы → пишет `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Принимает поле `summary` (rich thesis-style schema) и `max_slides_per_paper` (default 25). |
 | `pptx_inspect` | Читает структуру слайдов/шейпов существующего дека. |
 | `pptx_update_slide` | Заменяет `title` / `body` / `meta` (по имени шейпа) или произвольные шейпы по индексу. |
 | `pptx_delete_slide` | Удаляет слайд и его part relationship. |
@@ -240,7 +240,7 @@ ThesisAgents/
 ├── thesisagents/                 # основной пакет
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
 │   ├── fetchers/                    # async-клиент только-HTTPS, rate limit token bucket
-│   ├── exporters/                   # pptx (стиль дипломной) · xlsx · bib · md · json · pptx_edit · i18n
+│   ├── exporters/                   # pptx (стиль дипломной) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # загрузка PDF + сумматор Anthropic ([intelligence] extra)
 │   ├── mcp/                         # сервер FastMCP (11 инструментов)
 │   ├── utils/                       # logging, path safety
@@ -248,7 +248,7 @@ ThesisAgents/
 │   └── __main__.py
 ├── sources/                         # папки плагинов: arxiv, semantic_scholar,
 │                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer
+│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # pytest-сьют + записанные fixture (без живого HTTP)
 ├── docs/                            # Sphinx (14 языковых деревьев)
 ├── scripts/                         # одноразовые regen-скрипты

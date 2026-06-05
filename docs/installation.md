@@ -220,8 +220,8 @@ python -c "from thesisagents.mcp import build_server; import asyncio; \
     print(sorted(t.name for t in asyncio.run(build_server().list_tools())))"
 ```
 
-You should see all eleven tool names: `list_sources`, `search`,
-`fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`,
+You should see all twelve tool names: `list_sources`, `list_exports`,
+`search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`,
 `pptx_inspect`, `pptx_update_slide`, `pptx_delete_slide`,
 `pptx_reorder_slides`, `pptx_add_slide`.
 

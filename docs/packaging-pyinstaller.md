@@ -56,6 +56,10 @@ pyinstaller `
   --hidden-import crossref --hidden-import crossref.fetcher --hidden-import crossref.parser `
   --hidden-import openaire --hidden-import openaire.fetcher --hidden-import openaire.parser `
   --hidden-import springer --hidden-import springer.fetcher --hidden-import springer.parser `
+  --hidden-import europepmc --hidden-import europepmc.fetcher --hidden-import europepmc.parser `
+  --hidden-import doaj --hidden-import doaj.fetcher --hidden-import doaj.parser `
+  --hidden-import hal --hidden-import hal.fetcher --hidden-import hal.parser `
+  --hidden-import core --hidden-import core.fetcher --hidden-import core.parser `
   thesisagents/__main__.py
 ```
 
@@ -88,6 +92,8 @@ pyinstaller `
   --hidden-import acm --hidden-import ieee --hidden-import scholar `
   --hidden-import dblp --hidden-import crossref `
   --hidden-import openaire --hidden-import springer `
+  --hidden-import europepmc --hidden-import doaj `
+  --hidden-import hal --hidden-import core `
   thesisagents/mcp/__main__.py
 ```
 
@@ -108,6 +114,7 @@ from PyInstaller.utils.hooks import collect_submodules
 SOURCE_PLUGINS = (
     "arxiv", "semantic_scholar", "openalex", "pubmed", "acm",
     "ieee", "scholar", "dblp", "crossref", "openaire", "springer",
+    "europepmc", "doaj", "hal", "core",
 )
 
 hidden = []

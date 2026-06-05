@@ -61,6 +61,10 @@ python -m nuitka `
   --include-package=crossref `
   --include-package=openaire `
   --include-package=springer `
+  --include-package=europepmc `
+  --include-package=doaj `
+  --include-package=hal `
+  --include-package=core `
   --include-data-dir=sources=sources `
   --include-package-data=python_pptx `
   --include-package-data=openpyxl `
@@ -90,7 +94,9 @@ python -m nuitka `
   --include-package=acm --include-package=ieee `
   --include-package=scholar --include-package=dblp `
   --include-package=crossref --include-package=openaire `
-  --include-package=springer `
+  --include-package=springer --include-package=europepmc `
+  --include-package=doaj --include-package=hal `
+  --include-package=core `
   --include-data-dir=sources=sources `
   --assume-yes-for-downloads `
   thesisagents/mcp/__main__.py
@@ -122,7 +128,7 @@ instead.
 
 Confirm:
 
-- No `ModuleNotFoundError` — all 11 source plugins were bundled.
+- No `ModuleNotFoundError` — all 15 source plugins were bundled.
 - `.pptx` + `.xlsx` + `.bib` land under `./smoke-nuitka/`.
 - Startup is sub-second (the main win over PyInstaller).
 
