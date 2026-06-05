@@ -82,6 +82,43 @@ def test_dedupe_merges_multiple_optional_fields():
     assert out[0].year == 2024
 
 
+def test_dedupe_collapses_title_punctuation_and_case():
+    """Same paper from two sources differing only by trailing period / case
+    collapses to one record (no DOI / arXiv ID to key on)."""
+    a = _paper(source_id="1", title="Attention Is All You Need",
+               authors=("Vaswani",), year=2017)
+    b = _paper(source_id="2", title="Attention is all you need.",
+               authors=("Vaswani",), year=2017)
+    assert len(dedupe([a, b])) == 1
+
+
+def test_dedupe_collapses_arxiv_versions():
+    """Two arXiv versions of the same paper (v1, v2) are one paper."""
+    v1 = _paper(source_id="1", arxiv_id="2401.00001v1")
+    v2 = _paper(source_id="2", arxiv_id="2401.00001v2")
+    assert len(dedupe([v1, v2])) == 1
+
+
+def test_dedupe_collapses_author_name_formats():
+    """Same DOI-less paper whose first author arrives in three different name
+    formats across sources collapses to one record (surname canonicalisation)."""
+    a = _paper(source_id="1", title="On Method X",
+               authors=("Ashish Vaswani",), year=2020)
+    b = _paper(source_id="2", title="On Method X",
+               authors=("Vaswani, Ashish",), year=2020)
+    c = _paper(source_id="3", title="On Method X",
+               authors=("A. Vaswani",), year=2020)
+    assert len(dedupe([a, b, c])) == 1
+
+
+def test_dedupe_distinguishes_different_surnames():
+    """Different first-author surnames (same title/year) stay distinct — the
+    surname canonicalisation must not over-merge."""
+    a = _paper(source_id="1", title="Common Title", authors=("Alice Smith",), year=2020)
+    b = _paper(source_id="2", title="Common Title", authors=("Bob Jones",), year=2020)
+    assert len(dedupe([a, b])) == 2
+
+
 def test_rank_prefers_recent_papers():
     old = _paper(source_id="old", year=2010)
     new = _paper(source_id="new", year=2024)
@@ -101,3 +138,58 @@ def test_rank_handles_missing_year():
     b = _paper(source_id="b", year=2024)
     ordered = rank([a, b], current_year=2025)
     assert ordered[0].source_id == "b"
+
+
+def test_rank_relevance_outranks_off_topic_high_citation():
+    """An on-topic paper beats an off-topic, far-more-cited one — relevance is
+    the dominant signal (the failure this whole feature prevents)."""
+    on_topic = _paper(
+        source_id="on", title="A Survey of Transformer Attention",
+        year=2024, citation_count=10,
+    )
+    off_topic = _paper(
+        source_id="off", title="Deep Residual Learning for Image Recognition",
+        year=2024, citation_count=100_000,
+    )
+    ordered = rank(
+        [off_topic, on_topic], keywords="transformer attention", current_year=2025
+    )
+    assert ordered[0].source_id == "on"
+
+
+def test_rank_title_match_outranks_abstract_match():
+    """A query term in the title weighs more than the same term in the abstract."""
+    title_match = _paper(
+        source_id="title", title="Transformer Attention Models",
+        abstract="", year=2024,
+    )
+    abstract_match = _paper(
+        source_id="abs", title="A New Method",
+        abstract="we study transformer attention", year=2024,
+    )
+    ordered = rank(
+        [abstract_match, title_match],
+        keywords="transformer attention", current_year=2025,
+    )
+    assert ordered[0].source_id == "title"
+
+
+def test_rank_without_keywords_ignores_relevance():
+    """No keywords -> relevance axis off; back-compat recency+citation only."""
+    on_topic_but_old = _paper(
+        source_id="on", title="transformer attention", year=2010, citation_count=1,
+    )
+    recent_unrelated = _paper(
+        source_id="recent", title="unrelated topic", year=2024, citation_count=1,
+    )
+    ordered = rank([on_topic_but_old, recent_unrelated], current_year=2025)
+    assert ordered[0].source_id == "recent"  # recency wins; title text ignored
+
+
+def test_rank_short_query_terms_are_dropped():
+    """Stop-word-ish terms (<3 chars) don't create spurious matches."""
+    # "a"/"of" must not match; only "llm" (3 chars) counts.
+    hit = _paper(source_id="hit", title="On LLM agents", year=2024)
+    miss = _paper(source_id="miss", title="A study of birds", year=2024)
+    ordered = rank([miss, hit], keywords="a llm of", current_year=2025)
+    assert ordered[0].source_id == "hit"

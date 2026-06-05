@@ -274,8 +274,10 @@ def _register_search_tools(server: FastMCP) -> None:
         conferences + Nature / Science / PNAS / CACM / LNCS). arXiv
         preprints always pass through. Pass ``False`` for a broader net.
 
-        ``min_citations`` filters out papers below the threshold; pass
-        ``None`` for no minimum.
+        ``min_citations`` filters out papers whose citation count is below
+        the threshold — enforced across every source in the pipeline, with
+        papers whose source reports no count kept (not treated as zero).
+        Pass ``None`` for no minimum.
 
         Returns a JSON-serialisable dict with a `papers` list. Each paper has
         the same fields as Paper.to_dict() — pass the list straight to `export`.

@@ -268,3 +268,81 @@ async def test_run_search_top_tier_only_default_false(monkeypatch):
     collection = await pipeline_module.run_search(query)
     assert len(collection.papers) == 1
     assert collection.papers[0].title == "Low paper"
+
+
+async def test_run_search_min_citations_filters_all_sources(monkeypatch):
+    """min_citations is enforced in the pipeline for every source (not only
+    semantic_scholar). Papers with an unknown (None) citation count are kept."""
+    def _cited(source_id, count):
+        return Paper(
+            source="arxiv", source_id=source_id, title=source_id, authors=(),
+            year=2024, venue=None, abstract="",
+            url=f"https://example.com/{source_id}", citation_count=count,
+        )
+
+    high = _cited("high", 100)
+    low = _cited("low", 5)
+    unknown = _cited("unknown", None)
+    pool = {"arxiv": _make_fetcher("arxiv", [high, low, unknown])}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(
+        keywords="x", sources=("arxiv",), max_results=10, min_citations=50
+    )
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+    ids = {p.source_id for p in collection.papers}
+    assert "high" in ids          # 100 >= 50
+    assert "unknown" in ids        # unknown count kept, not dropped
+    assert "low" not in ids        # 5 < 50 filtered out
+
+
+async def test_run_search_year_range_pipeline_guard(monkeypatch):
+    """The pipeline enforces the year range even when a source returns
+    out-of-range papers (scrape sources filter loosely); unknown years kept."""
+    def _yr(sid, year):
+        return Paper(
+            source="arxiv", source_id=sid, title=sid, authors=(), year=year,
+            venue=None, abstract="", url=f"https://example.com/{sid}",
+        )
+
+    in_range = _yr("in", 2022)
+    too_old = _yr("old", 2010)
+    too_new = _yr("new", 2025)
+    unknown = _yr("unk", None)
+    pool = {"arxiv": _make_fetcher("arxiv", [in_range, too_old, too_new, unknown])}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(
+        keywords="x", sources=("arxiv",), max_results=10,
+        year_from=2020, year_to=2024,
+    )
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+    ids = {p.source_id for p in collection.papers}
+    assert ids == {"in", "unk"}  # in-range + unknown kept; old/new dropped
+
+
+async def test_enrich_collection_caps_concurrency(monkeypatch):
+    """A semaphore bounds how many per-paper enrichments run at once, so a big
+    collection doesn't fire one Anthropic call + one PDF download per paper."""
+    import asyncio
+
+    from thesisagents.core.models import PaperCollection
+
+    # dict (not nonlocal ints) so the counter mutation is visible to static
+    # analysers that don't trace the monkeypatched async call path.
+    counters = {"active": 0, "peak": 0}
+
+    async def fake_enrich_one(paper, *, language, model):
+        counters["active"] += 1
+        counters["peak"] = max(counters["peak"], counters["active"])
+        await asyncio.sleep(0.01)
+        counters["active"] -= 1
+        return paper
+
+    monkeypatch.setattr(pipeline_module, "_enrich_one", fake_enrich_one)
+    papers = tuple(_paper("arxiv", str(i), f"t{i}") for i in range(8))
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("arxiv",), max_results=8),
+        papers=papers,
+    )
+    out = await pipeline_module.enrich_collection(collection, concurrency=3)
+    assert len(out.papers) == 8
+    assert 1 <= counters["peak"] <= 3  # never more than the cap in flight at once

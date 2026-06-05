@@ -15,7 +15,7 @@ exclusive modes:
 thesisagents (--query KEYWORDS | --paper IDENTIFIER)
                 [--source SOURCES] [--exclude-source SOURCES]
                 [--max N]
-                [--year-from YEAR] [--year-to YEAR]
+                [--year-from YEAR] [--year-to YEAR] [--min-citations N]
                 [--export FORMATS]
                 [--out DIR]
                 [--filename-stem STEM]
@@ -39,6 +39,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
 | `--exclude-source` / `-x` | — | Comma-separated sources to remove from the mix, subtracted **after** `--source` resolves. The no-VPN gesture is to leave `--source` at its default and pass `--exclude-source ieee` — every other default source stays in. An unknown name (or excluding the whole mix) is an error. |
 | `--max` / `-n` | `25` | Range 1..200. |
 | `--year-from`, `--year-to` | — | Inclusive year filter. |
+| `--min-citations` | — | Drop papers below this citation count, enforced across **all** sources (not just Semantic Scholar). Papers whose source reports no count are kept. Omit for no minimum. |
 | `--export` / `-e` | mode-specific | Any of `pptx`, `xlsx`, `md`, `bib`, `json`, `ris`, `csv`, `csl`. **Default with `--query` is `pptx,xlsx,bib`; default with `--paper` is `pptx,bib`** (one-row Excel is busy work). Explicit `--export` always wins. `ris` (Zotero/Mendeley/EndNote), `csv` (flat table) and `csl` (CSL-JSON for Pandoc, written as `<stem>.csl.json`) are the interchange formats. |
 | `--list-sources`, `--list-exports` | — | Print the available search sources / export formats and exit (no query needed). |
 | `--out` / `-o` | `./exports` | Created if missing. |
