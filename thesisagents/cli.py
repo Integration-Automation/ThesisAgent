@@ -731,7 +731,7 @@ async def _enrich_local_pdf_collection(
                 summarise_paper, paper, extracted,
                 language=args.lang, model=args.llm_model,
             )
-        except (ThesisAgentsError, Exception) as err:  # noqa: BLE001  # API client raises various
+        except Exception as err:  # noqa: BLE001  # anthropic client raises various, incl. ThesisAgentsError
             _LOG.warning(
                 "local PDF summarisation failed for %s: %s",
                 paper.bibtex_key(), err,
