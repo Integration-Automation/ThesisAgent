@@ -347,15 +347,15 @@ async def test_download_pdfs_caps_concurrency(tmp_path: Path, monkeypatch):
     hammer a single publisher CDN with one request per paper at once."""
     import asyncio
 
-    active = 0
-    peak = 0
+    # dict (not nonlocal ints) so the counter mutation is visible to static
+    # analysers that don't trace the monkeypatched async call path.
+    counters = {"active": 0, "peak": 0}
 
     async def fake_download_one(paper, pdf_dir):
-        nonlocal active, peak
-        active += 1
-        peak = max(peak, active)
+        counters["active"] += 1
+        counters["peak"] = max(counters["peak"], counters["active"])
         await asyncio.sleep(0.01)
-        active -= 1
+        counters["active"] -= 1
         return pdf_download_module.PdfDownloadResult(
             paper_key=paper.source_id, path=None, skipped_reason=None
         )
@@ -364,4 +364,4 @@ async def test_download_pdfs_caps_concurrency(tmp_path: Path, monkeypatch):
     papers = [_paper(source_id=str(i), pdf_url="https://e/p.pdf") for i in range(8)]
     results = await download_pdfs(_collection(*papers), tmp_path, concurrency=3)
     assert len(results) == 8
-    assert 1 <= peak <= 3  # never more than the cap in flight at once
+    assert 1 <= counters["peak"] <= 3  # never more than the cap in flight at once

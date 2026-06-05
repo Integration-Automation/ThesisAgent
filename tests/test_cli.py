@@ -325,11 +325,11 @@ def test_cli_min_citations_flows_into_query(tmp_path, monkeypatch, sample_papers
     previously unreachable from the CLI)."""
     captured: dict[str, Query] = {}
 
-    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:
+    async def fake_run_search(query: Query, **_kwargs) -> PaperCollection:  # NOSONAR async stub
         captured["query"] = query
         return PaperCollection(query=query, papers=tuple(sample_papers))
 
-    async def fake_shutdown() -> None:
+    async def fake_shutdown() -> None:  # NOSONAR async stub
         return None
 
     monkeypatch.setattr(cli_module, "run_search", fake_run_search)

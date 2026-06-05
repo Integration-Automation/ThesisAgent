@@ -326,15 +326,15 @@ async def test_enrich_collection_caps_concurrency(monkeypatch):
 
     from thesisagents.core.models import PaperCollection
 
-    active = 0
-    peak = 0
+    # dict (not nonlocal ints) so the counter mutation is visible to static
+    # analysers that don't trace the monkeypatched async call path.
+    counters = {"active": 0, "peak": 0}
 
     async def fake_enrich_one(paper, *, language, model):
-        nonlocal active, peak
-        active += 1
-        peak = max(peak, active)
+        counters["active"] += 1
+        counters["peak"] = max(counters["peak"], counters["active"])
         await asyncio.sleep(0.01)
-        active -= 1
+        counters["active"] -= 1
         return paper
 
     monkeypatch.setattr(pipeline_module, "_enrich_one", fake_enrich_one)
@@ -345,4 +345,4 @@ async def test_enrich_collection_caps_concurrency(monkeypatch):
     )
     out = await pipeline_module.enrich_collection(collection, concurrency=3)
     assert len(out.papers) == 8
-    assert 1 <= peak <= 3  # never more than the cap in flight at once
+    assert 1 <= counters["peak"] <= 3  # never more than the cap in flight at once
