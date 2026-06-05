@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.gui import i18n
+from thesisagents.gui import i18n
 
 
 def test_every_key_has_every_language():
@@ -24,7 +24,7 @@ def test_every_key_has_every_language():
 
 def test_supported_languages_match_deck_table():
     """Keep the GUI and deck language sets in lockstep."""
-    from autopapertoppt.exporters.i18n import (
+    from thesisagents.exporters.i18n import (
         SUPPORTED_LANGUAGES as DECK_LANGUAGES,
     )
 

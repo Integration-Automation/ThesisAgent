@@ -1,6 +1,6 @@
 # PPTX editing & layout
 
-AutoPaperToPPT's slide-deck exporter writes a **16:9 widescreen** deck
+ThesisAgents's slide-deck exporter writes a **16:9 widescreen** deck
 sized at 13.33" × 7.5". Three rendering tiers pick themselves based on
 what's attached to each `Paper`:
 
@@ -36,7 +36,7 @@ text-bearing shapes (`shape_updates={0: "..."}`).
 
 All template strings (Agenda / Background / References / Paper N of M /
 footer copy / "n.d." for missing dates / etc.) flow through
-`autopapertoppt.exporters.i18n`. Supported languages: `en`, `zh-tw`,
+`thesisagents.exporters.i18n`. Supported languages: `en`, `zh-tw`,
 `zh-cn`, `ja`, `es`, `fr`, `de`, `ko`, `pt`, `ru`, `it`, `vi`, `hi`,
 `id` (14 in total). Set on the deck via `ExportOptions.language` (CLI
 `--lang`, MCP `export(language=...)`).
@@ -74,7 +74,7 @@ need to fight the renderer:
 ## Python API
 
 ```python
-from autopapertoppt.exporters import pptx_edit
+from thesisagents.exporters import pptx_edit
 
 # Inspect a deck (any deck — yours, ours, anyone's).
 slides = pptx_edit.inspect("exports/attention.pptx")
@@ -83,7 +83,7 @@ for slide in slides:
     for shape in slide.shapes:
         print(" ", shape.index, shape.name, shape.text[:60])
 
-# Update by shape name (works on AutoPaperToPPT decks).
+# Update by shape name (works on ThesisAgents decks).
 pptx_edit.update_slide(
     "exports/attention.pptx", slide_index=2,
     title="Custom title", body="Custom body bullet text",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.core.query import normalize_query
+from thesisagents.core.query import normalize_query
 
 
 def test_normalize_strips_whitespace_and_collapses():

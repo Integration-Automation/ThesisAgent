@@ -1,9 +1,9 @@
-Руководство пользователя AutoPaperToPPT
+Руководство пользователя ThesisAgents
 ========================================
 
 Поисковый ассистент статей, управляемый ключевыми словами. Получает
 результаты из arXiv, Semantic Scholar, OpenAlex, PubMed, ACM, IEEE
-Xplore, DBLP, Crossref, OpenAIRE, Springer Nature и Google Scholar; и
+Xplore, DBLP, Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE и Google Scholar; и
 экспортирует как презентацию PowerPoint в стиле дипломной работы,
 книгу Excel и файл BibTeX. Всё за один CLI-вызов или один вызов
 MCP-инструмента.
@@ -51,7 +51,7 @@ MCP в 6 шагов
    5. (вы читаете каждый PDF и составляете структурированный dict сводки)
    6. export(papers=[{...paper, "summary": {...}}], language="ru", ...)
 
-Все 11 MCP-инструментов: :doc:`/mcp`.
+Все 12 MCP-инструментов: :doc:`/mcp`.
 
 Обязательно: проверка URL / DOI перед сдачей
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -110,7 +110,7 @@ DOI, столбец 8 = URL. Прогоните аудит после regen-ск
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -126,19 +126,19 @@ DOI, столбец 8 = URL. Прогоните аудит после regen-ск
 .. code-block:: bash
 
    # Поиск по arXiv → дек + workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Одна статья по URL → дек + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Рендер дека на русском
-   autopapertoppt --paper 1706.03762 --lang ru --out ./exports/
+   thesisagents --paper 1706.03762 --lang ru --out ./exports/
 
    # Обогащение через Python pipeline (нужен ключ Anthropic)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang ru --out ./exports/
 
 Полная таблица флагов CLI: :doc:`/cli`.

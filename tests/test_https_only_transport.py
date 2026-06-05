@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from autopapertoppt.fetchers.http import HttpsOnlyTransport
+from thesisagents.fetchers.http import HttpsOnlyTransport
 
 
 class _PassthroughTransport(httpx.AsyncBaseTransport):

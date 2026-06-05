@@ -7,9 +7,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from autopapertoppt.core.exceptions import ConfigError, ParseError, SourceUnavailableError
-from autopapertoppt.core.models import Query
 from tests.sources._mock import MockTransport, install_mock
+from thesisagents.core.exceptions import ConfigError, ParseError, SourceUnavailableError
+from thesisagents.core.models import Query
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "ieee"
 
@@ -24,21 +24,21 @@ def _isolate_ieee_env(monkeypatch):
     force WebRunner off so the existing tests that monkeypatch the
     httpx transport stay valid — the few tests that specifically want
     to exercise the WebRunner path opt in by setting is_available."""
-    monkeypatch.delenv("AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING", raising=False)
-    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
+    monkeypatch.delenv("THESISAGENTS_DISABLE_IEEE_SCRAPING", raising=False)
+    monkeypatch.setenv("THESISAGENTS_DISABLE_WEBRUNNER", "1")
 
 
 def _new_fetcher():
-    from ieee.fetcher import IeeeFetcher
+    from thesisagents.sources.ieee.fetcher import IeeeFetcher
 
     return IeeeFetcher()
 
 
 async def test_opt_out_disables_plugin(monkeypatch):
-    """AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1 raises ConfigError so the
+    """THESISAGENTS_DISABLE_IEEE_SCRAPING=1 raises ConfigError so the
     pipeline silently skips IEEE for users who explicitly opted out."""
-    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING", "1")
-    from ieee.fetcher import IeeeFetcher
+    monkeypatch.setenv("THESISAGENTS_DISABLE_IEEE_SCRAPING", "1")
+    from thesisagents.sources.ieee.fetcher import IeeeFetcher
 
     with pytest.raises(ConfigError):
         IeeeFetcher()
@@ -46,7 +46,7 @@ async def test_opt_out_disables_plugin(monkeypatch):
 
 async def test_search_parses_rest_response(monkeypatch):
     transport = MockTransport(200, _fixture("search.json"))
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     papers = await _new_fetcher().search(
         Query(keywords="robotics", sources=("ieee",), max_results=10)
     )
@@ -63,7 +63,7 @@ async def test_search_parses_rest_response(monkeypatch):
 
 async def test_fetch_by_id_metadata_blob(monkeypatch):
     transport = MockTransport(200, _fixture("document.html"))
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     paper = await _new_fetcher().fetch_by_id("10965643")
     assert paper.source_id == "10965643"
     assert paper.year == 2025
@@ -74,21 +74,21 @@ async def test_fetch_by_id_metadata_blob(monkeypatch):
 
 async def test_fetch_by_id_non_digit_raises(monkeypatch):
     transport = MockTransport(200, "")
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     with pytest.raises(ParseError):
         await _new_fetcher().fetch_by_id("not-arnumber")
 
 
 async def test_fetch_blocked_response_surfaces_unavailable(monkeypatch):
     transport = MockTransport(418, "I'm a teapot")
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     with pytest.raises(SourceUnavailableError):
         await _new_fetcher().fetch_by_id("10965643")
 
 
 async def test_search_blocked_surfaces_unavailable(monkeypatch):
     transport = MockTransport(403, "forbidden")
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     with pytest.raises(SourceUnavailableError):
         await _new_fetcher().search(
             Query(keywords="x", sources=("ieee",), max_results=1)
@@ -109,7 +109,7 @@ async def test_search_sends_referer_and_origin(monkeypatch):
         async def aclose(self):
             return None
 
-    install_mock(monkeypatch, "ieee.fetcher", _CaptureTransport())
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", _CaptureTransport())
     await _new_fetcher().search(
         Query(keywords="x", sources=("ieee",), max_results=1)
     )
@@ -118,22 +118,22 @@ async def test_search_sends_referer_and_origin(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Official API path — AUTOPAPERTOPPT_IEEE_API_KEY
+# Official API path — THESISAGENTS_IEEE_API_KEY
 # ---------------------------------------------------------------------------
 
 
 async def test_api_key_takes_official_path(monkeypatch):
     """When the API key is set the plugin uses the official Xplore API."""
-    monkeypatch.setenv("AUTOPAPERTOPPT_IEEE_API_KEY", "test-key")
-    from ieee.fetcher import IeeeFetcher
+    monkeypatch.setenv("THESISAGENTS_IEEE_API_KEY", "test-key")
+    from thesisagents.sources.ieee.fetcher import IeeeFetcher
 
     IeeeFetcher()  # must not raise
 
 
 async def test_api_search_uses_api_endpoint_and_key(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_IEEE_API_KEY", "test-key")
+    monkeypatch.setenv("THESISAGENTS_IEEE_API_KEY", "test-key")
     transport = MockTransport(200, _fixture("api_search.json"))
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     papers = await _new_fetcher().search(
         Query(
             keywords="LLM security",
@@ -167,9 +167,9 @@ async def test_api_search_uses_api_endpoint_and_key(monkeypatch):
 
 
 async def test_api_fetch_by_id_uses_article_number_param(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_IEEE_API_KEY", "test-key")
+    monkeypatch.setenv("THESISAGENTS_IEEE_API_KEY", "test-key")
     transport = MockTransport(200, _fixture("api_search.json"))
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     paper = await _new_fetcher().fetch_by_id("10965643")
     assert transport.received_url is not None
     assert transport.received_url.params.get("article_number") == "10965643"
@@ -178,9 +178,9 @@ async def test_api_fetch_by_id_uses_article_number_param(monkeypatch):
 
 async def test_api_mode_no_api_key_falls_back_to_scrape(monkeypatch):
     """Without the API key the existing scraping path is used (default-on)."""
-    monkeypatch.delenv("AUTOPAPERTOPPT_IEEE_API_KEY", raising=False)
+    monkeypatch.delenv("THESISAGENTS_IEEE_API_KEY", raising=False)
     transport = MockTransport(200, _fixture("search.json"))
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     await _new_fetcher().search(
         Query(keywords="x", sources=("ieee",), max_results=1)
     )
@@ -192,7 +192,7 @@ async def test_api_mode_no_api_key_falls_back_to_scrape(monkeypatch):
 async def test_webrunner_search_used_when_available(monkeypatch):
     """When WebRunner is enabled, _scrape_search routes through it
     instead of the httpx POST."""
-    from ieee import webrunner_backend
+    from thesisagents.sources.ieee import webrunner_backend
 
     monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
 
@@ -212,7 +212,7 @@ async def test_webrunner_search_used_when_available(monkeypatch):
 
 async def test_webrunner_search_failure_falls_back_to_httpx(monkeypatch):
     """RuntimeError from the WebRunner backend triggers the httpx fallback."""
-    from ieee import webrunner_backend
+    from thesisagents.sources.ieee import webrunner_backend
 
     monkeypatch.setattr(webrunner_backend, "is_available", lambda: True)
 
@@ -222,7 +222,7 @@ async def test_webrunner_search_failure_falls_back_to_httpx(monkeypatch):
     monkeypatch.setattr(webrunner_backend, "fetch_search_json", explode)
 
     transport = MockTransport(200, _fixture("search.json"))
-    install_mock(monkeypatch, "ieee.fetcher", transport)
+    install_mock(monkeypatch, "thesisagents.sources.ieee.fetcher", transport)
     papers = await _new_fetcher().search(
         Query(keywords="x", sources=("ieee",), max_results=10)
     )

@@ -11,7 +11,7 @@ import os
 import pytest
 from PySide6.QtCore import QSettings
 
-from autopapertoppt.gui.pages.settings import SettingsPage
+from thesisagents.gui.pages.settings import SettingsPage
 
 
 @pytest.fixture(autouse=True)
@@ -25,13 +25,13 @@ def _isolated_qsettings(tmp_path, monkeypatch):
     # check the absence too.
     for var in (
         "ANTHROPIC_API_KEY",
-        "AUTOPAPERTOPPT_S2_API_KEY",
-        "AUTOPAPERTOPPT_NCBI_API_KEY",
-        "AUTOPAPERTOPPT_IEEE_API_KEY",
-        "AUTOPAPERTOPPT_SPRINGER_API_KEY",
-        "AUTOPAPERTOPPT_CROSSREF_PLUS_TOKEN",
-        "AUTOPAPERTOPPT_CONTACT_EMAIL",
-        "AUTOPAPERTOPPT_PDF_COOKIES_FILE",
+        "THESISAGENTS_S2_API_KEY",
+        "THESISAGENTS_NCBI_API_KEY",
+        "THESISAGENTS_IEEE_API_KEY",
+        "THESISAGENTS_SPRINGER_API_KEY",
+        "THESISAGENTS_CROSSREF_PLUS_TOKEN",
+        "THESISAGENTS_CONTACT_EMAIL",
+        "THESISAGENTS_PDF_COOKIES_FILE",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -44,7 +44,7 @@ def test_save_persists_to_qsettings_and_env(qtbot):
     page.trigger_save()
 
     assert os.environ["ANTHROPIC_API_KEY"] == "sk-test-123"
-    assert os.environ["AUTOPAPERTOPPT_CONTACT_EMAIL"] == "dev@example.com"
+    assert os.environ["THESISAGENTS_CONTACT_EMAIL"] == "dev@example.com"
 
     # Spin up a fresh page; values should re-hydrate from QSettings.
     page2 = SettingsPage(ui_language="en")

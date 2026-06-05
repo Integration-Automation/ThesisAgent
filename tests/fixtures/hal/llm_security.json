@@ -1,0 +1,37 @@
+{
+  "response": {
+    "numFound": 3,
+    "start": 0,
+    "docs": [
+      {
+        "docid": "4000001",
+        "title_s": ["Formal Verification of LLM Guardrails"],
+        "authFullName_s": ["Alice Andersson", "Bob Bertelsen"],
+        "producedDateY_i": 2025,
+        "journalTitle_s": "Journal of Formal Methods",
+        "doiId_s": "10.1234/hal.2025.0001",
+        "abstract_s": ["We formally verify guardrails for large language models."],
+        "uri_s": "https://hal.science/hal-4000001",
+        "fileMain_s": "https://hal.science/hal-4000001/document"
+      },
+      {
+        "docid": "4000002",
+        "title_s": ["Differential Privacy Survey"],
+        "authFullName_s": ["Carol Chen"],
+        "producedDateY_i": 2025,
+        "abstract_s": ["A survey of differential privacy techniques."],
+        "uri_s": "https://hal.science/hal-4000002"
+      },
+      {
+        "docid": "4000003",
+        "title_s": ["Legacy Cryptography Notes"],
+        "authFullName_s": ["Dan Doe"],
+        "producedDateY_i": 2017,
+        "journalTitle_s": "Old Crypto Journal",
+        "doiId_s": "10.1234/hal.2017.0003",
+        "abstract_s": ["Older cryptography lecture notes."],
+        "uri_s": "https://hal.science/hal-4000003"
+      }
+    ]
+  }
+}

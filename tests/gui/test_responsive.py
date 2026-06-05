@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.gui.i18n import SUPPORTED_LANGUAGES
-from autopapertoppt.gui.main_window import MainWindow
+from thesisagents.gui.i18n import SUPPORTED_LANGUAGES
+from thesisagents.gui.main_window import MainWindow
 
 
 def test_main_window_has_a_minimum_size(qtbot):

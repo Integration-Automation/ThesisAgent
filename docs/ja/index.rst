@@ -1,8 +1,8 @@
-AutoPaperToPPT ユーザーガイド
+ThesisAgents ユーザーガイド
 =============================
 
 キーワード駆動の論文検索アシスタント。arXiv、Semantic Scholar、OpenAlex、
-PubMed、ACM、IEEE Xplore、DBLP、Crossref、OpenAIRE、Springer Nature、
+PubMed、ACM、IEEE Xplore、DBLP、Crossref、OpenAIRE、Springer Nature、Europe PMC、DOAJ、HAL、CORE、
 Google Scholar から論文を取得し、論文発表用 PowerPoint デッキ、Excel
 ワークブック、BibTeX ファイルとして出力します。1 つの CLI コール、または
 1 つの MCP ツール呼び出しで完結します。
@@ -105,7 +105,7 @@ Python **3.12+** が必要です。
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -123,19 +123,19 @@ Python **3.12+** が必要です。
 .. code-block:: bash
 
    # arXiv で検索 → デッキ + ワークブック + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # 単一論文を URL で取得 → デッキ + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # 日本語でデッキを描画
-   autopapertoppt --paper 1706.03762 --lang ja --out ./exports/
+   thesisagents --paper 1706.03762 --lang ja --out ./exports/
 
    # Python パイプライン経由のエンリッチ(Anthropic API キー必須)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang ja --out ./exports/
 
 CLI フラグの完全な表は :doc:`/cli` を参照してください。
@@ -146,7 +146,7 @@ CLI フラグの完全な表は :doc:`/cli` を参照してください。
 ------------
 
 * CLI フラグの完全な一覧と環境変数: :doc:`/cli`
-* MCP サーバーの 11 ツール: :doc:`/mcp`
+* MCP サーバーの 12 ツール: :doc:`/mcp`
 * PPTX 編集ツールキット: :doc:`/pptx_editing`
 * このリポジトリ言語別の README ファイル(``readmes/README.ja.md``\ など)に
   プロジェクトの全機能リストがあります

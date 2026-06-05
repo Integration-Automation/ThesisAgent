@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.utils.path_safety import (
+from thesisagents.utils.path_safety import (
     ensure_export_dir,
     resolve_safe,
     safe_filename,
@@ -34,4 +34,4 @@ def test_ensure_export_dir_creates(tmp_path):
 def test_safe_filename_strips_specials():
     assert safe_filename("hello/world*") == "helloworld"
     assert safe_filename("  spaced  text  ") == "spaced--text"
-    assert safe_filename("") == "autopapertoppt"
+    assert safe_filename("") == "thesisagents"

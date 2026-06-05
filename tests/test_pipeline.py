@@ -15,11 +15,11 @@ from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.core import pipeline as pipeline_module
-from autopapertoppt.core.exceptions import ConfigError, FetchError, RateLimitError
-from autopapertoppt.core.models import Paper, Query
-from autopapertoppt.fetchers.base import Fetcher, FetcherConfig
-from autopapertoppt.fetchers.rate_limit import RateLimit
+from thesisagents.core import pipeline as pipeline_module
+from thesisagents.core.exceptions import ConfigError, FetchError, RateLimitError
+from thesisagents.core.models import Paper, Query
+from thesisagents.fetchers.base import Fetcher, FetcherConfig
+from thesisagents.fetchers.rate_limit import RateLimit
 
 
 @pytest.fixture(autouse=True)
@@ -159,7 +159,7 @@ async def test_run_search_merges_and_dedupes(monkeypatch):
 
 def test_default_sources_constant_includes_arxiv_and_ieee():
     """Default mix advertises the breadth users now expect from a search."""
-    from autopapertoppt.core.constants import DEFAULT_SOURCES
+    from thesisagents.core.constants import DEFAULT_SOURCES
 
     assert "arxiv" in DEFAULT_SOURCES
     assert "ieee" in DEFAULT_SOURCES
@@ -217,7 +217,7 @@ async def test_rate_limit_retries_then_succeeds(monkeypatch):
 
 async def test_rate_limit_gives_up_after_max_attempts(monkeypatch):
     """If every retry hits RateLimitError, source is reported empty."""
-    from autopapertoppt.core.constants import RATE_LIMIT_RETRY_ATTEMPTS
+    from thesisagents.core.constants import RATE_LIMIT_RETRY_ATTEMPTS
 
     flaky = _make_flaky_fetcher(
         "arxiv", [_paper("arxiv", "1", "x")],

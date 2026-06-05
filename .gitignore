@@ -181,11 +181,11 @@ cython_debug/
 .cursorindexingignore
 
 # Generated artifacts — search runs, downloaded PDFs, exported decks.
-# Produced by `py -m autopapertoppt --out ./exports/...` and can be
+# Produced by `py -m thesisagents --out ./exports/...` and can be
 # re-generated; committing them would bloat history.
 exports/
 
-# WebRunner artifacts — Chrome user-data dirs (when AUTOPAPERTOPPT_CHROME_PROFILE_DIR
+# WebRunner artifacts — Chrome user-data dirs (when THESISAGENTS_CHROME_PROFILE_DIR
 # is set to a repo-local path) and partial PDF downloads. Selenium / je_web_runner
 # state and screenshots are user-machine-specific and must never be committed.
 chrome_profile/

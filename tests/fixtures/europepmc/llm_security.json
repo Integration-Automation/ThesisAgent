@@ -1,0 +1,63 @@
+{
+  "version": "6.9",
+  "hitCount": 3,
+  "resultList": {
+    "result": [
+      {
+        "id": "40000001",
+        "source": "MED",
+        "pmid": "40000001",
+        "doi": "10.1109/SP.2025.0001",
+        "title": "Adversarial Probes for Large Language Models.",
+        "authorString": "Andersson A, Bertelsen B.",
+        "authorList": {
+          "author": [
+            {"fullName": "Alice Andersson", "firstName": "Alice", "lastName": "Andersson"},
+            {"fullName": "Bob Bertelsen", "firstName": "Bob", "lastName": "Bertelsen"}
+          ]
+        },
+        "journalInfo": {
+          "yearOfPublication": 2025,
+          "journal": {"title": "IEEE Symposium on Security and Privacy"}
+        },
+        "pubYear": "2025",
+        "abstractText": "We study adversarial probes against large language models.",
+        "citedByCount": 12,
+        "fullTextUrlList": {
+          "fullTextUrl": [
+            {"availability": "Open access", "documentStyle": "html", "url": "https://europepmc.org/articles/PMC1/"},
+            {"availability": "Open access", "documentStyle": "pdf", "url": "https://europepmc.org/articles/PMC1/pdf"}
+          ]
+        }
+      },
+      {
+        "id": "40000002",
+        "source": "PPR",
+        "doi": "10.5555/preprint.2",
+        "title": "Prompt Injection Survey",
+        "authorString": "Chen C.",
+        "journalInfo": {
+          "yearOfPublication": 2025,
+          "journal": {"title": "arXiv preprint"}
+        },
+        "pubYear": "2025",
+        "abstractText": "A survey of prompt injection attacks.",
+        "citedByCount": 3
+      },
+      {
+        "id": "40000003",
+        "source": "MED",
+        "pmid": "40000003",
+        "title": "Early Work on Model Robustness.",
+        "authorString": "Doe D.",
+        "journalInfo": {
+          "yearOfPublication": 2018,
+          "journal": {"title": "Old Journal of Robustness"}
+        },
+        "pubYear": "2018",
+        "abstractText": "An older robustness study predating modern LLMs.",
+        "citedByCount": 99
+      }
+    ]
+  }
+}

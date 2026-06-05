@@ -25,7 +25,7 @@ pip install pyinstaller
 
 1. **Source plugins are loaded by name at runtime.** The pipeline calls
    `importlib.import_module("arxiv")` (and the other 10 source names)
-   via `autopapertoppt.fetchers.base.load_fetcher`. PyInstaller's
+   via `thesisagents.fetchers.base.load_fetcher`. PyInstaller's
    static analysis cannot see these imports, so without help it will
    tree-shake the source packages away. The fix is `--hidden-import`
    per source.
@@ -37,12 +37,12 @@ pip install pyinstaller
    relative path resolution still works **as long as you copy
    `sources/` into the bundle as data**. That's `--add-data`.
 
-## Build the CLI (`autopapertoppt`)
+## Build the CLI (`thesisagents`)
 
 ```powershell
 pyinstaller `
   --onefile `
-  --name autopapertoppt `
+  --name thesisagents `
   --paths sources `
   --add-data "sources;sources" `
   --hidden-import arxiv --hidden-import arxiv.fetcher --hidden-import arxiv.parser `
@@ -56,7 +56,11 @@ pyinstaller `
   --hidden-import crossref --hidden-import crossref.fetcher --hidden-import crossref.parser `
   --hidden-import openaire --hidden-import openaire.fetcher --hidden-import openaire.parser `
   --hidden-import springer --hidden-import springer.fetcher --hidden-import springer.parser `
-  autopapertoppt/__main__.py
+  --hidden-import europepmc --hidden-import europepmc.fetcher --hidden-import europepmc.parser `
+  --hidden-import doaj --hidden-import doaj.fetcher --hidden-import doaj.parser `
+  --hidden-import hal --hidden-import hal.fetcher --hidden-import hal.parser `
+  --hidden-import core --hidden-import core.fetcher --hidden-import core.parser `
+  thesisagents/__main__.py
 ```
 
 On Linux / macOS, replace the `;` separator in `--add-data` with `:`
@@ -65,22 +69,22 @@ On Linux / macOS, replace the `;` separator in `--add-data` with `:`
 ```bash
 pyinstaller \
   --onefile \
-  --name autopapertoppt \
+  --name thesisagents \
   --paths sources \
   --add-data "sources:sources" \
   --hidden-import arxiv ... \
-  autopapertoppt/__main__.py
+  thesisagents/__main__.py
 ```
 
-The output binary lands at `dist/autopapertoppt` (or
-`dist/autopapertoppt.exe` on Windows).
+The output binary lands at `dist/thesisagents` (or
+`dist/thesisagents.exe` on Windows).
 
-## Build the MCP server (`autopapertoppt-mcp`)
+## Build the MCP server (`thesisagents-mcp`)
 
 ```powershell
 pyinstaller `
   --onefile `
-  --name autopapertoppt-mcp `
+  --name thesisagents-mcp `
   --paths sources `
   --add-data "sources;sources" `
   --hidden-import arxiv --hidden-import semantic_scholar `
@@ -88,10 +92,12 @@ pyinstaller `
   --hidden-import acm --hidden-import ieee --hidden-import scholar `
   --hidden-import dblp --hidden-import crossref `
   --hidden-import openaire --hidden-import springer `
-  autopapertoppt/mcp/__main__.py
+  --hidden-import europepmc --hidden-import doaj `
+  --hidden-import hal --hidden-import core `
+  thesisagents/mcp/__main__.py
 ```
 
-(The MCP entry point is `autopapertoppt.mcp.__main__:main` — see
+(The MCP entry point is `thesisagents.mcp.__main__:main` — see
 `pyproject.toml`'s `[project.scripts]`.)
 
 ## Build with a `.spec` file (cleaner for repeated builds)
@@ -101,13 +107,14 @@ emits a `.spec` file; commit it so subsequent builds are one command.
 A hand-tuned spec for this project:
 
 ```python
-# autopapertoppt.spec
-# Usage: pyinstaller autopapertoppt.spec
+# thesisagents.spec
+# Usage: pyinstaller thesisagents.spec
 from PyInstaller.utils.hooks import collect_submodules
 
 SOURCE_PLUGINS = (
     "arxiv", "semantic_scholar", "openalex", "pubmed", "acm",
     "ieee", "scholar", "dblp", "crossref", "openaire", "springer",
+    "europepmc", "doaj", "hal", "core",
 )
 
 hidden = []
@@ -115,7 +122,7 @@ for plugin in SOURCE_PLUGINS:
     hidden.extend(collect_submodules(plugin))
 
 a = Analysis(
-    ["autopapertoppt/__main__.py"],
+    ["thesisagents/__main__.py"],
     pathex=["sources"],
     binaries=[],
     datas=[("sources", "sources")],
@@ -127,7 +134,7 @@ a = Analysis(
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, a.binaries, a.datas,
-    name="autopapertoppt",
+    name="thesisagents",
     console=True,
     onefile=True,
     debug=False,
@@ -139,7 +146,7 @@ exe = EXE(
 ## Verify the executable works
 
 ```powershell
-dist\autopapertoppt.exe --query "transformer" --source arxiv --max 3 `
+dist\thesisagents.exe --query "transformer" --source arxiv --max 3 `
                         --out .\smoke-pyinstaller\
 ```
 
@@ -163,7 +170,7 @@ pip install -e .[intelligence]
 pyinstaller ... (same flags) ...
 ```
 
-Then `dist\autopapertoppt.exe --query "..." --enrich` works
+Then `dist\thesisagents.exe --query "..." --enrich` works
 (provided `ANTHROPIC_API_KEY` is set in the env where the exe runs).
 
 ## Common issues
@@ -191,7 +198,7 @@ instead of a single file — startup drops to under a second.
 
 **Windows console encoding for CJK paper titles**: the bundled exe
 inherits the system codepage. Run it with `python -X utf8` style
-behaviour by wrapping with `chcp 65001 && dist\autopapertoppt.exe
+behaviour by wrapping with `chcp 65001 && dist\thesisagents.exe
 ...` or set `PYTHONUTF8=1` in the env.
 
 ## Verifying the same flow in CI
@@ -214,10 +221,10 @@ jobs:
         with: { python-version: "3.12" }
       - run: |
           pip install -e ".[dev]" pyinstaller
-          pyinstaller autopapertoppt.spec
+          pyinstaller thesisagents.spec
       - uses: actions/upload-artifact@v4
         with:
-          name: autopapertoppt-${{ matrix.os }}
+          name: thesisagents-${{ matrix.os }}
           path: dist/
 ```
 

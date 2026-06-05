@@ -6,17 +6,17 @@ from pathlib import Path
 
 import httpx
 import pytest
-from springer.fetcher import SpringerFetcher
-from springer.parser import parse_record
 
-from autopapertoppt.core.exceptions import (
+from thesisagents.core.exceptions import (
     ConfigError,
     ParseError,
     RateLimitError,
     SourceUnavailableError,
 )
-from autopapertoppt.core.models import Query
-from autopapertoppt.fetchers import http as http_module
+from thesisagents.core.models import Query
+from thesisagents.fetchers import http as http_module
+from thesisagents.sources.springer.fetcher import SpringerFetcher
+from thesisagents.sources.springer.parser import parse_record
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "springer"
 _FIXTURE_BYTES = (_FIXTURE_DIR / "llm_security.json").read_bytes()
@@ -38,7 +38,7 @@ class _CannedTransport(httpx.AsyncBaseTransport):
 
 @pytest.fixture(autouse=True)
 def _reset_clients_and_key(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_SPRINGER_API_KEY", "test-key")
+    monkeypatch.setenv("THESISAGENTS_SPRINGER_API_KEY", "test-key")
     yield
     http_module._CLIENTS.clear()  # noqa: SLF001
 
@@ -49,7 +49,7 @@ def _install(monkeypatch, transport):
     async def fake_get_client(_source):
         return httpx.AsyncClient(transport=transport)
 
-    monkeypatch.setattr("springer.fetcher.get_client", fake_get_client)
+    monkeypatch.setattr("thesisagents.sources.springer.fetcher.get_client", fake_get_client)
 
 
 async def test_search_returns_papers(monkeypatch):
@@ -110,7 +110,7 @@ async def test_search_respects_max_results(monkeypatch):
 
 def test_construction_without_api_key_raises_config_error(monkeypatch):
     """ConfigError must fire at construction so load_fetcher_safe skips us."""
-    monkeypatch.delenv("AUTOPAPERTOPPT_SPRINGER_API_KEY", raising=False)
+    monkeypatch.delenv("THESISAGENTS_SPRINGER_API_KEY", raising=False)
     with pytest.raises(ConfigError):
         SpringerFetcher()
 

@@ -1,9 +1,9 @@
-Panduan Pengguna AutoPaperToPPT
+Panduan Pengguna ThesisAgents
 ================================
 
 Asisten pencarian makalah berbasis kata kunci. Mengambil hasil dari
 arXiv, Semantic Scholar, OpenAlex, PubMed, ACM, IEEE Xplore, DBLP,
-Crossref, OpenAIRE, Springer Nature, dan Google Scholar; dan mengekspor
+Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE, dan Google Scholar; dan mengekspor
 sebagai presentasi PowerPoint gaya tesis, buku kerja Excel, dan berkas
 BibTeX. Semua dari satu panggilan CLI atau satu panggilan tool MCP.
 
@@ -50,7 +50,7 @@ Alur MCP 6 langkah
    5. (Anda membaca tiap PDF dan menghasilkan dict ringkasan terstruktur)
    6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 
-11 tool MCP lengkap: :doc:`/mcp`.
+12 tool MCP lengkap: :doc:`/mcp`.
 
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -108,7 +108,7 @@ Perlu Python **3.12+**.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -124,19 +124,19 @@ Mulai cepat
 .. code-block:: bash
 
    # Cari arXiv → deck + workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Satu makalah by URL → deck + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Render deck dalam Bahasa Indonesia
-   autopapertoppt --paper 1706.03762 --lang id --out ./exports/
+   thesisagents --paper 1706.03762 --lang id --out ./exports/
 
    # Pengayaan Python pipeline (butuh key Anthropic)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang id --out ./exports/
 
 Tabel flag CLI lengkap: :doc:`/cli`.
@@ -147,7 +147,7 @@ Bacaan lebih lanjut
 -------------------
 
 * Flag CLI dan variabel lingkungan: :doc:`/cli`
-* 11 tool server MCP: :doc:`/mcp`
+* 12 tool server MCP: :doc:`/mcp`
 * Toolkit edit PPTX: :doc:`/pptx_editing`
 * Berkas ``readmes/README.id.md`` di akar repo berisi daftar fitur lengkap.
 * Referensi teknis mendalam (arsitektur plugin, kebijakan keamanan,

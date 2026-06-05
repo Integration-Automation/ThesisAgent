@@ -1,8 +1,8 @@
-AutoPaperToPPT 사용자 가이드
+ThesisAgents 사용자 가이드
 ============================
 
 키워드 기반 논문 검색 어시스턴트. arXiv, Semantic Scholar, OpenAlex,
-PubMed, ACM, IEEE Xplore, DBLP, Crossref, OpenAIRE, Springer Nature,
+PubMed, ACM, IEEE Xplore, DBLP, Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE,
 Google Scholar 에서 결과를 가져와 논문 발표용 PowerPoint 슬라이드, Excel
 워크북, BibTeX 파일로 내보냅니다. CLI 호출 한 번 또는 MCP 도구 호출 한
 번으로 모두 끝납니다.
@@ -48,7 +48,7 @@ MCP 6 단계 워크플로
    5. (각 PDF 읽고 구조화된 summary dict 생성)
    6. export(papers=[{...paper, "summary": {...}}], language="ko", ...)
 
-11 개 MCP 도구의 완전한 참조: :doc:`/mcp`.
+12 개 MCP 도구의 완전한 참조: :doc:`/mcp`.
 
 필수: 인도 전 URL / DOI 검증
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -105,7 +105,7 @@ Python **3.12+** 필요.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -121,19 +121,19 @@ Python **3.12+** 필요.
 .. code-block:: bash
 
    # arXiv 검색 → 덱 + 워크북 + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # URL 로 단일 논문 → 덱 + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # 덱을 한국어로 렌더링
-   autopapertoppt --paper 1706.03762 --lang ko --out ./exports/
+   thesisagents --paper 1706.03762 --lang ko --out ./exports/
 
    # Python 파이프라인 enrichment (Anthropic 키 필요)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang ko --out ./exports/
 
 CLI 플래그 전체 표: :doc:`/cli`.
@@ -144,7 +144,7 @@ CLI 플래그 전체 표: :doc:`/cli`.
 ---------
 
 * CLI 플래그 + 환경 변수: :doc:`/cli`
-* 11 개 MCP 서버 도구: :doc:`/mcp`
+* 12 개 MCP 서버 도구: :doc:`/mcp`
 * PPTX 편집 툴킷: :doc:`/pptx_editing`
 * repo 루트의 ``readmes/README.ko.md`` 에 기능 전체 목록이 있습니다.
 * 깊이 있는 기술 참조 (플러그인 아키텍처, 보안 정책, Definition of

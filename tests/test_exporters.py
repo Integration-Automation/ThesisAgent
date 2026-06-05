@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
-from autopapertoppt.core.models import ExportOptions, PaperCollection, Query
-from autopapertoppt.exporters import export_collection
+from thesisagents.core.models import ExportOptions, PaperCollection, Query
+from thesisagents.exporters import export_collection
 
 
 def _collection(sample_papers) -> PaperCollection:
@@ -72,6 +72,189 @@ def test_json_exporter_round_trip(sample_papers, tmp_path):
     assert data["query"]["keywords"] == "attention"
     assert len(data["papers"]) == 2
     assert data["papers"][0]["title"] == "Sample Paper on Attention"
+
+
+def test_ris_exporter(sample_papers, tmp_path):
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("ris",),
+        out_dir=str(tmp_path),
+        filename_stem="test",
+    )
+    written = export_collection(collection, options)
+    ris_text = written["ris"].read_text(encoding="utf-8")
+    # Paper 1 has no venue -> generic type; paper 2 has a venue -> JOUR.
+    assert "TY  - GEN" in ris_text
+    assert "TY  - JOUR" in ris_text
+    assert "TI  - Sample Paper on Attention" in ris_text
+    # Multi-author paper emits one AU line per author.
+    assert "AU  - Alice Anderson" in ris_text
+    assert "AU  - Bob Brown" in ris_text
+    # DOI only on the paper that has one.
+    assert "DO  - 10.1234/example.99999" in ris_text
+    # Two records -> two terminators.
+    assert ris_text.count("ER  - ") == 2
+
+
+def test_ris_exporter_no_value_spans_multiple_lines(sample_papers, tmp_path):
+    """Every non-blank line must carry a RIS tag — a value with an embedded
+    newline (which would corrupt the record) fails this."""
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("ris",),
+        out_dir=str(tmp_path),
+        filename_stem="test",
+    )
+    written = export_collection(collection, options)
+    for line in written["ris"].read_text(encoding="utf-8").splitlines():
+        if line:
+            assert line[2:6] == "  - ", f"line missing RIS tag layout: {line!r}"
+
+
+def test_ris_exporter_no_abstract(sample_papers, tmp_path):
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("ris",),
+        out_dir=str(tmp_path),
+        filename_stem="test",
+        include_abstract=False,
+    )
+    written = export_collection(collection, options)
+    assert "AB  - " not in written["ris"].read_text(encoding="utf-8")
+
+
+def test_csv_exporter(sample_papers, tmp_path):
+    import csv
+    import io
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("csv",),
+        out_dir=str(tmp_path),
+        filename_stem="test",
+    )
+    written = export_collection(collection, options)
+    rows = list(csv.reader(io.StringIO(written["csv"].read_text(encoding="utf-8"))))
+    header, *data = rows
+    assert header[:3] == ["rank", "title", "authors"]
+    assert len(data) == 2
+    by_title = {row[1]: row for row in data}
+    # Special "&" in the title round-trips intact through CSV quoting.
+    second = by_title["Second Paper with Special & Chars"]
+    cols = dict(zip(header, second, strict=True))
+    assert cols["authors"] == "Carol Chen"
+    assert cols["venue"] == "NeurIPS 2023"
+    assert cols["doi"] == "10.1234/example.99999"
+    assert cols["source"] == "arxiv"
+    # Multi-author cell joins with "; ".
+    first = by_title["Sample Paper on Attention"]
+    assert dict(zip(header, first, strict=True))["authors"] == "Alice Anderson; Bob Brown"
+
+
+def test_csv_exporter_quotes_commas_and_quotes(tmp_path):
+    """A title containing a comma and a double-quote must not shift columns."""
+    import csv
+    import io
+
+    from thesisagents.core.models import Paper
+
+    tricky = Paper(
+        source="arxiv",
+        source_id="x",
+        title='Attention, "Revisited"',
+        authors=("Ann Author",),
+        year=2024,
+        venue=None,
+        abstract="",
+        url="https://example.org/x",
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("arxiv",), max_results=10),
+        papers=(tricky,),
+    )
+    options = ExportOptions(
+        formats=("csv",), out_dir=str(tmp_path), filename_stem="test"
+    )
+    written = export_collection(collection, options)
+    rows = list(csv.reader(io.StringIO(written["csv"].read_text(encoding="utf-8"))))
+    assert rows[1][1] == 'Attention, "Revisited"'
+    assert dict(zip(rows[0], rows[1], strict=True))["url"] == "https://example.org/x"
+
+
+def test_csv_exporter_no_abstract(sample_papers, tmp_path):
+    import csv
+    import io
+
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("csv",),
+        out_dir=str(tmp_path),
+        filename_stem="test",
+        include_abstract=False,
+    )
+    written = export_collection(collection, options)
+    rows = list(csv.reader(io.StringIO(written["csv"].read_text(encoding="utf-8"))))
+    header = rows[0]
+    assert "abstract" in header
+    for row in rows[1:]:
+        assert dict(zip(header, row, strict=True))["abstract"] == ""
+
+
+def test_csljson_exporter(sample_papers, tmp_path):
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("csl",),
+        out_dir=str(tmp_path),
+        filename_stem="test",
+    )
+    written = export_collection(collection, options)
+    # Compound extension keeps it distinct from the plain json dump.
+    assert written["csl"].name == "test.csl.json"
+    items = json.loads(written["csl"].read_text(encoding="utf-8"))
+    assert isinstance(items, list)
+    assert len(items) == 2
+    by_title = {item["title"]: item for item in items}
+    first = by_title["Sample Paper on Attention"]
+    # No venue -> manuscript; structured family/given author parts.
+    assert first["type"] == "manuscript"
+    assert first["author"][0] == {"family": "Anderson", "given": "Alice"}
+    assert first["issued"] == {"date-parts": [[2024]]}
+    second = by_title["Second Paper with Special & Chars"]
+    assert second["type"] == "article-journal"
+    assert second["container-title"] == "NeurIPS 2023"
+    assert second["DOI"] == "10.1234/example.99999"
+
+
+def test_csljson_does_not_collide_with_json_dump(sample_papers, tmp_path):
+    """Emitting both json and csl in one run writes two distinct files."""
+    collection = _collection(sample_papers)
+    options = ExportOptions(
+        formats=("json", "csl"),
+        out_dir=str(tmp_path),
+        filename_stem="test",
+    )
+    written = export_collection(collection, options)
+    assert written["json"].name == "test.json"
+    assert written["csl"].name == "test.csl.json"
+    assert written["json"].exists() and written["csl"].exists()
+
+
+def test_csljson_single_token_author(tmp_path):
+    """A mononym becomes family-only (no given), not a crash."""
+    from thesisagents.core.models import Paper
+
+    paper = Paper(
+        source="arxiv", source_id="x", title="T", authors=("Plato",),
+        year=2024, venue=None, abstract="", url="https://example.org/x",
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("arxiv",), max_results=10),
+        papers=(paper,),
+    )
+    options = ExportOptions(formats=("csl",), out_dir=str(tmp_path), filename_stem="t")
+    written = export_collection(collection, options)
+    items = json.loads(written["csl"].read_text(encoding="utf-8"))
+    assert items[0]["author"][0] == {"family": "Plato"}
 
 
 def _slide_text(slide, name: str) -> str:
@@ -445,7 +628,7 @@ def test_xlsx_exporter_source_column_uses_venue_not_fetcher_name(tmp_path):
     """
     from openpyxl import load_workbook
 
-    from autopapertoppt.core.models import Paper
+    from thesisagents.core.models import Paper
 
     paper = Paper(
         source="openalex",
@@ -526,7 +709,7 @@ def test_pptx_thesis_style_when_rich_summary_attached(sample_papers, tmp_path):
     slides (pain-points, technique table, RQ result tables, Q&A …)."""
     from pptx import Presentation
 
-    from autopapertoppt.core.models import Paper, PaperSummary, RqResult
+    from thesisagents.core.models import Paper, PaperSummary, RqResult
 
     base = sample_papers[0]
     enriched = Paper(
@@ -622,7 +805,7 @@ def test_pptx_thesis_style_when_rich_summary_attached(sample_papers, tmp_path):
 def _minimal_rich_summary():
     """A PaperSummary with just enough rich content to trigger the
     thesis-style tier (so paper_subtitle shapes get rendered)."""
-    from autopapertoppt.core.models import PaperSummary
+    from thesisagents.core.models import PaperSummary
 
     return PaperSummary(
         language="en",
@@ -637,7 +820,7 @@ def test_pptx_subtitle_prefers_venue_over_fetcher_source(tmp_path):
     ``openalex``."""
     from pptx import Presentation
 
-    from autopapertoppt.core.models import Paper, PaperCollection, Query
+    from thesisagents.core.models import Paper, PaperCollection, Query
 
     paper = Paper(
         source="openalex",
@@ -673,7 +856,7 @@ def test_pptx_rq_slide_shows_verbatim_research_question(tmp_path):
     that an author may have stored on the RqResult."""
     from pptx import Presentation
 
-    from autopapertoppt.core.models import (
+    from thesisagents.core.models import (
         Paper,
         PaperCollection,
         PaperSummary,
@@ -737,7 +920,7 @@ def _section_titles(prs) -> list[str]:
 
 def _rich_paper_factory(**summary_overrides):
     """Build a single-paper PaperCollection with rich summary overrides."""
-    from autopapertoppt.core.models import (
+    from thesisagents.core.models import (
         Paper,
         PaperCollection,
         PaperSummary,
@@ -823,7 +1006,7 @@ def test_pptx_rq_analysis_keeps_up_to_six_bullets(tmp_path):
     """RQ analysis bullets — six should render, not 3."""
     from pptx import Presentation
 
-    from autopapertoppt.core.models import RqResult
+    from thesisagents.core.models import RqResult
 
     rq = RqResult(
         rq_id="RQ1",
@@ -961,7 +1144,7 @@ def test_pptx_paper_table_slide_renders_caption_table_analysis(tmp_path):
 
 
 def _full_rich_summary_kwargs():
-    from autopapertoppt.core.models import RqResult
+    from thesisagents.core.models import RqResult
 
     return {
         "language": "en",
@@ -1143,7 +1326,7 @@ def test_pptx_subtitle_falls_back_to_source_when_venue_missing(tmp_path):
     natural fallback because arXiv does double duty as publication channel."""
     from pptx import Presentation
 
-    from autopapertoppt.core.models import Paper, PaperCollection, Query
+    from thesisagents.core.models import Paper, PaperCollection, Query
 
     paper = Paper(
         source="arxiv",
@@ -1197,7 +1380,7 @@ def test_xlsx_exporter_no_abstract(sample_papers, tmp_path):
 def test_export_unknown_format_raises(sample_papers, tmp_path):
     import pytest
 
-    from autopapertoppt.core.exceptions import ExportError
+    from thesisagents.core.exceptions import ExportError
 
     collection = _collection(sample_papers)
     options = ExportOptions(

@@ -41,10 +41,10 @@ Push to main
 
 | Artefact | Where | Size |
 |---|---|---|
-| **`autopapertoppt-<version>.tar.gz`** (sdist) | PyPI | ~120 KB |
-| **`autopapertoppt-<version>-py3-none-any.whl`** | PyPI | ~140 KB |
-| **`autopapertoppt-windows-x86_64.zip`** | GitHub Release | ~250-350 MB (Nuitka bundle + PySide6) |
-| **`autopapertoppt-windows-x86_64.zip.sha256`** | GitHub Release | 80 bytes |
+| **`thesisagents-<version>.tar.gz`** (sdist) | PyPI | ~120 KB |
+| **`thesisagents-<version>-py3-none-any.whl`** | PyPI | ~140 KB |
+| **`thesisagents-windows-x86_64.zip`** | GitHub Release | ~250-350 MB (Nuitka bundle + PySide6) |
+| **`thesisagents-windows-x86_64.zip.sha256`** | GitHub Release | 80 bytes |
 
 The PyPI artefacts work on Linux / macOS / Windows; the zip is
 the standalone Windows bundle for users who don't want a Python
@@ -113,7 +113,7 @@ Two layers of belt + suspenders:
 ## Why `--standalone` not `--onefile`
 
 The Nuitka build uses `--standalone` (produces a
-`autopapertoppt.dist/` folder, which we zip) rather than
+`thesisagents.dist/` folder, which we zip) rather than
 `--onefile` (single self-extracting `.exe`).
 
 Reasons:
@@ -133,7 +133,7 @@ OBS, KeePass all ship this way).
 
 Linux + macOS users install from PyPI. Shipping Nuitka binaries
 for those platforms just inflates the release page without
-serving a real use case — `pip install autopapertoppt` is already
+serving a real use case — `pip install thesisagents` is already
 the one-command install path. Windows is the only platform where
 "download and double-click" is the common install pattern.
 

@@ -1,0 +1,37 @@
+{
+  "totalHits": 3,
+  "limit": 10,
+  "offset": 0,
+  "results": [
+    {
+      "id": 5000001,
+      "title": "Scalable Open-Access Retrieval for Security Research",
+      "authors": [{"name": "Andersson, Alice"}, {"name": "Bertelsen, Bob"}],
+      "yearPublished": 2025,
+      "doi": "10.5555/core.2025.0001",
+      "abstract": "We build a scalable retrieval system over open-access security papers.",
+      "downloadUrl": "https://core.ac.uk/download/5000001.pdf",
+      "journals": [{"title": "Journal of Open Access"}],
+      "publisher": "OA Press"
+    },
+    {
+      "id": 5000002,
+      "title": "Survey of Repository Harvesting",
+      "authors": [{"name": "Chen, Carol"}],
+      "yearPublished": 2025,
+      "abstract": "A survey of OAI-PMH harvesting techniques.",
+      "publisher": "Independent Press",
+      "downloadUrl": ""
+    },
+    {
+      "id": 5000003,
+      "title": "Legacy Indexing Methods",
+      "authors": [{"name": "Doe, Dan"}],
+      "yearPublished": 2016,
+      "doi": "10.5555/core.2016.0003",
+      "abstract": "Older indexing methods predating modern aggregators.",
+      "journals": [{"title": "Old Indexing Journal"}],
+      "downloadUrl": "https://core.ac.uk/download/5000003.pdf"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.core.models import ExportOptions, Paper, Query
+from thesisagents.core.models import ExportOptions, Paper, Query
 
 
 def test_paper_dedup_key_prefers_doi():

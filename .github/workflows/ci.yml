@@ -75,7 +75,7 @@ jobs:
       - name: bandit security scan
         # The -c flag is mandatory — without it bandit ignores the
         # project's per-rule skip configuration in pyproject.toml.
-        run: python -m bandit -c pyproject.toml -r autopapertoppt/ sources/
+        run: python -m bandit -c pyproject.toml -r thesisagents/ sources/
 
       - name: pytest
         # Hermetic fixtures only — no live HTTP. -X utf8 keeps Windows

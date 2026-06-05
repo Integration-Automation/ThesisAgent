@@ -1,4 +1,4 @@
-"""Tests for the PDF downloader in autopapertoppt.core.pdf_download."""
+"""Tests for the PDF downloader in thesisagents.core.pdf_download."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from pathlib import Path
 import httpx
 import pytest
 
-from autopapertoppt.core import pdf_download as pdf_download_module
-from autopapertoppt.core.models import Paper, PaperCollection, Query
-from autopapertoppt.core.pdf_download import download_pdfs
-from autopapertoppt.fetchers import http as http_module
+from thesisagents.core import pdf_download as pdf_download_module
+from thesisagents.core.models import Paper, PaperCollection, Query
+from thesisagents.core.pdf_download import download_pdfs
+from thesisagents.fetchers import http as http_module
 
 
 @pytest.fixture(autouse=True)
@@ -71,7 +71,7 @@ def _install_transport(monkeypatch, transport):
         return httpx.AsyncClient(transport=transport)
 
     monkeypatch.setattr(
-        "autopapertoppt.core.pdf_download.get_client", fake_get_client
+        "thesisagents.core.pdf_download.get_client", fake_get_client
     )
 
 
@@ -279,8 +279,8 @@ async def test_download_pdfs_omits_referer_on_cross_host(
 async def test_download_pdfs_attaches_cookies_when_jar_set(
     tmp_path: Path, monkeypatch,
 ):
-    """Cookies from AUTOPAPERTOPPT_PDF_COOKIES_FILE must reach the request."""
-    from autopapertoppt.core import pdf_cookies
+    """Cookies from THESISAGENTS_PDF_COOKIES_FILE must reach the request."""
+    from thesisagents.core import pdf_cookies
 
     cookies_file = tmp_path / "cookies.txt"
     cookies_file.write_text(
@@ -289,7 +289,7 @@ async def test_download_pdfs_attaches_cookies_when_jar_set(
         ".example.com\tTRUE\t/\tFALSE\t0\tauth_token\txyz789\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("AUTOPAPERTOPPT_PDF_COOKIES_FILE", str(cookies_file))
+    monkeypatch.setenv("THESISAGENTS_PDF_COOKIES_FILE", str(cookies_file))
     pdf_cookies._reset_for_tests()  # noqa: SLF001
 
     transport = _CannedTransport(200, b"%PDF-1.4\nx")
@@ -307,9 +307,9 @@ async def test_download_pdfs_attaches_cookies_when_jar_set(
 async def test_download_pdfs_no_cookies_when_env_unset(
     tmp_path: Path, monkeypatch,
 ):
-    from autopapertoppt.core import pdf_cookies
+    from thesisagents.core import pdf_cookies
 
-    monkeypatch.delenv("AUTOPAPERTOPPT_PDF_COOKIES_FILE", raising=False)
+    monkeypatch.delenv("THESISAGENTS_PDF_COOKIES_FILE", raising=False)
     pdf_cookies._reset_for_tests()  # noqa: SLF001
 
     transport = _CannedTransport(200, b"%PDF-1.4\nx")
@@ -322,7 +322,7 @@ async def test_cookies_only_attach_to_matching_host(
     tmp_path: Path, monkeypatch,
 ):
     """A cookie scoped to ``.publisher.com`` must NOT leak to ``arxiv.org``."""
-    from autopapertoppt.core import pdf_cookies
+    from thesisagents.core import pdf_cookies
 
     cookies_file = tmp_path / "cookies.txt"
     cookies_file.write_text(
@@ -330,7 +330,7 @@ async def test_cookies_only_attach_to_matching_host(
         ".publisher.com\tTRUE\t/\tFALSE\t0\tSECRET\tdo-not-leak\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("AUTOPAPERTOPPT_PDF_COOKIES_FILE", str(cookies_file))
+    monkeypatch.setenv("THESISAGENTS_PDF_COOKIES_FILE", str(cookies_file))
     pdf_cookies._reset_for_tests()  # noqa: SLF001
 
     transport = _CannedTransport(200, b"%PDF-1.4\nx")

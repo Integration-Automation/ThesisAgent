@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from autopapertoppt.core.dedup import dedupe
-from autopapertoppt.core.models import Paper
-from autopapertoppt.core.ranking import rank
+from thesisagents.core.dedup import dedupe
+from thesisagents.core.models import Paper
+from thesisagents.core.ranking import rank
 
 
 def _paper(**overrides) -> Paper:

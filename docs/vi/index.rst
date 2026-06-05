@@ -1,9 +1,10 @@
-Hướng dẫn người dùng AutoPaperToPPT
+Hướng dẫn người dùng ThesisAgents
 ====================================
 
 Trợ lý tìm kiếm bài báo theo từ khóa. Lấy kết quả từ arXiv, Semantic
 Scholar, OpenAlex, PubMed, ACM, IEEE Xplore, DBLP, Crossref, OpenAIRE,
-Springer Nature và Google Scholar; xuất thành slide PowerPoint phong
+Springer Nature, Europe PMC, DOAJ, HAL, CORE và Google Scholar; xuất
+thành slide PowerPoint phong
 cách luận văn, sổ Excel và tệp BibTeX. Tất cả từ một lệnh CLI hoặc một
 lời gọi công cụ MCP.
 
@@ -49,7 +50,7 @@ Quy trình MCP 6 bước
    5. (bạn đọc mỗi PDF và tạo dict tóm tắt có cấu trúc)
    6. export(papers=[{...paper, "summary": {...}}], language="vi", ...)
 
-11 công cụ MCP đầy đủ: :doc:`/mcp`.
+12 công cụ MCP đầy đủ: :doc:`/mcp`.
 
 Bắt buộc: xác minh URL / DOI trước khi giao
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -106,7 +107,7 @@ Yêu cầu Python **3.12+**.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -122,19 +123,19 @@ Bắt đầu nhanh
 .. code-block:: bash
 
    # Tìm arXiv → deck + workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Một bài theo URL → deck + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Render deck bằng tiếng Việt
-   autopapertoppt --paper 1706.03762 --lang vi --out ./exports/
+   thesisagents --paper 1706.03762 --lang vi --out ./exports/
 
    # Làm giàu Python pipeline (cần key Anthropic)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang vi --out ./exports/
 
 Bảng cờ CLI đầy đủ: :doc:`/cli`.
@@ -145,7 +146,7 @@ Tìm hiểu thêm
 -------------
 
 * Cờ CLI và biến môi trường: :doc:`/cli`
-* 11 công cụ máy chủ MCP: :doc:`/mcp`
+* 12 công cụ máy chủ MCP: :doc:`/mcp`
 * Toolkit chỉnh sửa PPTX: :doc:`/pptx_editing`
 * Tệp ``readmes/README.vi.md`` ở gốc repo có danh sách đầy đủ tính năng.
 * Tham chiếu kỹ thuật sâu (kiến trúc plugin, chính sách bảo mật,

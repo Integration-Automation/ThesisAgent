@@ -1,9 +1,9 @@
-Guia de uso AutoPaperToPPT
+Guia de uso ThesisAgents
 ==========================
 
 Assistente de busca de artigos guiado por palavras-chave. Recupera
 resultados de arXiv, Semantic Scholar, OpenAlex, PubMed, ACM, IEEE
-Xplore, DBLP, Crossref, OpenAIRE, Springer Nature e Google Scholar; e
+Xplore, DBLP, Crossref, OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE e Google Scholar; e
 exporta como apresentação PowerPoint estilo tese, planilha Excel e
 arquivo BibTeX. Tudo a partir de uma chamada CLI ou uma chamada de
 ferramenta MCP.
@@ -108,7 +108,7 @@ Requer Python **3.12+**.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -124,19 +124,19 @@ Início rápido
 .. code-block:: bash
 
    # Buscar arXiv → deck + workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Um artigo por URL → deck + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Renderizar deck em português
-   autopapertoppt --paper 1706.03762 --lang pt --out ./exports/
+   thesisagents --paper 1706.03762 --lang pt --out ./exports/
 
    # Enriquecimento Python pipeline (exige chave Anthropic)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang pt --out ./exports/
 
 Tabela completa de flags CLI: :doc:`/cli`.

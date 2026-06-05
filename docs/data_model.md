@@ -2,7 +2,7 @@
 
 Every record shape the pipeline produces, every field on each, and
 when each field is populated. All four core types are frozen
-dataclasses defined in `autopapertoppt.core.models`.
+dataclasses defined in `thesisagents.core.models`.
 
 ## `Query`
 
@@ -32,7 +32,7 @@ class Query:
 ## `Paper`
 
 The normalised result shape every source plugin produces. See
-`autopapertoppt.core.models.Paper` for the source.
+`thesisagents.core.models.Paper` for the source.
 
 ```python
 @dataclass(frozen=True)
@@ -269,7 +269,7 @@ class ExportOptions:
 
 | Field | Notes |
 |---|---|
-| `formats` | Validated against `ALL_EXPORTS = ("pptx", "xlsx", "bibtex", "markdown", "json")`. |
+| `formats` | Validated against `ALL_EXPORTS = ("bib", "md", "pptx", "xlsx", "pdf", "json", "ris", "csv", "csl")`. |
 | `out_dir` | Created if missing. Path-traversal-safe (resolved via `utils.path_safety`). |
 | `filename_stem` | When `None`, the pipeline generates `{slug-of-query}-{YYYYMMDD-HHMMSS}`. Hand-authored regen scripts typically set this to the BibTeX key. |
 | `include_abstract` | False produces a deck that's title + authors + link slides only — useful when you want a one-sentence summary deck for hundreds of papers. |
@@ -278,7 +278,7 @@ class ExportOptions:
 
 ## Identifier parsing
 
-`autopapertoppt.core.identifiers.parse_identifier(value: str)` is
+`thesisagents.core.identifiers.parse_identifier(value: str)` is
 the single entry point for resolving a `--paper` argument. It
 returns a `ParsedIdentifier` carrying:
 
@@ -304,10 +304,10 @@ for any value that doesn't match.
 ## Exceptions
 
 The whole project's error type hierarchy is in
-`autopapertoppt.core.exceptions`:
+`thesisagents.core.exceptions`:
 
 ```
-AutoPaperToPPTError                     # base — surfaces as exit code 2
+ThesisAgentsError                     # base — surfaces as exit code 2
 ├── ConfigError                          # missing API key, malformed env var
 ├── FetchError
 │   ├── RateLimitError                   # 429 / explicit upstream rate limit
@@ -319,5 +319,5 @@ AutoPaperToPPTError                     # base — surfaces as exit code 2
 
 Every fetcher's top-level method wraps upstream exceptions into
 one of the above. Surface code (CLI / MCP / GUI) catches the base
-`AutoPaperToPPTError` and renders it as a one-line error message;
+`ThesisAgentsError` and renders it as a one-line error message;
 unexpected exceptions surface as a stack trace so bugs are loud.

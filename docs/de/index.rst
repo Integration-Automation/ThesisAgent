@@ -1,9 +1,9 @@
-AutoPaperToPPT Benutzerhandbuch
+ThesisAgents Benutzerhandbuch
 ================================
 
 Stichwortgesteuerter Paper-Such-Assistent. Ruft Ergebnisse von arXiv,
 Semantic Scholar, OpenAlex, PubMed, ACM, IEEE Xplore, DBLP, Crossref,
-OpenAIRE, Springer Nature und Google Scholar ab; exportiert als
+OpenAIRE, Springer Nature, Europe PMC, DOAJ, HAL, CORE und Google Scholar ab; exportiert als
 PowerPoint-Präsentation im Thesis-Stil, Excel-Arbeitsmappe und
 BibTeX-Datei. Alles aus einem CLI-Aufruf oder einem MCP-Tool-Aufruf.
 
@@ -51,7 +51,7 @@ MCP-Workflow in 6 Schritten
    5. (Sie lesen jedes PDF und erzeugen strukturierten Summary-Dict)
    6. export(papers=[{...paper, "summary": {...}}], language="de", ...)
 
-Alle 11 MCP-Tools: :doc:`/mcp`.
+Alle 12 MCP-Tools: :doc:`/mcp`.
 
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -112,7 +112,7 @@ Python **3.12+** erforderlich.
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -128,19 +128,19 @@ Schnellstart
 .. code-block:: bash
 
    # arXiv durchsuchen → Deck + Workbook + BibTeX
-   autopapertoppt --query "diffusion models" --source arxiv --max 10 \
+   thesisagents --query "diffusion models" --source arxiv --max 10 \
                   --out ./exports/
 
    # Einzelnes Paper per URL → Deck + BibTeX
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --filename-stem attention --out ./exports/
 
    # Deck auf Deutsch rendern
-   autopapertoppt --paper 1706.03762 --lang de --out ./exports/
+   thesisagents --paper 1706.03762 --lang de --out ./exports/
 
    # Python-Pipeline-Anreicherung (Anthropic-Schlüssel erforderlich)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                   --enrich --lang de --out ./exports/
 
 Vollständige CLI-Flag-Tabelle: :doc:`/cli`.
@@ -151,7 +151,7 @@ Weiterführende Quellen
 ----------------------
 
 * CLI-Flags und Umgebungsvariablen: :doc:`/cli`
-* 11 MCP-Server-Tools: :doc:`/mcp`
+* 12 MCP-Server-Tools: :doc:`/mcp`
 * PPTX-Edit-Toolkit: :doc:`/pptx_editing`
 * Die Datei ``readmes/README.de.md`` im Repo-Root enthält die vollständige
   Feature-Liste.

@@ -7,12 +7,12 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-from autopapertoppt.core.exceptions import ConfigError, ParseError
-from autopapertoppt.core.models import Paper, PaperCollection, Query
-from autopapertoppt.core.pipeline import enrich_collection
-from autopapertoppt.fetchers import http as http_module
-from autopapertoppt.intelligence import pdf as pdf_module
-from autopapertoppt.intelligence import summarise as summarise_module
+from thesisagents.core.exceptions import ConfigError, ParseError
+from thesisagents.core.models import Paper, PaperCollection, Query
+from thesisagents.core.pipeline import enrich_collection
+from thesisagents.fetchers import http as http_module
+from thesisagents.intelligence import pdf as pdf_module
+from thesisagents.intelligence import summarise as summarise_module
 
 
 @pytest.fixture(autouse=True)
@@ -51,7 +51,7 @@ def _install_pdf_transport(monkeypatch, transport):
     async def fake_get_client(_source):
         return httpx.AsyncClient(transport=transport)
 
-    monkeypatch.setattr("autopapertoppt.intelligence.pdf.get_client", fake_get_client)
+    monkeypatch.setattr("thesisagents.intelligence.pdf.get_client", fake_get_client)
 
 
 class _CannedPdfTransport(httpx.AsyncBaseTransport):
@@ -263,7 +263,7 @@ async def test_enrich_collection_attaches_summary(monkeypatch):
         __import__("sys").modules, "anthropic", fake_anthropic
     )
     monkeypatch.setattr(
-        "autopapertoppt.intelligence.pdf.fetch_and_extract", fake_fetch
+        "thesisagents.intelligence.pdf.fetch_and_extract", fake_fetch
     )
 
     paper = _paper()

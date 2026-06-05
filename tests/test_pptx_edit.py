@@ -22,9 +22,9 @@ from pathlib import Path
 import pytest
 from pptx import Presentation
 
-from autopapertoppt.core.exceptions import ExportError
-from autopapertoppt.core.models import ExportOptions, PaperCollection, Query
-from autopapertoppt.exporters import export_collection, pptx_edit
+from thesisagents.core.exceptions import ExportError
+from thesisagents.core.models import ExportOptions, PaperCollection, Query
+from thesisagents.exporters import export_collection, pptx_edit
 
 
 @pytest.fixture()

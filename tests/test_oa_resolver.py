@@ -1,11 +1,11 @@
-"""Tests for ``autopapertoppt.core.oa_resolver``."""
+"""Tests for ``thesisagents.core.oa_resolver``."""
 
 from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.core import oa_resolver
-from autopapertoppt.core.models import Paper, PaperCollection, Query
+from thesisagents.core import oa_resolver
+from thesisagents.core.models import Paper, PaperCollection, Query
 
 
 def _paper(**overrides) -> Paper:
@@ -105,7 +105,7 @@ async def test_resolve_falls_back_to_core_when_s2_misses(monkeypatch):
 
 
 async def test_core_skipped_silently_when_key_unset(monkeypatch):
-    monkeypatch.delenv("AUTOPAPERTOPPT_CORE_API_KEY", raising=False)
+    monkeypatch.delenv("THESISAGENTS_CORE_API_KEY", raising=False)
     result = await oa_resolver._query_core("10.x/y")  # noqa: SLF001
     assert result is None
     assert oa_resolver._core_warning_emitted is True  # noqa: SLF001
@@ -119,9 +119,9 @@ async def test_s2_cache_skips_repeat_lookups(monkeypatch):
 
 
 async def test_s2_api_key_sent_when_set(monkeypatch):
-    """When AUTOPAPERTOPPT_S2_API_KEY is set, the resolver attaches x-api-key."""
+    """When THESISAGENTS_S2_API_KEY is set, the resolver attaches x-api-key."""
     monkeypatch.setattr(oa_resolver, "_S2_CACHE", {})
-    monkeypatch.setenv("AUTOPAPERTOPPT_S2_API_KEY", "test-key")
+    monkeypatch.setenv("THESISAGENTS_S2_API_KEY", "test-key")
 
     captured = {}
 
@@ -209,7 +209,7 @@ async def test_resolve_passes_through_when_no_doi_and_no_arxiv_hit(monkeypatch):
 
 
 async def test_unpaywall_skipped_silently_when_email_unset(monkeypatch):
-    monkeypatch.delenv("AUTOPAPERTOPPT_CONTACT_EMAIL", raising=False)
+    monkeypatch.delenv("THESISAGENTS_CONTACT_EMAIL", raising=False)
     result = await oa_resolver._query_unpaywall("10.x/y")  # noqa: SLF001
     assert result is None
     # And the one-shot warning got emitted.
@@ -218,7 +218,7 @@ async def test_unpaywall_skipped_silently_when_email_unset(monkeypatch):
 
 async def test_unpaywall_skip_does_not_double_warn(monkeypatch):
     """The one-shot flag prevents repeat warnings within a single process."""
-    monkeypatch.delenv("AUTOPAPERTOPPT_CONTACT_EMAIL", raising=False)
+    monkeypatch.delenv("THESISAGENTS_CONTACT_EMAIL", raising=False)
     call_count = 0
 
     def counting_warning(*_args, **_kwargs):
@@ -265,7 +265,7 @@ async def test_arxiv_fallback_matches_only_exact_normalised_title(monkeypatch):
         return fake_fetcher
 
     monkeypatch.setattr(
-        "autopapertoppt.fetchers.base.load_fetcher", fake_load
+        "thesisagents.fetchers.base.load_fetcher", fake_load
     )
     result = await oa_resolver._query_arxiv_title(_paper())  # noqa: SLF001
     assert result is None
@@ -289,7 +289,7 @@ async def test_arxiv_fallback_accepts_exact_match(monkeypatch):
         return fake_fetcher
 
     monkeypatch.setattr(
-        "autopapertoppt.fetchers.base.load_fetcher", fake_load
+        "thesisagents.fetchers.base.load_fetcher", fake_load
     )
     result = await oa_resolver._query_arxiv_title(_paper())  # noqa: SLF001
     assert result == "https://arxiv.org/pdf/1706.03762"
@@ -315,6 +315,6 @@ async def test_arxiv_fallback_rejects_non_https():
     import pytest as _pytest  # local import — monkeypatch is fn-level
 
     with _pytest.MonkeyPatch().context() as mp:
-        mp.setattr("autopapertoppt.fetchers.base.load_fetcher", lambda _: fake_fetcher)
+        mp.setattr("thesisagents.fetchers.base.load_fetcher", lambda _: fake_fetcher)
         result = await oa_resolver._query_arxiv_title(_paper())  # noqa: SLF001
     assert result is None

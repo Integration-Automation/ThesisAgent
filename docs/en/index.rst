@@ -1,4 +1,4 @@
-AutoPaperToPPT User Guide
+ThesisAgents User Guide
 ==========================
 
 A keyword-driven paper search assistant that fetches results from
@@ -51,7 +51,7 @@ Decision tree
    5. (you read each PDF and produce a structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-tw", ...)
 
-Eleven MCP tools total; full reference at :doc:`/mcp`.
+Twelve MCP tools total; full reference at :doc:`/mcp`.
 
 Mandatory: URL / DOI verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -107,13 +107,13 @@ hand-authored rich summaries built exactly this way.
 Installation
 ------------
 
-AutoPaperToPPT targets Python **3.12+** (developed against 3.14) on
+ThesisAgents targets Python **3.12+** (developed against 3.14) on
 Windows, macOS, and Linux. A project-local virtualenv is recommended:
 
 .. code-block:: bash
 
    git clone <repo-url>
-   cd AutoPaperToPPT
+   cd ThesisAgents
    python -m venv .venv
    .venv\Scripts\Activate.ps1            # Windows PowerShell
    # source .venv/bin/activate           # Linux / macOS
@@ -136,7 +136,7 @@ Optional dependency groups
      - What it unlocks
    * - ``[mcp]``
      - The ``mcp`` SDK only. Use this for production installs where
-       you want the ``autopapertoppt-mcp`` console script but not the
+       you want the ``thesisagents-mcp`` console script but not the
        test toolchain.
    * - ``[intelligence]``
      - ``pypdf`` + ``anthropic``. Needed for the Python ``--enrich``
@@ -156,7 +156,7 @@ Optional dependency groups
 CLI
 ---
 
-``python -m autopapertoppt`` (also installed as ``autopapertoppt``) is
+``python -m thesisagents`` (also installed as ``thesisagents``) is
 the canonical entrypoint. It has two mutually exclusive modes:
 
 Search mode
@@ -165,15 +165,15 @@ Search mode
 .. code-block:: bash
 
    # Default 25 results, default exports (pptx, xlsx, bib)
-   autopapertoppt --query "diffusion models" --source arxiv
+   thesisagents --query "diffusion models" --source arxiv
 
    # 10 results, every export format, custom dir
-   autopapertoppt --query "transformer attention" --source arxiv \
-                --max 10 --export pptx,xlsx,md,bib,json \
+   thesisagents --query "transformer attention" --source arxiv \
+                --max 10 --export pptx,xlsx,md,bib,json,ris,csv,csl \
                 --out ./exports/
 
    # Restrict to recent work
-   autopapertoppt --query "graph neural networks drug discovery" \
+   thesisagents --query "graph neural networks drug discovery" \
                 --year-from 2022 --year-to 2025 \
                 --max 15 --out ./exports/
 
@@ -183,22 +183,22 @@ Single-paper mode
 .. code-block:: bash
 
    # arXiv ID — default exports for single paper are pptx + bib
-   autopapertoppt --paper 1706.03762 --out ./exports/
+   thesisagents --paper 1706.03762 --out ./exports/
 
    # arXiv URL
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                 --filename-stem attention --out ./exports/
 
    # DOI (resolved via Semantic Scholar)
-   autopapertoppt --paper "10.1145/3411764.3445005" --out ./exports/
+   thesisagents --paper "10.1145/3411764.3445005" --out ./exports/
 
    # PubMed ID / URL
-   autopapertoppt --paper "https://pubmed.ncbi.nlm.nih.gov/34567890/" \
+   thesisagents --paper "https://pubmed.ncbi.nlm.nih.gov/34567890/" \
                 --out ./exports/
 
    # IEEE document URL (default-on via visible Chrome; opt out with
-   # AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1 if you have no Chrome binary)
-   autopapertoppt --paper "https://ieeexplore.ieee.org/document/10965643" \
+   # THESISAGENTS_DISABLE_IEEE_SCRAPING=1 if you have no Chrome binary)
+   thesisagents --paper "https://ieeexplore.ieee.org/document/10965643" \
                 --out ./exports/
 
 Available source plugins
@@ -207,8 +207,10 @@ Available source plugins
 The default mix used when ``--source`` is omitted is every plugin that
 needs no paid API key plus ``ieee`` + ``scholar`` (both default-on via
 visible Chrome): ``arxiv``, ``semantic_scholar``, ``openalex``,
-``pubmed``, ``acm``, ``dblp``, ``crossref``, ``openaire``, ``ieee``,
-``scholar``. One more plugin joins when its env var is set:
+``pubmed``, ``acm``, ``dblp``, ``crossref``, ``openaire``,
+``europepmc``, ``doaj``, ``hal``, ``ieee``, ``scholar`` (15 plugins
+total). Two more join when their env var is set (``springer`` and
+``core``):
 
 .. list-table::
    :header-rows: 1
@@ -218,24 +220,30 @@ visible Chrome): ``arxiv``, ``semantic_scholar``, ``openalex``,
      - Env var
      - Notes
    * - ``ieee``
-     - default-on; ``AUTOPAPERTOPPT_IEEE_API_KEY`` switches to the
-       official Xplore API; ``AUTOPAPERTOPPT_DISABLE_IEEE_SCRAPING=1``
+     - default-on; ``THESISAGENTS_IEEE_API_KEY`` switches to the
+       official Xplore API; ``THESISAGENTS_DISABLE_IEEE_SCRAPING=1``
        opts out entirely
      - Without the API key, the search + document fetch run through
        visible Chrome (selenium). The httpx fallback is a CI / no-Chrome
        safety net.
    * - ``springer``
-     - ``AUTOPAPERTOPPT_SPRINGER_API_KEY``
+     - ``THESISAGENTS_SPRINGER_API_KEY``
      - Free key from https://dev.springernature.com/. Covers Nature,
        Scientific Reports, Lecture Notes in CS, all Springer journals.
        The plugin raises ``ConfigError`` at construction without a key,
        which the pipeline silently skips.
+   * - ``core``
+     - ``THESISAGENTS_CORE_API_KEY``
+     - Free key from https://core.ac.uk/services/api. The largest
+       open-access aggregator (250M+ works); the same key also drives the
+       OA resolver's CORE lookup. Soft-skipped (``ConfigError``) without
+       a key, like ``springer``.
    * - ``scholar``
-     - default-on; ``AUTOPAPERTOPPT_DISABLE_SCHOLAR_SCRAPING=1`` opts out
+     - default-on; ``THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1`` opts out
      - SERP fetch runs in visible Chrome. Google ToS forbids automation;
        opt out to avoid captcha / IP-block risk.
 
-Set ``AUTOPAPERTOPPT_CHROME_PROFILE_DIR`` to a persistent path so
+Set ``THESISAGENTS_CHROME_PROFILE_DIR`` to a persistent path so
 VPN / institutional SSO / Google sign-in survive across runs.
 
 The search pipeline can optionally restrict results to a curated
@@ -248,11 +256,11 @@ Localised deck + LLM enrichment
 .. code-block:: bash
 
    # Slide template strings in Traditional Chinese
-   autopapertoppt --paper 1706.03762 --lang zh-tw --out ./exports/
+   thesisagents --paper 1706.03762 --lang zh-tw --out ./exports/
 
    # Python pipeline enrichment (PDF + Anthropic API → thesis-style deck)
    export ANTHROPIC_API_KEY=sk-ant-...
-   autopapertoppt --paper "https://arxiv.org/abs/1706.03762" \
+   thesisagents --paper "https://arxiv.org/abs/1706.03762" \
                 --enrich --lang zh-tw --out ./exports/
 
 Full flag table: :doc:`/cli`.
@@ -310,7 +318,7 @@ based on how much information is attached to each paper:
   Q&A, references). 20+ slides per paper.
 
 All template strings (Agenda / References / Paper N of M / footer)
-flow through ``autopapertoppt.exporters.i18n`` and respect ``--lang``.
+flow through ``thesisagents.exporters.i18n`` and respect ``--lang``.
 Supported languages: ``en`` (default), ``zh-tw``, ``zh-cn``, ``ja``,
 ``es``, ``fr``, ``de``, ``ko``, ``pt``, ``ru``, ``it``, ``vi``, ``hi``,
 ``id`` — 14 in total. Anything outside that set falls back silently
@@ -377,7 +385,7 @@ reverse for zh-cn strings. Full rule + the regex catalogue live in
 MCP server
 ----------
 
-AutoPaperToPPT ships an MCP server exposing **eleven tools** — source
+ThesisAgents ships an MCP server exposing **twelve tools** — source
 discovery (``list_sources``), search, single-paper fetch, single-PDF
 text extraction (``fetch_pdf_text``), batch PDF download
 (``download_pdfs``), export, and five PPTX edit operations. Any
@@ -388,7 +396,7 @@ Configure your MCP client (Claude Code shown):
 
 .. code-block:: powershell
 
-   claude mcp add autopapertoppt -- ".venv\Scripts\python.exe" -m autopapertoppt.mcp
+   claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 
 Or hand-edit your settings file:
 
@@ -396,9 +404,9 @@ Or hand-edit your settings file:
 
    {
      "mcpServers": {
-       "autopapertoppt": {
+       "thesisagents": {
          "command": ".venv\\Scripts\\python.exe",
-         "args": ["-m", "autopapertoppt.mcp"]
+         "args": ["-m", "thesisagents.mcp"]
        }
      }
    }
@@ -429,7 +437,7 @@ Tools at a glance:
      - Batch-download a papers list's PDFs into ``{out_dir}/pdfs/``.
        Returns per-paper results keyed by BibTeX key.
    * - ``export``
-     - Papers list + formats → writes ``.pptx/.xlsx/.md/.bib/.json``.
+     - Papers list + formats → writes ``.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json``.
        Accepts a ``summary`` field per paper that can carry the
        full thesis-style schema; accepts ``language`` for i18n,
        ``max_slides_per_paper`` (default 25; pass ``0`` for unlimited),
@@ -468,12 +476,12 @@ Editing a generated deck
 ------------------------
 
 Once a deck is generated, the ``pptx_*`` tools (or the
-``autopapertoppt.exporters.pptx_edit`` Python module) let you iterate
+``thesisagents.exporters.pptx_edit`` Python module) let you iterate
 on it without re-running the search:
 
 .. code-block:: python
 
-   from autopapertoppt.exporters import pptx_edit
+   from thesisagents.exporters import pptx_edit
 
    pptx_edit.update_slide(
        "exports/attention.pptx", slide_index=1,
@@ -517,20 +525,20 @@ Architecture
 
 ::
 
-   AutoPaperToPPT/
-   ├── autopapertoppt/                 # main package
+   ThesisAgents/
+   ├── thesisagents/                 # main package
    │   ├── core/                     # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
    │   ├── fetchers/                 # HTTPS-only http client, token bucket, Fetcher base
    │   ├── exporters/                # pptx (thesis-style + lightweight), xlsx,
    │   │                             #   bibtex, markdown, json + pptx_edit + i18n
    │   ├── intelligence/             # PDF fetch + Anthropic summariser ([intelligence] extra)
-   │   ├── mcp/                      # FastMCP server registering 11 tools
+   │   ├── mcp/                      # FastMCP server registering 12 tools
    │   ├── utils/                    # logging, path safety
    │   ├── cli.py                    # argparse CLI
-   │   └── __main__.py               # `python -m autopapertoppt`
+   │   └── __main__.py               # `python -m thesisagents`
    ├── sources/                      # per-source plugins (arxiv, semantic_scholar,
    │                                 #   openalex, pubmed, acm, ieee, scholar,
-   │                                 #   dblp, crossref, openaire, springer)
+   │                                 #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core)
    ├── tests/                        # pytest suite + recorded fixtures, no live HTTP
    ├── docs/                         # this Sphinx tree (en + zh-tw + zh-cn)
    ├── scripts/                      # one-off regen / fixture-record scripts
@@ -539,7 +547,7 @@ Architecture
 Core vs source plugins
 ^^^^^^^^^^^^^^^^^^^^^^
 
-The line between ``autopapertoppt/`` (core) and ``sources/<name>/``
+The line between ``thesisagents/`` (core) and ``sources/<name>/``
 (plugin) is **dependency surface and failure isolation**, not "any
 source-related code goes in a plugin":
 
@@ -562,13 +570,13 @@ Two enrichment paths
 * **Python pipeline (``--enrich`` CLI flag)** — for unattended
   automation. Requires ``ANTHROPIC_API_KEY`` and the
   ``[intelligence]`` extra. Default model ``claude-opus-4-7``;
-  override via ``--llm-model`` or ``AUTOPAPERTOPPT_LLM_MODEL``.
+  override via ``--llm-model`` or ``THESISAGENTS_LLM_MODEL``.
 
 Network safety
 ^^^^^^^^^^^^^^
 
 All outbound HTTP goes through
-``autopapertoppt.fetchers.http.get_client(source)`` which returns a
+``thesisagents.fetchers.http.get_client(source)`` which returns a
 per-source ``httpx.AsyncClient`` wrapped in an HTTPS-only transport.
 Plain HTTP requests are refused — even after a redirect. Each source
 declares a ``RateLimit`` policy enforced by a token bucket; arXiv
@@ -589,7 +597,7 @@ Every change must pass three gates before commit (see ``CLAUDE.md``):
 
    .venv\Scripts\python.exe -m pytest tests/
    .venv\Scripts\python.exe -m ruff check .
-   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r autopapertoppt/ sources/
+   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
 
 The ``-c`` flag on bandit is **required** — without it bandit ignores
 the project skip config and the run will be noisy.
@@ -598,7 +606,7 @@ Tests
 ^^^^^
 
 Tests mirror the package layout: each production module
-``autopapertoppt/<area>/<feature>.py`` has a paired
+``thesisagents/<area>/<feature>.py`` has a paired
 ``tests/test_<feature>.py``. Source plugins live under
 ``tests/sources/<name>/``.
 
@@ -661,7 +669,7 @@ use the paper's arXiv mirror if it exists.
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The bundled token bucket already paces requests at 1 / 3s. If
-you're still seeing 429s, you may be running multiple AutoPaperToPPT
+you're still seeing 429s, you may be running multiple ThesisAgents
 processes in parallel against the same arXiv endpoint — coordinate
 through a single process or lower ``--max``.
 

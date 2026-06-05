@@ -1,10 +1,10 @@
-"""Tests for ``autopapertoppt.fetchers.webrunner_pdf``."""
+"""Tests for ``thesisagents.fetchers.webrunner_pdf``."""
 
 from __future__ import annotations
 
 import pytest
 
-from autopapertoppt.fetchers import webrunner_pdf
+from thesisagents.fetchers import webrunner_pdf
 
 
 @pytest.mark.parametrize(
@@ -44,20 +44,20 @@ def test_should_use_webrunner_handles_garbage_url():
 
 
 def test_is_available_skipped_when_disable_env_set(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", "1")
+    monkeypatch.setenv("THESISAGENTS_DISABLE_WEBRUNNER", "1")
     assert webrunner_pdf.is_available() is False
 
 
 def test_is_available_returns_true_when_selenium_present(monkeypatch):
-    monkeypatch.delenv("AUTOPAPERTOPPT_DISABLE_WEBRUNNER", raising=False)
+    monkeypatch.delenv("THESISAGENTS_DISABLE_WEBRUNNER", raising=False)
     # selenium is in [dev] extras so it's importable in the test venv.
     assert webrunner_pdf.is_available() is True
 
 
 async def test_pdf_download_routes_paywalled_through_webrunner(monkeypatch, tmp_path):
     """The PDF downloader pipeline routes paywalled URLs via WebRunner."""
-    from autopapertoppt.core import pdf_download
-    from autopapertoppt.core.models import Paper, PaperCollection, Query
+    from thesisagents.core import pdf_download
+    from thesisagents.core.models import Paper, PaperCollection, Query
 
     captured: dict[str, object] = {}
 
@@ -94,8 +94,8 @@ async def test_pdf_download_routes_paywalled_through_webrunner(monkeypatch, tmp_
 
 async def test_pdf_download_skips_webrunner_for_arxiv(monkeypatch, tmp_path):
     """arXiv PDFs bypass WebRunner — httpx works fine on arXiv."""
-    from autopapertoppt.core import pdf_download
-    from autopapertoppt.core.models import Paper, PaperCollection, Query
+    from thesisagents.core import pdf_download
+    from thesisagents.core.models import Paper, PaperCollection, Query
 
     async def fail_browser(_url, _target):
         pytest.fail("WebRunner should not be called for arXiv URLs")

@@ -6,11 +6,11 @@ from pathlib import Path
 
 import httpx
 import pytest
-from openalex.fetcher import OpenAlexFetcher
-from openalex.parser import _reconstruct_abstract, parse_work
 
-from autopapertoppt.core.models import Query
-from autopapertoppt.fetchers import http as http_module
+from thesisagents.core.models import Query
+from thesisagents.fetchers import http as http_module
+from thesisagents.sources.openalex.fetcher import OpenAlexFetcher
+from thesisagents.sources.openalex.parser import _reconstruct_abstract, parse_work
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "openalex"
 _FIXTURE_BYTES = (_FIXTURE_DIR / "llm_security.json").read_bytes()
@@ -42,7 +42,7 @@ def _install(monkeypatch, transport):
     async def fake_get_client(_source):
         return httpx.AsyncClient(transport=transport)
 
-    monkeypatch.setattr("openalex.fetcher.get_client", fake_get_client)
+    monkeypatch.setattr("thesisagents.sources.openalex.fetcher.get_client", fake_get_client)
 
 
 async def test_search_returns_papers(monkeypatch):
@@ -99,7 +99,7 @@ async def test_search_respects_max_results(monkeypatch):
 
 
 async def test_search_attaches_mailto_when_env_set(monkeypatch):
-    monkeypatch.setenv("AUTOPAPERTOPPT_CONTACT_EMAIL", "test@example.com")
+    monkeypatch.setenv("THESISAGENTS_CONTACT_EMAIL", "test@example.com")
     transport = _CannedTransport(_FIXTURE_BYTES)
     _install(monkeypatch, transport)
     await OpenAlexFetcher().search(
@@ -110,7 +110,7 @@ async def test_search_attaches_mailto_when_env_set(monkeypatch):
 
 
 async def test_search_omits_mailto_when_env_unset(monkeypatch):
-    monkeypatch.delenv("AUTOPAPERTOPPT_CONTACT_EMAIL", raising=False)
+    monkeypatch.delenv("THESISAGENTS_CONTACT_EMAIL", raising=False)
     transport = _CannedTransport(_FIXTURE_BYTES)
     _install(monkeypatch, transport)
     await OpenAlexFetcher().search(
