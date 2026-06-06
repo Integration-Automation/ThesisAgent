@@ -152,6 +152,28 @@ Content slides carry the findings (§9); **structural** slides carry the *naviga
 
 **Anti-pattern:** a references slide with 35 BibTeX entries in 9pt overflowing the footer; an agenda whose lines are one-sentence paper summaries. **Pattern:** references = the ~8 works actually cited, numbered [1]..[8], split across 2 slides if needed; agenda = "Paper N of M: <short title>" pointers.
 
+### 12. Math notation rendering (presentation, not just glossing)
+
+§8 says every math symbol must be *glossed* at first use; this says how to *render* the symbol itself. They are independent — `min 互資訊 I(za;zb|Ep)` glosses the operator but still renders the variable as the bare ASCII string "za", which reads as a word, not "z subscript a".
+
+- **Real subscripts / superscripts, not flattened ASCII.** `za` is z-sub-a, `λmax` is λ-sub-max, `x²` is x-super-2. python-pptx supports run-level baseline shift (`<a:rPr baseline="-25000">` for subscript, `30000` for superscript) — use it, or Unicode subscript glyphs (`z` + `ₐ`) as a fallback. Typing "za" / "lambda_max" / "x^2" literally is a tell. (The exporter currently flattens these to ASCII — surfacing it here so a builder fixes the run rather than copying the flat form.)
+- **Variables italic, operators upright** (standard math typesetting). Variables `z`, `λ`, `x` italic; multi-letter operators `min`, `argmin`, `log`, `softmax` upright. `min` set in italic reads as m·i·n multiplied.
+- **Unicode math symbols, not ASCII stand-ins.** `≤ ≥ × · ‖·‖ λ ∑ ∫ ∇ ∈ →`, not `<=`, `>=`, `x`, `sum`, `integral`, `->`. The per-language font stack renders these; ASCII substitutes look like code, not math.
+- **Complex formulae → image, not text.** Multi-line equations, fractions, integrals / sums with limits, and matrices cannot be laid out in a pptx text run. Render them with LaTeX to a **transparent-background** PNG (per the Figures dark-mode rule in deck-design) and place via `figures=`. Don't fake a fraction by stacking "a / b" in two textboxes.
+- **One notation per concept across the whole deck.** If the paper writes `z_a`, every slide writes `z_a` — not `za` here and `z_adv` there. (Mirrors the paper-side notation-consistency rule.)
+
+**Anti-pattern:** a slide reading `min I(za;zb|Ep) s.t. ||za-zb||_2 <= eps` — ASCII subscripts, ASCII norm, ASCII `<=`, operator unnamed. **Pattern:** `min I(z_a; z_b | E_p)` with real subscripts + italic variables, `‖z_a − z_b‖₂ ≤ ε`, and the operator named ("minimise the mutual information …") per §8.
+
+### 13. Deck length and pacing
+
+`max_slides_per_paper` (default 25) is a **talk-time budget**, not an arbitrary cap. A defence / seminar audience absorbs ~1-1.5 minutes per content slide, so ~25 slides ≈ a 20-30 minute talk for one paper. Authoring past the cap produces a deck that can't be delivered in the slot — the cap exists so you prune at *authoring* time, not live.
+
+- **Prune to the takeaways, don't shrink to fit.** When a paper has more than fits, drop the weakest unit (an extra method sub-section, a secondary RQ) — do NOT cram everything onto fewer slides past the per-slide caps (§4); that just recreates the wall-of-text tell.
+- **A multi-paper survey divides the budget.** 5 papers in one 25-slide deck is ~5 slides each — a one-highlight-per-paper survey (cover / agenda / per-paper highlight / references), not a full thesis deck per paper. Set `max_slides_per_paper` to match the slot.
+- **Structural slides count toward the budget but aren't content.** Cover + agenda + dividers + Q&A + references (§11) are ~5-6 of the 25, leaving ~19 for findings — plan around that, don't discover it at slide 25.
+
+**Anti-pattern:** 40 dense slides "because the paper is rich" — undeliverable, and every slide over-caps. **Pattern:** the cap forces the one-assertion-per-slide discipline of §9; if the content doesn't fit, it wasn't prioritised, not "the cap is too small".
+
 ---
 
 ## LLM-as-agent vs Python pipeline (enrichment dispatch)
