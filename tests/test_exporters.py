@@ -1389,3 +1389,111 @@ def test_export_unknown_format_raises(sample_papers, tmp_path):
     )
     with pytest.raises(ExportError):
         export_collection(collection, options)
+
+
+# ---------------------------------------------------------------------------
+# Inline math rendering ($...$ -> real subscripts / superscripts + italic vars)
+# ---------------------------------------------------------------------------
+
+
+def _new_paragraph():
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    box = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(1))
+    return box.text_frame.paragraphs[0]
+
+
+def _baseline(run):
+    rpr = run._r.rPr  # noqa: SLF001
+    return rpr.get("baseline") if rpr is not None else None
+
+
+def _near_white():
+    from pptx.dml.color import RGBColor
+
+    return RGBColor(0xE5, 0xE7, 0xEB)
+
+
+def test_render_math_subscript_and_italic_variable():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "$z_a$", size_pt=18, colour=_near_white()
+    )
+    runs = para.runs
+    assert [r.text for r in runs] == ["z", "a"]
+    assert runs[0].font.italic is True        # single-letter variable z
+    assert _baseline(runs[0]) is None          # base char, normal baseline
+    assert _baseline(runs[1]) == "-25000"      # a rendered as subscript
+    # Dark-mode contract: every run carries an explicit colour.
+    assert all(r.font.color.rgb == _near_white() for r in runs)
+
+
+def test_render_math_superscript_and_multiletter_operator_upright():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "$min x^2$", size_pt=18, colour=_near_white()
+    )
+    by_text = {r.text: r for r in para.runs}
+    assert by_text["min"].font.italic is False   # multi-letter operator upright
+    assert by_text["x"].font.italic is True       # single-letter variable italic
+    assert _baseline(by_text["2"]) == "30000"     # superscript
+
+
+def test_render_math_braced_subscript():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "$z_{adv}$", size_pt=18, colour=_near_white()
+    )
+    sub = next(r for r in para.runs if r.text == "adv")
+    assert _baseline(sub) == "-25000"             # multi-char braced subscript
+
+
+def test_render_math_plain_text_is_one_normal_run():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "plain text, no math here", size_pt=18, colour=_near_white()
+    )
+    assert len(para.runs) == 1
+    assert para.runs[0].text == "plain text, no math here"
+    assert _baseline(para.runs[0]) is None
+
+
+def test_render_math_mixed_prose_and_span():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "loss $z_a$ over batch", size_pt=18, colour=_near_white()
+    )
+    assert para.runs[0].text == "loss "          # prose before the span
+    assert para.runs[-1].text == " over batch"    # prose after the span
+    assert any(_baseline(r) == "-25000" for r in para.runs)  # subscript inside
+
+
+def test_bullet_box_renders_math_subscript():
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    from thesisagents.exporters import pptx as pptx_mod
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    pptx_mod._add_bullet_box(  # noqa: SLF001
+        slide, name="body", bullets=["uses $z_a$ latent"],
+        left=Inches(1), top=Inches(1), width=Inches(8), height=Inches(2),
+        font_pt=16,
+    )
+    para = slide.shapes[0].text_frame.paragraphs[0]
+    assert any(_baseline(r) == "-25000" for r in para.runs)  # subscript rendered
+    assert all(r.font.color.rgb is not None for r in para.runs)  # dark-mode contract

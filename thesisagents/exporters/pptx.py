@@ -1308,6 +1308,112 @@ def _add_horizontal_rule(slide, *, top) -> None:
     line.line.width = Pt(0.75)
 
 
+# ---------------------------------------------------------------------------
+# Inline math rendering. Authoring marks math with $...$; inside it, `_x` /
+# `_{xy}` render as a real subscript and `^x` / `^{xy}` as a superscript (via
+# the run's OOXML `baseline` attribute, since python-pptx has no Font.subscript),
+# and a single-letter token (a variable like z / λ / I) is italicised while a
+# multi-letter word (an operator like min / log / softmax) stays upright. See
+# slide-deck-rules §12. Plain `_` outside `$...$` (file names, prose) is left
+# alone — only $-delimited spans are parsed.
+# ---------------------------------------------------------------------------
+_SUBSCRIPT_BASELINE = -25000
+_SUPERSCRIPT_BASELINE = 30000
+_MATH_DELIM = re.compile(r"\$([^$]+)\$")
+
+
+def _set_run_baseline(run, baseline: int) -> None:
+    """Shift a run's baseline (1/1000 of a percent): negative = subscript,
+    positive = superscript. python-pptx exposes no Font.subscript, so set the
+    OOXML attribute on the run's character properties directly."""
+    run._r.get_or_add_rPr().set("baseline", str(baseline))  # noqa: SLF001
+
+
+def _add_math_run(
+    paragraph, text: str, *, size_pt: int, colour: RGBColor,
+    bold: bool, italic: bool = False, baseline: int = 0,
+):
+    """Append one styled run. Always sets an explicit colour (dark-mode
+    contract — a run with ``color.rgb = None`` renders black on the dark slide
+    and can't be swapped by the post-pass)."""
+    run = paragraph.add_run()
+    run.text = text
+    run.font.size = Pt(size_pt)
+    run.font.bold = bold
+    run.font.italic = italic
+    run.font.color.rgb = colour
+    if baseline:
+        _set_run_baseline(run, baseline)
+    return run
+
+
+def _math_tokens(span: str):
+    """Tokenise an inline-math string into (kind, text): ``sub`` / ``sup`` for
+    ``_x`` / ``_{xy}`` / ``^x`` / ``^{xy}``, ``word`` for a letter run, ``char``
+    for anything else."""
+    i, n = 0, len(span)
+    while i < n:
+        c = span[i]
+        if c in "_^" and i + 1 < n:
+            j = i + 1
+            if span[j] == "{":
+                end = span.find("}", j)
+                if end == -1:
+                    content, i = span[j + 1:], n
+                else:
+                    content, i = span[j + 1:end], end + 1
+            else:
+                content, i = span[j], j + 1
+            yield ("sub" if c == "_" else "sup"), content
+        elif c.isalpha():
+            j = i
+            while j < n and span[j].isalpha():
+                j += 1
+            yield "word", span[i:j]
+            i = j
+        else:
+            yield "char", c
+            i += 1
+
+
+def _render_math_span(paragraph, span: str, *, size_pt: int, colour: RGBColor, bold: bool) -> None:
+    """Render one ``$...$`` inner string with real sub/superscripts and italic
+    single-letter variables (multi-letter operators like ``min`` stay upright)."""
+    common = {"size_pt": size_pt, "colour": colour, "bold": bold}
+    for kind, text in _math_tokens(span):
+        if kind == "sub":
+            _add_math_run(paragraph, text, baseline=_SUBSCRIPT_BASELINE, **common)
+        elif kind == "sup":
+            _add_math_run(paragraph, text, baseline=_SUPERSCRIPT_BASELINE, **common)
+        elif kind == "word":
+            _add_math_run(paragraph, text, italic=(len(text) == 1), **common)
+        else:
+            _add_math_run(paragraph, text, **common)
+
+
+def _render_math_paragraph(
+    paragraph, text: str, *, size_pt: int, colour: RGBColor, bold: bool = False,
+) -> None:
+    """Fill ``paragraph`` with runs, rendering ``$...$`` spans as math. Plain
+    text outside ``$...$`` becomes one run. Use instead of ``paragraph.text =
+    ...`` wherever a string may contain math notation.
+
+    Example: ``_render_math_paragraph(p, "loss $I(z_a;z_b)$", ...)`` yields
+    "loss " + I(italic) + "(" + z(italic) + a(subscript) + ";" + … .
+    """
+    paragraph.clear()
+    pos = 0
+    for m in _MATH_DELIM.finditer(text):
+        if m.start() > pos:
+            _add_math_run(paragraph, text[pos:m.start()], size_pt=size_pt, colour=colour, bold=bold)
+        _render_math_span(paragraph, m.group(1), size_pt=size_pt, colour=colour, bold=bold)
+        pos = m.end()
+    if pos < len(text):
+        _add_math_run(paragraph, text[pos:], size_pt=size_pt, colour=colour, bold=bold)
+    if not paragraph.runs:
+        _add_math_run(paragraph, "", size_pt=size_pt, colour=colour, bold=bold)
+
+
 def _add_textbox(
     slide, *, name: str, text: str, left, top, width, height,
     font_pt: int, bold: bool = False, colour: RGBColor | None = None,
@@ -1352,18 +1458,13 @@ def _add_bullet_box(
         return
     for index, bullet in enumerate(bullets):
         paragraph = text_frame.paragraphs[0] if index == 0 else text_frame.add_paragraph()
-        paragraph.text = f"• {bullet}"
         paragraph.alignment = PP_ALIGN.LEFT
-        for run in paragraph.runs:
-            run.font.size = Pt(font_pt)
-            # ALWAYS set the run colour explicitly. A run with
-            # ``font.color.rgb = None`` inherits the theme's body-text
-            # colour (which renders as black) and the dark-mode
-            # post-pass cannot swap it because there's no source RGB
-            # to look up in the mapping. See deck-design.md
-            # "Dark-mode contract" — every text-adding helper sets a
-            # palette colour, no exceptions.
-            run.font.color.rgb = _BRAND_DARK
+        # Render via _render_math_paragraph so $...$ spans become real
+        # subscripts / superscripts + italic variables; a plain bullet is one
+        # run. It sets an explicit _BRAND_DARK colour on every run (dark-mode
+        # contract — a None-coloured run renders black on the dark slide and the
+        # post-pass can't swap it). See deck-design.md "Dark-mode contract".
+        _render_math_paragraph(paragraph, f"• {bullet}", size_pt=font_pt, colour=_BRAND_DARK)
 
 
 def _add_footer(slide, text: str) -> None:
