@@ -1497,3 +1497,53 @@ def test_bullet_box_renders_math_subscript():
     para = slide.shapes[0].text_frame.paragraphs[0]
     assert any(_baseline(r) == "-25000" for r in para.runs)  # subscript rendered
     assert all(r.font.color.rgb is not None for r in para.runs)  # dark-mode contract
+
+
+def test_append_math_runs_preserves_existing_runs_and_renders_math():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._add_math_run(  # noqa: SLF001 — pre-existing label run
+        para, "Acc: ", size_pt=12, colour=_near_white(), bold=False
+    )
+    pptx_mod._append_math_runs(  # noqa: SLF001 — append value, don't clear
+        para, "$z_a$", size_pt=14, colour=_near_white(), bold=True
+    )
+    assert para.runs[0].text == "Acc: "                       # label not cleared
+    assert any(_baseline(r) == "-25000" for r in para.runs)    # subscript appended
+
+
+def test_append_math_runs_plain_value_is_one_upright_run():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._append_math_runs(  # noqa: SLF001
+        para, "78% F1", size_pt=14, colour=_near_white(), bold=True
+    )
+    # A KPI value with no $ stays a single run — crucially the "F" is NOT
+    # italic-ised (math italic only applies inside $...$).
+    assert len(para.runs) == 1
+    assert para.runs[0].text == "78% F1"
+    assert para.runs[0].font.italic is not True
+
+
+def test_table_cell_renders_math_subscript():
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    from thesisagents.exporters import pptx as pptx_mod
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    pptx_mod._add_table(  # noqa: SLF001
+        slide,
+        rows=[["Method", "Loss"], ["Ours", "$z_a$"]],
+        left=Inches(1), top=Inches(1), width=Inches(8), height=Inches(2),
+        col_widths=[Inches(4), Inches(4)],
+    )
+    table = next(s.table for s in slide.shapes if getattr(s, "has_table", False))
+    math_runs = [r for p in table.cell(1, 1).text_frame.paragraphs for r in p.runs]
+    assert any(_baseline(r) == "-25000" for r in math_runs)   # "$z_a$" subscript
+    # A plain header cell stays upright with no baseline shift.
+    hdr_runs = [r for p in table.cell(0, 0).text_frame.paragraphs for r in p.runs]
+    assert hdr_runs and all(_baseline(r) is None for r in hdr_runs)

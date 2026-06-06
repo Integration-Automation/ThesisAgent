@@ -1402,6 +1402,18 @@ def _render_math_paragraph(
     "loss " + I(italic) + "(" + z(italic) + a(subscript) + ";" + … .
     """
     paragraph.clear()
+    _append_math_runs(paragraph, text, size_pt=size_pt, colour=colour, bold=bold)
+    if not paragraph.runs:
+        _add_math_run(paragraph, "", size_pt=size_pt, colour=colour, bold=bold)
+
+
+def _append_math_runs(
+    paragraph, text: str, *, size_pt: int, colour: RGBColor, bold: bool = False,
+) -> None:
+    """Append math-aware runs for ``text`` to ``paragraph`` **without clearing
+    it** — ``$...$`` spans render as math, plain segments as one run each. Use
+    to add a math-aware value to a paragraph that already has runs (e.g. a KPI
+    value after its grey label). A string with no ``$`` adds exactly one run."""
     pos = 0
     for m in _MATH_DELIM.finditer(text):
         if m.start() > pos:
@@ -1410,8 +1422,6 @@ def _render_math_paragraph(
         pos = m.end()
     if pos < len(text):
         _add_math_run(paragraph, text[pos:], size_pt=size_pt, colour=colour, bold=bold)
-    if not paragraph.runs:
-        _add_math_run(paragraph, "", size_pt=size_pt, colour=colour, bold=bold)
 
 
 def _add_textbox(
@@ -1596,16 +1606,16 @@ def _add_kpi_lines(
         run_label.text = f"• {label}: "
         run_label.font.size = Pt(_BODY_PT)
         run_label.font.color.rgb = _BRAND_GREY
-        run_value = paragraph.add_run()
-        run_value.text = str(value)
-        run_value.font.size = Pt(_BODY_PT + 2)
-        run_value.font.bold = True
-        # Teal accent for KPI numbers — they're the slide's punch line
-        # (a 2.3x speedup, a 78% F1, etc.). Bold + teal makes them pop
-        # without using red, which would read as error/warning. Was red,
-        # then briefly navy; teal restores a real emphasis colour.
-        # See deck-design.md "No red text" contract.
-        run_value.font.color.rgb = _BRAND_HIGHLIGHT
+        # Value runs are math-aware ($...$ -> real sub/superscripts), so a KPI
+        # like "$λ_max$=0.1" renders with a real subscript, while a plain
+        # "78% F1" stays one upright run (no $, so the "F" isn't italic-ised).
+        # Teal accent: KPI numbers are the slide's punch line (a 2.3x speedup,
+        # a 78% F1, etc.). Bold + teal makes them pop without red, which would
+        # read as error/warning. See deck-design.md "No red text" contract.
+        _append_math_runs(
+            paragraph, str(value),
+            size_pt=_BODY_PT + 2, colour=_BRAND_HIGHLIGHT, bold=True,
+        )
         if baseline:
             run_base = paragraph.add_run()
             run_base.text = f"   ({baseline_label}: {baseline})"
@@ -1654,7 +1664,6 @@ def _style_table_cell(cell, value: str, r: int, c: int) -> None:
     Split out from ``_add_table`` so the cognitive-complexity budget
     fits — borders + fills + font + alignment all live here.
     """
-    cell.text = value
     cell.vertical_anchor = MSO_ANCHOR.MIDDLE
     text_frame = cell.text_frame
     text_frame.word_wrap = True
@@ -1662,17 +1671,22 @@ def _style_table_cell(cell, value: str, r: int, c: int) -> None:
     text_frame.margin_right = Inches(0.1)
     text_frame.margin_top = Inches(0.05)
     text_frame.margin_bottom = Inches(0.05)
-    for paragraph in text_frame.paragraphs:
-        for run in paragraph.runs:
-            run.font.size = Pt(_TABLE_PT)
-            if r == 0:
-                run.font.bold = True
-                run.font.color.rgb = _TABLE_HEADER_FG
-            else:
-                run.font.color.rgb = _BRAND_DARK
-                if c == 0:
-                    # Row-label column gets a slightly heavier weight.
-                    run.font.bold = True
+    # Cell text style by position: the header row is bold on the header FG, data
+    # rows are _BRAND_DARK with the row-label column (c == 0) slightly heavier.
+    if r == 0:
+        cell_colour, cell_bold = _TABLE_HEADER_FG, True
+    else:
+        cell_colour, cell_bold = _BRAND_DARK, (c == 0)
+    # Math-aware so a comparison-table cell like "$z_a$" or "O($n^2$)" renders
+    # real sub/superscripts; a plain cell is one run, exactly as before. Split
+    # on \n so a multi-line cell keeps its paragraphs (cell.text used to do this).
+    for line_index, line in enumerate(value.split("\n")):
+        paragraph = (
+            text_frame.paragraphs[0] if line_index == 0 else text_frame.add_paragraph()
+        )
+        _render_math_paragraph(
+            paragraph, line, size_pt=_TABLE_PT, colour=cell_colour, bold=cell_bold,
+        )
     _set_cell_fill(cell, r)
     _clear_cell_borders(cell)
     if r == 1:
