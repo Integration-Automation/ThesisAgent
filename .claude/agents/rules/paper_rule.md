@@ -1145,6 +1145,85 @@ stack of independently-edited paragraphs. Two requirements:
 
 ---
 
+## 時態規範 / Verb tense (HARD RULE)
+
+Academic English fixes verb tense by a section's **function**, and the wrong
+tense is one of the loudest "this wasn't written by a researcher" tells — a
+reviewer notices it in the first paragraph. The Abstract rule (§Abstract) says
+"present perfect or past"; this is the whole-document map. 中文無時態變化，但
+「動機用現在式陳述仍存在的問題、方法與實驗用過去式敘述已完成的工作、結論用
+現在式陳述成立的事實」這個**語氣對應**仍然適用。
+
+**Per-section tense (English):**
+
+| Where | Tense | Example | Why |
+|---|---|---|---|
+| Abstract / Intro — what *you did* | past / present perfect | "We **propose** a method and **evaluated** it"; "experiments **showed**…" | reports completed work |
+| Background, Related Work — established facts | present | "Transformers **dominate** NLP"; "X **is** widely used" | general truths hold now |
+| Problem / research gap | present | "no existing method **handles** Y" | the gap exists now |
+| Methodology — what your artefact *does* | present | "the encoder **splits** the prompt into za / zb" | describing the system's behaviour |
+| Methodology — what you *did* to build / run it | past | "we **trained** on 3 GPUs"; "we **set** λ = 0.1" | completed actions |
+| Experiment — setup + results | past | "we **evaluated** on three benchmarks"; "APD **reached** 92.3% ADA" | completed measurements |
+| Result analysis / Conclusion — interpretation | present | "this **shows** that…"; "our method **improves**…" | the conclusion holds now |
+| Future Work | future / modal | "we **plan to**…"; "this **could**…" | not yet done |
+
+**Why it matters:** mixing tenses *inside one paragraph* (e.g. "We **propose** a
+method and **evaluated** it and it **will show** gains") reads as machine-
+stitched. Choose the tense from the section's function, not sentence by sentence.
+
+**Anti-pattern:** "In this paper we **will present** a method… Experiments
+**show**… We **concluded**…" — future in the abstract, present for completed
+experiments, past for a standing conclusion: three wrong choices in one breath.
+**Pattern:** "In this paper we **present** a method… Experiments **showed**…
+We **conclude**…"
+
+**Audit checklist:**
+- [ ] 摘要與緒論描述「我做了什麼」用過去式/完成式，**不**用 will。
+- [ ] 同一段落內時態一致（除非語意確實跨越「已完成的動作 vs 普遍成立的事實」）。
+- [ ] 只有 Future Work 用 will / could / plan to；其餘章節不用 will 描述已完成的實驗。
+
+---
+
+## 數字與統計呈現 / Reporting numbers and statistics (HARD RULE)
+
+The "no fabrication" rule (§不謊造) governs *whether* a number is real; this
+rule governs *how* a real number is written. Sloppy number formatting is both a
+credibility tell and a back-door to accidental fabrication — an over-precise
+digit invents data you don't actually have.
+
+1. **Significant figures match the measurement.** Report 92.3%, not 92.31748% —
+   three sig-figs is plausible for an accuracy over a few-thousand-example
+   benchmark; six implies a precision you cannot have. Never paste a raw float
+   straight from a `.log`.
+2. **Percentage point vs percent.** "Accuracy rose from 88% to 92%" is **+4
+   percentage points (pp)**, NOT "+4%" (which reads as 88 × 1.04 = 91.5%) and
+   NOT "a 4% improvement" unless you mean *relative*. State which one. (Mirrors
+   the CLAUDE.md prose convention; it is a top reviewer nit.)
+3. **p-values:** give the actual value (p = 0.003), not just "p < 0.05", and
+   never "p = 0.000" (write p < 0.001). A p-value without the test name and
+   sample size is unreviewable.
+4. **Pair an effect with its uncertainty** where the field expects it: mean ±
+   std, or a 95% CI. A bare "92.3% over 3 seeds" hides the variance that decides
+   whether a 0.4-pp lead is real.
+5. **Units, one per quantity, defined at first use.** Latency as "12.3 ms"
+   everywhere — not "0.0123 s" in one table and "12ms" in another. (See
+   §Technical terminology for first-use definition.)
+6. **Round consistently within a table column** — every entry in an "ADA (%)"
+   column to the same number of decimals.
+
+**Anti-pattern:** "Our method is 4% better (accuracy 92.31748%, p = 0.000)." —
+relative/absolute ambiguous, false precision, impossible p-value.
+**Pattern:** "Our method improves accuracy by 4.0 pp (88.3% → 92.3%, mean of 3
+seeds; paired t-test, n = 3000, p = 0.003)."
+
+**Audit checklist:**
+- [ ] 每個百分比都標明是「百分點 (absolute)」還是「相對 (%)」。
+- [ ] 沒有從 .log 直接貼出的超長浮點數；有效數字與量測精度相符。
+- [ ] p 值寫實際值，不寫 p = 0.000；附上檢定方法與樣本數。
+- [ ] 同一表格欄位的小數位數一致；單位全文統一且首次出現即定義。
+
+---
+
 ## 字型規範 / Typography (HARD RULE)
 
 **EN.** Every academic paper / thesis produced through this project — whether

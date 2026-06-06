@@ -212,6 +212,15 @@ For each paper that is on-topic for the user's actual intent (see "Off-topic pap
 
 7. **Run the script.** `py scripts/regen_<...>.py`. Confirm each `.pptx` written.
 
+### Field-content quality bar (apply the deck + paper rules at authoring time)
+
+The fields you write here are what `slide-deck-rules` and `paper_rule` later govern — satisfy those rules **as you author**, not after the deck renders:
+
+- **Each slide-driving string is an assertion, not a topic label** (slide-deck-rules §9). Write a `rq_results` question / `pain_points` sub-head / contribution heading as a claim — "Disentangling za / zb cuts adversarial leakage to near-zero", not "Method". One message per unit: never fold two RQs into one `rq_results` block to save a slide.
+- **Pick the field that fits the data** (slide-deck-rules §10). A trend / many-value comparison goes in a `technique_table` / `rq_results.table` (→ table) or a `figures` entry (→ chart); the headline numbers go in `headline_metrics` (→ KPI callout); qualitative / sequential points go in the bullet fields. Don't cram a 5×4 result grid into prose bullets.
+- **Numbers follow the reporting rules** (paper_rule §數字與統計呈現). `headline_metrics` values use measurement-appropriate significant figures (92.3%, not 92.31748%), label percentage-points vs relative %, and report p-values as actual values — and never invent a digit the PDF doesn't state.
+- **No fabrication** (paper_rule §不謊造). Every number / RQ result / limitation must come from the PDF you read. If the paper doesn't report it, leave the field empty — the exporter skips empty fields, which is correct.
+
 ## After all papers are authored
 
 Delegate two audits before handing the deck back — these are non-negotiable:

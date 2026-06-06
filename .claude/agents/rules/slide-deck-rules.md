@@ -111,6 +111,33 @@ When changing the deck or i18n, delegate to the `slide-overflow-check` subagent 
 
 **Interaction with content caps:** glosses cost chars and may push a bullet over `_BULLET_MAX_CHARS = 96`. When they do, the priority order from `paper_rule`'s tech-term rule applies: keep the gloss, trim adjacent filler, never drop the gloss.
 
+### 9. One message per slide — assertion headline + evidence (HARD)
+
+A thesis-style deck is read by an audience watching a talk, not by someone reading a document. Each content slide must carry **one** takeaway, stated *as the title* (an **assertion** — a full claim, not a topic label), with the body acting as the **evidence** for that claim. This is the single biggest lever on whether a deck reads as "designed for a defence" vs "a paper dumped onto slides", and — unlike the geometry rules — it binds the **authoring** step (`paper-summary-author` / `regen_*.py`), not `PptxExporter`.
+
+- **Assertion title, not topic label.** The title is a sentence-shaped claim the audience should remember.
+  - ❌ topic label: "Results", "Method", "Evaluation"
+  - ✅ assertion: "APD beats the 4 SOTA defences by ≥ 5.6 pp", "Disentangling za / zb cuts adversarial leakage to near-zero", "Distillation makes detection 2.3× faster"
+- **One message.** If a slide needs two unrelated takeaways, it is two slides. The `PaperSummary` schema already encodes one-message units — each `headline_metrics` row, each `rq_results` block, each `pain_points` quadrant. Do NOT merge two RQs onto one slide to save space; `max_slides_per_paper` (default 25) exists so you don't have to.
+- **Body = evidence for the title.** A KPI callout, one chart, one comparison table, or 3-5 tight bullets that *support the assertion* — never a wall of text restating it. If the body doesn't back the title's claim, one of the two is wrong.
+
+**Why:** a slide titled "Method" with eight bullets forces the audience to find the point themselves; a slide whose title *is* the point, evidenced below it, lands in five seconds. The exporter renders whatever the summary provides, so the assertion has to be authored into the slide's `title` / `subhead`, not left as a section label.
+
+**Anti-pattern:** title "Experiment Results", body = 9 bullets spanning 3 different findings. **Pattern:** three slides, each titled with one finding, each body = that finding's KPI / table / chart.
+
+### 10. Choose the evidence form that fits the data (HARD)
+
+§9 says the body is *evidence*; this says which **form** it takes. Authoring a deck means picking, per slide, between a chart, a table, a KPI callout, and bullets — the wrong choice buries the point even when the content is right.
+
+- **Trend / comparison across many values → chart.** "ADA across 3 benchmarks × 5 defences" is a grouped bar chart, not a 15-cell table the speaker reads aloud. The eye sees "ours is highest" instantly; it cannot from a number grid.
+- **A few exact numbers that *are* the point → KPI callout.** "92.3% ADA · +5.6 pp · 12.3 ms" as three big bold numbers, not a sentence. `headline_metrics` is exactly this.
+- **Structured many-row comparison where exact cells matter → table.** Literature positioning (§2.3) and per-RQ result tables, because the reader compares specific cells. Keep them ≤ ~5 rows on a slide (overflow rule §7).
+- **Qualitative / sequential points → 3-5 bullets.** Pain-points, method steps, limitations — not numbers.
+
+**Why:** the exporter already supports figures (`figures`) and tables (`paper_tables` / `rq_results`) — a deck that renders every result as bullets leaves the exporter's strongest slide types unused and makes the audience do the comparison in their heads.
+
+**Anti-pattern:** a 5×4 accuracy table read cell-by-cell (should be a bar chart); or a single 92.3% drowned in a paragraph (should be a KPI). **Pattern:** chart for "who wins", table for "exact cells", KPI for "the one number", bullets for "the qualitative points".
+
 ---
 
 ## LLM-as-agent vs Python pipeline (enrichment dispatch)
