@@ -138,6 +138,20 @@ A thesis-style deck is read by an audience watching a talk, not by someone readi
 
 **Anti-pattern:** a 5×4 accuracy table read cell-by-cell (should be a bar chart); or a single 92.3% drowned in a paragraph (should be a KPI). **Pattern:** chart for "who wins", table for "exact cells", KPI for "the one number", bullets for "the qualitative points".
 
+### 11. Structural slides (cover / agenda / divider / Q&A / references)
+
+Content slides carry the findings (§9); **structural** slides carry the *navigation*. They have different jobs, and over-filling them is a common "paper dumped onto slides" tell — a divider with eight bullets, or a references slide pasting a whole BibTeX file. Each structural slide has exactly **one** navigational job.
+
+- **Cover** (`_cover_title` + `_cover_subtitle`). Title = the paper's title run through `_cover_title` (title-cased, period / locale suffix added) — NEVER the raw search query (deck-design anti-pattern). Subtitle = authors · year · venue. For a multi-paper survey deck the cover title is the *survey topic*, not paper #1's title. Presenter name / affiliation / date belong here (a defence), not repeated on every slide.
+- **Agenda** (`_agenda_line`). A multi-paper deck lists each paper as one pointer line so the audience can place each paper. A single-paper deck does **not** need an agenda — go cover → content; an agenda for one paper is filler. Agenda lines are pointers, never content (no abstracts on the agenda).
+- **Section divider** (the larger top accent band, deck-design). A divider is a *cognitive reset* between topics — section name + number, nothing else. Resist putting the next section's first bullet on it. Its whole value is telling the audience "we've moved from Method to Results".
+- **Q&A / closing.** One slide, minimal — "Q&A" or a thanks line + contact. It is NOT a second conclusion; the takeaways already landed on the findings slides. Don't restate results here.
+- **References.** List ONLY the works the deck actually cites (the comparison table, the SOTA baselines), numbered to match the in-deck citation markers — not a full bibliography dump. Split across slides when it overflows `FOOTER_GUARD` (§7). Reference text may be small but must stay readable (contrast contract) and on-brand grey, not bright.
+
+**Why:** structural slides are exactly where "a paper dumped onto slides" leaks back in — a 40-entry references slide, an agenda restating abstracts, a divider doubling as a content slide. Keep each to its one navigational job.
+
+**Anti-pattern:** a references slide with 35 BibTeX entries in 9pt overflowing the footer; an agenda whose lines are one-sentence paper summaries. **Pattern:** references = the ~8 works actually cited, numbered [1]..[8], split across 2 slides if needed; agenda = "Paper N of M: <short title>" pointers.
+
 ---
 
 ## LLM-as-agent vs Python pipeline (enrichment dispatch)
