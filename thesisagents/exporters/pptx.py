@@ -158,6 +158,11 @@ _ACCENT_LEFT_WIDTH = Inches(0.4)
 # Dark-mode palette (post-build recolour, opt-in via
 # ``ExportOptions.dark_mode``).
 _DARK_SLIDE_BG = RGBColor(0x12, 0x15, 0x1B)
+# Near-white body-text colour for dark mode. The post-build recolour pass
+# promotes any run lacking an explicit colour (theme inheritance → renders
+# black on the dark slide) to this, and it's the swap target for _BRAND_DARK
+# body text in _LIGHT_TO_DARK_TEXT below. Named so the value lives in one place.
+_DARK_BODY_TEXT = RGBColor(0xE5, 0xE7, 0xEB)
 
 # Light-palette RGB → dark-palette RGB mapping for TEXT colours. Keys
 # are 3-tuples (R, G, B) since python-pptx's RGBColor is tuple-comparable
@@ -200,6 +205,20 @@ _TABLE_HEADER_FG = RGBColor(0xFF, 0xFF, 0xFF)
 _TABLE_ROW_ALT = RGBColor(0xF4, 0xF6, 0xF9)
 _TABLE_DIVIDER = RGBColor(0xD0, 0xD7, 0xE2)  # row divider — soft grey-blue
 _TABLE_HEADER_RULE = RGBColor(0x1F, 0x3A, 0x66)  # heavy nav rule under header
+
+
+def _rgb_key(rgb) -> tuple[int, int, int]:
+    """An RGBColor as a hashable ``(r, g, b)`` int tuple — the key type the
+    light→dark palette maps above are indexed by. Centralises the
+    ``(int(rgb[0]), int(rgb[1]), int(rgb[2]))`` idiom used by every swap pass."""
+    return (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+
+
+def _rgb_hex(rgb) -> str:
+    """6-char uppercase hex (no ``#``) for an RGBColor or ``(r, g, b)`` tuple —
+    the form OOXML's ``<a:srgbClr val=...>`` attribute expects."""
+    return f"{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}"
+
 
 # ---------------------------------------------------------------------------
 # Abstract segmentation (fallback when summary is absent / lightweight only)
@@ -1741,8 +1760,7 @@ def _set_cell_border(cell, edge: str, width, colour: RGBColor) -> None:
         nsmap=None,
     )
     solid = ln.makeelement(qn("a:solidFill"), {}, nsmap=None)
-    rgb_hex = f"{colour[0]:02X}{colour[1]:02X}{colour[2]:02X}"
-    solid.append(solid.makeelement(qn("a:srgbClr"), {"val": rgb_hex}, nsmap=None))
+    solid.append(solid.makeelement(qn("a:srgbClr"), {"val": _rgb_hex(colour)}, nsmap=None))
     ln.append(solid)
     ln.append(ln.makeelement(qn("a:prstDash"), {"val": "solid"}, nsmap=None))
     ln.append(ln.makeelement(qn("a:round"), {}, nsmap=None))
@@ -2091,8 +2109,7 @@ def _swap_fill(shape_or_cell) -> None:
         return
     if rgb is None:
         return
-    key = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
-    new = _LIGHT_TO_DARK_FILL.get(key)
+    new = _LIGHT_TO_DARK_FILL.get(_rgb_key(rgb))
     if new is None:
         return
     fill.solid()
@@ -2112,18 +2129,16 @@ def _swap_text_colors(shape_or_cell) -> None:
     text_frame = getattr(shape_or_cell, "text_frame", None)
     if text_frame is None:
         return
-    near_white = RGBColor(0xE5, 0xE7, 0xEB)
     for paragraph in text_frame.paragraphs:
         for run in paragraph.runs:
             try:
                 rgb = run.font.color.rgb
             except (AttributeError, ValueError, TypeError):
                 rgb = None
-            if rgb is None or (int(rgb[0]), int(rgb[1]), int(rgb[2])) == (0, 0, 0):
-                run.font.color.rgb = near_white
+            if rgb is None or _rgb_key(rgb) == (0, 0, 0):
+                run.font.color.rgb = _DARK_BODY_TEXT
                 continue
-            key = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
-            new = _LIGHT_TO_DARK_TEXT.get(key)
+            new = _LIGHT_TO_DARK_TEXT.get(_rgb_key(rgb))
             if new is not None:
                 run.font.color.rgb = RGBColor(*new)
 
@@ -2155,4 +2170,4 @@ def _swap_cell_border_colors(cell) -> None:
         new = _LIGHT_TO_DARK_FILL.get(key)
         if new is None:
             continue
-        clr.set("val", f"{new[0]:02X}{new[1]:02X}{new[2]:02X}")
+        clr.set("val", _rgb_hex(new))
