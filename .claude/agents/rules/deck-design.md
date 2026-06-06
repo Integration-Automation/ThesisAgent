@@ -310,6 +310,30 @@ provided every slide ends up with:
   column is clearly numeric values, prefer right-align so units / digits
   line up. Out of scope for the v1 ship.)
 
+### Figures & charts (an "AI-generated" tell as loud as Calibri or black grids)
+
+The exporter inserts figures as PNGs via the `figures=` field (`_add_figure_image`); it does **not** draw native charts. So figure *quality* is an authoring responsibility — a default-matplotlib plot or a low-res screenshot undoes the brand discipline the rest of the deck earns.
+
+- **Dark-mode adaptation is mandatory.** The slide background is `_DARK_SLIDE_BG` (`#12151B`) by default. A white-background PNG dropped onto it shows a glaring white rectangle — the figure equivalent of `rgb=None` text on dark. Export plots with a **transparent background** (`savefig(..., transparent=True)`) and light foreground (axes / labels / lines in near-white or brand teal `#2DD4BF`), OR place the figure on a card whose fill has a `_LIGHT_TO_DARK_FILL` entry. Never a bare white PNG on the dark slide.
+- **Strip chartjunk.** No default matplotlib grey panel, no spines on all four sides, no dense gridlines, no 3-D bars / pies, no drop shadows. Top + right spines off, at most one light horizontal gridline set. Data-ink first.
+- **Brand palette, not library defaults.** Series colours come from the deck palette (navy / teal / grey), never matplotlib's `C0` blue / `C1` orange — default colours read as "pasted from a notebook". (Red stays banned here too, per the no-red contract.)
+- **Readable when projected.** Axis labels + tick labels + legend ≥ ~14pt *in the rendered figure* (a 6pt matplotlib label is unreadable from row 10). Label every axis with its quantity AND unit ("Latency (ms)"), per `paper_rule`'s number-reporting rule.
+- **Export at print DPI.** `dpi >= 150` (200 for line-heavy plots). A 72-DPI screenshot pixelates on a projector.
+- **Paper screenshots are a last resort.** Re-plotting your own data beats screenshotting the paper's figure — a screenshot carries the paper's off-brand fonts / colours, JPEG artefacts, and usually a white background. Crop tightly; only screenshot when re-plotting is impossible (e.g. a qualitative architecture diagram).
+
+**Anti-pattern:** `plt.savefig("fig.png")` with defaults → grey panel, blue/orange series, 6pt labels, white border, dropped onto the dark slide. **Pattern:** `savefig("fig.png", dpi=200, transparent=True, bbox_inches="tight")` with teal / navy series, 14pt labels, top + right spines removed.
+
+### Visual hierarchy & focal point
+
+Each slide needs one element the eye lands on first — the takeaway from `slide-deck-rules` §9. Size, weight, colour and position build that hierarchy; without it every element competes and the audience reads top-to-bottom hunting for the point.
+
+- **One focal point per slide.** The biggest / boldest / most-saturated element *is* the takeaway — usually the KPI value (teal, bold, large) or the winning row of a table. Exactly one.
+- **Hierarchy by size, not just order.** Title > headline number > evidence > caption, each visibly smaller. A KPI value at the same size as its label has no hierarchy. Caption / provenance text uses `_BRAND_GREY` so it recedes — the palette already encodes this (teal emphasises, grey recedes); don't invert it.
+- **Whitespace is not wasted space.** A slide filled edge-to-edge has no focal point. Leave margins and let the KPI block breathe. The `FOOTER_GUARD` (7.05") and per-slide content caps exist partly so content can't sprawl across the whole canvas.
+- **Reading order follows the layout.** Assertion title on top, evidence beneath it, provenance / caption last. Don't bury the conclusion in a footnote while the setup sits in the headline.
+
+**Anti-pattern:** title, three KPIs, a table and a caption all the same size and colour — no focal point, the eye wanders. **Pattern:** one KPI value ~2× the size of its label in teal, the table muted beneath it, caption small and grey.
+
 ## Anti-patterns (instant "AI-generated" tells)
 
 - Plain `prs.slide_layouts[6]` (blank) with no programmatic accent. Every
