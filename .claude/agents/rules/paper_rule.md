@@ -448,6 +448,38 @@ If after step 3 the budget still won't close, surface the trade-off to the user 
 
 ---
 
+## Plain-language comprehensibility — a non-expert must grasp the point (HARD) / 深入淺出：非專業讀者也要看得懂重點（HARD）
+
+The sibling Technical-terminology rule (above) makes each individual **term** understandable, this rule makes the whole **argument** understandable. First-use glossing fixes the word level, this fixes the paragraph-and-section level: a reader who is NOT in the sub-field — an adjacent-discipline 口試委員, a final-year undergraduate, a reviewer skimming many submissions, a family member sitting in on a defence — must be able to follow what problem is being solved, roughly how, and why the result matters. **Depth is kept in full**, every dense technical passage is simply accompanied by a plain-language "what this means / why it matters" layer, so comprehension never REQUIRES prior expertise. Accessibility is **additive to** depth, never a replacement for it (深入 AND 淺出, not 淺 instead of 深). / 上一條技術名詞規則處理的是「單一名詞」看不看得懂，本條處理的是「整段論述」看不看得懂。首次解釋修的是字詞層級，本條修的是段落與章節層級：非該子領域之讀者（相鄰領域口試委員、大四學生、快速翻閱之審稿人、旁聽答辯的家人）都必須能跟上「在解什麼問題、大致怎麼做、結果為何重要」。**技術深度完整保留**，只是在每段艱深技術旁，加一層白話的「這是什麼意思／為何重要」，使理解不必以先備專業為前提。淺出是**疊加在**深入之上，而非取代深入（深入 AND 淺出，不是用淺取代深）。
+
+**Why this is a separate HARD rule.** Depth and accessibility are not in tension — the project's existing first-use-gloss rule already proves the stance (a term must both appear AND be explained). This section extends the very same stance from the **term level** to the **argument level**. The single most common review complaint on this project's generated papers and decks is 「技術上對，但跨領域／外行委員抓不到重點」, the content is technically correct yet the point does not land for anyone outside the sub-field. A correct argument that only the author's lab can parse fails its real audience (committee + reviewers + broader-community readers). / **為何另立一條 HARD 規則。** 深入與淺出並不衝突，本專案既有的首次解釋規則已經證明了立場（名詞必須出現「且」必須解釋）。本條把同一立場從**名詞層級**延伸到**論述層級**。本專案產生的論文與簡報，最常見的審閱抱怨就是「技術上對，但跨領域／外行委員抓不到重點」，內容技術上正確，但對子領域外的人重點傳不到。一個只有作者實驗室看得懂的正確論述，對其真正的讀者（口試委員＋審稿人＋廣義社群讀者）而言是失敗的。
+
+### Sub-rules / 子規則
+
+1. **Intuition before formalism / 先講直覺，再上公式或術語.** Before a formula, algorithm block, or dense passage, state in one plain everyday-language sentence what it accomplishes and why. / 在公式、演算法區塊或艱深段落之前，先用一句白話講清楚它做到什麼、為什麼要這樣做。
+   - Worked example (zh-tw): before the formula 「minimise the mutual information $I(z_a;z_b\mid E_p)$」, first write the plain lead-in 「我們要讓對抗訊號與正常訊號在表示空間裡盡量不重疊，攻擊者就無法藏在正常請求裡」, **then** give the formula. Math notation stays wrapped in `$...$` per the paper/deck math rules. / 範例：在公式之前，先寫白話引導句，再列出公式，數學記號仍以 `$...$` 包覆。
+2. **Every section answers "so what" in plain language / 每節都要有白話的「所以呢」.** Each section carries a one-line plain takeaway a non-expert could repeat verbatim. / 每節都要有一句非專家能照樣複述的白話結論。
+   - Not 「達到 92.3% ADA」 but 「我們的方法比現有最好的防禦多擋下約 6% 的攻擊，速度也更快」. / 不是「達到 92.3% ADA」，而是「我們的方法比現有最好的防禦多擋下約 6% 的攻擊，速度也更快」。
+3. **Analogy or concrete micro-example for the single hardest concept / 用類比或具體小例子解釋最難的概念.** One per method, used sparingly, never decorative. / 每個方法最多一個，點到為止，不可為了好看而加。
+4. **Quantities given meaning, not just magnitude / 數字要給意義.** A non-expert cannot calibrate a bare number, so anchor it to the real world. / 非專家無法校準一個赤裸的數字，要把它錨定到現實感受。
+   - 「延遲 12.3 ms」 → 「延遲 12.3 ms（約眨眼的 1/30，使用者幾乎無感）」, 「F1 0.87」 → 「F1 0.87（每 100 次判斷約 87 次正確）」. This **complements** the number-reporting rule (`§ 數字與統計呈現 / Reporting numbers and statistics`, which governs significant figures, pp-vs-% and p-values) by adding the real-world anchor on top of the correctly-formatted number. / 此規則在「數字呈現」規則（管有效數字、pp 對 %、p 值）之上，再加一層現實世界的錨點。
+5. **Self-test (audit) / 自我檢核.** After each section, ask: could a smart reader from a DIFFERENT department say (a) what problem this solves, (b) roughly how, (c) why the result matters — WITHOUT Googling? If not, add the plain layer. / 寫完每節後自問：來自「不同系所」的聰明讀者能否在不 Google 的前提下講出（a）這解了什麼問題、（b）大致怎麼做、（c）結果為何重要？不能，就補上白話層。
+
+### Anti-patterns / 反例（不可這樣寫）
+
+1. **Formula or algorithm with no plain lead-in** — the reader sees symbols and never learns the goal. / 公式或演算法前面沒有白話引導句，讀者只看到符號，始終不知道目標是什麼。
+2. **A bare number as the entire takeaway** (「92.3%」) with no real-world meaning attached. / 整段結論只丟一個赤裸數字（「92.3%」），沒有任何現實意義。
+3. **"Dumbing down" by deletion** — removing the rigorous statement and keeping only the hand-wave is the WRONG direction. Keep **both** the rigorous claim AND the plain layer. / 用刪除來「降低難度」，把嚴謹陳述刪掉、只留下含糊比喻，方向錯了。嚴謹宣稱與白話層**兩者都要留**。
+4. **Plain layer only in the Abstract and Introduction**, then pure jargon for §3–§5. Comprehensibility must hold section by section, not just at the top. / 白話層只出現在摘要與緒論，§3–§5 又退回純術語，深入淺出必須逐節成立，不是只在開頭做。
+
+### Cross-references / 交叉參照
+
+- Pairs with **Technical terminology — must include AND must explain** above: that rule is **term-level** comprehensibility, this rule is **argument-level** comprehensibility. / 與上方「技術名詞」規則成對：該條是**名詞層級**，本條是**論述層級**。
+- Builds on the number-reporting rule **§ 數字與統計呈現 / Reporting numbers and statistics (HARD RULE)**: that rule fixes how a number is formatted, sub-rule 4 here adds what the number means to a non-expert. / 承接「數字與統計呈現」規則：該條管數字怎麼寫，本條子規則 4 管這個數字對外行人代表什麼。
+- The slide-deck surface implements this same principle as **`slide-deck-rules §14`**. / 簡報面以 **`slide-deck-rules §14`** 落實同一原則。
+
+---
+
 ## Other recommendations / 論文其他建議
 
 ### Figures / 圖表

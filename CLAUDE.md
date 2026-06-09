@@ -97,8 +97,8 @@ Concretely:
 | Addition type | "Clear context" means | "Detailed explanation" means |
 |---|---|---|
 | Subagent rule | A **Why:** clause naming the past incident / failure mode the rule prevents. | At least one **example** of the rule applied + one **anti-pattern** showing how it fails. Rules without examples bit-rot. |
-| Paper / thesis paragraph | A topic sentence locating the paragraph in the larger argument (which section, which RQ, which contribution). | Every technical term defined at first use (see `paper_rule` "Technical terminology"), and every quantitative claim cited or shown in a table. |
-| Slide bullet | A sub-head that says what the slide as a whole is about. | Every acronym / math notation / library name glossed at first use (see `slide-deck-rules` §8 "Content clarity & first-use context"). |
+| Paper / thesis paragraph | A topic sentence locating the paragraph in the larger argument (which section, which RQ, which contribution). | Every technical term defined at first use (see `paper_rule` "Technical terminology"), every quantitative claim cited or shown in a table, and an argument-level plain-language layer so a non-expert grasps the point, not just the words (see `paper_rule` "Plain-language comprehensibility"). |
+| Slide bullet | A sub-head that says what the slide as a whole is about. | Every acronym / math notation / library name glossed at first use (see `slide-deck-rules` §8 "Content clarity & first-use context"), plus a plain-language takeaway the slide's whole point lands for a non-expert reading at presentation speed (see `slide-deck-rules` §14). |
 | Code helper | A docstring naming the boundary the helper guards and the failure mode it prevents. | Type hints + one usage example in either the docstring or a unit test. |
 
 **Why this is a top-level rule rather than buried in one subagent**: it
@@ -106,11 +106,17 @@ applies across every surface this project produces (rules, papers,
 slides, code) and has been the single most common review-cycle source of
 churn — "why does X exist?" / "what does Y do?" questions that should
 have been answered at write-time. The subagent-specific applications
-(`paper_rule` "Technical terminology", `slide-deck-rules` §8 "Content
-clarity & first-use context", `code-quality-reviewer` "docstring +
-example") all derive from this top-level principle. When in doubt about
-how to phrase an addition, default to "explain like the reader just
-joined the conversation".
+(`paper_rule` "Technical terminology" + "Plain-language
+comprehensibility", `slide-deck-rules` §8 "Content clarity & first-use
+context" + §14 "Plain-language comprehensibility for a mixed audience",
+`code-quality-reviewer` "docstring + example") all derive from this
+top-level principle. Term-level glossing answers "what does this word
+mean", the comprehensibility rules answer the harder "I read every word
+and still don't see the point" — both are required on any paper / deck
+this project ships, so a non-expert (an adjacent-discipline committee
+member, a reviewer skimming, an undergraduate) can follow it. When in
+doubt about how to phrase an addition, default to "explain like the
+reader just joined the conversation".
 
 **Prose punctuation in additions**: prefer `，` (Chinese) or `,` (English)
 to join clauses, and avoid `；` / `;`. **Why**: short comma-joined

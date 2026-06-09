@@ -348,6 +348,15 @@ Each slide needs one element the eye lands on first — the takeaway from `slide
 
 **Anti-pattern:** title, three KPIs, a table and a caption all the same size and colour — no focal point, the eye wanders. **Pattern:** one KPI value ~2× the size of its label in blue, the table muted beneath it, caption small and grey.
 
+### Designing for the non-expert eye (comprehension is a visual job too)
+
+Every contract above makes a deck look *professional*, the typography pass kills the Calibri tell, the palette stays disciplined, the contrast contracts keep text readable. But "looks professional" and "an outside examiner actually understood it" are different wins — a deck can pass every visual contract in this doc and still lose half the committee, because the adjacent-discipline 口試委員 / the skimming reviewer never grasped *what the slide was claiming*. The authoritative definition of that bar is `paper_rule`'s "Plain-language comprehensibility — a non-expert must grasp the point (HARD)", and the wording-side slide rules (a plain "so what" per slide, intuition before formula, a real-world anchor for every headline number, one sparing analogy) live in `slide-deck-rules` §14. This subsection is the **visual-side complement**, the parts of comprehension that are a *design* decision rather than a *wording* one. It is additive to depth, never a dumbing-down — the rigour stays, the entry ramp gets built.
+
+- **Show the intuition, don't only state it.** The single most effective way to land a hard idea for a non-expert is a SIMPLE diagram / schematic / annotated example placed BEFORE the dense table or formula — a labelled "before vs after", a one-arrow flow, a single worked example with the moving part highlighted does what a paragraph cannot. The exporter already supports this via `figures=` (`_add_figure_image`) and `system_flow`, so an intuition diagram is a legitimate, high-value figure, not decoration that pads the slide count. Render it on-brand exactly as the "Figures & charts" rules above require (brand palette, no chartjunk, transparent background in dark mode, ≥ 14pt labels). **Anti-pattern:** the first slide on a method opens with the full objective `$I(z_a;z_b|E_p)$` and a 6-row hyperparameter table, the non-expert is lost before the result slide. **Pattern:** a one-arrow "raw input → our transform → cleaner signal" schematic first, THEN the formula on the next slide for the experts who want it.
+- **Visual hierarchy should foreground the plain takeaway.** This ties directly to "Visual hierarchy & focal point" above, the one focal element — the biggest / boldest / most-saturated thing — must be the **plain-language point** (the anchored KPI, the winning row, the one-line assertion), not the most technical-looking object on the slide. A dense equation rendered large and centred makes a slide LOOK rigorous while burying the takeaway, which is the exact opposite of comprehensibility, the eye lands on the symbol soup and bounces off. **Anti-pattern:** a five-term equation set 40pt dead-centre while the result it produces sits 14pt in a corner. **Pattern:** the result ("2.3× faster, same accuracy") is the focal KPI in bold blue, the equation is supporting evidence beneath it at body size.
+- **Annotate figures so they're self-explaining.** A chart a non-expert can read needs axis labels with units, a one-line "what to notice" caption, and the winning series called out DIRECTLY on the plot (a label or arrow at the end of the line), not left for the audience to reverse-engineer from a legend in the corner. This extends the Figures rule "Label every axis with its quantity AND unit" by adding the *"tell the reader what to conclude"* layer on top of the *"tell the reader what the axes are"* layer. **Anti-pattern:** four unlabelled coloured lines and a legend that says `model_a / model_b / baseline_v2`, the examiner has no idea which line is good or why. **Pattern:** the winning line is the only heavy solid one, labelled "Ours" at its endpoint, with a caption「越低越好，本方法在所有負載下延遲最低」(lower is better, our method has the lowest latency at every load).
+- **Don't let visual polish substitute for comprehension.** A beautifully styled deck whose every slide is still opaque to an outside examiner has failed `slide-deck-rules` §14, full stop. Brand discipline (this doc) and accessibility-to-a-non-expert (§14) are **independent axes, both required** — passing the typography / palette / contrast contracts buys you "professional", it does NOT buy you "understood". When you audit a deck, ask both questions separately, "does it look on-brand?" AND "would someone outside this sub-field know what each slide is claiming?". A yes to the first and a no to the second is still a fail.
+
 ## Anti-patterns (instant "AI-generated" tells)
 
 - Plain `prs.slide_layouts[6]` (blank) with no programmatic accent. Every
@@ -370,6 +379,12 @@ Each slide needs one element the eye lands on first — the takeaway from `slide
   look generated. See [paper-summary-author](paper-summary-author.md).
 - Identical line-height across heading + body. Headings should have
   tighter line-height than body.
+- A dense formula or 15-cell table rendered as the slide's largest, most
+  central element — looks rigorous, but the plain takeaway is buried and
+  the outside examiner bounces off the symbol soup. The focal point should
+  be the anchored takeaway (the KPI / winning row / one-line assertion),
+  with the formula or full table as supporting evidence beneath it (see
+  "Designing for the non-expert eye" above + `slide-deck-rules` §14).
 
 ## How to audit a deck
 

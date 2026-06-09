@@ -135,7 +135,7 @@ A thesis-style deck is read by an audience watching a talk, not by someone readi
 
 **Why:** a slide titled "Method" with eight bullets forces the audience to find the point themselves; a slide whose title *is* the point, evidenced below it, lands in five seconds. The exporter renders whatever the summary provides, so the assertion has to be authored into the slide's `title` / `subhead`, not left as a section label.
 
-**Anti-pattern:** title "Experiment Results", body = 9 bullets spanning 3 different findings. **Pattern:** three slides, each titled with one finding, each body = that finding's KPI / table / chart.
+**Anti-pattern:** title "Experiment Results", body = 9 bullets spanning 3 different findings. **Pattern:** three slides, each titled with one finding, each body = that finding's KPI / table / chart. (See §14 for the argument-level requirement that the assertion be sayable by a non-expert, not only correct.)
 
 ### 10. Choose the evidence form that fits the data (HARD)
 
@@ -189,6 +189,22 @@ Surfaces that render the contract (`_render_math_paragraph` / `_append_math_runs
 - **Structural slides count toward the budget but aren't content.** Cover + agenda + dividers + Q&A + references (§11) are ~5-6 of the 25, leaving ~19 for findings — plan around that, don't discover it at slide 25.
 
 **Anti-pattern:** 40 dense slides "because the paper is rich" — undeliverable, and every slide over-caps. **Pattern:** the cap forces the one-assertion-per-slide discipline of §9; if the content doesn't fit, it wasn't prioritised, not "the cap is too small".
+
+### 14. Plain-language comprehensibility for a mixed audience (HARD)
+
+§8 makes each **term** on a slide decodable, this section makes the **slide's whole point** graspable by a non-expert. They are complementary, not the same gate, a slide can pass §8 (every acronym / symbol / library name glossed at first use) and still leave the audience knowing what each word means yet not what the slide is *for*. A thesis-defence audience is mixed: it includes an examiner from an adjacent sub-field, and the deck is read at presentation speed (~30 s/slide) with no chance to ask "what did that mean?". §14 ensures that examiner leaves each slide able to say what it shows and why it matters. **Accessibility here is ADDITIVE to depth, never a dumbing-down** — the rigorous content stays, a plain layer is laid on top of it. The authoritative cross-surface definition is `paper_rule`'s "Plain-language comprehensibility" section, §14 is its slide implementation, defer to `paper_rule` when the two surfaces (paper text vs slide) need to agree.
+
+- **Plain-language takeaway lives in the assertion title (ties to §9).** The §9 assertion-headline must be *sayable by a non-expert*, not merely correct. The formula then lives in the body, glossed per §8 and wrapped in `$...$` per §12.
+  - ❌ formula-as-title: "Disentangling $z_a$/$z_b$ minimises $I(z_a;z_b|E_p)$" — correct, but opaque to anyone outside the sub-field.
+  - ✅ plain assertion: "Separating attack signal from normal signal cuts the leak attackers exploit to near-zero" — the same claim a non-expert can repeat, with $I(z_a;z_b|E_p)$ moved into the (glossed) body.
+- **Intuition before the formula on the slide.** When a slide shows an objective / equation, one plain bullet ABOVE or beside it states what it *accomplishes* in everyday terms before the symbols appear (e.g. 「先把攻擊訊號和正常訊號分開，讓攻擊者能利用的洩漏降到接近零」 above the `$...$` objective). The exporter renders whatever the body provides, so this is an AUTHORING duty (`paper-summary-author` / `thesis-deck-author` / regen scripts), not an exporter change.
+- **Give every headline number a real-world anchor.** A KPI of "12.3 ms" or "F1 0.87" means nothing to a non-expert standing alone, pair it with a plain anchor where the layout allows: "12.3 ms — faster than a blink", "F1 0.87 — ~87 of 100 calls correct". This complements §10 (which picks KPI vs chart vs table) by governing how the chosen number is *labelled*.
+- **One analogy for the single hardest idea, at most.** A one-line analogy on the method slide for the most counter-intuitive concept — sparing, never decorative. An analogy on every slide is noise, the value comes from spending it on the one idea the audience is most likely to stumble on.
+- **Self-test:** could an examiner from a DIFFERENT department, watching at presentation speed, leave this slide able to say what it shows and why it matters? If not, the plain layer is missing — add the plain assertion / intuition bullet / number anchor that closes the gap.
+
+**Why:** a deck can pass every geometry gate (§1–§7) and every §8 gloss yet still lose the half of the committee that isn't in the sub-field — the single most common「技術對但抓不到重點」complaint. §8 fixes "I don't know that word", §14 fixes "I followed every word and still don't know the point".
+
+**Anti-pattern:** a slide titled with a raw formula, body = symbols only, KPI "92.3%" with no anchor — every term may be glossed yet the slide is opaque to anyone outside the sub-field. **Pattern:** assertion title in plain language (§9), an intuition bullet above the glossed `$...$`-wrapped formula (§8 / §12), and the KPI carrying a real-world anchor (§10) — depth preserved, point delivered.
 
 ---
 
