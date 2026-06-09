@@ -48,6 +48,14 @@ The pptx exporter is the most visually-sensitive surface in the project. Several
 - `_EVALUATION_SECTIONS_PER_SLIDE = 2`
 - KPI blocks and core-observation callouts are **always** split onto their own slide (`_add_kpi_slide`, separate core-observation slide). Never balance "stacks + tail callout" inside a fixed height.
 
+**Count caps are upper bounds — pagination is height-aware.** A fixed *count* can't guarantee fit, because section bodies vary in length: a slide of four 3-line contributions overflows where four 1-line ones fit. So the exporter now sizes and paginates by **estimated rendered height**, not count alone:
+
+- `_add_stacked_section` body height is **adaptive** — `_stacked_body_height_in(body)` estimates the wrapped line count (same model as the overflow inspector, full-width CJK ≈ 1.0 em / half-width Latin ≈ 0.55 em) and sizes the box to it, floored at `_STACK_BODY_MIN_IN = 0.85"`. A 3-line contribution gets a 3-line box instead of spilling into the next subhead.
+- `_paginate_stacks` packs sections into slides by a **height budget** (`_STACK_TOP_IN = 1.7"` → `_FOOTER_GUARD = 7.0"`), starting a new `(i/N)`-titled slide before the cumulative height would cross the guard. `_MAX_STACKS_PER_SLIDE` is kept as an upper bound so a slide never crowds in more than the documented maximum even when sections are tiny.
+- `_pain_points_per_slide` drops the pain-point grid from 2×2 to one row of two when cells are text-heavy, so a tall 3-bullet cell gets the full `_PAIN_QUADRANT_HEIGHT_IN = 4.4"` row instead of `4.4/2 = 2.2"`. Short cells keep the 2×2 look.
+
+**Why height-aware, not truncation:** the project never silently truncates body text (`_cap_bullets` caps *count* with a `(+N more)` marker, `_clean` never lops). So the only overflow-safe lever for variable-length content is box height + pagination. The regression guard is `tests/test_check_overflow.py::test_exported_rich_deck_has_no_overflow`, which exports a deliberately long-content rich deck and asserts the inspector finds zero violations.
+
 ### 5. Semantic shape names
 
 Every textbox is named with one of: `title` / `meta` / `body` / `subhead` / `footer` / `page_number` / `kpi` / `kpi_label` / `rq_box` / `paper_subtitle`. `pptx_edit.update_slide(..., title=...)` looks them up by name; **never break this contract** — silently renaming a shape will break the MCP edit tools.
@@ -65,13 +73,17 @@ SUPPORTED_LANGUAGES = (
 
 Every language has every key — enforced by `test_every_language_has_every_key`. Untranslated locales fall back silently to `en` via `normalise_language`.
 
+**Deck locales ≠ `paper_rule` writing locales (a real trap).** This list — the locales the *exporter* can render — includes `id` (Indonesian) and has **no Arabic**. The `paper_rule` subagent's writing-locale set instead includes `ar` (Arabic, RTL) and is about authoring *paper text*, not rendering slides. So a request for an Arabic deck does not raise — it falls back silently to `en`. Do not promise Arabic deck output on the strength of `paper_rule` covering Arabic, the two sets are deliberately different surfaces. If Arabic deck rendering is ever needed, it requires an `i18n.py` entry **and** RTL paragraph support in the exporter, neither of which exists today.
+
 When adding a new template string:
 1. Add the key to all 14 languages in `i18n.py`.
 2. Run `py -m pytest tests/exporters/test_i18n.py` to confirm the parity test stays green.
 
 ### 7. No overflow regressions
 
-When changing the deck or i18n, delegate to the `slide-overflow-check` subagent — it walks every shape on every slide and checks rendered-text height vs. the box's reserved height, and confirms no shape extends past the footer guard.
+When changing the deck or i18n, delegate to the `slide-overflow-check` subagent — it runs `scripts/check_overflow.py`, which walks every shape on every slide and checks rendered-text height vs. the box's reserved height, and confirms no shape extends past the footer guard.
+
+**Tables are estimated, not trusted.** python-pptx grows a table row to fit wrapped cell text, but the GraphicFrame's *declared* `height` does not change — so a many-row or long-cell table renders far taller than declared and can cross the footer guard while `shape.height` claims it fits. The inspector therefore **estimates** a table's rendered height (sum of each row's tallest-cell wrapped lines) rather than reading the declared height. This is what enforces the "≤ ~5 rows per slide" authoring guidance in §10 — a 10-row table is now caught, not silently shipped. The exporter deliberately does **not** auto-paginate author tables (splitting a comparison mid-table would reorder / duplicate its semantics, against the project's never-silently-restructure-author-content principle), so the fix for a flagged table is to split it at the **authoring** layer (`rq_results` / `paper_tables`), not in `pptx.py`.
 
 ### 8. Content clarity & first-use context (HARD)
 
@@ -156,13 +168,17 @@ Content slides carry the findings (§9); **structural** slides carry the *naviga
 
 §8 says every math symbol must be *glossed* at first use; this says how to *render* the symbol itself. They are independent — `min 互資訊 I(za;zb|Ep)` glosses the operator but still renders the variable as the bare ASCII string "za", which reads as a word, not "z subscript a".
 
-- **Real subscripts / superscripts, not flattened ASCII.** `za` is z-sub-a, `λmax` is λ-sub-max, `x²` is x-super-2. python-pptx supports run-level baseline shift (`<a:rPr baseline="-25000">` for subscript, `30000` for superscript) — use it, or Unicode subscript glyphs (`z` + `ₐ`) as a fallback. Typing "za" / "lambda_max" / "x^2" literally is a tell. (The exporter currently flattens these to ASCII — surfacing it here so a builder fixes the run rather than copying the flat form.)
+- **Real subscripts / superscripts, not flattened ASCII.** `za` is z-sub-a, `λmax` is λ-sub-max, `x²` is x-super-2. python-pptx supports run-level baseline shift (`<a:rPr baseline="-25000">` for subscript, `30000` for superscript) — use it, or Unicode subscript glyphs (`z` + `ₐ`) as a fallback. Typing "za" / "lambda_max" / "x^2" literally is a tell. **The exporter renders this for you — but only when the authoring wraps the notation in `$...$` (the math-delimiter contract below).** Bare `I(za;zb|Ep)` typed without `$...$` stays flat ASCII on the slide; that is the single most common way the feature goes unused (the original fang2026 deck shipped flat because its regen script never used `$...$`).
 - **Variables italic, operators upright** (standard math typesetting). Variables `z`, `λ`, `x` italic; multi-letter operators `min`, `argmin`, `log`, `softmax` upright. `min` set in italic reads as m·i·n multiplied.
 - **Unicode math symbols, not ASCII stand-ins.** `≤ ≥ × · ‖·‖ λ ∑ ∫ ∇ ∈ →`, not `<=`, `>=`, `x`, `sum`, `integral`, `->`. The per-language font stack renders these; ASCII substitutes look like code, not math.
 - **Complex formulae → image, not text.** Multi-line equations, fractions, integrals / sums with limits, and matrices cannot be laid out in a pptx text run. Render them with LaTeX to a **transparent-background** PNG (per the Figures dark-mode rule in deck-design) and place via `figures=`. Don't fake a fraction by stacking "a / b" in two textboxes.
 - **One notation per concept across the whole deck.** If the paper writes `z_a`, every slide writes `z_a` — not `za` here and `z_adv` there. (Mirrors the paper-side notation-consistency rule.)
 
-**Anti-pattern:** a slide reading `min I(za;zb|Ep) s.t. ||za-zb||_2 <= eps` — ASCII subscripts, ASCII norm, ASCII `<=`, operator unnamed. **Pattern:** `min I(z_a; z_b | E_p)` with real subscripts + italic variables, `‖z_a − z_b‖₂ ≤ ε`, and the operator named ("minimise the mutual information …") per §8.
+**The `$...$` math-delimiter authoring contract (HARD).** The exporter only renders real subscripts / superscripts / italic variables for notation the authoring **wraps in `$...$`**, using `_x` / `_{xy}` for subscript and `^x` / `^{xy}` for superscript. So the authoring side (`paper-summary-author`, `regen_*.py`) must write `$I(z_a;z_b|E_p)$`, not bare `I(za;zb|Ep)`. Inside a `$...$` span a single-letter token is italicised as a variable and a multi-letter token stays upright as an operator (`$min$` → upright). Plain `_` outside `$...$` (file names, prose) is left alone, so the delimiter is opt-in and never mangles non-math text.
+
+Surfaces that render the contract (`_render_math_paragraph` / `_append_math_runs` in `pptx.py`): **bullets** (`_add_bullet_box`), **KPI values** (`_add_kpi_lines`), **table cells** (`_add_table`), **contribution / method body paragraphs** (`_add_stacked_section` via `_add_textbox(math=True)`), and **RQ / core-observation callouts** (`_add_rq_callout`). Together these cover every content surface a thesis deck puts math on. **Why:** body paragraphs and the RQ callout are exactly where the objective formula lives (`I(z_a;z_b|E_p)`), and they were the last two surfaces to bypass the renderer — a deck that glosses the operator (§8) but still shows flat "za" in its contribution paragraph reads half-finished.
+
+**Anti-pattern:** a slide reading `min I(za;zb|Ep) s.t. ||za-zb||_2 <= eps` — ASCII subscripts, ASCII norm, ASCII `<=`, operator unnamed, and (the authoring-side root cause) no `$...$` so the renderer never fires. **Pattern:** author `$min$ $I(z_a;z_b|E_p)$` with real subscripts + italic variables, `‖z_a − z_b‖₂ ≤ ε`, and the operator named ("minimise the mutual information …") per §8.
 
 ### 13. Deck length and pacing
 

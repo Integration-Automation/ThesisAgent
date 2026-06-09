@@ -354,13 +354,16 @@ doesn't look like generic ``add_slide()`` output:
 Dark mode
 ^^^^^^^^^
 
-Dark mode is the **default** render path. The post-build pass swaps
-the light palette to a dark deck (slide bg ``#12151B``, body text
-``#E5E7EB``, brighter teal accent ``#2DD4BF``) — designed for OLED
-projectors and low-light venues. Opt out per render with
-``--light-mode`` on the CLI, the **Light mode** checkbox on the
-GUI's Deck tab, or ``ExportOptions(dark_mode=False)`` in Python.
-Over MCP, pass ``dark_mode: false`` to the ``export`` tool.
+The **light navy-band deck is the default** render path: white
+slides, a full-width navy header band with a white title, and a
+full-bleed navy cover panel. Opt **in** to dark mode per render with
+``--dark-mode`` on the CLI, the **Dark mode** checkbox on the GUI's
+Deck tab, or ``ExportOptions(dark_mode=True)`` in Python (over MCP,
+pass ``dark_mode: true`` to the ``export`` tool). The dark post-build
+pass swaps to a dark deck (slide bg ``#12151B``, body text
+``#E5E7EB``, brighter teal accent ``#2DD4BF``) and lightens the navy
+band / cover / table fills — designed for OLED projectors and
+low-light venues.
 
 Red is **banned as a text colour** in both modes. The sanctioned
 emphasis colour is teal ``#0E7490`` (bold + teal for KPI values and

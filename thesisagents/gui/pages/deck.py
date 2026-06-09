@@ -140,12 +140,13 @@ class DeckPage(QWidget):
         )
         self._include_abstract_check.setChecked(True)
         options_form.addRow(self._include_abstract_check)
-        # Default is DARK; this checkbox is the opt-OUT toggle for light.
-        self._light_mode_check = QCheckBox(
-            t("deck.light_mode_label", self._ui_language), self,
+        # Default is the light navy-band deck; this checkbox is the
+        # opt-IN toggle for dark mode (OLED / low-light venues).
+        self._dark_mode_check = QCheckBox(
+            t("deck.dark_mode_label", self._ui_language), self,
         )
-        self._light_mode_check.setChecked(False)
-        options_form.addRow(self._light_mode_check)
+        self._dark_mode_check.setChecked(False)
+        options_form.addRow(self._dark_mode_check)
         outer.addWidget(options_box)
 
         # Action row
@@ -266,7 +267,7 @@ class DeckPage(QWidget):
             include_abstract=self._include_abstract_check.isChecked(),
             language=language,
             max_slides_per_paper=self._max_slides_spin.value(),
-            dark_mode=not self._light_mode_check.isChecked(),
+            dark_mode=self._dark_mode_check.isChecked(),
         )
         collection = self._collection
         self._export_button.setEnabled(False)

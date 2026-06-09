@@ -30,6 +30,7 @@ All template strings flow through ``i18n.py`` so the deck respects
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -109,19 +110,19 @@ _BRAND_DARK = RGBColor(0x1F, 0x3A, 0x66)
 #: WARNING — DO NOT use _BRAND_ACCENT as a TEXT colour.
 #: Red text in slide decks is consistently associated with errors,
 #: warnings, and AI-generated KPI emphasis ("look at this number!").
-#: The project bans red font runs entirely; use _BRAND_HIGHLIGHT (teal)
+#: The project bans red font runs entirely; use _BRAND_HIGHLIGHT (blue)
 #: for emphasis instead. The constant is kept around in case a future
 #: non-text accent shape (sparkline, badge, etc.) needs it, but every
 #: existing TEXT callsite has been migrated to _BRAND_HIGHLIGHT.
 #: See .claude/agents/rules/deck-design.md "No red text" contract.
 _BRAND_ACCENT = RGBColor(0xC0, 0x39, 0x2B)
-#: Emphasis text colour — teal-700 (#0E7490). Replaces the banned red
-#: _BRAND_ACCENT for KPI values, RQ question callouts, figure
+#: Emphasis text colour — academic blue-600 (#2563EB). Replaces the banned
+#: red _BRAND_ACCENT for KPI values, RQ question callouts, figure
 #: captions, and other "this stands out" use cases. Pairs well with
-#: bold; pairs cleanly with _BRAND_DARK navy as the secondary; reads
-#: as professional/modern (think academic posters, not error banners).
-#: Dark-mode pass swaps to teal-400 (#2DD4BF) via _LIGHT_TO_DARK_TEXT.
-_BRAND_HIGHLIGHT = RGBColor(0x0E, 0x74, 0x90)
+#: bold; sits in the same blue family as _BRAND_DARK navy for a cohesive
+#: white + blue academic-paper look (not a competing hue). Dark-mode pass
+#: swaps to blue-400 (#60A5FA) via _LIGHT_TO_DARK_TEXT.
+_BRAND_HIGHLIGHT = RGBColor(0x25, 0x63, 0xEB)
 _BRAND_GREY = RGBColor(0x55, 0x55, 0x55)
 _BRAND_LIGHT = RGBColor(0xAA, 0xAA, 0xAA)
 
@@ -150,10 +151,28 @@ _FONT_FAMILIES: dict[str, tuple[str, str | None]] = {
 }
 _DEFAULT_FONT_FAMILY: tuple[str, str | None] = ("Inter", None)
 
-# Accent geometry (set on every content slide by the typography /
-# accent pass so a stock blank layout still reads as a designed deck).
-_ACCENT_TOP_HEIGHT = Inches(0.08)
+# Accent geometry — the deck's signature chrome.
+#
+# Why a band, not a thin bar: a full-width filled navy header band with a
+# white title (and a thin teal accent rule along its bottom edge) is what
+# makes every content slide read as "designed for a defence" rather than a
+# blank layout with a hairline at the top. _BODY_TOP (1.5") already sits
+# below _HEADER_BAND_HEIGHT (1.18") so body content never collides with the
+# band — no body-position constants need to move.
+_HEADER_BAND_HEIGHT = Inches(1.18)
+_ACCENT_RULE_HEIGHT = Inches(0.06)
+# Legacy cover left-band width; the cover is now a full-bleed navy panel
+# (see _add_cover_left_band) but the constant is kept for any external ref.
 _ACCENT_LEFT_WIDTH = Inches(0.4)
+# Title text sits ON the navy band / navy cover, so it must be white —
+# navy _BRAND_DARK on the navy band would be navy-on-navy (invisible).
+# White-on-navy is already the established pattern for table headers
+# (_TABLE_HEADER_FG), so this reuses that idea rather than adding a hue.
+_HEADER_TITLE_FG = RGBColor(0xFF, 0xFF, 0xFF)
+# The under-band accent rule + cover accent use the brand blue. It is a
+# non-text shape, so the "blue is for emphasis TEXT only" split does not
+# bind it; staying on-palette keeps the four-colour discipline.
+_HEADER_ACCENT_FILL = _BRAND_HIGHLIGHT
 
 # Dark-mode palette (post-build recolour, opt-in via
 # ``ExportOptions.dark_mode``).
@@ -171,7 +190,7 @@ _LIGHT_TO_DARK_TEXT: dict[tuple[int, int, int], tuple[int, int, int]] = {
     (0x1F, 0x3A, 0x66): (0xE5, 0xE7, 0xEB),  # _BRAND_DARK      → near-white text
     (0x55, 0x55, 0x55): (0x9C, 0xA3, 0xAF),  # _BRAND_GREY      → mid grey
     (0xAA, 0xAA, 0xAA): (0x6B, 0x72, 0x80),  # _BRAND_LIGHT     → muted grey
-    (0x0E, 0x74, 0x90): (0x2D, 0xD4, 0xBF),  # _BRAND_HIGHLIGHT → bright teal-400
+    (0x25, 0x63, 0xEB): (0x60, 0xA5, 0xFA),  # _BRAND_HIGHLIGHT → bright blue-400
     # _BRAND_ACCENT (#C0392B) intentionally NOT mapped — red text was
     # banned per the deck-design "No red text" contract, and the
     # `test_pptx_no_red_text_runs` regression test fails if any run
@@ -196,6 +215,11 @@ _LIGHT_TO_DARK_FILL: dict[tuple[int, int, int], tuple[int, int, int]] = {
     # is re-coloured to near-white = white-on-white = invisible. This
     # specific bug is what the dark-mode contrast contract guards.
     (0xF3, 0xF6, 0xFA): (0x1E, 0x26, 0x38),
+    # _HEADER_ACCENT_FILL / blue callout fill (_BRAND_HIGHLIGHT, #2563EB) →
+    # brighter blue-400 so the under-band accent rule and any blue-filled
+    # callout read on the dark slide, mirroring how blue emphasis TEXT
+    # swaps in _LIGHT_TO_DARK_TEXT.
+    (0x25, 0x63, 0xEB): (0x60, 0xA5, 0xFA),
 }
 _BRAND_RULE = RGBColor(0xCC, 0xCC, 0xCC)
 _RQ_BOX_FILL = RGBColor(0xF3, 0xF6, 0xFA)
@@ -387,12 +411,45 @@ class PptxExporter(Exporter):
 # ---------------------------------------------------------------------------
 
 
+def _is_own_thesis(paper: Paper) -> bool:
+    """True when ``paper`` is the candidate's OWN thesis, not a fetched paper.
+
+    The boundary this guards: a borrowed paper needs a source/overview slide
+    and a BibTeX cite-key (so the deck can attribute and cite it), whereas the
+    candidate's own dissertation has neither a fetched source to credit nor a
+    publisher DOI nor a cite-key worth advertising in their own defence deck.
+
+    The ``thesis-deck-author`` flow builds the cover ``Paper`` with
+    ``source="local"`` and *no* external provenance — empty ``url``, no
+    ``doi`` / ``arxiv_id`` / ``pdf_url`` (see ``scripts/regen_thesis_demo.py``).
+    The discriminator is deliberately that *combination*, not ``source``
+    alone: the CLI ``--pdf`` flow also stamps ``source="local"`` when it
+    analyses *someone else's* downloaded paper, but it always records a
+    ``file://`` ``url`` (and often a real ``doi`` / ``arxiv_id`` from
+    PDF-metadata extraction), so it stays a borrowed paper and keeps its
+    source slide. Only an identifier-less local paper is the own-thesis cover.
+
+    >>> own = Paper(source="local", source_id="t", title="My Thesis",
+    ...             authors=("Me",), year=2026, venue="NTU", abstract="", url="")
+    >>> _is_own_thesis(own)
+    True
+    """
+    if paper.source != "local":
+        return False
+    return not (paper.url or paper.doi or paper.arxiv_id or paper.pdf_url)
+
+
 def _add_paper_slides(
     prs: Presentation, layout, index: int, total: int, paper: Paper, ctx: _BuildContext
 ) -> None:
     if total > 1:
         _add_section_divider(prs, layout, index, total, paper, ctx)
-    _add_overview_slide(prs, layout, index, total, paper, ctx)
+    # The source/overview slide (and its BibTeX cite-key) exists to attribute a
+    # *borrowed* paper; the candidate's own thesis has no fetched source to
+    # credit, and the cover already carries its title / authors / venue. Skip
+    # it so a defence deck doesn't open on a "來源 / BibTeX key" page.
+    if not _is_own_thesis(paper):
+        _add_overview_slide(prs, layout, index, total, paper, ctx)
     if not ctx.include_abstract:
         return
     summary = paper.summary
@@ -507,11 +564,15 @@ def _add_cover_slide(
 ) -> None:
     slide = prs.slides.add_slide(layout)
     title_text = _cover_title(collection, ctx)
+    # Cover is a full-bleed navy panel (placed by _add_cover_left_band), so
+    # the title is WHITE and the subtitle / meta are near-white — navy text
+    # would vanish into the navy. These light colours are correct in BOTH
+    # light (default) and dark modes because the cover stays navy either way.
     _add_textbox(
         slide, name="title", text=title_text,
         left=_MARGIN_X, top=_COVER_TITLE_TOP,
         width=_BODY_WIDTH, height=_COVER_TITLE_HEIGHT,
-        font_pt=_COVER_TITLE_PT, bold=True, colour=_BRAND_DARK,
+        font_pt=_COVER_TITLE_PT, bold=True, colour=_HEADER_TITLE_FG,
         align=PP_ALIGN.CENTER,
         shrink_to_fit=True,
     )
@@ -526,7 +587,7 @@ def _add_cover_slide(
                 slide, name="subtitle", text=subtitle,
                 left=_MARGIN_X, top=_COVER_SUBTITLE_TOP,
                 width=_BODY_WIDTH, height=_COVER_SUBTITLE_HEIGHT,
-                font_pt=_COVER_SUBTITLE_PT, colour=_BRAND_GREY,
+                font_pt=_COVER_SUBTITLE_PT, colour=_DARK_BODY_TEXT,
                 align=PP_ALIGN.CENTER,
             )
     meta_text = _cover_subtitle(collection, ctx)
@@ -534,7 +595,7 @@ def _add_cover_slide(
         slide, name="meta", text=meta_text,
         left=_MARGIN_X, top=_COVER_META_TOP,
         width=_BODY_WIDTH, height=_COVER_META_HEIGHT,
-        font_pt=_COVER_META_PT, colour=_BRAND_GREY,
+        font_pt=_COVER_META_PT, colour=_DARK_BODY_TEXT,
         align=PP_ALIGN.CENTER,
     )
 
@@ -603,8 +664,16 @@ def _add_overview_slide(
 def _add_references_slide(
     prs: Presentation, layout, collection: PaperCollection, ctx: _BuildContext
 ) -> None:
+    # A References section lists the works the deck *cites* (slide-deck-rules
+    # §11), never the presenting paper itself — so the candidate's own thesis
+    # is excluded. The rich PaperSummary carries no citation list, so a deck of
+    # only the candidate's own thesis gets no references slide at all rather
+    # than one that points back at the thesis (and shows an empty identifier).
+    cited = [p for p in collection.papers if not _is_own_thesis(p)]
+    if not cited:
+        return
     slide = _new_section_slide(prs, layout, t(ctx.language, "references"))
-    bullets = [_reference_line(i + 1, p, ctx) for i, p in enumerate(collection.papers)]
+    bullets = [_reference_line(i + 1, p, ctx) for i, p in enumerate(cited)]
     _add_bullet_box(
         slide, name="body", bullets=bullets,
         left=_MARGIN_X, top=_BODY_TOP,
@@ -642,19 +711,47 @@ def _add_qa_slide(prs: Presentation, layout, paper: Paper, ctx: _BuildContext) -
 _PAIN_POINTS_PER_SLIDE = 4   # 2 columns × 2 rows
 
 
+_PAIN_QUADRANT_HEIGHT_IN = 4.4   # vertical span the quadrant grid occupies
+
+
+def _pain_points_per_slide(sections) -> int:
+    """Cells per pain-point slide. The grid is normally 2×2, but when cells are
+    text-heavy a 2×2 forces ``row_h = 4.4/2 = 2.2"`` (body ≈ 1.55") which a
+    3-long-bullet cell overflows. Since the project never truncates text, the
+    fix is to **paginate to one row of two** for tall content so each cell gets
+    the full 4.4" — fewer cells per slide, never a clipped bullet. Short cells
+    keep the 2×2 look. Estimates use the same wrap model as the overflow
+    inspector so the result is one it agrees fits.
+    """
+    col_w_in = (_BODY_WIDTH.inches - 0.2) / 2
+    max_cell = 0.0
+    for _heading, bullets in sections:
+        lines = sum(
+            _estimate_wrapped_lines(
+                _strip_math_markup("• " + b), width_in=col_w_in, font_pt=_BODY_PT
+            )
+            for b in _cap_bullets(bullets)
+        )
+        cell = 0.55 + lines * _BODY_LINE_HEIGHT_IN + 0.1  # subhead + body + gap
+        max_cell = max(max_cell, cell)
+    rows_fit = int(_PAIN_QUADRANT_HEIGHT_IN // max_cell) if max_cell else 2
+    return max(2, min(_PAIN_POINTS_PER_SLIDE, rows_fit * 2))
+
+
 def _add_pain_points_slide(
     prs: Presentation, layout, paper: Paper, summary: PaperSummary, ctx: _BuildContext,
 ) -> None:
-    """Pain-points quadrant slide, paginated when more than 4 sections
-    are supplied. The research-question callout sits on the first slide
+    """Pain-points quadrant slide, paginated by content height so a text-heavy
+    cell never overflows. The research-question callout sits on the first slide
     only — subsequent pages are full quadrants of pain points."""
     title = t(ctx.language, "section_pain_points")
     sections = list(summary.pain_points)
     if not sections:
         return
+    per_slide = _pain_points_per_slide(sections)
     chunks = [
-        sections[i : i + _PAIN_POINTS_PER_SLIDE]
-        for i in range(0, len(sections), _PAIN_POINTS_PER_SLIDE)
+        sections[i : i + per_slide]
+        for i in range(0, len(sections), per_slide)
     ]
     for chunk_index, chunk in enumerate(chunks):
         chunk_title = title
@@ -718,29 +815,55 @@ def _add_contributions_detailed_slide(
         _add_kpi_slide(prs, layout, paper, ctx, summary.headline_metrics)
 
 
+_STACK_TOP_IN = 1.7   # first stacked section's Y on the slide
+
+
+def _paginate_stacks(stack_list):
+    """Pack (heading, body) sections into per-slide chunks by **height budget**
+    so no chunk's cumulative height crosses the footer guard. ``(heading, body)``
+    sections vary in body length, so a fixed count (``_MAX_STACKS_PER_SLIDE``)
+    can't guarantee fit — a slide of four 3-line contributions overflows where
+    four 1-line ones fit. ``_MAX_STACKS_PER_SLIDE`` is kept as an upper bound so
+    a slide never crowds in more than the documented maximum even when tiny.
+    """
+    budget = _FOOTER_GUARD.inches
+    chunks: list[list] = []
+    current: list = []
+    y = _STACK_TOP_IN
+    for heading, body in stack_list:
+        height = _stacked_section_height_in(body)
+        over_budget = current and y + height > budget
+        over_count = len(current) >= _MAX_STACKS_PER_SLIDE
+        if over_budget or over_count:
+            chunks.append(current)
+            current = []
+            y = _STACK_TOP_IN
+        current.append((heading, body))
+        y += height
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def _add_stacks_slide(
     prs: Presentation, layout, paper: Paper, ctx: _BuildContext,
     *, title: str, stacks,
 ) -> None:
-    """Render stacked sections. Paginates when stacks exceed
-    ``_MAX_STACKS_PER_SLIDE`` so author bullets are never silently
-    dropped — instead the title gets ``(1/N)`` and overflow spills onto
-    the next slide.
+    """Render stacked sections, paginating by height budget so author bullets
+    are never silently dropped — instead the title gets ``(1/N)`` and overflow
+    spills onto the next slide. See ``_paginate_stacks``.
     """
     stack_list = list(stacks)
     if not stack_list:
         return
-    chunks = [
-        stack_list[i : i + _MAX_STACKS_PER_SLIDE]
-        for i in range(0, len(stack_list), _MAX_STACKS_PER_SLIDE)
-    ]
+    chunks = _paginate_stacks(stack_list)
     for chunk_index, chunk in enumerate(chunks):
         chunk_title = title
         if len(chunks) > 1:
             chunk_title = f"{title} ({chunk_index + 1}/{len(chunks)})"
         slide = _new_section_slide(prs, layout, chunk_title)
         _add_paper_subtitle(slide, paper, ctx)
-        cursor = Inches(1.7)
+        cursor = Inches(_STACK_TOP_IN)
         for heading, body in chunk:
             cursor = _add_stacked_section(slide, heading, body, cursor)
 
@@ -1078,7 +1201,7 @@ def _add_contribution_summary_slide(
         _add_rq_callout(
             slide, summary.core_observation,
             left=_MARGIN_X, top=Inches(2.5),
-            width=_BODY_WIDTH, height=Inches(2.0),
+            width=_BODY_WIDTH, height=Inches(2.0), highlight=True,
         )
 
 
@@ -1285,17 +1408,20 @@ def _new_section_slide(
     prs: Presentation, layout, title: str, *, font_pt: int = _SECTION_TITLE_PT,
 ):
     slide = prs.slides.add_slide(layout)
+    # The title sits inside the navy header band (placed later by the accent
+    # pass), so it is WHITE, not navy — navy-on-navy would be invisible.
     # ``shrink_to_fit`` lets a long title (e.g. a verbatim paper title) wrap
-    # within the fixed-height title box and PowerPoint scales the font down
-    # so the text never crosses the horizontal rule below.
+    # within the band's height and PowerPoint scales the font down so the
+    # text never spills past the band's bottom accent rule. The separate
+    # horizontal rule is gone — the band + its teal under-rule replace it.
     _add_textbox(
         slide, name="title", text=_clean(title),
-        left=_MARGIN_X, top=_TITLE_TOP,
-        width=_BODY_WIDTH, height=_TITLE_HEIGHT,
-        font_pt=font_pt, bold=True, colour=_BRAND_DARK,
+        left=_MARGIN_X, top=Inches(0.18),
+        width=_BODY_WIDTH, height=Inches(0.86),
+        font_pt=font_pt, bold=True, colour=_HEADER_TITLE_FG,
+        align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE,
         shrink_to_fit=True,
     )
-    _add_horizontal_rule(slide, top=_RULE_TOP)
     return slide
 
 
@@ -1447,7 +1573,9 @@ def _add_textbox(
     slide, *, name: str, text: str, left, top, width, height,
     font_pt: int, bold: bool = False, colour: RGBColor | None = None,
     align: PP_ALIGN | None = None,
+    anchor: MSO_ANCHOR | None = None,
     shrink_to_fit: bool = False,
+    math: bool = False,
 ) -> None:
     """Render a textbox.
 
@@ -1457,13 +1585,35 @@ def _add_textbox(
     gets rendered inside its allotted height — PowerPoint shrinks the font
     at open time rather than letting the text bleed past the horizontal
     rule.
+
+    ``math`` routes the text through ``_render_math_paragraph`` so ``$...$``
+    spans become real subscripts / superscripts + italic variables (see
+    slide-deck-rules §12). Turn it on for content surfaces that carry math
+    notation — contribution / method body paragraphs, callouts — so the
+    feature actually fires there, not only in bullets / KPIs / table cells.
+    A math run always needs an explicit colour for the dark-mode contract,
+    so ``colour`` falls back to ``_BRAND_DARK`` when ``None``. The math path
+    fills a single paragraph; its callers pass whitespace-collapsed,
+    newline-free text, so multi-paragraph splitting is intentionally skipped.
     """
     box = slide.shapes.add_textbox(left, top, width, height)
     box.name = name
     text_frame = box.text_frame
     text_frame.word_wrap = True
+    # Vertical anchor lets the header-band title sit visually centred within
+    # the band's height instead of top-aligned against the band's top edge.
+    if anchor is not None:
+        text_frame.vertical_anchor = anchor
     if shrink_to_fit:
         text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+    if math:
+        paragraph = text_frame.paragraphs[0]
+        if align is not None:
+            paragraph.alignment = align
+        _render_math_paragraph(
+            paragraph, text, size_pt=font_pt, colour=colour or _BRAND_DARK, bold=bold
+        )
+        return
     text_frame.text = text
     for paragraph in text_frame.paragraphs:
         if align is not None:
@@ -1505,17 +1655,81 @@ def _add_footer(slide, text: str) -> None:
     )
 
 
+# Line-height of a body paragraph at single spacing (PowerPoint ≈ 1.2 × font).
+_BODY_LINE_HEIGHT_IN = _BODY_PT * 1.2 / 72
+_STACK_HEAD_HEIGHT_IN = 0.42
+_STACK_GAP_IN = 0.05
+_STACK_BODY_MIN_IN = 0.85
+_STACK_BODY_PAD_IN = 0.06   # keep the box just taller than the rendered text
+_TEXTBOX_SIDE_MARGIN_IN = 0.1  # python-pptx default left/right inner margin
+
+
+def _strip_math_markup(text: str) -> str:
+    """Reduce ``$...$`` math markup to its visible glyphs for length estimation:
+    ``$I(z_a)$`` → ``I(za)``. The delimiters / sub-/superscript markers are not
+    rendered as characters, so counting them would over-size the box."""
+    cleaned = text.replace("$", "")
+    cleaned = re.sub(r"[_^]\{([^}]*)\}", r"\1", cleaned)  # _{xy} / ^{xy} -> xy
+    return re.sub(r"[_^](.)", r"\1", cleaned)              # _x / ^x -> x
+
+
+def _estimate_wrapped_lines(text: str, *, width_in: float, font_pt: int) -> int:
+    """Estimate wrapped line count for ``text`` in a box ``width_in`` wide.
+
+    Mirrors ``scripts/check_overflow.py``'s estimator (full-width CJK ≈ 1.0 em,
+    half-width Latin ≈ 0.55 em, wrap at the box's inner width) so a body box
+    this sizes is one the overflow inspector agrees fits — the exporter and the
+    inspector stay on one geometry contract instead of drifting apart.
+    """
+    inner_pt = max(0.1, width_in - 2 * _TEXTBOX_SIDE_MARGIN_IN) * 72
+    line_w = 0.0
+    lines = 1
+    for ch in text:
+        if ch == "\n":
+            lines += 1
+            line_w = 0.0
+            continue
+        em = 1.0 if unicodedata.east_asian_width(ch) in ("F", "W") else 0.55
+        char_w = em * font_pt
+        if line_w + char_w > inner_pt and line_w > 0:
+            lines += 1
+            line_w = char_w
+        else:
+            line_w += char_w
+    return lines
+
+
+def _stacked_body_height_in(body: str) -> float:
+    """Body-box height (inches) needed for ``body``, adaptive to its wrapped
+    line count so a 3-line contribution gets a 3-line box instead of spilling
+    into the next subhead. Floors at ``_STACK_BODY_MIN_IN`` so a one-line body
+    still has breathing room."""
+    text = _strip_math_markup(" ".join((body or "").split()))
+    # Length arithmetic returns a plain int (EMU), so re-wrap in Emu to read .inches.
+    width_in = Emu(_BODY_WIDTH - Inches(0.2)).inches
+    lines = _estimate_wrapped_lines(text, width_in=width_in, font_pt=_BODY_PT)
+    return max(_STACK_BODY_MIN_IN, lines * _BODY_LINE_HEIGHT_IN + _STACK_BODY_PAD_IN)
+
+
+def _stacked_section_height_in(body: str) -> float:
+    """Total vertical span of one stacked section (head + body + gap), used by
+    the height-aware paginator in ``_add_stacks_slide``."""
+    return _STACK_HEAD_HEIGHT_IN + _stacked_body_height_in(body) + _STACK_GAP_IN
+
+
 def _add_stacked_section(slide, heading: str, body: str, cursor) -> int:
     """Render an inline (heading bold + body grey) block; return next cursor Y.
 
-    Body height is sized for a 2-line wrap at the current body font so a
-    full-sentence contribution doesn't visually spill into the next
-    subhead. Body text is not truncated — see ``_sentences_to_bullets``
-    for the rationale.
+    Body height is **adaptive** — sized to the body's estimated wrapped line
+    count (see ``_stacked_body_height_in``) so a full-sentence contribution
+    that needs three lines gets a three-line box rather than overflowing a
+    fixed two-line one. Body text is not truncated — see ``_sentences_to_bullets``
+    for the rationale. The caller (``_add_stacks_slide``) paginates by the same
+    height estimate so the cumulative stack never crosses the footer guard.
     """
-    head_height = Inches(0.42)
-    body_height = Inches(0.85)
-    gap = Inches(0.05)
+    head_height = Inches(_STACK_HEAD_HEIGHT_IN)
+    body_height = Inches(_stacked_body_height_in(body))
+    gap = Inches(_STACK_GAP_IN)
     _add_textbox(
         slide, name="subhead", text=_clean(heading),
         left=_MARGIN_X, top=cursor,
@@ -1526,9 +1740,25 @@ def _add_stacked_section(slide, heading: str, body: str, cursor) -> int:
         slide, name="body", text=" ".join((body or "").split()),
         left=Inches(0.7), top=cursor + head_height,
         width=_BODY_WIDTH - Inches(0.2), height=body_height,
-        font_pt=_BODY_PT, colour=_BRAND_GREY,
+        font_pt=_BODY_PT, colour=_BRAND_GREY, math=True,
     )
     return cursor + head_height + body_height + gap
+
+
+def _bullets_box_height_in(bullets, width_in: float) -> float:
+    """Estimated height (inches) of a bullet box, adaptive to each bullet's
+    wrapped line count rather than a flat per-bullet allowance. A long
+    framework-feature bullet that wraps to two lines gets two lines of height
+    instead of overflowing a fixed 0.5"/bullet box. Uses the same wrap model as
+    the overflow inspector. Floors at 0.5" so a single short bullet still has
+    breathing room."""
+    total = 0.0
+    for bullet in bullets:
+        lines = _estimate_wrapped_lines(
+            _strip_math_markup(f"• {bullet}"), width_in=width_in, font_pt=_BODY_PT
+        )
+        total += lines * _BODY_LINE_HEIGHT_IN + 0.06
+    return max(0.5, total)
 
 
 def _add_subsection(slide, heading: str, bullets, cursor, *, width) -> int:
@@ -1537,7 +1767,7 @@ def _add_subsection(slide, heading: str, bullets, cursor, *, width) -> int:
     # Method/eval slides paginate at the section-list level, so 6 per
     # subsection won't push past the footer in the worst case.
     capped = _cap_bullets(bullets, max_count=6)
-    bullet_height = Inches(0.5 * max(1, len(capped)))
+    bullet_height = Inches(_bullets_box_height_in(capped, Emu(width - Inches(0.2)).inches))
     _add_textbox(
         slide, name="subhead", text=_clean(heading),
         left=_MARGIN_X, top=cursor,
@@ -1583,27 +1813,47 @@ def _render_multi_column(
         )
 
 
-def _add_rq_callout(slide, text: str, *, left, top, width, height) -> None:
-    """A boxed highlight: filled rectangle + bold text on top."""
+def _add_rq_callout(
+    slide, text: str, *, left, top, width, height, highlight: bool = False
+) -> None:
+    """A boxed highlight: filled rectangle + bold text on top.
+
+    ``highlight=False`` (default) is the light off-white RQ-question box
+    (navy text + navy border) used for research-question callouts.
+    ``highlight=True`` is the **filled takeaway box** — solid navy fill +
+    white text, no border — reserved for the single core-observation /
+    key-finding slide so the deck's one "punch line" reads as a filled
+    panel that mirrors the navy header band, not as just another light box.
+    Both fill RGBs (``_BRAND_DARK`` navy, ``_RQ_BOX_FILL`` off-white) have
+    ``_LIGHT_TO_DARK_FILL`` entries, so dark mode recolours them and the
+    text stays readable in both modes.
+    """
     from pptx.enum.shapes import MSO_SHAPE
 
     rect = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     rect.name = "rq_box"
     rect.fill.solid()
-    rect.fill.fore_color.rgb = _RQ_BOX_FILL
-    rect.line.color.rgb = _RQ_BOX_BORDER
-    rect.line.width = Pt(1.0)
+    if highlight:
+        rect.fill.fore_color.rgb = _BRAND_DARK
+        rect.line.fill.background()
+        text_colour = _HEADER_TITLE_FG
+    else:
+        rect.fill.fore_color.rgb = _RQ_BOX_FILL
+        rect.line.color.rgb = _RQ_BOX_BORDER
+        rect.line.width = Pt(1.0)
+        text_colour = _BRAND_DARK
     rect.text_frame.word_wrap = True
     rect.text_frame.margin_left = Inches(0.2)
     rect.text_frame.margin_right = Inches(0.2)
     rect.text_frame.margin_top = Inches(0.1)
     rect.text_frame.margin_bottom = Inches(0.1)
-    rect.text_frame.text = text
-    for paragraph in rect.text_frame.paragraphs:
-        for run in paragraph.runs:
-            run.font.size = Pt(_BODY_PT)
-            run.font.bold = True
-            run.font.color.rgb = _BRAND_DARK
+    # Math-aware: an RQ / core-observation callout often states the paper's
+    # objective formula (e.g. "$I(z_a;z_b|E_p)$"), so render $...$ spans as real
+    # subscripts rather than flat ASCII (slide-deck-rules §12).
+    _render_math_paragraph(
+        rect.text_frame.paragraphs[0], text,
+        size_pt=_BODY_PT, colour=text_colour, bold=True,
+    )
 
 
 def _add_kpi_lines(
@@ -1996,12 +2246,20 @@ def _decorate_with_accents(prs: Presentation) -> None:
 
 
 def _add_cover_left_band(slide) -> None:
+    """Cover chrome — a full-bleed navy panel behind the centred white title.
+
+    Kept under the name ``accent_left`` (the cover-band semantic name) even
+    though it now spans the whole slide, so pptx_edit / audits that look up
+    the cover accent by name still find it. Sent to back so the cover
+    title / subtitle / meta (set to white / near-white in ``_add_cover_slide``)
+    render on top of the navy.
+    """
     if _has_named_shape(slide, "accent_left"):
         return
     shape = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
         Emu(0), Emu(0),
-        _ACCENT_LEFT_WIDTH, _SLIDE_HEIGHT,
+        _SLIDE_WIDTH, _SLIDE_HEIGHT,
     )
     shape.name = "accent_left"
     shape.line.fill.background()
@@ -2011,18 +2269,39 @@ def _add_cover_left_band(slide) -> None:
 
 
 def _add_top_accent_bar(slide) -> None:
+    """Content-slide chrome — the full-width navy header band plus a thin
+    teal accent rule along its bottom edge.
+
+    The band keeps the name ``accent_top`` (the content-slide accent
+    semantic name) so edit tools / the deck-design audit still locate the
+    top accent by name. Both shapes are sent to back so the white title
+    placed by ``_new_section_slide`` renders on top of the band. The band
+    fill (_BRAND_DARK) and blue rule fill (_BRAND_HIGHLIGHT) both have
+    ``_LIGHT_TO_DARK_FILL`` entries, so dark mode lightens them rather than
+    leaving them as-is.
+    """
     if _has_named_shape(slide, "accent_top"):
         return
-    shape = slide.shapes.add_shape(
+    band = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
         Emu(0), Emu(0),
-        _SLIDE_WIDTH, _ACCENT_TOP_HEIGHT,
+        _SLIDE_WIDTH, _HEADER_BAND_HEIGHT,
     )
-    shape.name = "accent_top"
-    shape.line.fill.background()
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = _BRAND_DARK
-    _send_shape_to_back(shape, slide)
+    band.name = "accent_top"
+    band.line.fill.background()
+    band.fill.solid()
+    band.fill.fore_color.rgb = _BRAND_DARK
+    _send_shape_to_back(band, slide)
+    rule = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Emu(0), _HEADER_BAND_HEIGHT,
+        _SLIDE_WIDTH, _ACCENT_RULE_HEIGHT,
+    )
+    rule.name = "accent_rule"
+    rule.line.fill.background()
+    rule.fill.solid()
+    rule.fill.fore_color.rgb = _HEADER_ACCENT_FILL
+    _send_shape_to_back(rule, slide)
 
 
 def _has_named_shape(slide, name: str) -> bool:

@@ -437,13 +437,16 @@ class ExportOptions:
     #: render the full deck regardless of size; ``None`` is treated
     #: identically to the default.
     max_slides_per_paper: int | None = 25
-    #: When True (default), the pptx exporter applies a dark-mode
-    #: palette post-build: dark slide background, light text, dark
-    #: table-row stripe. Set False (or pass ``--light-mode`` on the
-    #: CLI / tick the "Light mode" box in the GUI Deck tab) to keep
-    #: the classic white-background light deck — useful on projectors
-    #: in well-lit rooms or when the audience reads on paper after.
-    dark_mode: bool = True
+    #: When True, the pptx exporter applies a dark-mode palette
+    #: post-build: dark slide background, light text, dark table-row
+    #: stripe. **Defaults to False** — the project's default deck is now
+    #: the light navy-band style (white slides, full-width navy header
+    #: band with a white title, navy cover panel). Pass ``--dark-mode``
+    #: on the CLI / tick the "Dark mode" box in the GUI Deck tab (or set
+    #: this True) for OLED projectors / low-light venues, where the
+    #: post-build pass lightens the band / cover / table fills so the
+    #: same chrome reads on the dark background.
+    dark_mode: bool = False
 
     def __post_init__(self) -> None:
         if not self.formats:

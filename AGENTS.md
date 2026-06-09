@@ -62,10 +62,10 @@ fallback, never the goal when an LLM is in the loop.**
   the full search and stay as-is.
 
 ### Worked example
-`scripts/regen_llm_security_batch.py` ships 7 hand-authored rich
-summaries built exactly this way — read each PDF, author the summary,
-batch-export. Reuse it as the template for any future multi-paper
-search.
+`scripts/regen_fang2026.py` is the canonical hand-authored rich summary
+built exactly this way — read the PDF, author the `PaperSummary`, export
+through `PptxExporter`. Reuse it as the template, a multi-paper batch is
+the same shape with a tuple of papers in `PaperCollection`.
 
 ### Per-paper flow
 
@@ -108,10 +108,9 @@ search.
    non-`footer` / non-`page_number` shape must have
    `top + height ≤ 7.05"` on a 16:9 widescreen slide.
 
-Working templates: `scripts/regen_llm_security_batch.py` (batch, 7
-papers), `scripts/regen_ling2026_agent_skills.py` (single paper en),
-`scripts/regen_ling2026_agent_skills_zh_tw.py` (single paper zh-tw),
-`scripts/regen_ieee_thesis_style.py` (single paper).
+Working template: `scripts/regen_fang2026.py` (single paper, rich-tier,
+zh-tw, dark mode — every rich field populated). A batch follows the same
+shape with a tuple of papers in `PaperCollection`.
 
 ### URL / DOI verification (mandatory)
 
@@ -279,6 +278,9 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
 - DoD gate runner: `.claude/agents/tasks/dod-verify.md`.
 - LLM-as-agent thesis-style authoring: `.claude/agents/tasks/paper-summary-author.md`
   + `tasks/post-author-audit.md` + `tasks/slide-overflow-check.md`.
+- Degree-thesis ORAL-DEFENCE deck from the candidate's own thesis (seven
+  `paper_rule` sections → rich deck via the existing exporter):
+  `.claude/agents/tasks/thesis-deck-author.md`.
 - Per-source plugin contract and recorded fixtures: `thesisagents/sources/<name>/`
   + `tests/fixtures/<name>/`.
 - LLM-as-agent flow examples: `scripts/regen_*.py`.

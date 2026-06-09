@@ -23,8 +23,8 @@ Tools:
   papers[*].summary may include rich fields (pain_points, research_question,
   headline_metrics, technique_table, literature_table, method_sections,
   research_questions, rq_results, …) — when present, the PPT switches to
-  thesis-style layout. ``dark_mode`` defaults to True (project default);
-  pass False for the light/printable variant.
+  thesis-style layout. ``dark_mode`` defaults to False (project default
+  is the light navy-band deck); pass True for the dark OLED/low-light variant.
 - pptx_inspect(path) -> {slides: [...]}
 - pptx_update_slide(path, slide_index, title?, body?, meta?, shape_updates?) -> {path}
 - pptx_delete_slide(path, slide_index) -> {path}
@@ -333,7 +333,7 @@ def _register_export_tool(server: FastMCP) -> None:
         include_abstract: bool = True,
         language: str = "en",
         max_slides_per_paper: int | None = 25,
-        dark_mode: bool = True,
+        dark_mode: bool = False,
     ) -> dict[str, Any]:
         """Export a list of papers (from search / fetch_paper) to disk.
 
@@ -349,11 +349,13 @@ def _register_export_tool(server: FastMCP) -> None:
         Q&A/figure slides drop first). Default 25; pass ``0`` (or
         ``None``) for unlimited.
 
-        ``dark_mode`` defaults to True — the post-build pass swaps the
-        brand palette to dark slide background (#12151B) + near-white
-        text (#E5E7EB) so OLED projectors and low-light venues don't
-        glare. Pass False for the light/printable variant (white slide
-        background + navy text).
+        ``dark_mode`` defaults to False — the project default is the
+        light navy-band deck (white slides, full-width navy header band
+        with a white title, navy cover panel). Pass True for the dark
+        variant: the post-build pass swaps to a dark slide background
+        (#12151B) + near-white text (#E5E7EB) and lightens the navy
+        band / cover / table fills so the same chrome reads on OLED
+        projectors and in low-light venues.
         """
         if not papers:
             raise ThesisAgentsError("export requires at least one paper")

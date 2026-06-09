@@ -834,6 +834,60 @@ locales). Three sub-rules:
 
 ---
 
+## 草稿管理元資訊不得進入交付內容 / Drafting-management metadata must never reach the delivered content (HARD RULE)
+
+**EN.** The paper / slide a reader sees must contain only the *content*, never the
+*bookkeeping* used while writing it. Drafting-management metadata is anything that
+helps the author track revisions but means nothing to the reader: version numbers
+(`v3.2`, 修正版, 「v3 既有」, 「v3.1 新增」), the file name of a writing guide or
+internal tool (`paper_rule.md`, an internal `.rst` path), drop-in / insertion
+markers (`INSERT INTO §3.2`, a drop-in block id like `§2.4`, `Renumbered`),
+author-facing notes (「目前 §5 僅有…缺少…」, 「本節僅基於…不引入…」), and
+version-relative phrasing (「原 v3 設計之…」, 「v3 追加之第 5 點」). One audit of a
+thesis assembled from a drop-in insert set found **8** such leaks — `v3`–`v3.5`
+version tags in the §3.7 preamble and §6.4.5, a `paper_rule.md` citation in two
+mechanism subsections, and three 「原 v3 設計／之」 phrasings — every one had to be
+stripped before the document could ship.
+
+**Why this is its own HARD rule.** A drop-in 段落集 / regen script / insert file is
+written with version tags and insertion notes so the *author* can manage which
+paragraph came from which revision. The instinct is to paste those paragraphs
+verbatim into the deliverable, and the version tag rides along. The reader then
+meets 「§3.7.23 為 v3.5 新增之無模型定向信號」 and has no idea what v3.5 is, or
+「依 paper_rule.md 不輸出分數」 and no idea what paper_rule.md is. The bookkeeping is
+invisible to the author (who knows what v3.5 means) and glaring to the reader (who
+does not). It is distinct from the no-fabrication rule — the content is *true*, it
+is just *addressed to the wrong audience*.
+
+**繁中.** 讀者看到的論文／投影片只應有「內容」，不應有你寫作時的「管理記號」。
+草稿管理元資訊指對作者追蹤改版有用、但對讀者毫無意義者：版本號（`v3.2`、修正版、
+「v3 既有」、「v3.1 新增」）、寫作指引或內部工具之檔名（`paper_rule.md`、指向專案
+內部之 `.rst` 路徑）、插入／drop-in 標記（`INSERT INTO §3.2`、drop-in 段落集之
+區塊編號如 `§2.4`、`Renumbered`）、給作者之元說明（「目前 §5 僅有…缺少…」、
+「本節僅基於…不引入…」）、以版本指代之措辭（「原 v3 設計之…」、「v3 追加之
+第 5 點」）。一次以 drop-in 段落集組裝之學位論文審核發現 **8** 處此類洩漏，全部
+須於交付前清除。
+
+**How to apply.**
+- **Authoring 時**：你寫的是論文內容，不是修改日誌。「這節是新加的」屬於 commit／
+  PR／外部筆記，不進正文，以節號（§3.7.23）指代即可，不附版本號。
+- **指代「原本的設計」時**：用「原設計」「初版」等讀者可理解之詞，不用「原 v3 設計」。
+- **引用文件時**：引用隨附開源框架之公開文件（如其 GitHub 倉庫之 docs）可保留，惟
+  須確認該引用對讀者有意義，指向寫作流程內部之指引／腳本檔名一律刪除。
+- **Audit 時**：交付前以正規表示掃過這些 token（版本號 `v\d`、`paper_rule`、
+  `INSERT INTO`、`drop-in`、`Renumber`、「原 v\d」）。對應審核步驟見
+  `post-author-audit` 之「Drafting-metadata leak scan」。
+
+**Example（正確）**：「§3.7.1–§3.7.13 與 §3.7.15–§3.7.18 合為十七項研究級機制，
+§3.7.14 為部署層工程設計、§3.7.23 為無模型定向信號（均不計入十七項）。」── 只用
+節號與分類，讀者自足。
+
+**Anti-pattern（錯誤）**：「§3.7.1–§3.7.13 為 v3 既有之十三項，§3.7.19 為 v3.2
+新增之可觀測層，§3.7.23 為 v3.5 新增之無模型定向信號。」──「v3」「v3.2」「v3.5」是
+drop-in 段落集之版本號，讀者無從理解，且洩漏了寫作流程。
+
+---
+
 ## 圖、表、內容必須清楚解釋 / Every figure, table, and content item must be clearly explained (HARD RULE)
 
 **EN.** Every figure, every table, every pseudo-code block, every dataset,
@@ -1264,6 +1318,39 @@ attribute slots so Word doesn't fall back to a theme font:
 complex-script fallback (Arabic / Devanagari — not used in zh-tw papers but
 must be set so Word's "Use East-Asian font for CJK" rendering rule applies
 correctly).
+
+### 字級規範 / Font sizes (HARD)
+
+**ZH-TW 學位論文預設字級:本文 14pt、標題(章與各級節)20pt 並加粗。** 此為國立
+高雄師範大學等碩士論文格式手冊之常見規範,本文(body)一律 14pt,章標題
+(第 N 章 / Heading 1)與節／子節標題(3.1、3.2.1 …)一律 20pt 加粗,字型仍依
+locale 規則(zh-tw 為標楷體 CJK + Times New Roman Latin)。
+
+**Why**: 以 `python-docx` 程式化插入新節時,新段落若沿用「複製來的參考 run」或
+樣式預設,極易帶到錯誤字級——曾發生新插入的「3.1 系統架構」一節本文落在 18pt、
+標題落在 24pt(Heading 2 樣式預設值),與全文 14／20pt 不一致而需補正。明訂絕對
+字級可讓插入後的稽核一眼可驗,不必逐處目視比對。
+
+**OOXML 對應**:`<w:sz>`(Latin)與 `<w:szCs>`(CJK／複雜文字)之 `w:val` 以**半點**
+為單位,故 val = pt × 2——本文 14pt → `w:val="28"`,標題 20pt → `w:val="40"`。兩者
+都要設,只設 `w:sz` 時 CJK 字仍會回退樣式字級。
+
+```xml
+<!-- 本文 run（14pt）-->
+<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"
+        w:eastAsia="標楷體" w:cs="Times New Roman"/>
+  <w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>
+<!-- 標題 run（20pt，另加 <w:b/>，sz/szCs 用 40）-->
+```
+
+**與上方〈Visual style〉相對字級之關係**:上方「章 sz=22 → 子章節 sz=20-21」是給
+**只要求「標題需與正文可區分」之模板**的**相對**示例。當論文手冊**明訂絕對字級**
+(如本文 14、標題 20)時以絕對值為準,相對示例不適用——兩者不衝突,一個是
+「沒給絕對值時怎麼拉開層級」,一個是「給了絕對值就照辦」。
+
+**Anti-pattern**: 插入新節後沿用 `insert_paragraph_before` 的樣式預設,或把非本文
+段落(caption / 標題)的 run 格式複製到本文,導致 body 18pt／heading 24pt。務必在
+寫檔前逐 run 顯式設 `w:sz` / `w:szCs`,並以下方 audit 連同字型一起驗。
 
 **Implementation in .pptx**: handled by `deck-design` subagent (see
 `thesisagents/exporters/pptx.py` `_apply_typography` pass + the per-language
