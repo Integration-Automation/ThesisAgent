@@ -362,6 +362,92 @@ def test_pptx_own_thesis_drops_source_slide_bibtex_and_self_reference(tmp_path):
     assert "BibTeX" not in every_run_text
 
 
+def test_pptx_over_cap_marker_is_localised(tmp_path):
+    """When a section exceeds the per-slide bullet cap, the "+N more" marker is
+    rendered in the deck's language — never a hard-coded English "(+N more)".
+
+    Why: `_cap_bullets` appends a count marker (slide-deck-rules §3) instead of
+    silently dropping bullets; before this fix the marker was English on every
+    deck, so a zh-tw deck showed "(+2 more)" amid Traditional Chinese body text.
+    """
+    from pptx import Presentation
+
+    from thesisagents.core.models import Paper, PaperSummary
+
+    summary = PaperSummary(
+        language="zh-tw",
+        # Eight bullets in one method section overruns the 6-per-subsection cap.
+        method_sections=(("步驟", tuple(f"第{i}步驟說明文字" for i in range(1, 9))),),
+        core_observation="核心觀察。",
+        model="test",
+    )
+    paper = Paper(
+        source="local", source_id="t", title="標註在地化測試",
+        authors=("A",), year=2026, venue="T", abstract="摘要", url="", summary=summary,
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("local",)), papers=(paper,),
+    )
+    options = ExportOptions(
+        formats=("pptx",), out_dir=str(tmp_path), filename_stem="marker",
+        language="zh-tw",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    every_run_text = " ".join(
+        run.text
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+        for para in shape.text_frame.paragraphs
+        for run in para.runs
+    )
+    assert "（還有 2 項）" in every_run_text, "localised over-cap marker missing"
+    assert "more)" not in every_run_text, "English marker leaked into a zh-tw deck"
+
+
+def test_pptx_long_evaluation_section_preserves_all_bullets(tmp_path):
+    """An evaluation section with more bullets than a 2-column grid cell holds
+    renders as height-paginated stacks so EVERY bullet survives — none is dropped
+    behind a "(+N more)" marker — and the result still clears the footer guard.
+    """
+    from pptx import Presentation
+
+    from thesisagents.core.models import Paper, PaperSummary
+    from thesisagents.exporters.overflow import check_pptx
+
+    bullets = tuple(f"Finding number {i} with its own distinct text" for i in range(1, 10))
+    summary = PaperSummary(
+        language="en",
+        evaluation_sections=(("Benchmark results", bullets),),  # 9 > the 6 cell cap
+        core_observation="Stacked rendering preserves every evaluation bullet.",
+        model="test",
+    )
+    paper = Paper(
+        source="local", source_id="t", title="Evaluation Heavy",
+        authors=("A",), year=2026, venue="V", abstract="", url="", summary=summary,
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("local",)), papers=(paper,),
+    )
+    written = export_collection(collection, ExportOptions(
+        formats=("pptx",), out_dir=str(tmp_path), filename_stem="evalheavy", language="en",
+    ))
+    prs = Presentation(str(written["pptx"]))
+    every_run_text = " ".join(
+        run.text
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+        for para in shape.text_frame.paragraphs
+        for run in para.runs
+    )
+    for i in range(1, 10):
+        assert f"Finding number {i} " in every_run_text, f"evaluation bullet {i} dropped"
+    assert "more)" not in every_run_text, "content was truncated instead of paginated"
+    assert check_pptx(written["pptx"]) == [], "stacked evaluation overflowed"
+
+
 def _find_run_color(prs, target_rgb: tuple[int, int, int]) -> bool:
     for slide in prs.slides:
         for shape in slide.shapes:

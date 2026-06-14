@@ -21,6 +21,7 @@ DEFAULT_LANGUAGE: Final[str] = "en"
 
 _TABLE: dict[str, dict[str, str]] = {
     "en": {
+        "more_items": "(+{n} more)",
         "agenda": "Agenda",
         "references": "References",
         "paper_review_prefix": "Paper Review:",
@@ -70,6 +71,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "zh-tw": {
+        "more_items": "（還有 {n} 項）",
         "agenda": "議程",
         "references": "參考文獻",
         "paper_review_prefix": "論文回顧:",
@@ -119,6 +121,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "zh-cn": {
+        "more_items": "（还有 {n} 项）",
         "agenda": "议程",
         "references": "参考文献",
         "paper_review_prefix": "论文回顾:",
@@ -168,6 +171,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "ja": {
+        "more_items": "（他 {n} 件）",
         "agenda": "目次",
         "references": "参考文献",
         "paper_review_prefix": "論文レビュー:",
@@ -217,6 +221,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "es": {
+        "more_items": "(+{n} más)",
         "agenda": "Índice",
         "references": "Referencias",
         "paper_review_prefix": "Revisión del artículo:",
@@ -266,6 +271,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "fr": {
+        "more_items": "(+{n} autres)",
         "agenda": "Sommaire",
         "references": "Références",
         "paper_review_prefix": "Revue d'article :",
@@ -315,6 +321,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "de": {
+        "more_items": "(+{n} weitere)",
         "agenda": "Inhalt",
         "references": "Literatur",
         "paper_review_prefix": "Paper-Review:",
@@ -364,6 +371,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "ko": {
+        "more_items": "(외 {n}개)",
         "agenda": "목차",
         "references": "참고문헌",
         "paper_review_prefix": "논문 리뷰:",
@@ -413,6 +421,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "pt": {
+        "more_items": "(+{n} mais)",
         "agenda": "Sumário",
         "references": "Referências",
         "paper_review_prefix": "Análise do artigo:",
@@ -462,6 +471,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "ru": {
+        "more_items": "(ещё {n})",
         "agenda": "Содержание",
         "references": "Список литературы",
         "paper_review_prefix": "Обзор статьи:",
@@ -511,6 +521,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "it": {
+        "more_items": "(+{n} altri)",
         "agenda": "Indice",
         "references": "Bibliografia",
         "paper_review_prefix": "Recensione dell'articolo:",
@@ -560,6 +571,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "vi": {
+        "more_items": "(+{n} mục nữa)",
         "agenda": "Mục lục",
         "references": "Tài liệu tham khảo",
         "paper_review_prefix": "Tổng quan bài báo:",
@@ -609,6 +621,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "hi": {
+        "more_items": "(+{n} और)",
         "agenda": "विषय-सूची",
         "references": "संदर्भ",
         "paper_review_prefix": "शोध-पत्र समीक्षा:",
@@ -658,6 +671,7 @@ _TABLE: dict[str, dict[str, str]] = {
         "no_authors_dash": "—",
     },
     "id": {
+        "more_items": "(+{n} lainnya)",
         "agenda": "Daftar Isi",
         "references": "Referensi",
         "paper_review_prefix": "Tinjauan Makalah:",

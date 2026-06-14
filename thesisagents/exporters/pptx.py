@@ -765,6 +765,7 @@ def _add_pain_points_slide(
             left=_MARGIN_X, top=Inches(1.7),
             width=_BODY_WIDTH, height=Inches(4.4),
             columns=2,
+            language=ctx.language,
         )
         if chunk_index == 0 and summary.research_question:
             _add_rq_callout(
@@ -974,6 +975,51 @@ def _add_method_details_slides(
         for heading, bullets in chunk:
             cursor = _add_subsection(
                 slide, heading, bullets, cursor, width=_BODY_WIDTH,
+                language=ctx.language,
+            )
+
+
+def _any_section_over_cell_cap(sections) -> bool:
+    """True when a section has more bullets than a 2-column grid cell shows.
+
+    The grid path caps a cell at ``_BULLETS_PER_CELL_MAX`` and appends a
+    "(+N more)" marker — fine when content fits, but a section with more bullets
+    than that loses the overflow. Callers test this and, when True, render the
+    section list via ``_add_paginated_bullet_sections`` (full-width, one section
+    per slide, split into <= cap pages) where every bullet survives instead of
+    being dropped from a cramped cell.
+
+    Example: an evaluation section with eight findings renders as two full-width
+    pages ("… (1/2)" with six, "… (2/2)" with two) rather than a 2-column grid
+    that would show six + "(+2 more)".
+    """
+    return any(len(bullets) > _BULLETS_PER_CELL_MAX for _heading, bullets in sections)
+
+
+def _add_paginated_bullet_sections(
+    prs: Presentation, layout, paper: Paper, ctx: _BuildContext, *, title, sections,
+) -> None:
+    """Render (heading, bullets) sections full-width, one section per slide, with
+    any section's bullets split into consecutive ``<heading> (i/N)`` pages of at
+    most ``_BULLETS_PER_CELL_MAX`` bullets — so no bullet is ever dropped.
+
+    Each page carries at most the cap the 2-column grid cell was already sized
+    for, so the result clears the footer guard the same way the grid does. This
+    is the overflow-safe fallback the grid callers use when
+    ``_any_section_over_cell_cap`` is True; short content keeps the compact grid.
+    """
+    cap = _BULLETS_PER_CELL_MAX
+    for heading, bullets in sections:
+        chunks = [bullets[i : i + cap] for i in range(0, len(bullets), cap)] or [()]
+        for chunk_index, chunk in enumerate(chunks):
+            slide = _new_section_slide(prs, layout, title)
+            _add_paper_subtitle(slide, paper, ctx)
+            sub_heading = heading
+            if len(chunks) > 1:
+                sub_heading = f"{heading} ({chunk_index + 1}/{len(chunks)})"
+            _add_subsection(
+                slide, sub_heading, chunk, Inches(1.7),
+                width=_BODY_WIDTH, language=ctx.language,
             )
 
 
@@ -981,6 +1027,15 @@ def _add_evaluation_slide(
     prs: Presentation, layout, paper: Paper, summary: PaperSummary, ctx: _BuildContext,
 ) -> None:
     sections = summary.evaluation_sections
+    if not sections:
+        return
+    if _any_section_over_cell_cap(sections):
+        # Full-width, paginated: no bullet dropped from a cramped cell.
+        _add_paginated_bullet_sections(
+            prs, layout, paper, ctx,
+            title=t(ctx.language, "section_evaluation"), sections=sections,
+        )
+        return
     chunk_size = _EVALUATION_SECTIONS_PER_SLIDE
     chunks = [sections[i : i + chunk_size] for i in range(0, len(sections), chunk_size)]
     for chunk_index, chunk in enumerate(chunks):
@@ -995,6 +1050,7 @@ def _add_evaluation_slide(
             left=_MARGIN_X, top=Inches(1.7),
             width=_BODY_WIDTH, height=Inches(5.0),
             columns=min(2, len(chunk)),
+            language=ctx.language,
         )
 
 
@@ -1032,7 +1088,7 @@ def _add_figure_slides(
         if description:
             _add_bullet_box(
                 slide, name="body",
-                bullets=_cap_bullets(description, max_count=4),
+                bullets=_cap_bullets(description, max_count=4, language=ctx.language),
                 left=_MARGIN_X, top=Inches(5.95),
                 width=_BODY_WIDTH, height=Inches(1.05),
                 font_pt=_BODY_PT - 2,
@@ -1113,7 +1169,7 @@ def _add_paper_table_slides(
         if analysis:
             _add_bullet_box(
                 slide, name="body",
-                bullets=_cap_bullets(analysis, max_count=6),
+                bullets=_cap_bullets(analysis, max_count=6, language=ctx.language),
                 left=_MARGIN_X, top=Inches(5.6),
                 width=_BODY_WIDTH, height=Inches(1.4),
                 font_pt=_BODY_PT,
@@ -1176,7 +1232,8 @@ def _add_rq_result_slide(
         # Show up to 6 analysis bullets so authors don't lose argument
         # detail to a silent 3-bullet cap.
         _add_bullet_box(
-            slide, name="body", bullets=_cap_bullets(rq.analysis, max_count=6),
+            slide, name="body",
+            bullets=_cap_bullets(rq.analysis, max_count=6, language=ctx.language),
             left=_MARGIN_X, top=analysis_top,
             width=_BODY_WIDTH, height=Inches(1.4 if rq.table else 4.5),
             font_pt=_BODY_PT,
@@ -1212,8 +1269,6 @@ def _add_limitations_future_slide(
         f"{t(ctx.language, 'section_limitations')} & "
         f"{t(ctx.language, 'section_future_work')}"
     )
-    slide = _new_section_slide(prs, layout, title)
-    _add_paper_subtitle(slide, paper, ctx)
     sections: list[tuple[str, tuple[str, ...]]] = []
     if summary.limitations:
         sections.append(
@@ -1223,12 +1278,22 @@ def _add_limitations_future_slide(
         sections.append(
             (t(ctx.language, "section_future_work"), tuple(summary.future_work))
         )
+    if _any_section_over_cell_cap(sections):
+        # A long limitations / future-work list would lose bullets in the
+        # 2-column grid; render full-width paginated so all survive.
+        _add_paginated_bullet_sections(
+            prs, layout, paper, ctx, title=title, sections=tuple(sections),
+        )
+        return
+    slide = _new_section_slide(prs, layout, title)
+    _add_paper_subtitle(slide, paper, ctx)
     _render_multi_column(
         slide,
         sections=tuple(sections),
         left=_MARGIN_X, top=Inches(1.7),
         width=_BODY_WIDTH, height=Inches(5.0),
         columns=2,
+        language=ctx.language,
     )
 
 
@@ -1255,7 +1320,9 @@ def _add_content_slide(
     )
     fallback = [_clean(paper.abstract)]
     raw_bullets = _sentences_to_bullets(sentences) or fallback
-    bullets = _cap_bullets(raw_bullets, max_count=6, max_chars=_BULLET_MAX_CHARS)
+    bullets = _cap_bullets(
+        raw_bullets, max_count=6, max_chars=_BULLET_MAX_CHARS, language=ctx.language,
+    )
     _add_bullet_box(
         slide, name="body", bullets=bullets,
         left=_MARGIN_X, top=_BODY_TOP + Inches(0.6),
@@ -1372,18 +1439,23 @@ def _cap_bullets(
     bullets,
     max_count: int = _BULLETS_PER_CELL_MAX,
     max_chars: int = _BULLET_MAX_CHARS,  # kept for back-compat; ignored
+    *,
+    language: str = "en",
 ) -> list[str]:
     """Cap the *number* of bullets shown; never truncate a bullet's text.
 
-    A trailing "(+N more)" marker calls out genuine overflow by count so
-    authors notice they exceeded the cap, without silently chewing
-    characters off a kept bullet.
+    A trailing localised "(+N more)" marker (the ``more_items`` i18n key) calls
+    out genuine overflow by count so authors notice they exceeded the cap,
+    without silently chewing characters off a kept bullet. ``language`` selects
+    the marker's locale so a zh-tw / ja deck never shows an English "(+N more)";
+    it defaults to ``en`` for callers (e.g. height estimators) where the marker
+    text is immaterial because only the line *count* matters.
     """
     del max_chars  # intentionally ignored; see docstring
     sliced = [" ".join(b.split()) for b in bullets[:max_count]]
     overflow = len(bullets) - len(sliced)
     if overflow > 0:
-        sliced.append(f"(+{overflow} more)")
+        sliced.append(t(language, "more_items", n=overflow))
     return sliced
 
 
@@ -1761,12 +1833,14 @@ def _bullets_box_height_in(bullets, width_in: float) -> float:
     return max(0.5, total)
 
 
-def _add_subsection(slide, heading: str, bullets, cursor, *, width) -> int:
+def _add_subsection(
+    slide, heading: str, bullets, cursor, *, width, language: str = "en",
+) -> int:
     head_height = Inches(0.5)
     # Subsection bullets — show up to 6 so authors don't lose detail.
     # Method/eval slides paginate at the section-list level, so 6 per
     # subsection won't push past the footer in the worst case.
-    capped = _cap_bullets(bullets, max_count=6)
+    capped = _cap_bullets(bullets, max_count=6, language=language)
     bullet_height = Inches(_bullets_box_height_in(capped, Emu(width - Inches(0.2)).inches))
     _add_textbox(
         slide, name="subhead", text=_clean(heading),
@@ -1785,6 +1859,7 @@ def _add_subsection(slide, heading: str, bullets, cursor, *, width) -> int:
 
 def _render_multi_column(
     slide, *, sections, left, top, width, height, columns: int = 2,
+    language: str = "en",
 ) -> None:
     if not sections:
         return
@@ -1806,7 +1881,9 @@ def _render_multi_column(
         )
         _add_bullet_box(
             slide, name="body",
-            bullets=_cap_bullets(bullets, max_chars=_BULLET_MAX_CHARS_COL),
+            bullets=_cap_bullets(
+                bullets, max_chars=_BULLET_MAX_CHARS_COL, language=language,
+            ),
             left=x, top=y + Inches(0.55),
             width=col_w, height=row_h - Inches(0.65),
             font_pt=_BODY_PT,
