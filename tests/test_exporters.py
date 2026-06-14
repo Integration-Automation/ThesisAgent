@@ -448,6 +448,80 @@ def test_pptx_long_evaluation_section_preserves_all_bullets(tmp_path):
     assert check_pptx(written["pptx"]) == [], "stacked evaluation overflowed"
 
 
+def _export_one(tmp_path, summary, *, stem):
+    from thesisagents.core.models import Paper
+
+    paper = Paper(
+        source="local", source_id="t", title="Content Preservation",
+        authors=("A",), year=2026, venue="V", abstract="", url="", summary=summary,
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("local",)), papers=(paper,),
+    )
+    return export_collection(collection, ExportOptions(
+        formats=("pptx",), out_dir=str(tmp_path), filename_stem=stem, language="en",
+    ))["pptx"]
+
+
+def _all_run_text(pptx_path) -> str:
+    from pptx import Presentation
+
+    prs = Presentation(str(pptx_path))
+    return " ".join(
+        run.text
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+        for para in shape.text_frame.paragraphs
+        for run in para.runs
+    )
+
+
+def test_pptx_long_future_work_preserves_all_bullets(tmp_path):
+    """A future-work list longer than a grid cell is paginated full-width (via
+    _add_limitations_future_slide's fallback), so no bullet is dropped."""
+    from thesisagents.core.models import PaperSummary
+    from thesisagents.exporters.overflow import check_pptx
+
+    summary = PaperSummary(
+        language="en",
+        future_work=tuple(f"Future direction {i} to pursue" for i in range(1, 10)),
+        core_observation="The future-work list paginates instead of truncating.",
+        model="test",
+    )
+    out = _export_one(tmp_path, summary, stem="futureheavy")
+    text = _all_run_text(out)
+    for i in range(1, 10):
+        assert f"Future direction {i} " in text, f"future-work bullet {i} dropped"
+    assert "more)" not in text
+    assert check_pptx(out) == []
+
+
+def test_pptx_long_pain_point_preserves_bullets_and_keeps_rq(tmp_path):
+    """A pain point with more bullets than a quadrant cell holds paginates
+    full-width AND still shows the research-question callout on its own lead
+    slide — neither the bullets nor the RQ is lost."""
+    from thesisagents.core.models import PaperSummary
+    from thesisagents.exporters.overflow import check_pptx
+
+    rq = "How can the manual deck workflow be automated end to end?"
+    summary = PaperSummary(
+        language="en",
+        pain_points=(
+            ("Slow manual workflow", tuple(f"Pain bullet {i} detail" for i in range(1, 10))),
+        ),
+        research_question=rq,
+        model="test",
+    )
+    out = _export_one(tmp_path, summary, stem="painheavy")
+    text = _all_run_text(out)
+    for i in range(1, 10):
+        assert f"Pain bullet {i} " in text, f"pain-point bullet {i} dropped"
+    assert rq in text, "research question lost when pain points paginated"
+    assert "more)" not in text
+    assert check_pptx(out) == []
+
+
 def _find_run_color(prs, target_rgb: tuple[int, int, int]) -> bool:
     for slide in prs.slides:
         for shape in slide.shapes:

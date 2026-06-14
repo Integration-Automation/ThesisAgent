@@ -748,6 +748,25 @@ def _add_pain_points_slide(
     sections = list(summary.pain_points)
     if not sections:
         return
+    if _any_section_over_cell_cap(sections):
+        # A pain point with more bullets than a quadrant cell holds would lose
+        # content; render full-width paginated so every bullet survives. The RQ
+        # callout (normally inline under the quadrant) gets its own lead slide so
+        # it is still shown — _add_research_question_slide stays skipped because
+        # pain_points is non-empty, so there is no duplicate.
+        if summary.research_question:
+            rq_slide = _new_section_slide(
+                prs, layout, t(ctx.language, "section_research_question"),
+            )
+            _add_paper_subtitle(rq_slide, paper, ctx)
+            _add_rq_callout(
+                rq_slide, summary.research_question,
+                left=_MARGIN_X, top=Inches(2.5), width=_BODY_WIDTH, height=Inches(2.0),
+            )
+        _add_paginated_bullet_sections(
+            prs, layout, paper, ctx, title=title, sections=tuple(sections),
+        )
+        return
     per_slide = _pain_points_per_slide(sections)
     chunks = [
         sections[i : i + per_slide]

@@ -225,11 +225,15 @@ def main(argv: list[str]) -> int:
     ``DeckReview.to_dict()`` objects instead of the human report, so a CI step
     can parse the overflow / contrast / missing-section detail.
     """
+    usage = "usage: review [--lang XX] [--json] <deck.pptx> [more.pptx ...]"
     language: str | None = None
     as_json = False
     paths: list[str] = []
     i = 0
     while i < len(argv):
+        if argv[i] in ("-h", "--help"):
+            print(usage)
+            return 0
         if argv[i] in ("--lang", "--language") and i + 1 < len(argv):
             language = argv[i + 1]
             i += 2
@@ -241,7 +245,7 @@ def main(argv: list[str]) -> int:
         paths.append(argv[i])
         i += 1
     if not paths:
-        print("usage: review [--lang XX] [--json] <deck.pptx> [more.pptx ...]")
+        print(usage)
         return 2
     reviews = [review_deck(path, language) for path in paths]
     if as_json:
