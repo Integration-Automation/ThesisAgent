@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from thesisagents.core.dedup import dedupe
 from thesisagents.core.models import Paper
 from thesisagents.core.ranking import rank
@@ -193,3 +195,126 @@ def test_rank_short_query_terms_are_dropped():
     miss = _paper(source_id="miss", title="A study of birds", year=2024)
     ordered = rank([miss, hit], keywords="a llm of", current_year=2025)
     assert ordered[0].source_id == "hit"
+
+
+def test_rank_stemming_matches_plural():
+    """A singular query term matches a plural/inflected title — same concept.
+
+    Without stemming, "transformer" would miss "Transformers" entirely and the
+    on-topic paper would sort below an unrelated one on recency/citation alone.
+    """
+    hit = _paper(source_id="hit", title="Transformers in Vision", year=2024)
+    miss = _paper(source_id="miss", title="Graph Theory Basics", year=2024)
+    ordered = rank([miss, hit], keywords="transformer", current_year=2025)
+    assert ordered[0].source_id == "hit"
+
+
+def test_rank_phrase_adjacency_bonus():
+    """Two titles share all query words, but the one where they appear ADJACENT
+    (a real phrase) ranks above the one where they are scattered."""
+    phrase = _paper(
+        source_id="phrase", title="Retrieval-Augmented Generation", year=2024,
+    )
+    scattered = _paper(
+        source_id="scattered", title="Generation Augmented by Retrieval", year=2024,
+    )
+    ordered = rank(
+        [scattered, phrase],
+        keywords="retrieval augmented generation", current_year=2025,
+    )
+    assert ordered[0].source_id == "phrase"
+
+
+def test_rank_synonym_acronym_expands():
+    """A query for an acronym matches a title that only writes the long form."""
+    hit = _paper(
+        source_id="hit", title="A Survey of Large Language Models", year=2024,
+    )
+    miss = _paper(source_id="miss", title="Image Segmentation Methods", year=2024)
+    ordered = rank([miss, hit], keywords="llm", current_year=2025)
+    assert ordered[0].source_id == "hit"
+
+
+def test_rank_synonym_does_not_overmatch_shared_word():
+    """A lone shared word ("language") must NOT inject an unrelated acronym:
+    a query for "nlp" must not match a pure "language model" title."""
+    lang_only = _paper(
+        source_id="lang", title="Sign Language Recognition", year=2024,
+    )
+    nlp_paper = _paper(
+        source_id="nlp", title="Natural Language Processing Advances", year=2024,
+    )
+    ordered = rank([lang_only, nlp_paper], keywords="nlp", current_year=2025)
+    assert ordered[0].source_id == "nlp"
+
+
+def test_rank_cjk_query_has_relevance():
+    """A Chinese-keyword search gets a real relevance signal (CJK bigrams), so an
+    on-topic Chinese title beats an off-topic one rather than tying on recency."""
+    hit = _paper(source_id="hit", title="視覺注意力機制研究", year=2024)
+    miss = _paper(source_id="miss", title="區塊鏈技術概論", year=2024)
+    ordered = rank([miss, hit], keywords="注意力機制", current_year=2025)
+    assert ordered[0].source_id == "hit"
+
+
+def test_rank_stemming_does_not_overstrip():
+    """The min-stem-length guard keeps short words intact: "ring" must stay
+    "ring" (not collapse to "r"), so it still matches a "Ring ..." title and
+    "Rendering" correctly stems to "render" without colliding."""
+    hit = _paper(source_id="hit", title="Ring Signatures", year=2024)
+    miss = _paper(source_id="miss", title="Rendering Pipelines", year=2024)
+    ordered = rank([miss, hit], keywords="ring", current_year=2025)
+    assert ordered[0].source_id == "hit"
+
+
+# --- Golden-query regression set -------------------------------------------
+# A realistic candidate pool ranked end-to-end (relevance + recency + citation
+# together), so a future change to the weights / stemmer / synonyms that quietly
+# degrades real-world ranking is caught — not just the isolated-axis unit tests
+# above. The invariant each case pins: the on-topic paper takes the #1 slot even
+# though the pool contains a 180k-citation OFF-topic paper (resnet) — i.e.
+# relevance still dominates raw citation count. (Below #1, the off-topic paper
+# may legitimately fill a slot on a query where only one paper is on-topic; that
+# is correct recency+citation behaviour, so the test pins #1, not the whole top
+# 3.) The gaps are wide enough to survive small weight retunes; if one breaks,
+# the ranking changed materially and the expectation should be re-justified.
+def _golden_pool() -> list[Paper]:
+    return [
+        _paper(source_id="attn", title="Attention Is All You Need",
+               year=2017, citation_count=90000),
+        _paper(source_id="xformer_survey", title="A Survey of Transformer Architectures",
+               year=2024, citation_count=120),
+        _paper(source_id="resnet", title="Deep Residual Learning for Image Recognition",
+               year=2016, citation_count=180000),
+        _paper(source_id="rag",
+               title="Retrieval-Augmented Generation for Knowledge-Intensive NLP",
+               year=2020, citation_count=5000),
+        _paper(source_id="gpt3", title="Large Language Models are Few-Shot Learners",
+               year=2020, citation_count=30000),
+        _paper(source_id="gnn", title="Graph Neural Networks: A Comprehensive Review",
+               year=2021, citation_count=800),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_top"),
+    [
+        # Plural/inflected title match (stemming): "transformer" -> "Transformer".
+        ("transformer", "xformer_survey"),
+        # Exact multi-word phrase wins on adjacency + full overlap.
+        ("retrieval augmented generation", "rag"),
+        # Acronym synonym: "llm" surfaces the long-form "Large Language Models".
+        ("llm", "gpt3"),
+        # Plural in title ("Networks") + phrase; on-topic beats the 180k-cite resnet.
+        ("graph neural network", "gnn"),
+    ],
+)
+def test_rank_golden_queries(query, expected_top):
+    ordered = rank(_golden_pool(), keywords=query, current_year=2026)
+    top_ids = [p.source_id for p in ordered]
+    assert top_ids[0] == expected_top, f"{query!r} -> {top_ids[:3]}"
+    # Relevance dominance: the on-topic paper outranks the 180k-citation
+    # off-topic paper, even with a ~400x citation disadvantage in some cases.
+    assert top_ids.index(expected_top) < top_ids.index("resnet"), (
+        f"off-topic resnet outranked {expected_top!r} for {query!r}: {top_ids}"
+    )
