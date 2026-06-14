@@ -48,6 +48,14 @@ The pptx exporter is the most visually-sensitive surface in the project. Several
 - `_EVALUATION_SECTIONS_PER_SLIDE = 2`
 - KPI blocks and core-observation callouts are **always** split onto their own slide (`_add_kpi_slide`, separate core-observation slide). Never balance "stacks + tail callout" inside a fixed height.
 
+**Count caps are upper bounds — pagination is height-aware.** A fixed *count* can't guarantee fit, because section bodies vary in length: a slide of four 3-line contributions overflows where four 1-line ones fit. So the exporter now sizes and paginates by **estimated rendered height**, not count alone:
+
+- `_add_stacked_section` body height is **adaptive** — `_stacked_body_height_in(body)` estimates the wrapped line count (same model as the overflow inspector, full-width CJK ≈ 1.0 em / half-width Latin ≈ 0.55 em) and sizes the box to it, floored at `_STACK_BODY_MIN_IN = 0.85"`. A 3-line contribution gets a 3-line box instead of spilling into the next subhead.
+- `_paginate_stacks` packs sections into slides by a **height budget** (`_STACK_TOP_IN = 1.7"` → `_FOOTER_GUARD = 7.0"`), starting a new `(i/N)`-titled slide before the cumulative height would cross the guard. `_MAX_STACKS_PER_SLIDE` is kept as an upper bound so a slide never crowds in more than the documented maximum even when sections are tiny.
+- `_pain_points_per_slide` drops the pain-point grid from 2×2 to one row of two when cells are text-heavy, so a tall 3-bullet cell gets the full `_PAIN_QUADRANT_HEIGHT_IN = 4.4"` row instead of `4.4/2 = 2.2"`. Short cells keep the 2×2 look.
+
+**Why height-aware, not truncation:** the project never silently truncates body text (`_cap_bullets` caps *count* with a `(+N more)` marker, `_clean` never lops). So the only overflow-safe lever for variable-length content is box height + pagination. The regression guard is `tests/test_check_overflow.py::test_exported_rich_deck_has_no_overflow`, which exports a deliberately long-content rich deck and asserts the inspector finds zero violations.
+
 ### 5. Semantic shape names
 
 Every textbox is named with one of: `title` / `meta` / `body` / `subhead` / `footer` / `page_number` / `kpi` / `kpi_label` / `rq_box` / `paper_subtitle`. `pptx_edit.update_slide(..., title=...)` looks them up by name; **never break this contract** — silently renaming a shape will break the MCP edit tools.
@@ -65,13 +73,17 @@ SUPPORTED_LANGUAGES = (
 
 Every language has every key — enforced by `test_every_language_has_every_key`. Untranslated locales fall back silently to `en` via `normalise_language`.
 
+**Deck locales ≠ `paper_rule` writing locales (a real trap).** This list — the locales the *exporter* can render — includes `id` (Indonesian) and has **no Arabic**. The `paper_rule` subagent's writing-locale set instead includes `ar` (Arabic, RTL) and is about authoring *paper text*, not rendering slides. So a request for an Arabic deck does not raise — it falls back silently to `en`. Do not promise Arabic deck output on the strength of `paper_rule` covering Arabic, the two sets are deliberately different surfaces. If Arabic deck rendering is ever needed, it requires an `i18n.py` entry **and** RTL paragraph support in the exporter, neither of which exists today.
+
 When adding a new template string:
 1. Add the key to all 14 languages in `i18n.py`.
 2. Run `py -m pytest tests/exporters/test_i18n.py` to confirm the parity test stays green.
 
 ### 7. No overflow regressions
 
-When changing the deck or i18n, delegate to the `slide-overflow-check` subagent — it walks every shape on every slide and checks rendered-text height vs. the box's reserved height, and confirms no shape extends past the footer guard.
+When changing the deck or i18n, delegate to the `slide-overflow-check` subagent — it runs `scripts/check_overflow.py`, which walks every shape on every slide and checks rendered-text height vs. the box's reserved height, and confirms no shape extends past the footer guard.
+
+**Tables are estimated, not trusted.** python-pptx grows a table row to fit wrapped cell text, but the GraphicFrame's *declared* `height` does not change — so a many-row or long-cell table renders far taller than declared and can cross the footer guard while `shape.height` claims it fits. The inspector therefore **estimates** a table's rendered height (sum of each row's tallest-cell wrapped lines) rather than reading the declared height. This is what enforces the "≤ ~5 rows per slide" authoring guidance in §10 — a 10-row table is now caught, not silently shipped. The exporter deliberately does **not** auto-paginate author tables (splitting a comparison mid-table would reorder / duplicate its semantics, against the project's never-silently-restructure-author-content principle), so the fix for a flagged table is to split it at the **authoring** layer (`rq_results` / `paper_tables`), not in `pptx.py`.
 
 ### 8. Content clarity & first-use context (HARD)
 
@@ -110,6 +122,89 @@ When changing the deck or i18n, delegate to the `slide-overflow-check` subagent 
 **Builder responsibility:** when authoring a new section / RQ / pain-point / contribution slide in `PptxExporter` or via the LLM-as-agent flow (`paper-summary-author`), check every term the slide introduces against the slide deck so far. If this is the term's first appearance, the gloss must be on this slide. The audit is mechanical — grep the slide-by-slide text dump for acronyms in caps + standalone math notation + 英文 library names.
 
 **Interaction with content caps:** glosses cost chars and may push a bullet over `_BULLET_MAX_CHARS = 96`. When they do, the priority order from `paper_rule`'s tech-term rule applies: keep the gloss, trim adjacent filler, never drop the gloss.
+
+### 9. One message per slide — assertion headline + evidence (HARD)
+
+A thesis-style deck is read by an audience watching a talk, not by someone reading a document. Each content slide must carry **one** takeaway, stated *as the title* (an **assertion** — a full claim, not a topic label), with the body acting as the **evidence** for that claim. This is the single biggest lever on whether a deck reads as "designed for a defence" vs "a paper dumped onto slides", and — unlike the geometry rules — it binds the **authoring** step (`paper-summary-author` / `regen_*.py`), not `PptxExporter`.
+
+- **Assertion title, not topic label.** The title is a sentence-shaped claim the audience should remember.
+  - ❌ topic label: "Results", "Method", "Evaluation"
+  - ✅ assertion: "APD beats the 4 SOTA defences by ≥ 5.6 pp", "Disentangling za / zb cuts adversarial leakage to near-zero", "Distillation makes detection 2.3× faster"
+- **One message.** If a slide needs two unrelated takeaways, it is two slides. The `PaperSummary` schema already encodes one-message units — each `headline_metrics` row, each `rq_results` block, each `pain_points` quadrant. Do NOT merge two RQs onto one slide to save space; `max_slides_per_paper` (default 25) exists so you don't have to.
+- **Body = evidence for the title.** A KPI callout, one chart, one comparison table, or 3-5 tight bullets that *support the assertion* — never a wall of text restating it. If the body doesn't back the title's claim, one of the two is wrong.
+
+**Why:** a slide titled "Method" with eight bullets forces the audience to find the point themselves; a slide whose title *is* the point, evidenced below it, lands in five seconds. The exporter renders whatever the summary provides, so the assertion has to be authored into the slide's `title` / `subhead`, not left as a section label.
+
+**Anti-pattern:** title "Experiment Results", body = 9 bullets spanning 3 different findings. **Pattern:** three slides, each titled with one finding, each body = that finding's KPI / table / chart. (See §14 for the argument-level requirement that the assertion be sayable by a non-expert, not only correct.)
+
+### 10. Choose the evidence form that fits the data (HARD)
+
+§9 says the body is *evidence*; this says which **form** it takes. Authoring a deck means picking, per slide, between a chart, a table, a KPI callout, and bullets — the wrong choice buries the point even when the content is right.
+
+- **Trend / comparison across many values → chart.** "ADA across 3 benchmarks × 5 defences" is a grouped bar chart, not a 15-cell table the speaker reads aloud. The eye sees "ours is highest" instantly; it cannot from a number grid.
+- **A few exact numbers that *are* the point → KPI callout.** "92.3% ADA · +5.6 pp · 12.3 ms" as three big bold numbers, not a sentence. `headline_metrics` is exactly this.
+- **Structured many-row comparison where exact cells matter → table.** Literature positioning (§2.3) and per-RQ result tables, because the reader compares specific cells. Keep them ≤ ~5 rows on a slide (overflow rule §7).
+- **Qualitative / sequential points → 3-5 bullets.** Pain-points, method steps, limitations — not numbers.
+
+**Why:** the exporter already supports figures (`figures`) and tables (`paper_tables` / `rq_results`) — a deck that renders every result as bullets leaves the exporter's strongest slide types unused and makes the audience do the comparison in their heads.
+
+**Anti-pattern:** a 5×4 accuracy table read cell-by-cell (should be a bar chart); or a single 92.3% drowned in a paragraph (should be a KPI). **Pattern:** chart for "who wins", table for "exact cells", KPI for "the one number", bullets for "the qualitative points".
+
+### 11. Structural slides (cover / agenda / divider / Q&A / references)
+
+Content slides carry the findings (§9); **structural** slides carry the *navigation*. They have different jobs, and over-filling them is a common "paper dumped onto slides" tell — a divider with eight bullets, or a references slide pasting a whole BibTeX file. Each structural slide has exactly **one** navigational job.
+
+- **Cover** (`_cover_title` + `_cover_subtitle`). Title = the paper's title run through `_cover_title` (title-cased, period / locale suffix added) — NEVER the raw search query (deck-design anti-pattern). Subtitle = authors · year · venue. For a multi-paper survey deck the cover title is the *survey topic*, not paper #1's title. Presenter name / affiliation / date belong here (a defence), not repeated on every slide.
+- **Agenda** (`_agenda_line`). A multi-paper deck lists each paper as one pointer line so the audience can place each paper. A single-paper deck does **not** need an agenda — go cover → content; an agenda for one paper is filler. Agenda lines are pointers, never content (no abstracts on the agenda).
+- **Section divider** (the larger top accent band, deck-design). A divider is a *cognitive reset* between topics — section name + number, nothing else. Resist putting the next section's first bullet on it. Its whole value is telling the audience "we've moved from Method to Results".
+- **Q&A / closing.** One slide, minimal — "Q&A" or a thanks line + contact. It is NOT a second conclusion; the takeaways already landed on the findings slides. Don't restate results here.
+- **References.** List ONLY the works the deck actually cites (the comparison table, the SOTA baselines), numbered to match the in-deck citation markers — not a full bibliography dump. Split across slides when it overflows `FOOTER_GUARD` (§7). Reference text may be small but must stay readable (contrast contract) and on-brand grey, not bright.
+
+**Why:** structural slides are exactly where "a paper dumped onto slides" leaks back in — a 40-entry references slide, an agenda restating abstracts, a divider doubling as a content slide. Keep each to its one navigational job.
+
+**Anti-pattern:** a references slide with 35 BibTeX entries in 9pt overflowing the footer; an agenda whose lines are one-sentence paper summaries. **Pattern:** references = the ~8 works actually cited, numbered [1]..[8], split across 2 slides if needed; agenda = "Paper N of M: <short title>" pointers.
+
+### 12. Math notation rendering (presentation, not just glossing)
+
+§8 says every math symbol must be *glossed* at first use; this says how to *render* the symbol itself. They are independent — `min 互資訊 I(za;zb|Ep)` glosses the operator but still renders the variable as the bare ASCII string "za", which reads as a word, not "z subscript a".
+
+- **Real subscripts / superscripts, not flattened ASCII.** `za` is z-sub-a, `λmax` is λ-sub-max, `x²` is x-super-2. python-pptx supports run-level baseline shift (`<a:rPr baseline="-25000">` for subscript, `30000` for superscript) — use it, or Unicode subscript glyphs (`z` + `ₐ`) as a fallback. Typing "za" / "lambda_max" / "x^2" literally is a tell. **The exporter renders this for you — but only when the authoring wraps the notation in `$...$` (the math-delimiter contract below).** Bare `I(za;zb|Ep)` typed without `$...$` stays flat ASCII on the slide; that is the single most common way the feature goes unused (the original fang2026 deck shipped flat because its regen script never used `$...$`).
+- **Variables italic, operators upright** (standard math typesetting). Variables `z`, `λ`, `x` italic; multi-letter operators `min`, `argmin`, `log`, `softmax` upright. `min` set in italic reads as m·i·n multiplied.
+- **Unicode math symbols, not ASCII stand-ins.** `≤ ≥ × · ‖·‖ λ ∑ ∫ ∇ ∈ →`, not `<=`, `>=`, `x`, `sum`, `integral`, `->`. The per-language font stack renders these; ASCII substitutes look like code, not math.
+- **Complex formulae → image, not text.** Multi-line equations, fractions, integrals / sums with limits, and matrices cannot be laid out in a pptx text run. Render them with LaTeX to a **transparent-background** PNG (per the Figures dark-mode rule in deck-design) and place via `figures=`. Don't fake a fraction by stacking "a / b" in two textboxes.
+- **One notation per concept across the whole deck.** If the paper writes `z_a`, every slide writes `z_a` — not `za` here and `z_adv` there. (Mirrors the paper-side notation-consistency rule.)
+
+**The `$...$` math-delimiter authoring contract (HARD).** The exporter only renders real subscripts / superscripts / italic variables for notation the authoring **wraps in `$...$`**, using `_x` / `_{xy}` for subscript and `^x` / `^{xy}` for superscript. So the authoring side (`paper-summary-author`, `regen_*.py`) must write `$I(z_a;z_b|E_p)$`, not bare `I(za;zb|Ep)`. Inside a `$...$` span a single-letter token is italicised as a variable and a multi-letter token stays upright as an operator (`$min$` → upright). Plain `_` outside `$...$` (file names, prose) is left alone, so the delimiter is opt-in and never mangles non-math text.
+
+Surfaces that render the contract (`_render_math_paragraph` / `_append_math_runs` in `pptx.py`): **bullets** (`_add_bullet_box`), **KPI values** (`_add_kpi_lines`), **table cells** (`_add_table`), **contribution / method body paragraphs** (`_add_stacked_section` via `_add_textbox(math=True)`), and **RQ / core-observation callouts** (`_add_rq_callout`). Together these cover every content surface a thesis deck puts math on. **Why:** body paragraphs and the RQ callout are exactly where the objective formula lives (`I(z_a;z_b|E_p)`), and they were the last two surfaces to bypass the renderer — a deck that glosses the operator (§8) but still shows flat "za" in its contribution paragraph reads half-finished.
+
+**Anti-pattern:** a slide reading `min I(za;zb|Ep) s.t. ||za-zb||_2 <= eps` — ASCII subscripts, ASCII norm, ASCII `<=`, operator unnamed, and (the authoring-side root cause) no `$...$` so the renderer never fires. **Pattern:** author `$min$ $I(z_a;z_b|E_p)$` with real subscripts + italic variables, `‖z_a − z_b‖₂ ≤ ε`, and the operator named ("minimise the mutual information …") per §8.
+
+### 13. Deck length and pacing
+
+`max_slides_per_paper` (default 25) is a **talk-time budget**, not an arbitrary cap. A defence / seminar audience absorbs ~1-1.5 minutes per content slide, so ~25 slides ≈ a 20-30 minute talk for one paper. Authoring past the cap produces a deck that can't be delivered in the slot — the cap exists so you prune at *authoring* time, not live.
+
+- **Prune to the takeaways, don't shrink to fit.** When a paper has more than fits, drop the weakest unit (an extra method sub-section, a secondary RQ) — do NOT cram everything onto fewer slides past the per-slide caps (§4); that just recreates the wall-of-text tell.
+- **A multi-paper survey divides the budget.** 5 papers in one 25-slide deck is ~5 slides each — a one-highlight-per-paper survey (cover / agenda / per-paper highlight / references), not a full thesis deck per paper. Set `max_slides_per_paper` to match the slot.
+- **Structural slides count toward the budget but aren't content.** Cover + agenda + dividers + Q&A + references (§11) are ~5-6 of the 25, leaving ~19 for findings — plan around that, don't discover it at slide 25.
+
+**Anti-pattern:** 40 dense slides "because the paper is rich" — undeliverable, and every slide over-caps. **Pattern:** the cap forces the one-assertion-per-slide discipline of §9; if the content doesn't fit, it wasn't prioritised, not "the cap is too small".
+
+### 14. Plain-language comprehensibility for a mixed audience (HARD)
+
+§8 makes each **term** on a slide decodable, this section makes the **slide's whole point** graspable by a non-expert. They are complementary, not the same gate, a slide can pass §8 (every acronym / symbol / library name glossed at first use) and still leave the audience knowing what each word means yet not what the slide is *for*. A thesis-defence audience is mixed: it includes an examiner from an adjacent sub-field, and the deck is read at presentation speed (~30 s/slide) with no chance to ask "what did that mean?". §14 ensures that examiner leaves each slide able to say what it shows and why it matters. **Accessibility here is ADDITIVE to depth, never a dumbing-down** — the rigorous content stays, a plain layer is laid on top of it. The authoritative cross-surface definition is `paper_rule`'s "Plain-language comprehensibility" section, §14 is its slide implementation, defer to `paper_rule` when the two surfaces (paper text vs slide) need to agree.
+
+- **Plain-language takeaway lives in the assertion title (ties to §9).** The §9 assertion-headline must be *sayable by a non-expert*, not merely correct. The formula then lives in the body, glossed per §8 and wrapped in `$...$` per §12.
+  - ❌ formula-as-title: "Disentangling $z_a$/$z_b$ minimises $I(z_a;z_b|E_p)$" — correct, but opaque to anyone outside the sub-field.
+  - ✅ plain assertion: "Separating attack signal from normal signal cuts the leak attackers exploit to near-zero" — the same claim a non-expert can repeat, with $I(z_a;z_b|E_p)$ moved into the (glossed) body.
+- **Intuition before the formula on the slide.** When a slide shows an objective / equation, one plain bullet ABOVE or beside it states what it *accomplishes* in everyday terms before the symbols appear (e.g. 「先把攻擊訊號和正常訊號分開，讓攻擊者能利用的洩漏降到接近零」 above the `$...$` objective). The exporter renders whatever the body provides, so this is an AUTHORING duty (`paper-summary-author` / `thesis-deck-author` / regen scripts), not an exporter change.
+- **Give every headline number a real-world anchor.** A KPI of "12.3 ms" or "F1 0.87" means nothing to a non-expert standing alone, pair it with a plain anchor where the layout allows: "12.3 ms — faster than a blink", "F1 0.87 — ~87 of 100 calls correct". This complements §10 (which picks KPI vs chart vs table) by governing how the chosen number is *labelled*.
+- **One analogy for the single hardest idea, at most.** A one-line analogy on the method slide for the most counter-intuitive concept — sparing, never decorative. An analogy on every slide is noise, the value comes from spending it on the one idea the audience is most likely to stumble on.
+- **Self-test:** could an examiner from a DIFFERENT department, watching at presentation speed, leave this slide able to say what it shows and why it matters? If not, the plain layer is missing — add the plain assertion / intuition bullet / number anchor that closes the gap.
+
+**Why:** a deck can pass every geometry gate (§1–§7) and every §8 gloss yet still lose the half of the committee that isn't in the sub-field — the single most common「技術對但抓不到重點」complaint. §8 fixes "I don't know that word", §14 fixes "I followed every word and still don't know the point".
+
+**Anti-pattern:** a slide titled with a raw formula, body = symbols only, KPI "92.3%" with no anchor — every term may be glossed yet the slide is opaque to anyone outside the sub-field. **Pattern:** assertion title in plain language (§9), an intuition bullet above the glossed `$...$`-wrapped formula (§8 / §12), and the KPI carrying a real-world anchor (§10) — depth preserved, point delivered.
 
 ---
 

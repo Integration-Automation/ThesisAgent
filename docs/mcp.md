@@ -313,7 +313,8 @@ after the priority-based trim — cover / references / contributions are
 kept first; Q&A / figure / paper-table slides drop first. Pass `0`
 (or omit the field) for unlimited.
 
-`dark_mode` (default `true`) toggles the post-build recolour pass.
+`dark_mode` (default `false` — the project default is the light
+navy-band deck) toggles the post-build recolour pass.
 On: dark slide background (`#12151B`) + near-white body text (`#E5E7EB`)
 + darker table-row stripe — designed for OLED projectors and low-light
 venues. Off: the light/printable variant (white background + navy text
@@ -384,6 +385,40 @@ Shape names are set by `PptxExporter`: each slide carries `title`,
 `meta`, and (when an abstract was included) `body` shapes. Decks built
 elsewhere may not have these names — fall back to `shape_updates`
 addressed by integer index.
+
+### `pptx_review`
+
+Audit an existing deck against all three deck-quality contracts in one
+call: slide **overflow**, the dark-mode / no-red / contrast **colour**
+contracts, and `paper_rule` **section completeness**.
+
+```json
+{"path": "./exports/attention.pptx"}
+```
+
+`language` is optional — it is auto-detected from the slide titles when
+omitted (pass e.g. `"zh-tw"` to force it). Returns:
+
+```text
+{
+  "path": "./exports/attention.pptx",
+  "language": "zh-tw",
+  "thesis_style": true,
+  "ok": true,
+  "overflow": [],                 // {slide, shape, kind, rendered_in, limit_in}
+  "contrast": [],                 // {slide, shape, kind, detail, hard}
+  "missing_sections": [],         // canonical body sections with no covering slide
+  "completeness_gated": true      // missing_sections only fail a thesis-style deck
+}
+```
+
+`ok` is `false` when there is any overflow, any *hard* contrast issue
+(invisible / red / light-on-light text), or — for a thesis-style deck —
+any missing body section (Introduction, Literature Review, Methodology,
+Experiment, Conclusion). A lightweight abstract-only deck is never failed
+for lacking sections (`thesis_style` / `completeness_gated` say which).
+The same audit is available on the command line as
+`python -m thesisagents review <deck.pptx> [more.pptx ...] [--lang xx]`.
 
 ### `pptx_update_slide`
 

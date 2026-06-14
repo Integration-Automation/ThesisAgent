@@ -198,19 +198,24 @@ For each paper that is on-topic for the user's actual intent (see "Off-topic pap
 
    Concretely: when authoring each `Paper`, copy column 7 of the xlsx → `Paper.doi`, column 8 → `Paper.url`. For arxiv URLs, strip a trailing `v1` / `v2` version suffix: `https://arxiv.org/abs/2506.09580v1` → `arxiv_id="2506.09580"`, `url="https://arxiv.org/abs/2506.09580"`. Leave empty cells as `None` — never fabricate to fill.
 
-4. **Drop a regen script.** Save under `scripts/regen_<authoryear>_<slug>.py` or `scripts/regen_<query_slug>.py` for batches. Working templates already in the repo:
-   - `scripts/regen_llm_security_batch.py` — batch, 7 papers
-   - `scripts/regen_ling2026_agent_skills.py` — single paper en
-   - `scripts/regen_ling2026_agent_skills_zh_tw.py` — single paper zh-tw
-   - `scripts/regen_ieee_thesis_style.py` — single paper
-
-   Read the closest template first and follow its shape.
+4. **Drop a regen script.** Save under `scripts/regen_<authoryear>_<slug>.py` or `scripts/regen_<query_slug>.py` for batches. The canonical worked template in the repo is **`scripts/regen_fang2026.py`** — a single-paper, rich-tier, zh-tw, dark-mode build with every rich field populated. Read it first and follow its shape (`_build_summary()` → `_build_paper()` → `PaperCollection` → `PptxExporter().export(...)`). For a **batch**, use the same shape but pass a tuple of papers to `PaperCollection(papers=(...))` and loop the per-paper export, there is no separate batch template in-repo today, the single-paper one generalises directly.
 
 5. **Canonical filename, no `-rich` suffix.** In the script, set `filename_stem=paper.bibtex_key()` so the rich deck overwrites the CLI's lightweight emit at the same path. One `.pptx` per paper, the rich one. Language variants are the only exception (`f"{key}-zh-tw"`).
 
 6. **Call the exporter.** Either via the MCP `export` tool (when running against a live MCP server) or directly in Python by constructing a `Paper` with `summary=...`, wrapping in a `PaperCollection`, passing to `export_collection(...)`.
 
 7. **Run the script.** `py scripts/regen_<...>.py`. Confirm each `.pptx` written.
+
+### Field-content quality bar (apply the deck + paper rules at authoring time)
+
+The fields you write here are what `slide-deck-rules` and `paper_rule` later govern — satisfy those rules **as you author**, not after the deck renders:
+
+- **Each slide-driving string is an assertion, not a topic label** (slide-deck-rules §9). Write a `rq_results` question / `pain_points` sub-head / contribution heading as a claim — "Disentangling za / zb cuts adversarial leakage to near-zero", not "Method". One message per unit: never fold two RQs into one `rq_results` block to save a slide.
+- **Pick the field that fits the data** (slide-deck-rules §10). A trend / many-value comparison goes in a `technique_table` / `rq_results.table` (→ table) or a `figures` entry (→ chart); the headline numbers go in `headline_metrics` (→ KPI callout); qualitative / sequential points go in the bullet fields. Don't cram a 5×4 result grid into prose bullets.
+- **Numbers follow the reporting rules** (paper_rule §數字與統計呈現). `headline_metrics` values use measurement-appropriate significant figures (92.3%, not 92.31748%), label percentage-points vs relative %, and report p-values as actual values — and never invent a digit the PDF doesn't state.
+- **A non-expert must grasp the point, not just decode each term** (paper_rule "Plain-language comprehensibility", slide-deck-rules §14). §8 first-use glossing makes every *term* decodable, this bar makes the whole *argument* graspable by an adjacent-discipline 口試委員 / undergraduate / skimming reviewer. It is additive to depth, never a dumbing-down. Apply it to the specific fields you author: (a) every `pain_points` / `core_observation` / `rq_results` analysis string carries a plain "so what" a non-expert could repeat in one breath — ❌ "驗證器將拒絕率降至 0.03" ✅ "驗證器先攔下八成的錯誤草稿,所以最終輸出幾乎不再出錯(拒絕率 0.03)"; (b) a `headline_metrics` value pairs the number with a real-world anchor wherever the field's text allows — ❌ "延遲 12.3 ms" ✅ "延遲 12.3 ms(比一次眨眼還快)", ❌ "F1 0.87" ✅ "F1 0.87(約每 100 通電話對 87 通)"; (c) a `method_sections` body leads with one plain-language intuition sentence *before* any formula — ❌ opening on "$min\ I(z_a;z_b|E_p)$" ✅ "直覺上,我們要讓內容向量 $z_a$ 與風格向量 $z_b$ 互不洩漏,形式上即最小化 $I(z_a;z_b|E_p)$". Self-test before you ship a field: could a reader from a *different* department say what problem this solves, roughly how, and why it matters, without Googling? If not, add the one plain sentence — do NOT delete the technical content.
+- **Wrap math notation in `$...$`** (slide-deck-rules §12 math-delimiter contract). The exporter renders real subscripts / superscripts / italic variables only for `$...$`-delimited spans, and it does so on every content surface a thesis deck uses — bullets, KPI values, table cells, contribution / method body paragraphs, and RQ / core-observation callouts. So author `$I(z_a;z_b|E_p)$`, `$λ_{max}$`, `$x^2$` — never bare `I(za;zb|Ep)` / `lambda_max` / `x^2`, which ship flat ASCII. Use `_x` / `_{xy}` for subscript, `^x` / `^{xy}` for superscript; a single letter inside the span italicises as a variable, a multi-letter token stays upright as an operator. This is the same notation in `contributions_detailed`, `method_sections`, `core_observation`, and any `rq_results` text — keep it consistent across fields (one notation per concept). The original fang2026 deck shipped flat `za` precisely because its regen script omitted the `$...$`; don't repeat it.
+- **No fabrication** (paper_rule §不謊造). Every number / RQ result / limitation must come from the PDF you read. If the paper doesn't report it, leave the field empty — the exporter skips empty fields, which is correct.
 
 ## After all papers are authored
 
@@ -235,7 +240,7 @@ The search is keyword-based, so off-topic papers slip in:
 **Rich thesis-style PPT is the default deliverable. Lightweight is a fallback, never the goal when an LLM agent is in the loop.**
 
 1. `ANTHROPIC_API_KEY` set in the environment? → CLI auto-enriches via the Python pipeline; just run it.
-2. No key but you (an LLM agent) drive the session? → **you write the rich summary yourself.** The per-paper lightweight `.pptx` the CLI just emitted is an intermediate artefact, not the deliverable. Read each PDF, hand-author a `PaperSummary` with rich-tier fields, drop a `scripts/regen_<query>.py`, run it. Worked example: `scripts/regen_llm_security_batch.py` ships 7 hand-authored rich summaries built exactly this way.
+2. No key but you (an LLM agent) drive the session? → **you write the rich summary yourself.** The per-paper lightweight `.pptx` the CLI just emitted is an intermediate artefact, not the deliverable. Read each PDF, hand-author a `PaperSummary` with rich-tier fields, drop a `scripts/regen_<query>.py`, run it. Worked example: `scripts/regen_fang2026.py` is a complete hand-authored rich summary built exactly this way.
 3. No LLM in the loop (CI / cron / unattended) → lightweight is acceptable.
 
 ### Default CLI invocation (when the user asks for a deck)
@@ -272,7 +277,7 @@ When the user says "search X and make a [lang] PPT", run the runbook below strai
 1. For each downloaded PDF in `exports/<run>/pdfs/`, read it (use the Read tool; large PDFs go through `thesisagents.intelligence.pdf._extract_text`).
 2. Classify off-topic — see "Off-topic papers" below. Off-topic PDFs get deleted along with their lightweight `.pptx`, BUT stay in the xlsx + bib (honest record).
 3. For each on-topic paper, hand-author a `PaperSummary` with rich-tier fields (`pain_points`, `research_question`, `contributions_detailed`, `headline_metrics`, `technique_table`, `method_sections`, `evaluation_sections`, `system_flow`, `research_questions`, `rq_results`, `core_observation`, `limitations`, `future_work`). All in the user's requested language.
-4. Drop `scripts/regen_<slug>.py` modelled on `scripts/regen_llm_security_batch.py`. Each entry: `Paper(...summary=PaperSummary(...))`. Export with `filename_stem=paper.bibtex_key()` (NO `-rich` suffix) and `language=<lang>`.
+4. Drop `scripts/regen_<slug>.py` modelled on `scripts/regen_fang2026.py`. Each entry: `Paper(...summary=PaperSummary(...))`. Export with `filename_stem=paper.bibtex_key()` (NO `-rich` suffix) and `language=<lang>`.
 5. Run the regen. It overwrites the lightweight `<key>.pptx` at the canonical path with the rich-tier deck.
 
 **Phase 4 — Audits**

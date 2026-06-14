@@ -28,38 +28,54 @@ You'll be told (or you can infer from context) which deck(s) to check. Typical i
 - A specific path: `exports/<run>/<key>.pptx`
 - Or a regen script the parent just ran: re-derive the path from the script's `out_dir` + `filename_stem`.
 
-For each deck, run a headless inspection that walks every slide, every shape, estimates the wrapped text height, and flags violations. The reference inspection pattern is `scripts/regen_ieee_thesis_style.py` and the report shape is in `exports/v3-final-overflow-check.txt`. If neither exists in the current repo, write the inspection inline with `python-pptx`:
+**Use the canonical inspector.** Its logic now lives in the package at
+`thesisagents.exporters.overflow` (the `scripts/check_overflow.py` CLI is a thin
+wrapper re-exporting it), so run it rather than reinventing one:
 
-```python
-from pptx import Presentation
-from pptx.util import Emu
-
-FOOTER_GUARD_EMU = int(7.05 * 914400)  # 7.05" in EMU
-
-def estimate_wrapped_height(shape) -> int:
-    """Rough wrap estimator: count lines including soft-wraps at ~chars/width."""
-    # Implementation: walk paragraphs, measure font size, estimate chars-per-line
-    # from shape width and font, sum line heights. Project's inspector script
-    # already does this — prefer importing it over reinventing.
-    ...
-
-prs = Presentation(pptx_path)
-violations = []
-for idx, slide in enumerate(prs.slides, start=1):
-    for shape in slide.shapes:
-        if not shape.has_text_frame:
-            continue
-        top = shape.top or 0
-        height = shape.height or 0
-        rendered = estimate_wrapped_height(shape)
-        bottom = top + rendered
-        if rendered > height:
-            violations.append((idx, shape.name, "overflows its box", rendered, height))
-        if bottom > FOOTER_GUARD_EMU:
-            violations.append((idx, shape.name, "crosses footer guard", bottom, FOOTER_GUARD_EMU))
+```
+.venv/Scripts/python.exe scripts/check_overflow.py exports/<deck>.pptx [more.pptx ...]
 ```
 
-Prefer reusing the project's existing inspector (look for `scripts/regen_ieee_thesis_style.py` or any `overflow_check.py`) over writing your own — it already knows the per-font-size estimation constants the project uses.
+It prints the report block below per deck and exits with the count of failed decks
+(0 = all clean), so you can assert on the exit code. It is also importable —
+`from thesisagents.exporters.overflow import check_pptx, check_pptx_from_prs` (the
+script path `from check_overflow import …` still works too) — returning a list of
+`Violation(slide, shape, kind, rendered_in, limit_in)`; `check_pptx_from_prs(prs)`
+takes an already-open `Presentation` so a test can build a deck in memory.
+
+**For a full deck audit (overflow + colour contracts + section completeness) in
+one pass, prefer `thesisagents.exporters.review.review_deck(path)`** — exposed as
+the CLI `python -m thesisagents review <deck.pptx>` and the MCP `pptx_review`
+tool. It bundles this overflow check with the dark-mode / no-red / contrast audit
+and the `paper_rule` seven-section completeness check, returning a single
+`DeckReview` (`.ok`, `.overflow`, `.contrast`, `.missing_sections`). Use the
+standalone overflow inspector above when you only need the geometry check.
+
+What it does (so you can trust / explain its output):
+
+- Reads each run's actual `font.size` (the exporter sets it per run), classifies
+  each character as full-width (CJK / kana / hangul ≈ 1.0 em) or half-width
+  (Latin / digits / punctuation ≈ 0.55 em), accumulates width per line, wraps at
+  the box's inner width, and sums line heights at `font_pt × 1.2` (single spacing).
+- **Exempts exporter-placed chrome** — shape names `page_number`, `footer`, and any
+  `accent*` bar. These are fixed-geometry decoration, the page number / footer live
+  *at* the 7.05" line by design, so checking them is a false positive (an early
+  version flagged 48 "violations" on a clean deck, 40 of them chrome).
+- Treats an **empty text frame as zero height** (a blank decorative rectangle is
+  not charged a fallback line).
+- **Estimates table rendered height** rather than trusting the declared one:
+  python-pptx grows a row to fit wrapped cell text but leaves the GraphicFrame's
+  `height` unchanged, so a many-row / long-cell table overflows the footer guard
+  while `shape.height` claims it fits. The inspector sums each row's tallest-cell
+  wrapped lines. A flagged table is fixed by splitting it at the authoring layer
+  (`rq_results` / `paper_tables`), the exporter does not auto-paginate tables.
+- Applies a `0.08"` box tolerance so a sub-third-of-a-line rounding overshoot
+  doesn't flag a box that visually fits.
+
+It is a deliberately rough estimate (no font-metrics library) — the same trade-off
+the manual check always made. It catches gross overflow, it will not catch a
+1-pixel clip. If the canonical script is somehow absent, replicate its logic
+inline, do **not** revert to a stub that returns nothing.
 
 ## Reporting format
 

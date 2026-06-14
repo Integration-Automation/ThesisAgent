@@ -25,7 +25,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
                 [--llm-model MODEL]
                 [--all-venues]
                 [--paywall-threshold FLOAT] [--yes]
-                [--max-slides N] [--light-mode]
+                [--max-slides N] [--dark-mode]
                 [--quiet]
 ```
 
@@ -54,7 +54,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
 | `--paywall-threshold` | `0.30` | Fraction of paywalled results above which the search-mode pipeline asks the user before generating per-paper PPTs. |
 | `--yes` | off | Auto-accept the paywall prompt. |
 | `--max-slides` | `25` | Per-paper slide cap. Pass `0` for unlimited. |
-| `--light-mode` | off | Render the pptx in light mode (white slide background + navy text). **Dark mode is the default** — the exporter swaps the brand palette via a post-build pass (slide bg `#12151B`, body text `#E5E7EB`, lighter table-row stripe) so OLED projectors and low-light venues don't glare. Pass this flag for projectors in well-lit rooms or when the deck will be printed. |
+| `--dark-mode` | off | Render the pptx in dark mode. **The light navy-band deck is the default** (white slides, full-width navy header band with a white title, navy cover panel). Pass this flag for the dark variant — a post-build pass swaps to a dark slide background (`#12151B`) + near-white text (`#E5E7EB`) and lightens the navy band / cover / table-row fills so the same chrome reads on OLED projectors and in low-light venues. |
 | `--quiet` | off | Suppress the per-paper one-line printout to stdout. |
 
 ## Examples
@@ -130,6 +130,24 @@ results, limitations, takeaways — plus the rich tier: pain points,
 research question, KPI metrics, technique table, literature
 positioning, per-RQ result tables, …), and the PPT exporter renders the
 thesis-style layout.
+
+### Review an existing deck
+
+```bash
+thesisagents review ./exports/attention.pptx
+thesisagents review ./exports/*.pptx --lang zh-tw
+```
+
+The `review` subcommand audits a finished `.pptx` against all three
+deck-quality contracts in one pass — slide **overflow**, the dark-mode /
+no-red / contrast **colour** contracts, and `paper_rule` **section
+completeness** (Introduction, Literature Review, Methodology, Experiment,
+Conclusion). `--lang` is optional; the deck's language is auto-detected
+from its slide titles otherwise. It prints a per-deck report and exits
+with the number of decks that failed (`0` = all clean), so it drops into
+CI. Section completeness only fails a *thesis-style* deck — a lightweight
+abstract-only deck is never failed for legitimately lacking sections.
+The same audit is the MCP `pptx_review` tool.
 
 ## Exit codes
 

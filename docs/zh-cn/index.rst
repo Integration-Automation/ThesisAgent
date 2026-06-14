@@ -353,6 +353,10 @@ Claude Desktop、Cursor …)都能驱动整套流程。
        代表不限)。
    * - ``pptx_inspect``
      - 读已有幻灯片文件的 slide / shape 结构。
+   * - ``pptx_review``
+     - 一次审核整份幻灯片 — 溢出 + 颜色契约 + ``paper_rule``\
+       章节完整度。自动检测语言,也是 CLI
+       ``python -m thesisagents review``。
    * - ``pptx_update_slide``
      - 替换 ``title``/ ``body``/ ``meta``\ (通过 shape name)或
        任意 shape(通过 index)。

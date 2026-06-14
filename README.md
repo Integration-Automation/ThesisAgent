@@ -64,9 +64,9 @@ it.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-All twelve MCP tools (including `list_sources`, `list_exports`,
-`download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide`
-/ etc.) are
+All thirteen MCP tools (including `list_sources`, `list_exports`,
+`download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
+`pptx_add_slide` / etc.) are
 documented in [`docs/mcp.md`](docs/mcp.md).
 
 ### Mandatory: URL / DOI verification before shipping
@@ -409,8 +409,9 @@ Tools:
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |
-| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `true` — the project's dark-deck post-pass; pass `false` for the printable light variant). |
+| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `false` — the project default is the light navy-band deck, pass `true` for the dark OLED / low-light post-pass). |
 | `pptx_inspect` | Read slide / shape structure of an existing deck. |
+| `pptx_review` | Audit a deck in one call — overflow + colour contracts + `paper_rule` section completeness. Auto-detects the deck language; also the CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Replace `title` / `body` / `meta` (by shape name) or arbitrary shapes by index. |
 | `pptx_delete_slide` | Remove a slide and its part relationship. |
 | `pptx_reorder_slides` | Permute slides via `sldIdLst`. |

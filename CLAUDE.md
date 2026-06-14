@@ -7,7 +7,8 @@
 > `code-quality-reviewer`, `compliance-auditor`, `slide-deck-rules`,
 > `deck-design`, `env-vars`, `language-vocabulary-check`, `paper_rule`) and
 > `tasks/` (task-running / multi-tasking agents: `dod-verify`,
-> `paper-summary-author`, `post-author-audit`, `slide-overflow-check`). Claude
+> `paper-summary-author`, `thesis-deck-author`, `post-author-audit`,
+> `slide-overflow-check`). Claude
 > Code discovers them recursively by `name:`, so the path never affects how an
 > agent is invoked. Full path index: see "Where the detailed rules live" below.
 
@@ -46,8 +47,10 @@ Concretely, the assistant:
 4. **Generates** `.pptx` (three rendering tiers — lightweight / enriched-flat /
    thesis-style), `.xlsx`, `.bib`, `.md`, `.json` outputs.
 5. **Exposes** every step as an MCP tool (`search`, `fetch_paper`, `fetch_pdf_text`,
-   `export`, `pptx_inspect`, `pptx_update_slide`, `pptx_delete_slide`,
-   `pptx_reorder_slides`, `pptx_add_slide`).
+   `export`, `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
+   `pptx_reorder_slides`, `pptx_add_slide`). `pptx_review` audits an existing deck
+   (overflow + colour contracts + `paper_rule` section completeness) in one call —
+   the same audit the CLI exposes as `python -m thesisagents review <deck.pptx>`.
 
 Single-process, Python 3.12+. Heavy I/O off the event loop; shared
 `httpx.AsyncClient` registry pools connections per source.
@@ -96,8 +99,8 @@ Concretely:
 | Addition type | "Clear context" means | "Detailed explanation" means |
 |---|---|---|
 | Subagent rule | A **Why:** clause naming the past incident / failure mode the rule prevents. | At least one **example** of the rule applied + one **anti-pattern** showing how it fails. Rules without examples bit-rot. |
-| Paper / thesis paragraph | A topic sentence locating the paragraph in the larger argument (which section, which RQ, which contribution). | Every technical term defined at first use (see `paper_rule` "Technical terminology"), and every quantitative claim cited or shown in a table. |
-| Slide bullet | A sub-head that says what the slide as a whole is about. | Every acronym / math notation / library name glossed at first use (see `slide-deck-rules` §8 "Content clarity & first-use context"). |
+| Paper / thesis paragraph | A topic sentence locating the paragraph in the larger argument (which section, which RQ, which contribution). | Every technical term defined at first use (see `paper_rule` "Technical terminology"), every quantitative claim cited or shown in a table, and an argument-level plain-language layer so a non-expert grasps the point, not just the words (see `paper_rule` "Plain-language comprehensibility"). |
+| Slide bullet | A sub-head that says what the slide as a whole is about. | Every acronym / math notation / library name glossed at first use (see `slide-deck-rules` §8 "Content clarity & first-use context"), plus a plain-language takeaway the slide's whole point lands for a non-expert reading at presentation speed (see `slide-deck-rules` §14). |
 | Code helper | A docstring naming the boundary the helper guards and the failure mode it prevents. | Type hints + one usage example in either the docstring or a unit test. |
 
 **Why this is a top-level rule rather than buried in one subagent**: it
@@ -105,11 +108,17 @@ applies across every surface this project produces (rules, papers,
 slides, code) and has been the single most common review-cycle source of
 churn — "why does X exist?" / "what does Y do?" questions that should
 have been answered at write-time. The subagent-specific applications
-(`paper_rule` "Technical terminology", `slide-deck-rules` §8 "Content
-clarity & first-use context", `code-quality-reviewer` "docstring +
-example") all derive from this top-level principle. When in doubt about
-how to phrase an addition, default to "explain like the reader just
-joined the conversation".
+(`paper_rule` "Technical terminology" + "Plain-language
+comprehensibility", `slide-deck-rules` §8 "Content clarity & first-use
+context" + §14 "Plain-language comprehensibility for a mixed audience",
+`code-quality-reviewer` "docstring + example") all derive from this
+top-level principle. Term-level glossing answers "what does this word
+mean", the comprehensibility rules answer the harder "I read every word
+and still don't see the point" — both are required on any paper / deck
+this project ships, so a non-expert (an adjacent-discipline committee
+member, a reviewer skimming, an undergraduate) can follow it. When in
+doubt about how to phrase an addition, default to "explain like the
+reader just joined the conversation".
 
 **Prose punctuation in additions**: prefer `，` (Chinese) or `,` (English)
 to join clauses, and avoid `；` / `;`. **Why**: short comma-joined
@@ -185,14 +194,17 @@ to every `.pptx` this project produces or modifies.
 
 After the edit, audit the resulting deck against those subagents' contracts:
 
-1. **Background is `_DARK_SLIDE_BG` (`#12151B`)** unless the user explicitly
-   opted into light mode (`--light-mode`, `dark_mode=False`, GUI checkbox).
+1. **Background is white (the default light navy-band deck)** unless the
+   user explicitly opted into dark mode (`--dark-mode`, `dark_mode=True`,
+   GUI "Dark mode" checkbox), in which case it is `_DARK_SLIDE_BG`
+   (`#12151B`).
 2. **No text run has `rgb=None` or `rgb=(0,0,0)`** (invisible on dark bg).
 3. **No light fill contains light text** (luminance > 0.7 × 255 on both).
 4. **No `#C0392B` red text runs** (banned in both modes).
-5. **Top accent bar + cover left-band geometry** present on ThesisAgents
-   generated decks (hand-made decks are exempt from accent geometry but
-   not from dark-mode / no-red / contrast contracts).
+5. **Navy header band (`accent_top`) + full-bleed navy cover (`accent_left`)
+   geometry** present on ThesisAgents generated decks (hand-made decks are
+   exempt from accent geometry but not from dark-mode / no-red / contrast
+   contracts).
 
 **For hand-made decks that don't follow the project's `_BRAND_*` constants**,
 run `_apply_dark_mode(prs)` from `thesisagents.exporters.pptx` as a
@@ -211,6 +223,7 @@ deliverable surfaces:
 | Source plugins under `sources/` or `thesisagents/fetchers/` | `compliance-auditor` |
 | Paper / thesis text in any locale | `paper_rule` |
 | Hand-authoring `PaperSummary` from a PDF | `paper-summary-author`, `paper_rule` |
+| Authoring a degree-thesis defence deck from the candidate's own thesis | `thesis-deck-author`, `paper_rule`, `deck-design` |
 | Anything before commit | `dod-verify` (gate runner) |
 
 When in doubt, read more subagents, not fewer. The subagent rules exist
@@ -219,13 +232,16 @@ failure mode, not a corner case.
 
 ## Dark-Mode Contract: Every Text Run Sets an Explicit Colour (HARD RULE)
 
-Dark mode is the project's default pptx render path. The post-build
-recolour pass swaps light-palette RGB values to their dark-palette
-equivalents — but it can only swap colours it can read. **A text run
-with `run.font.color.rgb = None` inherits the slide-master's theme
-colour, renders as near-black on the dark slide background, and is
-invisible.** Every text-adding helper in `thesisagents/exporters/pptx.py`
-MUST therefore assign `run.font.color.rgb = _BRAND_*` (one of the four
+Dark mode is an opt-in pptx render path (the default is the light
+navy-band deck), but the contract still binds **every** build because the
+exporter always builds with the light palette first and a deck may be
+rendered dark at any time. The post-build recolour pass swaps light-palette
+RGB values to their dark-palette equivalents — but it can only swap colours
+it can read. **A text run with `run.font.color.rgb = None` inherits the
+slide-master's theme colour, renders as near-black on the dark slide
+background, and is invisible.** Every text-adding helper in
+`thesisagents/exporters/pptx.py` MUST therefore assign
+`run.font.color.rgb = _BRAND_*` (one of the four
 palette constants) after creating or overwriting a run. Never leave the
 colour at its default; never pass `colour=None` to `_add_textbox`;
 never write `RGBColor(0, 0, 0)` — use `_BRAND_DARK` instead.
@@ -252,12 +268,12 @@ default-dark-mode render.
 as a TEXT colour across both light and dark modes. Red text reads
 as error / warning in slide conventions and pattern-matches strongly
 to AI-generated KPI emphasis. The sanctioned text-emphasis colour is
-**``_BRAND_HIGHLIGHT``** (teal-700, ``#0E7490``) — pair with
+**``_BRAND_HIGHLIGHT``** (academic blue-600, ``#2563EB``) — pair with
 ``run.font.bold = True``. Use ``_BRAND_GREY`` for caption / placeholder /
 chrome text so headlines stay headlines. Variety rule: KPI value + RQ
-question use teal; figure caption + figure-unavailable use grey — do
+question use blue, figure caption + figure-unavailable use grey — do
 not collapse all four to the same colour. The dark-mode pass swaps
-teal-700 → teal-400 (``#2DD4BF``) via ``_LIGHT_TO_DARK_TEXT``; the
+blue-600 → blue-400 (``#60A5FA``) via ``_LIGHT_TO_DARK_TEXT``, the
 audit script's ``_ACCEPTED_DARK_RUN_COLORS`` set knows about both.
 Regression test ``test_pptx_no_red_text_runs`` walks every run on a
 default-rendered deck and fails if any run uses ``#C0392B``. The red
@@ -320,8 +336,8 @@ two kinds of subagent this project uses:
 .claude/agents/
 ├── rules/   code-quality-reviewer · compliance-auditor · slide-deck-rules ·
 │            deck-design · env-vars · language-vocabulary-check · paper_rule
-└── tasks/   dod-verify · paper-summary-author · post-author-audit ·
-             slide-overflow-check
+└── tasks/   dod-verify · paper-summary-author · thesis-deck-author ·
+             post-author-audit · slide-overflow-check
 ```
 
 | Topic | Subagent | File (under `.claude/agents/`) |
@@ -335,5 +351,6 @@ two kinds of subagent this project uses:
 | Academic paper writing rules (multilingual, all 14 locales) — Abstract / Introduction / Literature Review / Methodology / Experiment / Conclusion / References structure + PaperSummary-to-section mapping | `paper_rule` | `rules/paper_rule.md` |
 | Definition-of-Done gate runner | `dod-verify` | `tasks/dod-verify.md` |
 | LLM-as-agent thesis-style authoring (PDF → rich PaperSummary) | `paper-summary-author` | `tasks/paper-summary-author.md` |
-| URL-fabrication / off-topic audits after authoring | `post-author-audit` | `tasks/post-author-audit.md` |
+| Degree-thesis ORAL-DEFENCE deck from the candidate's OWN thesis (seven `paper_rule` sections → rich deck) | `thesis-deck-author` | `tasks/thesis-deck-author.md` |
+| URL-fabrication / off-topic / drafting-metadata-leak / flat-math audits after authoring | `post-author-audit` | `tasks/post-author-audit.md` |
 | Slide-overflow regression check | `slide-overflow-check` | `tasks/slide-overflow-check.md` |

@@ -48,23 +48,25 @@ Already pinned in `pptx.py`:
 | Constant | RGB | Use |
 |---|---|---|
 | `_BRAND_DARK` | `#1F3A66` (deep navy) | Primary text + accent bar |
-| `_BRAND_HIGHLIGHT` | `#0E7490` (teal-700) | Text emphasis — KPI values, RQ question callout, "this stands out" headlines. The sanctioned replacement for the banned red accent. |
+| `_BRAND_HIGHLIGHT` | `#2563EB` (academic blue-600) | Text emphasis — KPI values, RQ question callout, "this stands out" headlines. The sanctioned replacement for the banned red accent. Same blue family as `_BRAND_DARK` navy for a cohesive white + blue academic look. |
 | `_BRAND_ACCENT` | `#C0392B` (warm red) | BANNED for text (see "No red text" contract). Reserved for potential future non-text accent shapes only. |
 | `_BRAND_GREY` | `#555555` | Metadata, captions, secondary text, placeholder/error states |
 | `_BRAND_LIGHT` | `#AAAAAA` | Rule lines, dividers |
 
 Do NOT introduce new brand colours casually — every additional colour
 fights for attention. Reuse the five above unless the user explicitly
-adds one. Note the deliberate split: **teal is the headline emphasis,
-grey is the label/chrome emphasis** — picking the wrong one (e.g. teal
+adds one. Note the deliberate split: **blue is the headline emphasis,
+grey is the label/chrome emphasis** — picking the wrong one (e.g. blue
 for a figure caption) makes captions compete with KPIs for the eye.
 
-#### Dark-mode palette (default; opt-out with `dark_mode=False` / `--light-mode` / GUI "Light mode")
+#### Dark-mode palette (opt-in with `dark_mode=True` / `--dark-mode` / GUI "Dark mode")
 
-**Dark mode is the project default.** OLED projectors and low-light
-presentation venues are the common case; bright-white slides glare
-under both. The exporter builds with the light palette first, then
-runs `_apply_dark_mode(prs)` as a post-build pass.
+**The light navy-band deck is the project default; dark mode is opt-in.**
+(It used to be the reverse — the default flipped when the light navy-band
+chrome landed.) The exporter always builds with the light palette first,
+and only when dark mode is requested runs `_apply_dark_mode(prs)` as a
+post-build pass — useful for OLED projectors and low-light venues where
+bright-white slides glare.
 The pass re-colours individual runs / shape fills / cell borders by
 looking up their current RGB in two mapping dicts. No builder needs
 to know about dark mode at construction time.
@@ -75,7 +77,7 @@ to know about dark mode at construction time.
 | `_BRAND_DARK` text | `#1F3A66` → `#E5E7EB` | Body text near-white |
 | `_BRAND_GREY` text | `#555555` → `#9CA3AF` | Metadata mid grey |
 | `_BRAND_LIGHT` text | `#AAAAAA` → `#6B7280` | Subtle dividers / page numbers |
-| `_BRAND_HIGHLIGHT` text | `#0E7490` → `#2DD4BF` | Teal-700 → teal-400; brighter teal reads on the dark slide bg without losing the accent identity |
+| `_BRAND_HIGHLIGHT` text | `#2563EB` → `#60A5FA` | Blue-600 → blue-400, brighter blue reads on the dark slide bg without losing the accent identity |
 | `_BRAND_ACCENT` | `#C0392B` (unchanged) | BANNED for text in both modes (see "No red text" contract). If reused for a non-text shape, kept as-is for brand consistency. |
 | `_BRAND_DARK` fill (accent bars / table header) | `#1F3A66` → `#3B5AA0` | Lighter navy reads against the dark slide background |
 | `_TABLE_ROW_ALT` | `#F4F6F9` → `#1F232C` | Dark stripe |
@@ -132,8 +134,11 @@ Both layers ship together; tests pin both. The regression test
 ``test_pptx_dark_mode_has_no_invisible_runs`` (in ``tests/test_exporters.py``)
 walks every run on every slide of a default-dark-mode deck and fails
 if any non-empty run has ``rgb is None`` or ``rgb == (0,0,0)``. A
-companion debug script lives at ``scripts/_audit_dark_text.py`` for
-manual inspection of a single rendered deck.
+companion auditor lives at ``thesisagents.exporters.audit.audit_deck`` (the
+``scripts/_audit_dark_text.py`` CLI is a thin wrapper) for manual inspection
+of a single rendered deck — or use the one-stop ``review_deck`` /
+``python -m thesisagents review`` / MCP ``pptx_review``, which bundles this
+contrast audit with the overflow and section-completeness checks.
 
 #### "No red text" contract (HARD)
 
@@ -141,9 +146,9 @@ manual inspection of a single rendered deck.
 constant ``_BRAND_ACCENT`` (= ``#C0392B`` warm red) stays in the palette
 for potential future non-text accent shapes (sparkline highlight,
 status badge, etc.), but every TEXT call site has been migrated off it.
-The sanctioned text-emphasis colour is **``_BRAND_HIGHLIGHT`` (teal-700,
-``#0E7490``)** — pair with ``run.font.bold = True``. Use ``_BRAND_GREY``
-for chrome / label / placeholder emphasis (never teal — teal is reserved
+The sanctioned text-emphasis colour is **``_BRAND_HIGHLIGHT`` (academic
+blue-600, ``#2563EB``)** — pair with ``run.font.bold = True``. Use ``_BRAND_GREY``
+for chrome / label / placeholder emphasis (never blue — blue is reserved
 for "this matters", grey is for "this is context").
 
 Why banned:
@@ -164,8 +169,8 @@ is closest at hand. The four migrated sites split:
 
 | Call site | Role | Replacement |
 |---|---|---|
-| KPI value (`_add_kpi_lines`) | "the slide's punch line" headline | `_BRAND_HIGHLIGHT` (teal) |
-| RQ question (`_add_rq_result_slide`) | "the question being answered" headline | `_BRAND_HIGHLIGHT` (teal) |
+| KPI value (`_add_kpi_lines`) | "the slide's punch line" headline | `_BRAND_HIGHLIGHT` (blue) |
+| RQ question (`_add_rq_result_slide`) | "the question being answered" headline | `_BRAND_HIGHLIGHT` (blue) |
 | Paper-table caption (`_add_paper_table_slides`) | caption label below subhead | `_BRAND_GREY` (muted) |
 | Figure-unavailable fallback (`_add_figure_image`) | placeholder / error state | `_BRAND_GREY` (muted) |
 
@@ -176,7 +181,7 @@ Implementation contract:
 3. For emphasis on a value (e.g. a KPI number) use:
    ``run.font.bold = True`` + ``run.font.color.rgb = _BRAND_HIGHLIGHT``.
 4. For caption / placeholder / chrome text, use ``_BRAND_GREY`` — not
-   teal, not navy. Reserving teal for headlines is what makes headlines
+   blue, not navy. Reserving blue for headlines is what makes headlines
    actually read as headlines.
 5. Regression test ``test_pptx_no_red_text_runs`` walks every run on
    a default-rendered deck and fails if any run uses ``#C0392B``.
@@ -185,7 +190,7 @@ Implementation contract:
    pass wouldn't quietly map it; the run would carry red through to
    the dark deck where the regression test fires.
 7. The audit script's ``_ACCEPTED_DARK_RUN_COLORS`` set includes the
-   dark-mode teal variant ``#2DD4BF``; if you introduce another accent
+   dark-mode blue variant ``#60A5FA``; if you introduce another accent
    colour, update both the map AND the audit set in the same commit.
 
 If a future "non-text accent" use of red comes up (e.g. a tiny status
@@ -221,18 +226,19 @@ stayed light. White-on-white. Fixed by adding the mapping
    text colour, and fails when both > 0.7 × 255 (= 178). Adding a new
    light-fill shape without a corresponding dark mapping will fail
    this test.
-3. **The audit script** ``scripts/_audit_dark_text.py`` now also
-   reports failure-mode B — run it on a rendered deck during manual
-   inspection.
+3. **The auditor** ``thesisagents.exporters.audit.audit_deck`` (CLI
+   ``scripts/_audit_dark_text.py``, or bundled into ``review_deck`` /
+   ``pptx_review``) now also reports failure-mode B — run it on a rendered
+   deck during manual inspection.
 
-Exposure surfaces (dark is default; the toggles flip to LIGHT):
-- CLI: `--light-mode` opt-out flag (when absent → dark)
-- GUI: Deck tab `deck.light_mode_label` checkbox (unchecked → dark)
-- Programmatic: `ExportOptions(dark_mode=False)` to opt out
-- Regen script: pass `dark_mode=False` per variant — see
-  `scripts/regen_speculative_decoding_zh_tw.py` which ships both the
-  default dark deck (`<key>-zh-tw.pptx`) and a light opt-out
-  (`<key>-zh-tw-light.pptx`).
+Exposure surfaces (light is default; the toggles opt IN to DARK):
+- CLI: `--dark-mode` opt-in flag (when absent → light)
+- GUI: Deck tab `deck.dark_mode_label` checkbox (unchecked → light)
+- Programmatic: `ExportOptions(dark_mode=True)` to opt in
+- Regen script: pass `dark_mode=` in `ExportOptions` per variant —
+  `scripts/regen_fang2026.py` is the worked example (it sets
+  `dark_mode=True` for the dark variant). The default omits the field
+  (or passes `dark_mode=False`) for the light navy-band deck.
 
 ### Table styling (the second-biggest "AI-generated" tell after Calibri)
 
@@ -269,16 +275,27 @@ flows through this single helper, so the change applies uniformly.
 
 ### Accent geometry (the "this is a designed deck" tell)
 
-Every content slide gets a thin top accent bar:
-- Position: `left=0, top=0, width=_SLIDE_WIDTH (13.333"), height=Inches(0.08)`
-- Fill: `_BRAND_DARK` solid
-- Name: `accent_top` (semantic name so `pptx_edit` can target it)
+Every content slide gets a **full-width navy header band** (the deck's
+signature chrome) with the white title sitting inside it and a thin blue
+accent rule along its bottom edge:
+- Band position: `left=0, top=0, width=_SLIDE_WIDTH (13.333"), height=_HEADER_BAND_HEIGHT (1.18")`
+- Band fill: `_BRAND_DARK` solid; name `accent_top` (kept on the band so
+  `pptx_edit` / audits still target the content-slide accent by name even
+  though it's now a band, not a hairline).
+- Accent rule: `left=0, top=1.18", width=_SLIDE_WIDTH, height=_ACCENT_RULE_HEIGHT (0.06")`,
+  fill `_HEADER_ACCENT_FILL` (= `_BRAND_HIGHLIGHT` blue); name `accent_rule`.
+- The title (`_new_section_slide`) is WHITE (`_HEADER_TITLE_FG`, the same
+  white as `_TABLE_HEADER_FG`) and middle-anchored inside the band — navy
+  `_BRAND_DARK` would be navy-on-navy = invisible. `_BODY_TOP` (1.5") sits
+  below the band so body content never moves.
 
-The cover slide gets a left vertical band:
-- Position: `left=0, top=0, width=Inches(0.4), height=_SLIDE_HEIGHT (7.5")`
-- Fill: `_BRAND_DARK` solid
-- Name: `accent_left`
-- Cover textboxes shift right by `Inches(0.4)` worth of margin to clear it.
+The cover slide gets a **full-bleed navy panel** (not a left band):
+- Position: `left=0, top=0, width=_SLIDE_WIDTH, height=_SLIDE_HEIGHT (7.5")`
+- Fill: `_BRAND_DARK` solid; name `accent_left` (kept for the cover-accent
+  semantic name even though it now spans the whole slide).
+- Cover title is WHITE; subtitle / meta are near-white (`_DARK_BODY_TEXT`) —
+  these light colours are correct in BOTH modes because the cover stays
+  navy either way.
 
 Section-divider slides may use a larger top band (`height=Inches(0.6)`)
 with the section title overlaid in light text — but this is optional
@@ -310,6 +327,40 @@ provided every slide ends up with:
   column is clearly numeric values, prefer right-align so units / digits
   line up. Out of scope for the v1 ship.)
 
+### Figures & charts (an "AI-generated" tell as loud as Calibri or black grids)
+
+The exporter inserts figures as PNGs via the `figures=` field (`_add_figure_image`); it does **not** draw native charts. So figure *quality* is an authoring responsibility — a default-matplotlib plot or a low-res screenshot undoes the brand discipline the rest of the deck earns.
+
+- **Dark-mode adaptation is mandatory when the deck is rendered dark.** In dark mode the slide background is `_DARK_SLIDE_BG` (`#12151B`). A white-background PNG dropped onto it shows a glaring white rectangle — the figure equivalent of `rgb=None` text on dark. Export plots with a **transparent background** (`savefig(..., transparent=True)`) and light foreground (axes / labels / lines in near-white or brand blue `#60A5FA`), OR place the figure on a card whose fill has a `_LIGHT_TO_DARK_FILL` entry. Never a bare white PNG on the dark slide.
+- **Strip chartjunk.** No default matplotlib grey panel, no spines on all four sides, no dense gridlines, no 3-D bars / pies, no drop shadows. Top + right spines off, at most one light horizontal gridline set. Data-ink first.
+- **Brand palette, not library defaults.** Series colours come from the deck palette (navy / blue / grey), never matplotlib's `C0` blue / `C1` orange — default colours read as "pasted from a notebook". (Red stays banned here too, per the no-red contract.)
+- **Don't encode meaning by colour alone.** Teal vs navy is hard for some colour-blind viewers and *indistinguishable* in a black-and-white printout. When two series must be told apart, encode them twice — colour **plus** a marker shape / line style (solid vs dashed) or a direct end-of-line label. The winning series can also be the only solid/heavy one. (The 4-colour brand palette is small precisely so it can't carry many simultaneous distinctions — lean on shape and labels.)
+- **Readable when projected.** Axis labels + tick labels + legend ≥ ~14pt *in the rendered figure* (a 6pt matplotlib label is unreadable from row 10). Label every axis with its quantity AND unit ("Latency (ms)"), per `paper_rule`'s number-reporting rule.
+- **Export at print DPI.** `dpi >= 150` (200 for line-heavy plots). A 72-DPI screenshot pixelates on a projector.
+- **Paper screenshots are a last resort.** Re-plotting your own data beats screenshotting the paper's figure — a screenshot carries the paper's off-brand fonts / colours, JPEG artefacts, and usually a white background. Crop tightly; only screenshot when re-plotting is impossible (e.g. a qualitative architecture diagram).
+
+**Anti-pattern:** `plt.savefig("fig.png")` with defaults → grey panel, blue/orange series, 6pt labels, white border, dropped onto the dark slide. **Pattern:** `savefig("fig.png", dpi=200, transparent=True, bbox_inches="tight")` with blue / navy series, 14pt labels, top + right spines removed.
+
+### Visual hierarchy & focal point
+
+Each slide needs one element the eye lands on first — the takeaway from `slide-deck-rules` §9. Size, weight, colour and position build that hierarchy; without it every element competes and the audience reads top-to-bottom hunting for the point.
+
+- **One focal point per slide.** The biggest / boldest / most-saturated element *is* the takeaway — usually the KPI value (blue, bold, large) or the winning row of a table. Exactly one.
+- **Hierarchy by size, not just order.** Title > headline number > evidence > caption, each visibly smaller. A KPI value at the same size as its label has no hierarchy. Caption / provenance text uses `_BRAND_GREY` so it recedes — the palette already encodes this (blue emphasises, grey recedes); don't invert it.
+- **Whitespace is not wasted space.** A slide filled edge-to-edge has no focal point. Leave margins and let the KPI block breathe. The `FOOTER_GUARD` (7.05") and per-slide content caps exist partly so content can't sprawl across the whole canvas.
+- **Reading order follows the layout.** Assertion title on top, evidence beneath it, provenance / caption last. Don't bury the conclusion in a footnote while the setup sits in the headline.
+
+**Anti-pattern:** title, three KPIs, a table and a caption all the same size and colour — no focal point, the eye wanders. **Pattern:** one KPI value ~2× the size of its label in blue, the table muted beneath it, caption small and grey.
+
+### Designing for the non-expert eye (comprehension is a visual job too)
+
+Every contract above makes a deck look *professional*, the typography pass kills the Calibri tell, the palette stays disciplined, the contrast contracts keep text readable. But "looks professional" and "an outside examiner actually understood it" are different wins — a deck can pass every visual contract in this doc and still lose half the committee, because the adjacent-discipline 口試委員 / the skimming reviewer never grasped *what the slide was claiming*. The authoritative definition of that bar is `paper_rule`'s "Plain-language comprehensibility — a non-expert must grasp the point (HARD)", and the wording-side slide rules (a plain "so what" per slide, intuition before formula, a real-world anchor for every headline number, one sparing analogy) live in `slide-deck-rules` §14. This subsection is the **visual-side complement**, the parts of comprehension that are a *design* decision rather than a *wording* one. It is additive to depth, never a dumbing-down — the rigour stays, the entry ramp gets built.
+
+- **Show the intuition, don't only state it.** The single most effective way to land a hard idea for a non-expert is a SIMPLE diagram / schematic / annotated example placed BEFORE the dense table or formula — a labelled "before vs after", a one-arrow flow, a single worked example with the moving part highlighted does what a paragraph cannot. The exporter already supports this via `figures=` (`_add_figure_image`) and `system_flow`, so an intuition diagram is a legitimate, high-value figure, not decoration that pads the slide count. Render it on-brand exactly as the "Figures & charts" rules above require (brand palette, no chartjunk, transparent background in dark mode, ≥ 14pt labels). **Anti-pattern:** the first slide on a method opens with the full objective `$I(z_a;z_b|E_p)$` and a 6-row hyperparameter table, the non-expert is lost before the result slide. **Pattern:** a one-arrow "raw input → our transform → cleaner signal" schematic first, THEN the formula on the next slide for the experts who want it.
+- **Visual hierarchy should foreground the plain takeaway.** This ties directly to "Visual hierarchy & focal point" above, the one focal element — the biggest / boldest / most-saturated thing — must be the **plain-language point** (the anchored KPI, the winning row, the one-line assertion), not the most technical-looking object on the slide. A dense equation rendered large and centred makes a slide LOOK rigorous while burying the takeaway, which is the exact opposite of comprehensibility, the eye lands on the symbol soup and bounces off. **Anti-pattern:** a five-term equation set 40pt dead-centre while the result it produces sits 14pt in a corner. **Pattern:** the result ("2.3× faster, same accuracy") is the focal KPI in bold blue, the equation is supporting evidence beneath it at body size.
+- **Annotate figures so they're self-explaining.** A chart a non-expert can read needs axis labels with units, a one-line "what to notice" caption, and the winning series called out DIRECTLY on the plot (a label or arrow at the end of the line), not left for the audience to reverse-engineer from a legend in the corner. This extends the Figures rule "Label every axis with its quantity AND unit" by adding the *"tell the reader what to conclude"* layer on top of the *"tell the reader what the axes are"* layer. **Anti-pattern:** four unlabelled coloured lines and a legend that says `model_a / model_b / baseline_v2`, the examiner has no idea which line is good or why. **Pattern:** the winning line is the only heavy solid one, labelled "Ours" at its endpoint, with a caption「越低越好，本方法在所有負載下延遲最低」(lower is better, our method has the lowest latency at every load).
+- **Don't let visual polish substitute for comprehension.** A beautifully styled deck whose every slide is still opaque to an outside examiner has failed `slide-deck-rules` §14, full stop. Brand discipline (this doc) and accessibility-to-a-non-expert (§14) are **independent axes, both required** — passing the typography / palette / contrast contracts buys you "professional", it does NOT buy you "understood". When you audit a deck, ask both questions separately, "does it look on-brand?" AND "would someone outside this sub-field know what each slide is claiming?". A yes to the first and a no to the second is still a fail.
+
 ## Anti-patterns (instant "AI-generated" tells)
 
 - Plain `prs.slide_layouts[6]` (blank) with no programmatic accent. Every
@@ -332,6 +383,12 @@ provided every slide ends up with:
   look generated. See [paper-summary-author](paper-summary-author.md).
 - Identical line-height across heading + body. Headings should have
   tighter line-height than body.
+- A dense formula or 15-cell table rendered as the slide's largest, most
+  central element — looks rigorous, but the plain takeaway is buried and
+  the outside examiner bounces off the symbol soup. The focal point should
+  be the anchored takeaway (the KPI / winning row / one-line assertion),
+  with the formula or full table as supporting evidence beneath it (see
+  "Designing for the non-expert eye" above + `slide-deck-rules` §14).
 
 ## How to audit a deck
 

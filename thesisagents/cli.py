@@ -273,14 +273,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--light-mode",
+        "--dark-mode",
         action="store_true",
         help=(
-            "Render the pptx with the classic white slide background + "
-            "navy text. Default is dark mode (dark slide background, "
-            "near-white text) — pass this flag for projectors in "
-            "well-lit rooms or when the deck will be printed / read on "
-            "paper."
+            "Render the pptx in dark mode (dark slide background, "
+            "near-white text, lightened navy band / cover / table "
+            "fills). Default is the light navy-band deck (white slides, "
+            "navy header band with a white title, navy cover panel) — "
+            "pass this flag for OLED projectors or low-light venues."
         ),
     )
     parser.add_argument(
@@ -433,7 +433,7 @@ async def _run(args: argparse.Namespace) -> int:
         include_abstract=not args.no_abstract,
         language=args.lang,
         max_slides_per_paper=args.max_slides,
-        dark_mode=not args.light_mode,
+        dark_mode=args.dark_mode,
     )
     needs_pptx = EXPORT_PPTX in formats
     # ``--pdf`` already supplies the PDF — the paywall gate is irrelevant
@@ -983,6 +983,12 @@ def main(argv: list[str] | None = None) -> int:
     if not raw_argv or raw_argv[0] == "gui":
         gui_extra_argv = raw_argv[1:] if raw_argv else []
         return _dispatch_gui(gui_extra_argv)
+    # ``review`` audits an existing .pptx (overflow + colour contracts + section
+    # completeness) and short-circuits before argparse for the same reason as the
+    # gui shim: it takes file paths, not the query/paper/pdf mode mutex group.
+    if raw_argv[0] == "review":
+        from thesisagents.exporters.review import main as review_main
+        return review_main(raw_argv[1:])
     # Discovery flags short-circuit before argparse: they answer "what can I
     # search / export?" and so must NOT trip the required query/paper/pdf mutex
     # group (same reasoning as the bare-invocation gui shim above).

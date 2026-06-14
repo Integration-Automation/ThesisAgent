@@ -111,10 +111,12 @@ so a subsequent **Export** picks up the rich-tier layout automatically.
 The pre-export deck-shaping controls. Wires `ExportOptions` fields
 behind Qt widgets:
 
-- **Light mode** checkbox — unchecked (default) ships the dark deck
+- **Dark mode** checkbox — unchecked (default) ships the light
+  navy-band deck (white slides, navy header band with a white title,
+  navy cover panel). Tick it for the dark OLED / low-light variant
   (slide bg `#12151B`, body text `#E5E7EB`, brighter teal accent
-  `#2DD4BF`). Tick it for the printable / well-lit-room variant
-  (white bg + navy text). Mirrors the CLI `--light-mode` flag.
+  `#2DD4BF`, lightened navy band / cover / table fills). Mirrors the
+  CLI `--dark-mode` flag.
 - **Max slides per paper** — integer spinner. Defaults to 25;
   `0` means unlimited.
 - **Max figures per paper** — controls how many `figures=` entries the

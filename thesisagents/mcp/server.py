@@ -23,9 +23,13 @@ Tools:
   papers[*].summary may include rich fields (pain_points, research_question,
   headline_metrics, technique_table, literature_table, method_sections,
   research_questions, rq_results, …) — when present, the PPT switches to
-  thesis-style layout. ``dark_mode`` defaults to True (project default);
-  pass False for the light/printable variant.
+  thesis-style layout. ``dark_mode`` defaults to False (project default
+  is the light navy-band deck); pass True for the dark OLED/low-light variant.
 - pptx_inspect(path) -> {slides: [...]}
+- pptx_review(path, language?) -> {overflow, contrast, missing_sections, ok}
+  Audit an existing deck against the overflow, colour-contract, and
+  paper_rule section-completeness rules in one call. ``language`` is
+  auto-detected from the slide titles when omitted.
 - pptx_update_slide(path, slide_index, title?, body?, meta?, shape_updates?) -> {path}
 - pptx_delete_slide(path, slide_index) -> {path}
 - pptx_reorder_slides(path, new_order) -> {path}
@@ -61,7 +65,7 @@ from thesisagents.core.models import ExportOptions, Paper, PaperCollection, Quer
 from thesisagents.core.pdf_download import download_pdfs as core_download_pdfs
 from thesisagents.core.pipeline import run_search, run_single_paper
 from thesisagents.core.query import normalize_query
-from thesisagents.exporters import export_collection, pptx_edit
+from thesisagents.exporters import export_collection, pptx_edit, review
 from thesisagents.fetchers.http import shutdown_clients
 from thesisagents.utils.logging import get_logger
 
@@ -333,7 +337,7 @@ def _register_export_tool(server: FastMCP) -> None:
         include_abstract: bool = True,
         language: str = "en",
         max_slides_per_paper: int | None = 25,
-        dark_mode: bool = True,
+        dark_mode: bool = False,
     ) -> dict[str, Any]:
         """Export a list of papers (from search / fetch_paper) to disk.
 
@@ -349,11 +353,13 @@ def _register_export_tool(server: FastMCP) -> None:
         Q&A/figure slides drop first). Default 25; pass ``0`` (or
         ``None``) for unlimited.
 
-        ``dark_mode`` defaults to True — the post-build pass swaps the
-        brand palette to dark slide background (#12151B) + near-white
-        text (#E5E7EB) so OLED projectors and low-light venues don't
-        glare. Pass False for the light/printable variant (white slide
-        background + navy text).
+        ``dark_mode`` defaults to False — the project default is the
+        light navy-band deck (white slides, full-width navy header band
+        with a white title, navy cover panel). Pass True for the dark
+        variant: the post-build pass swaps to a dark slide background
+        (#12151B) + near-white text (#E5E7EB) and lightens the navy
+        band / cover / table fills so the same chrome reads on OLED
+        projectors and in low-light venues.
         """
         if not papers:
             raise ThesisAgentsError("export requires at least one paper")
@@ -404,6 +410,18 @@ def _register_pptx_tools(server: FastMCP) -> None:
                 for s in slides
             ],
         }
+
+    @server.tool()
+    def pptx_review(path: str, language: str | None = None) -> dict[str, Any]:
+        """Audit a deck: overflow + colour contracts + section completeness.
+
+        Returns overflow violations, contrast issues (invisible / red text /
+        light-on-light), and which canonical paper_rule sections the deck is
+        missing. ``language`` is auto-detected from the slide titles when
+        omitted. Section completeness only fails a thesis-style deck; a
+        lightweight abstract-only deck legitimately lacks most sections.
+        """
+        return review.review_deck(path, language).to_dict()
 
     @server.tool()
     def pptx_update_slide(

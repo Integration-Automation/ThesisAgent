@@ -311,6 +311,217 @@ def test_pptx_exporter_single_paper_skips_agenda_and_divider(sample_papers, tmp_
     assert "References" in titles
 
 
+def test_pptx_own_thesis_drops_source_slide_bibtex_and_self_reference(tmp_path):
+    """A candidate's own thesis (source=local, no external ids) renders no
+    source/overview slide, no BibTeX cite-key, and no references-of-self slide.
+
+    Why: the source/overview slide and BibTeX key exist to attribute a
+    *borrowed* paper; a defence deck of the candidate's own dissertation has
+    no fetched source to credit and must not list itself as a reference
+    (slide-deck-rules §11). The cover already carries title/authors/venue.
+    """
+    from pptx import Presentation
+
+    from thesisagents.core.models import Paper, PaperSummary
+
+    summary = PaperSummary(
+        language="en",
+        pain_points=(("Manual decks are slow", ("a", "b", "c")),),
+        contributions_detailed=(("1. A rule-driven engine", "renders rich tiers"),),
+        core_observation="Structure + visual contract + audit yields a defence deck.",
+        model="test",
+    )
+    own = Paper(
+        source="local", source_id="my-thesis", title="My Own Thesis",
+        authors=("Jeffrey Chen",), year=2026, venue="NTU · MSc Thesis",
+        abstract="", url="", doi=None, arxiv_id=None, summary=summary,
+    )
+    collection = PaperCollection(
+        query=Query(keywords="my thesis", sources=("local",)), papers=(own,),
+    )
+    options = ExportOptions(formats=("pptx",), out_dir=str(tmp_path), filename_stem="own")
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+
+    titles = [_slide_text(s, "title") for s in prs.slides]
+    # No references-of-self slide (the thesis is not its own citation).
+    assert "References" not in titles
+    # The title appears only on the cover — no source/overview slide repeats
+    # it as a body section (before the fix it appeared on both).
+    assert titles.count("My Own Thesis") == 1
+    # No BibTeX cite-key (or "Source:" attribution) anywhere in the deck.
+    every_run_text = " ".join(
+        run.text
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+        for para in shape.text_frame.paragraphs
+        for run in para.runs
+    )
+    assert own.bibtex_key() not in every_run_text
+    assert "BibTeX" not in every_run_text
+
+
+def test_pptx_over_cap_marker_is_localised(tmp_path):
+    """When a section exceeds the per-slide bullet cap, the "+N more" marker is
+    rendered in the deck's language — never a hard-coded English "(+N more)".
+
+    Why: `_cap_bullets` appends a count marker (slide-deck-rules §3) instead of
+    silently dropping bullets; before this fix the marker was English on every
+    deck, so a zh-tw deck showed "(+2 more)" amid Traditional Chinese body text.
+    """
+    from pptx import Presentation
+
+    from thesisagents.core.models import Paper, PaperSummary
+
+    summary = PaperSummary(
+        language="zh-tw",
+        # Eight bullets in one method section overruns the 6-per-subsection cap.
+        method_sections=(("步驟", tuple(f"第{i}步驟說明文字" for i in range(1, 9))),),
+        core_observation="核心觀察。",
+        model="test",
+    )
+    paper = Paper(
+        source="local", source_id="t", title="標註在地化測試",
+        authors=("A",), year=2026, venue="T", abstract="摘要", url="", summary=summary,
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("local",)), papers=(paper,),
+    )
+    options = ExportOptions(
+        formats=("pptx",), out_dir=str(tmp_path), filename_stem="marker",
+        language="zh-tw",
+    )
+    written = export_collection(collection, options)
+    prs = Presentation(str(written["pptx"]))
+    every_run_text = " ".join(
+        run.text
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+        for para in shape.text_frame.paragraphs
+        for run in para.runs
+    )
+    assert "（還有 2 項）" in every_run_text, "localised over-cap marker missing"
+    assert "more)" not in every_run_text, "English marker leaked into a zh-tw deck"
+
+
+def test_pptx_long_evaluation_section_preserves_all_bullets(tmp_path):
+    """An evaluation section with more bullets than a 2-column grid cell holds
+    renders as height-paginated stacks so EVERY bullet survives — none is dropped
+    behind a "(+N more)" marker — and the result still clears the footer guard.
+    """
+    from pptx import Presentation
+
+    from thesisagents.core.models import Paper, PaperSummary
+    from thesisagents.exporters.overflow import check_pptx
+
+    bullets = tuple(f"Finding number {i} with its own distinct text" for i in range(1, 10))
+    summary = PaperSummary(
+        language="en",
+        evaluation_sections=(("Benchmark results", bullets),),  # 9 > the 6 cell cap
+        core_observation="Stacked rendering preserves every evaluation bullet.",
+        model="test",
+    )
+    paper = Paper(
+        source="local", source_id="t", title="Evaluation Heavy",
+        authors=("A",), year=2026, venue="V", abstract="", url="", summary=summary,
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("local",)), papers=(paper,),
+    )
+    written = export_collection(collection, ExportOptions(
+        formats=("pptx",), out_dir=str(tmp_path), filename_stem="evalheavy", language="en",
+    ))
+    prs = Presentation(str(written["pptx"]))
+    every_run_text = " ".join(
+        run.text
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+        for para in shape.text_frame.paragraphs
+        for run in para.runs
+    )
+    for i in range(1, 10):
+        assert f"Finding number {i} " in every_run_text, f"evaluation bullet {i} dropped"
+    assert "more)" not in every_run_text, "content was truncated instead of paginated"
+    assert check_pptx(written["pptx"]) == [], "stacked evaluation overflowed"
+
+
+def _export_one(tmp_path, summary, *, stem):
+    from thesisagents.core.models import Paper
+
+    paper = Paper(
+        source="local", source_id="t", title="Content Preservation",
+        authors=("A",), year=2026, venue="V", abstract="", url="", summary=summary,
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("local",)), papers=(paper,),
+    )
+    return export_collection(collection, ExportOptions(
+        formats=("pptx",), out_dir=str(tmp_path), filename_stem=stem, language="en",
+    ))["pptx"]
+
+
+def _all_run_text(pptx_path) -> str:
+    from pptx import Presentation
+
+    prs = Presentation(str(pptx_path))
+    return " ".join(
+        run.text
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+        for para in shape.text_frame.paragraphs
+        for run in para.runs
+    )
+
+
+def test_pptx_long_future_work_preserves_all_bullets(tmp_path):
+    """A future-work list longer than a grid cell is paginated full-width (via
+    _add_limitations_future_slide's fallback), so no bullet is dropped."""
+    from thesisagents.core.models import PaperSummary
+    from thesisagents.exporters.overflow import check_pptx
+
+    summary = PaperSummary(
+        language="en",
+        future_work=tuple(f"Future direction {i} to pursue" for i in range(1, 10)),
+        core_observation="The future-work list paginates instead of truncating.",
+        model="test",
+    )
+    out = _export_one(tmp_path, summary, stem="futureheavy")
+    text = _all_run_text(out)
+    for i in range(1, 10):
+        assert f"Future direction {i} " in text, f"future-work bullet {i} dropped"
+    assert "more)" not in text
+    assert check_pptx(out) == []
+
+
+def test_pptx_long_pain_point_preserves_bullets_and_keeps_rq(tmp_path):
+    """A pain point with more bullets than a quadrant cell holds paginates
+    full-width AND still shows the research-question callout on its own lead
+    slide — neither the bullets nor the RQ is lost."""
+    from thesisagents.core.models import PaperSummary
+    from thesisagents.exporters.overflow import check_pptx
+
+    rq = "How can the manual deck workflow be automated end to end?"
+    summary = PaperSummary(
+        language="en",
+        pain_points=(
+            ("Slow manual workflow", tuple(f"Pain bullet {i} detail" for i in range(1, 10))),
+        ),
+        research_question=rq,
+        model="test",
+    )
+    out = _export_one(tmp_path, summary, stem="painheavy")
+    text = _all_run_text(out)
+    for i in range(1, 10):
+        assert f"Pain bullet {i} " in text, f"pain-point bullet {i} dropped"
+    assert rq in text, "research question lost when pain points paginated"
+    assert "more)" not in text
+    assert check_pptx(out) == []
+
+
 def _find_run_color(prs, target_rgb: tuple[int, int, int]) -> bool:
     for slide in prs.slides:
         for shape in slide.shapes:
@@ -327,29 +538,38 @@ def _find_run_color(prs, target_rgb: tuple[int, int, int]) -> bool:
     return False
 
 
-def test_pptx_default_is_dark_mode(sample_papers, tmp_path):
-    """``dark_mode`` defaults to True, so an ExportOptions that doesn't
-    explicitly pass the field still produces a dark deck.
+def test_pptx_default_is_light_mode(sample_papers, tmp_path):
+    """``dark_mode`` defaults to False, so an ExportOptions that doesn't
+    explicitly pass the field produces the light navy-band deck.
 
     Confirms:
-    1. Slide background fill is the dark colour (`#12151B`).
-    2. At least one run carries the swapped near-white text colour.
+    1. No dark slide-background fill is applied (the post-build dark pass
+       is skipped, so slide 0's background carries no explicit fore-colour
+       — reading it raises, as for any un-filled background).
+    2. At least one run keeps the original navy ``_BRAND_DARK`` (#1F3A66)
+       body-text colour (i.e. the dark recolour pass did NOT run).
     """
     from pptx import Presentation
-    from pptx.dml.color import RGBColor
 
     collection = _collection(sample_papers)
     options = ExportOptions(
         formats=("pptx",),
         out_dir=str(tmp_path),
-        filename_stem="default-dark",
+        filename_stem="default-light",
     )
     written = export_collection(collection, options)
     prs = Presentation(str(written["pptx"]))
-    bg_rgb = list(prs.slides)[0].background.fill.fore_color.rgb
-    assert tuple(bg_rgb) == tuple(RGBColor(0x12, 0x15, 0x1B))
-    assert _find_run_color(prs, (0xE5, 0xE7, 0xEB)), (
-        "no run was re-coloured to the dark-mode near-white text"
+    # No dark background was stamped — the un-filled background raises when
+    # asked for a foreground colour, the same signal the light-mode opt-out
+    # test relies on.
+    try:
+        bg_rgb = list(prs.slides)[0].background.fill.fore_color.rgb
+    except (TypeError, ValueError, AttributeError):
+        bg_rgb = None
+    assert bg_rgb is None or tuple(bg_rgb) != (0x12, 0x15, 0x1B)
+    assert _find_run_color(prs, (0x1F, 0x3A, 0x66)), (
+        "no run kept the navy _BRAND_DARK body text — the dark recolour "
+        "pass should be skipped by default now that light is the default"
     )
 
 
@@ -371,6 +591,7 @@ def test_pptx_dark_mode_has_no_invisible_runs(sample_papers, tmp_path):
         formats=("pptx",),
         out_dir=str(tmp_path),
         filename_stem="dark-readability",
+        dark_mode=True,
     )
     written = export_collection(collection, options)
     prs = Presentation(str(written["pptx"]))
@@ -462,6 +683,7 @@ def test_pptx_dark_mode_no_light_text_on_light_fill(sample_papers, tmp_path):
         formats=("pptx",),
         out_dir=str(tmp_path),
         filename_stem="dark-contrast",
+        dark_mode=True,
     )
     written = export_collection(collection, options)
     prs = Presentation(str(written["pptx"]))
@@ -486,7 +708,7 @@ def test_pptx_dark_mode_no_light_text_on_light_fill(sample_papers, tmp_path):
 def test_pptx_no_red_text_runs(sample_papers, tmp_path):
     """The "No red text" contract: ``_BRAND_ACCENT`` (#C0392B) must
     never be written as a run colour. Bold + ``_BRAND_HIGHLIGHT``
-    (teal-700 ``#0E7490``) is the approved emphasis pattern for
+    (blue-600 ``#2563EB``) is the approved emphasis pattern for
     headline text (KPI value, RQ question); ``_BRAND_GREY`` is the
     approved pattern for caption / placeholder / chrome text. Red
     font runs read as error / warning in slide-deck conventions and
@@ -504,6 +726,7 @@ def test_pptx_no_red_text_runs(sample_papers, tmp_path):
         formats=("pptx",),
         out_dir=str(tmp_path),
         filename_stem="no-red",
+        dark_mode=True,
     )
     written = export_collection(collection, options)
     prs = Presentation(str(written["pptx"]))
@@ -528,7 +751,7 @@ def test_pptx_no_red_text_runs(sample_papers, tmp_path):
                             f"slide {s_idx} shape {shape.name!r}: {text[:40]!r}"
                         )
     assert not offenders, (
-        "red text (#C0392B) found — use bold + _BRAND_HIGHLIGHT (teal) "
+        "red text (#C0392B) found — use bold + _BRAND_HIGHLIGHT (blue) "
         "for headlines or _BRAND_GREY for captions instead "
         "(deck-design 'No red text' contract):\n  "
         + "\n  ".join(offenders[:10])
@@ -1389,3 +1612,204 @@ def test_export_unknown_format_raises(sample_papers, tmp_path):
     )
     with pytest.raises(ExportError):
         export_collection(collection, options)
+
+
+# ---------------------------------------------------------------------------
+# Inline math rendering ($...$ -> real subscripts / superscripts + italic vars)
+# ---------------------------------------------------------------------------
+
+
+def _new_paragraph():
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    box = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(1))
+    return box.text_frame.paragraphs[0]
+
+
+def _baseline(run):
+    rpr = run._r.rPr  # noqa: SLF001
+    return rpr.get("baseline") if rpr is not None else None
+
+
+def _near_white():
+    from pptx.dml.color import RGBColor
+
+    return RGBColor(0xE5, 0xE7, 0xEB)
+
+
+def test_render_math_subscript_and_italic_variable():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "$z_a$", size_pt=18, colour=_near_white()
+    )
+    runs = para.runs
+    assert [r.text for r in runs] == ["z", "a"]
+    assert runs[0].font.italic is True        # single-letter variable z
+    assert _baseline(runs[0]) is None          # base char, normal baseline
+    assert _baseline(runs[1]) == "-25000"      # a rendered as subscript
+    # Dark-mode contract: every run carries an explicit colour.
+    assert all(r.font.color.rgb == _near_white() for r in runs)
+
+
+def test_render_math_superscript_and_multiletter_operator_upright():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "$min x^2$", size_pt=18, colour=_near_white()
+    )
+    by_text = {r.text: r for r in para.runs}
+    assert by_text["min"].font.italic is False   # multi-letter operator upright
+    assert by_text["x"].font.italic is True       # single-letter variable italic
+    assert _baseline(by_text["2"]) == "30000"     # superscript
+
+
+def test_render_math_braced_subscript():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "$z_{adv}$", size_pt=18, colour=_near_white()
+    )
+    sub = next(r for r in para.runs if r.text == "adv")
+    assert _baseline(sub) == "-25000"             # multi-char braced subscript
+
+
+def test_render_math_plain_text_is_one_normal_run():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "plain text, no math here", size_pt=18, colour=_near_white()
+    )
+    assert len(para.runs) == 1
+    assert para.runs[0].text == "plain text, no math here"
+    assert _baseline(para.runs[0]) is None
+
+
+def test_render_math_mixed_prose_and_span():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._render_math_paragraph(  # noqa: SLF001
+        para, "loss $z_a$ over batch", size_pt=18, colour=_near_white()
+    )
+    assert para.runs[0].text == "loss "          # prose before the span
+    assert para.runs[-1].text == " over batch"    # prose after the span
+    assert any(_baseline(r) == "-25000" for r in para.runs)  # subscript inside
+
+
+def test_bullet_box_renders_math_subscript():
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    from thesisagents.exporters import pptx as pptx_mod
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    pptx_mod._add_bullet_box(  # noqa: SLF001
+        slide, name="body", bullets=["uses $z_a$ latent"],
+        left=Inches(1), top=Inches(1), width=Inches(8), height=Inches(2),
+        font_pt=16,
+    )
+    para = slide.shapes[0].text_frame.paragraphs[0]
+    assert any(_baseline(r) == "-25000" for r in para.runs)  # subscript rendered
+    assert all(r.font.color.rgb is not None for r in para.runs)  # dark-mode contract
+
+
+def test_append_math_runs_preserves_existing_runs_and_renders_math():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._add_math_run(  # noqa: SLF001 — pre-existing label run
+        para, "Acc: ", size_pt=12, colour=_near_white(), bold=False
+    )
+    pptx_mod._append_math_runs(  # noqa: SLF001 — append value, don't clear
+        para, "$z_a$", size_pt=14, colour=_near_white(), bold=True
+    )
+    assert para.runs[0].text == "Acc: "                       # label not cleared
+    assert any(_baseline(r) == "-25000" for r in para.runs)    # subscript appended
+
+
+def test_append_math_runs_plain_value_is_one_upright_run():
+    from thesisagents.exporters import pptx as pptx_mod
+
+    para = _new_paragraph()
+    pptx_mod._append_math_runs(  # noqa: SLF001
+        para, "78% F1", size_pt=14, colour=_near_white(), bold=True
+    )
+    # A KPI value with no $ stays a single run — crucially the "F" is NOT
+    # italic-ised (math italic only applies inside $...$).
+    assert len(para.runs) == 1
+    assert para.runs[0].text == "78% F1"
+    assert para.runs[0].font.italic is not True
+
+
+def test_table_cell_renders_math_subscript():
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    from thesisagents.exporters import pptx as pptx_mod
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    pptx_mod._add_table(  # noqa: SLF001
+        slide,
+        rows=[["Method", "Loss"], ["Ours", "$z_a$"]],
+        left=Inches(1), top=Inches(1), width=Inches(8), height=Inches(2),
+        col_widths=[Inches(4), Inches(4)],
+    )
+    table = next(s.table for s in slide.shapes if getattr(s, "has_table", False))
+    math_runs = [r for p in table.cell(1, 1).text_frame.paragraphs for r in p.runs]
+    assert any(_baseline(r) == "-25000" for r in math_runs)   # "$z_a$" subscript
+    # A plain header cell stays upright with no baseline shift.
+    hdr_runs = [r for p in table.cell(0, 0).text_frame.paragraphs for r in p.runs]
+    assert hdr_runs and all(_baseline(r) is None for r in hdr_runs)
+
+
+def test_stacked_section_body_renders_math_subscript():
+    # The contribution / method body paragraph is the densest math surface in a
+    # thesis deck (it states the objective formula in prose). It routes through
+    # _add_textbox(math=True); without that flag it flattened "$I(z_a;z_b)$" to
+    # ASCII even though bullets / KPIs / tables already rendered it. Regression.
+    from pptx import Presentation
+
+    from thesisagents.exporters import pptx as pptx_mod
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    pptx_mod._add_stacked_section(  # noqa: SLF001
+        slide,
+        "互資訊式語意分解",
+        "訓練目標最小化互資訊 $I(z_a;z_b|E_p)$ 以保證分離",
+        pptx_mod.Inches(2),
+    )
+    body = next(s for s in slide.shapes if s.name == "body")
+    runs = [r for p in body.text_frame.paragraphs for r in p.runs]
+    assert any(_baseline(r) == "-25000" for r in runs)        # z_a / z_b subscripts
+    assert all(r.font.color.rgb is not None for r in runs)    # dark-mode contract
+
+
+def test_rq_callout_renders_math_subscript():
+    # The RQ / core-observation box states the paper's objective formula; it is a
+    # shape (rounded rectangle), not _add_textbox, so it needs its own math wiring.
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    from thesisagents.exporters import pptx as pptx_mod
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    pptx_mod._add_rq_callout(  # noqa: SLF001
+        slide, "把對抗成分和良性成分分離(最小化 $I(z_a;z_b|E_p)$),既準又快",
+        left=Inches(1), top=Inches(2), width=Inches(8), height=Inches(2),
+    )
+    rect = next(s for s in slide.shapes if s.name == "rq_box")
+    runs = [r for p in rect.text_frame.paragraphs for r in p.runs]
+    assert any(_baseline(r) == "-25000" for r in runs)        # subscript rendered
+    assert all(r.font.color.rgb is not None for r in runs)    # dark-mode contract
