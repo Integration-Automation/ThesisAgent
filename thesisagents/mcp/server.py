@@ -26,6 +26,10 @@ Tools:
   thesis-style layout. ``dark_mode`` defaults to False (project default
   is the light navy-band deck); pass True for the dark OLED/low-light variant.
 - pptx_inspect(path) -> {slides: [...]}
+- pptx_review(path, language?) -> {overflow, contrast, missing_sections, ok}
+  Audit an existing deck against the overflow, colour-contract, and
+  paper_rule section-completeness rules in one call. ``language`` is
+  auto-detected from the slide titles when omitted.
 - pptx_update_slide(path, slide_index, title?, body?, meta?, shape_updates?) -> {path}
 - pptx_delete_slide(path, slide_index) -> {path}
 - pptx_reorder_slides(path, new_order) -> {path}
@@ -61,7 +65,7 @@ from thesisagents.core.models import ExportOptions, Paper, PaperCollection, Quer
 from thesisagents.core.pdf_download import download_pdfs as core_download_pdfs
 from thesisagents.core.pipeline import run_search, run_single_paper
 from thesisagents.core.query import normalize_query
-from thesisagents.exporters import export_collection, pptx_edit
+from thesisagents.exporters import export_collection, pptx_edit, review
 from thesisagents.fetchers.http import shutdown_clients
 from thesisagents.utils.logging import get_logger
 
@@ -406,6 +410,18 @@ def _register_pptx_tools(server: FastMCP) -> None:
                 for s in slides
             ],
         }
+
+    @server.tool()
+    def pptx_review(path: str, language: str | None = None) -> dict[str, Any]:
+        """Audit a deck: overflow + colour contracts + section completeness.
+
+        Returns overflow violations, contrast issues (invisible / red text /
+        light-on-light), and which canonical paper_rule sections the deck is
+        missing. ``language`` is auto-detected from the slide titles when
+        omitted. Section completeness only fails a thesis-style deck; a
+        lightweight abstract-only deck legitimately lacks most sections.
+        """
+        return review.review_deck(path, language).to_dict()
 
     @server.tool()
     def pptx_update_slide(

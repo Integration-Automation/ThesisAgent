@@ -983,6 +983,12 @@ def main(argv: list[str] | None = None) -> int:
     if not raw_argv or raw_argv[0] == "gui":
         gui_extra_argv = raw_argv[1:] if raw_argv else []
         return _dispatch_gui(gui_extra_argv)
+    # ``review`` audits an existing .pptx (overflow + colour contracts + section
+    # completeness) and short-circuits before argparse for the same reason as the
+    # gui shim: it takes file paths, not the query/paper/pdf mode mutex group.
+    if raw_argv[0] == "review":
+        from thesisagents.exporters.review import main as review_main
+        return review_main(raw_argv[1:])
     # Discovery flags short-circuit before argparse: they answer "what can I
     # search / export?" and so must NOT trip the required query/paper/pdf mutex
     # group (same reasoning as the bare-invocation gui shim above).
