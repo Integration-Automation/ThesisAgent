@@ -354,6 +354,10 @@ Claude Desktop、Cursor …)都能驅動整套流程。
        代表不限)。
    * - ``pptx_inspect``
      - 讀既有投影片檔的 slide / shape 結構。
+   * - ``pptx_review``
+     - 一次稽核整份投影片 — 溢位 + 色彩契約 + ``paper_rule``\
+       章節完整度。自動偵測語言,亦為 CLI
+       ``python -m thesisagents review``。
    * - ``pptx_update_slide``
      - 取代 ``title``/ ``body``/ ``meta``\ (透過 shape name)或
        任意 shape(透過 index)。

@@ -134,8 +134,11 @@ Both layers ship together; tests pin both. The regression test
 ``test_pptx_dark_mode_has_no_invisible_runs`` (in ``tests/test_exporters.py``)
 walks every run on every slide of a default-dark-mode deck and fails
 if any non-empty run has ``rgb is None`` or ``rgb == (0,0,0)``. A
-companion debug script lives at ``scripts/_audit_dark_text.py`` for
-manual inspection of a single rendered deck.
+companion auditor lives at ``thesisagents.exporters.audit.audit_deck`` (the
+``scripts/_audit_dark_text.py`` CLI is a thin wrapper) for manual inspection
+of a single rendered deck — or use the one-stop ``review_deck`` /
+``python -m thesisagents review`` / MCP ``pptx_review``, which bundles this
+contrast audit with the overflow and section-completeness checks.
 
 #### "No red text" contract (HARD)
 
@@ -223,9 +226,10 @@ stayed light. White-on-white. Fixed by adding the mapping
    text colour, and fails when both > 0.7 × 255 (= 178). Adding a new
    light-fill shape without a corresponding dark mapping will fail
    this test.
-3. **The audit script** ``scripts/_audit_dark_text.py`` now also
-   reports failure-mode B — run it on a rendered deck during manual
-   inspection.
+3. **The auditor** ``thesisagents.exporters.audit.audit_deck`` (CLI
+   ``scripts/_audit_dark_text.py``, or bundled into ``review_deck`` /
+   ``pptx_review``) now also reports failure-mode B — run it on a rendered
+   deck during manual inspection.
 
 Exposure surfaces (light is default; the toggles opt IN to DARK):
 - CLI: `--dark-mode` opt-in flag (when absent → light)

@@ -28,8 +28,9 @@ You'll be told (or you can infer from context) which deck(s) to check. Typical i
 - A specific path: `exports/<run>/<key>.pptx`
 - Or a regen script the parent just ran: re-derive the path from the script's `out_dir` + `filename_stem`.
 
-**Use the canonical inspector — `scripts/check_overflow.py`.** It already encodes
-the project's wrap estimate and calibration, so run it rather than reinventing one:
+**Use the canonical inspector.** Its logic now lives in the package at
+`thesisagents.exporters.overflow` (the `scripts/check_overflow.py` CLI is a thin
+wrapper re-exporting it), so run it rather than reinventing one:
 
 ```
 .venv/Scripts/python.exe scripts/check_overflow.py exports/<deck>.pptx [more.pptx ...]
@@ -37,9 +38,18 @@ the project's wrap estimate and calibration, so run it rather than reinventing o
 
 It prints the report block below per deck and exits with the count of failed decks
 (0 = all clean), so you can assert on the exit code. It is also importable —
-`from check_overflow import check_pptx, check_pptx_from_prs` — returning a list of
+`from thesisagents.exporters.overflow import check_pptx, check_pptx_from_prs` (the
+script path `from check_overflow import …` still works too) — returning a list of
 `Violation(slide, shape, kind, rendered_in, limit_in)`; `check_pptx_from_prs(prs)`
 takes an already-open `Presentation` so a test can build a deck in memory.
+
+**For a full deck audit (overflow + colour contracts + section completeness) in
+one pass, prefer `thesisagents.exporters.review.review_deck(path)`** — exposed as
+the CLI `python -m thesisagents review <deck.pptx>` and the MCP `pptx_review`
+tool. It bundles this overflow check with the dark-mode / no-red / contrast audit
+and the `paper_rule` seven-section completeness check, returning a single
+`DeckReview` (`.ok`, `.overflow`, `.contrast`, `.missing_sections`). Use the
+standalone overflow inspector above when you only need the geometry check.
 
 What it does (so you can trust / explain its output):
 

@@ -448,6 +448,10 @@ Tools at a glance:
        for the printable light variant).
    * - ``pptx_inspect``
      - Read slide / shape structure of an existing deck.
+   * - ``pptx_review``
+     - Audit a deck in one call — overflow + colour contracts +
+       ``paper_rule`` section completeness. Auto-detects the deck
+       language; also the CLI ``python -m thesisagents review``.
    * - ``pptx_update_slide``
      - Replace ``title`` / ``body`` / ``meta`` (by shape name) or
        arbitrary shapes by index.

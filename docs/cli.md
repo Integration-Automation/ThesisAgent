@@ -131,6 +131,24 @@ research question, KPI metrics, technique table, literature
 positioning, per-RQ result tables, …), and the PPT exporter renders the
 thesis-style layout.
 
+### Review an existing deck
+
+```bash
+thesisagents review ./exports/attention.pptx
+thesisagents review ./exports/*.pptx --lang zh-tw
+```
+
+The `review` subcommand audits a finished `.pptx` against all three
+deck-quality contracts in one pass — slide **overflow**, the dark-mode /
+no-red / contrast **colour** contracts, and `paper_rule` **section
+completeness** (Introduction, Literature Review, Methodology, Experiment,
+Conclusion). `--lang` is optional; the deck's language is auto-detected
+from its slide titles otherwise. It prints a per-deck report and exits
+with the number of decks that failed (`0` = all clean), so it drops into
+CI. Section completeness only fails a *thesis-style* deck — a lightweight
+abstract-only deck is never failed for legitimately lacking sections.
+The same audit is the MCP `pptx_review` tool.
+
 ## Exit codes
 
 | Code | Meaning |

@@ -47,8 +47,10 @@ Concretely, the assistant:
 4. **Generates** `.pptx` (three rendering tiers — lightweight / enriched-flat /
    thesis-style), `.xlsx`, `.bib`, `.md`, `.json` outputs.
 5. **Exposes** every step as an MCP tool (`search`, `fetch_paper`, `fetch_pdf_text`,
-   `export`, `pptx_inspect`, `pptx_update_slide`, `pptx_delete_slide`,
-   `pptx_reorder_slides`, `pptx_add_slide`).
+   `export`, `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
+   `pptx_reorder_slides`, `pptx_add_slide`). `pptx_review` audits an existing deck
+   (overflow + colour contracts + `paper_rule` section completeness) in one call —
+   the same audit the CLI exposes as `python -m thesisagents review <deck.pptx>`.
 
 Single-process, Python 3.12+. Heavy I/O off the event loop; shared
 `httpx.AsyncClient` registry pools connections per source.
