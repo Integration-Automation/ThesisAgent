@@ -444,8 +444,8 @@ Tools at a glance:
        Accepts a ``summary`` field per paper that can carry the
        full thesis-style schema; accepts ``language`` for i18n,
        ``max_slides_per_paper`` (default 25; pass ``0`` for unlimited),
-       and ``dark_mode`` (default ``true`` — dark deck; pass ``false``
-       for the printable light variant).
+       and ``dark_mode`` (default ``false`` — the light navy-band deck;
+       pass ``true`` for the dark OLED / low-light variant).
    * - ``pptx_inspect``
      - Read slide / shape structure of an existing deck.
    * - ``pptx_review``

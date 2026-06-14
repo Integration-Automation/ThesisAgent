@@ -313,7 +313,8 @@ after the priority-based trim — cover / references / contributions are
 kept first; Q&A / figure / paper-table slides drop first. Pass `0`
 (or omit the field) for unlimited.
 
-`dark_mode` (default `true`) toggles the post-build recolour pass.
+`dark_mode` (default `false` — the project default is the light
+navy-band deck) toggles the post-build recolour pass.
 On: dark slide background (`#12151B`) + near-white body text (`#E5E7EB`)
 + darker table-row stripe — designed for OLED projectors and low-light
 venues. Off: the light/printable variant (white background + navy text

@@ -392,7 +392,8 @@ non-invasive walk-and-rewrite passes run before the file is saved:
    the user never sees as separate shapes but instantly reads as
    "this deck has an identity".
 3. **Dark-mode recolour** (`_apply_dark_mode(prs)`, runs when
-   `ExportOptions.dark_mode=True`, which is the default) — walks every
+   `ExportOptions.dark_mode=True`, which is opt-in — the default deck
+   is light) — walks every
    slide / shape / run / table cell and swaps light-palette RGBs to
    their dark equivalents via `_LIGHT_TO_DARK_TEXT` + `_LIGHT_TO_DARK_FILL`
    dicts. The slide background switches to `#12151B`; body text goes
