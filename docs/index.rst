@@ -96,6 +96,7 @@ Contributing
 
    contributing
    source_plugins
+   search-quality
 
 Quick links
 -----------
