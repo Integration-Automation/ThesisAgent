@@ -30,7 +30,7 @@ the gates pass.
 2. **`pytest tests/` runs clean.** Pre-existing skips are OK; new
    skips need a written reason.
 3. **`ruff check .` reports no new errors.**
-4. **`bandit -c pyproject.toml -r thesisagents/ sources/`**
+4. **`bandit -c pyproject.toml -r thesisagents/`**
    reports `No issues identified`. The `-c` flag is **mandatory** —
    without it bandit ignores the project skip config.
 5. **End-to-end smoke** for changes touching `sources/`,
@@ -227,7 +227,7 @@ Before pushing, reproduce each gate locally:
 
 ```bash
 # bandit (the -c flag is mandatory)
-python -m bandit -c pyproject.toml -r thesisagents/ sources/
+python -m bandit -c pyproject.toml -r thesisagents/
 
 # ruff
 python -m ruff check .

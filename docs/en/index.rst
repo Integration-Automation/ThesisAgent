@@ -607,7 +607,7 @@ Every change must pass three gates before commit (see ``CLAUDE.md``):
 
    .venv\Scripts\python.exe -m pytest tests/
    .venv\Scripts\python.exe -m ruff check .
-   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 
 The ``-c`` flag on bandit is **required** — without it bandit ignores
 the project skip config and the run will be noisy.

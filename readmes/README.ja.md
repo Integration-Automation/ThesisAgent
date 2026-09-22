@@ -263,7 +263,7 @@ ThesisAgents/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 ```
 
 bandit の `-c` フラグは必須 — 無いと bandit はプロジェクトの skip 設定を無視します。pptx エクスポータを触る場合は overflow チェックも実行(`CLAUDE.md`「Slide Deck Rules」参照)。

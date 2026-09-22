@@ -263,7 +263,7 @@ ThesisAgents/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 ```
 
 El flag `-c` de bandit es obligatorio — sin él, bandit ignora la configuración skip del proyecto. Al tocar el exportador pptx, ejecute también una comprobación de desbordamiento (ver `CLAUDE.md` "Slide Deck Rules").

@@ -131,7 +131,7 @@ Systemic false positives are skipped at config level, never per-line.
 Adding a new bandit skip:
 1. Add to `.bandit` with `# B<NNN>: <one-line reason>`.
 2. Mirror in `pyproject.toml` `[tool.bandit].skips`.
-3. `py -m bandit -c pyproject.toml -r thesisagents/ sources/` must return `No issues identified`.
+3. `py -m bandit -c pyproject.toml -r thesisagents/` must return `No issues identified`.
 
 ---
 
