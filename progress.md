@@ -6,7 +6,7 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- **#1** Open the dev→main PR for the backlog committed on 2026-09-22 (workspace S-5). The network smoke gates of `dod-verify` (search, single-paper) have not been run on it.
+- **#1** Merge PR #19 (dev→main, the backlog committed on 2026-09-22 plus the mcp 1.x pin); merging starts the release workflow. CI, pytest, ruff, bandit and the search and single-paper smoke gates passed on 2026-09-23 (workspace S-5).
 - **#2** `ci.yml:78` and `README.md:451` run bandit on `sources/`, which no longer exists at the top level (`AGENTS.md:284` scans only `thesisagents/`).
 - **#3** The GUI does not remember its window size and position (`docs/gui.md:219`).
 - **#4** The search-quality evaluator exists but no benchmark judgement file (qrels) is committed.
