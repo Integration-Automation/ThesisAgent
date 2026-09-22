@@ -14,6 +14,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from thesisagents.utils.path_safety import resolve_safe
+
 
 def evaluate_query(
     retrieved: Sequence[str],
@@ -95,12 +97,22 @@ def _dcg(grades: Sequence[int]) -> float:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the offline evaluator against a JSON benchmark file."""
+    """Run the offline evaluator against a JSON benchmark file.
+
+    The benchmark path comes from a command line that a caller, human or agent, composes, so it
+    goes through ``resolve_safe`` like every other user-controlled path in this project: it is read
+    relative to ``--root`` (the current directory by default) and absolute or ``..`` paths are
+    refused. A benchmark kept elsewhere is reached by naming its directory as ``--root``.
+    """
     parser = argparse.ArgumentParser(description="Evaluate ranked paper-search results.")
-    parser.add_argument("benchmark", type=Path, help="JSON benchmark path")
+    parser.add_argument("benchmark", help="JSON benchmark path, relative to --root")
+    parser.add_argument(
+        "--root", type=Path, default=None,
+        help="directory the benchmark must live under (default: the current directory)")
     parser.add_argument("--cutoff", "-k", type=int, default=10)
     args = parser.parse_args(argv)
-    payload = json.loads(args.benchmark.read_text(encoding="utf-8"))
+    benchmark = resolve_safe(args.root if args.root is not None else Path.cwd(), args.benchmark)
+    payload = json.loads(benchmark.read_text(encoding="utf-8"))
     print(json.dumps(evaluate_benchmark(payload, cutoff=args.cutoff), indent=2))
     return 0
 

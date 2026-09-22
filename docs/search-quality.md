@@ -29,6 +29,15 @@ Run the evaluator without network access:
 py -m thesisagents.evaluation.search_quality benchmark.json --cutoff 10
 ```
 
+The benchmark path is read relative to `--root`, which defaults to the current
+directory; absolute paths and `..` segments are refused, like every other
+user-supplied path in this project. A benchmark kept elsewhere is reached by
+naming its directory:
+
+```powershell
+py -m thesisagents.evaluation.search_quality bench.json --root D:\data\qrels
+```
+
 The report includes per-query and macro Precision@K, Recall@K and nDCG@K.
 Judgements should be reviewed by a domain reader, committed separately from
 retrieved results, and updated only when the relevance standard changes.

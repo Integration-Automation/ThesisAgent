@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-02 | 2026-09-23 | Evaluator CLI path goes through resolve_safe | #done #security | [2026-09](2026-09.md) |
 | U-20260923-01 | 2026-09-23 | CI green again: keep mcp on the 1.x SDK | #done #mcp #ci | [2026-09](2026-09.md) |
 | U-20260922-08 | 2026-09-22 | Thesis-defence and TCSE deck scripts with figures | #done #decks | [2026-09](2026-09.md) |
 | U-20260922-07 | 2026-09-22 | New authoring rules; agent docs drop retired tooling | #docs #rules | [2026-09](2026-09.md) |
@@ -72,4 +73,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 9 |
+| [2026-09.md](2026-09.md) | 2026-09 | 10 |
