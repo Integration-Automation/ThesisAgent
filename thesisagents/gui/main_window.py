@@ -8,6 +8,8 @@ scrollbar when the window shrinks below the form's natural height.
 
 from __future__ import annotations
 
+from PySide6.QtCore import QByteArray
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QMainWindow,
     QScrollArea,
@@ -19,7 +21,7 @@ from thesisagents.gui.i18n import t
 from thesisagents.gui.pages.deck import DeckPage
 from thesisagents.gui.pages.enrich import EnrichPage
 from thesisagents.gui.pages.search import SearchPage
-from thesisagents.gui.pages.settings import SettingsPage
+from thesisagents.gui.pages.settings import SettingsPage, settings_store
 
 # Sensible window-size bounds: a 720p laptop can still see everything
 # at 900x600, while a 4K monitor gets a comfortable default that does
@@ -28,16 +30,23 @@ _MIN_WIDTH = 900
 _MIN_HEIGHT = 600
 _DEFAULT_WIDTH = 1280
 _DEFAULT_HEIGHT = 800
+# QSettings key holding the window's size, position and maximised state.
+_GEOMETRY_KEY = "window/geometry"
 
 
 class MainWindow(QMainWindow):
-    """Top-level window. Owns the tab widget and all page instances."""
+    """Top-level window. Owns the tab widget and all page instances.
+
+    The window's size and position are saved to QSettings when it closes
+    and restored when the next one is built.
+    """
 
     def __init__(self, ui_language: str = "en", parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle(t("app.title", ui_language))
         self.setMinimumSize(_MIN_WIDTH, _MIN_HEIGHT)
         self.resize(_DEFAULT_WIDTH, _DEFAULT_HEIGHT)
+        self._restore_geometry()
 
         tabs = QTabWidget(self)
         tabs.setDocumentMode(True)
@@ -75,6 +84,22 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(tabs)
         self._tabs = tabs
+
+    def _restore_geometry(self) -> None:
+        """Apply the geometry saved by the last window, if any.
+
+        ``restoreGeometry`` moves a window that would land off-screen (a
+        monitor that is gone) back onto an available screen, and ignores
+        data it cannot parse, so the defaults above stay in that case.
+        """
+        saved = settings_store().value(_GEOMETRY_KEY)
+        if isinstance(saved, QByteArray) and not saved.isEmpty():
+            self.restoreGeometry(saved)
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - Qt override
+        """Save the window geometry, then close as usual."""
+        settings_store().setValue(_GEOMETRY_KEY, self.saveGeometry())
+        super().closeEvent(event)
 
     def _wrap_scrollable(self, page: QWidget) -> QScrollArea:
         """Wrap a page so it scrolls vertically when the window shrinks.

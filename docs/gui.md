@@ -164,6 +164,9 @@ at PR time.
 
 - The window has a minimum size of 900×600 (still fits a 720p
   laptop) and a default of 1280×800.
+- Closing the window saves its size, position and maximised state
+  (QSettings key `window/geometry`); the next launch restores them,
+  moving the window back on-screen if its monitor is gone.
 - Each tab page lives inside a `QScrollArea` with
   `widgetResizable=True`, so the form widgets stretch horizontally
   with the window width and reveal a vertical scrollbar when the
@@ -216,6 +219,3 @@ round-trip through QSettings).
   validation would leak the key into HTTP logs and slow down save.
   An invalid key surfaces later as a `ConfigError` / 401 from the
   relevant source plugin.
-- The window does not yet remember its size / position between
-  runs. Add `QMainWindow.saveGeometry` / `restoreGeometry` if you
-  want that.
