@@ -12,6 +12,7 @@ from thesisagents.core.constants import (
     DEFAULT_PAGE_SIZE,
     MAX_RESULTS_PER_SOURCE,
 )
+from thesisagents.core.exceptions import ThesisAgentsError
 
 _TITLE_NOISE_RE = re.compile(r"[^a-z0-9]+")
 
@@ -158,6 +159,21 @@ class PaperSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class FieldProvenance:
+    """Record which source supplied one normalised paper field.
+
+    This keeps cross-source merge decisions auditable without retaining an
+    entire upstream payload. For example, a canonical ACM record may carry
+    ``FieldProvenance("pdf_url", "openalex", "W123")`` after OpenAlex
+    supplies the missing open-access PDF URL.
+    """
+
+    field: str
+    source: str
+    source_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class Paper:
     """One paper, normalised across sources."""
 
@@ -174,42 +190,94 @@ class Paper:
     citation_count: int | None = None
     pdf_url: str | None = None
     summary: PaperSummary | None = None
+    provenance: tuple[FieldProvenance, ...] = ()
     raw: dict[str, Any] = field(default_factory=dict, compare=False, hash=False)
 
-    def dedup_key(self) -> str:
-        """Stable identity for dedup across sources.
+    def doi_key(self) -> str | None:
+        """Normalised DOI identity key, or ``None`` when the paper has no DOI."""
+        return f"doi:{self.doi.lower().strip()}" if self.doi else None
 
-        Why: Google Scholar and Semantic Scholar may return the same paper with
-        different source-side IDs. DOI is best; arXiv ID next; otherwise hash
-        title + first-author + year.
+    def arxiv_key(self) -> str | None:
+        """Normalised arXiv identity key, or ``None`` when there is no arXiv ID.
 
-        Each key component is *normalised* so cosmetic cross-source differences
-        don't split one paper into two records:
-
-        * arXiv IDs drop the version suffix — ``2401.00001v1`` and
-          ``2401.00001v2`` are the same paper (a revision), so they collapse.
-        * Title hashes strip punctuation and whitespace via
-          :func:`_canon_title`, so ``"Attention Is All You Need"`` and
-          ``"Attention is all you need."`` produce the same key.
-        * The first author is reduced to its surname via
-          :func:`_canon_author`, so ``"Vaswani, Ashish"`` / ``"Ashish
-          Vaswani"`` / ``"A. Vaswani"`` don't split one paper into duplicates.
+        The version suffix is dropped — ``2401.00001v1`` and ``2401.00001v2``
+        are one paper (a revision), so they must collapse.
         """
-        if self.doi:
-            return f"doi:{self.doi.lower()}"
-        if self.arxiv_id:
-            arxiv = re.sub(r"v\d+$", "", self.arxiv_id.strip().lower())
-            return f"arxiv:{arxiv}"
+        if not self.arxiv_id:
+            return None
+        stripped = re.sub(r"v\d+$", "", self.arxiv_id.strip().lower())
+        return f"arxiv:{stripped}"
+
+    def title_key(self) -> str:
+        """Fuzzy identity key over canonical title + first-author surname + year.
+
+        Both components are normalised so cosmetic cross-source differences
+        don't split one paper into two records: :func:`_canon_title` strips
+        punctuation and case (``"Attention Is All You Need"`` ==
+        ``"Attention is all you need."``), and :func:`_canon_author` reduces the
+        first author to a surname (``"Vaswani, Ashish"`` == ``"Ashish Vaswani"``
+        == ``"A. Vaswani"``).
+        """
         first_author = _canon_author(self.authors[0]) if self.authors else ""
         seed = f"{_canon_title(self.title)}|{first_author}|{self.year or ''}"
         digest = hashlib.sha256(seed.encode("utf-8"), usedforsecurity=False).hexdigest()
         return f"hash:{digest[:16]}"
 
+    def identity_keys(self) -> tuple[str, ...]:
+        """EVERY key under which this paper can be recognised, strongest first.
+
+        A paper carries up to three identities at once — its DOI, its arXiv ID,
+        and its fuzzy title hash — and sources populate different subsets of
+        them. Crossref returns a DOI and no arXiv ID; arXiv returns the reverse;
+        a Scholar scrape often has neither. Treating only the *strongest*
+        available key as the paper's identity (what :meth:`dedup_key` returns)
+        means a DOI-less ACM record and a DOI-carrying OpenAlex record of the
+        same paper never even compare, and both ship in the results.
+
+        :func:`thesisagents.core.dedup.dedupe` therefore groups on the whole
+        tuple: papers sharing ANY key are the same paper.
+
+        Example: ``Paper(doi="10.1/x", arxiv_id="2401.1", title="On X")`` →
+        ``("doi:10.1/x", "arxiv:2401.1", "hash:…")``.
+        """
+        keys: list[str] = []
+        doi = self.doi_key()
+        if doi:
+            keys.append(doi)
+        arxiv = self.arxiv_key()
+        if arxiv:
+            keys.append(arxiv)
+        keys.append(self.title_key())
+        return tuple(keys)
+
+    def dedup_key(self) -> str:
+        """The single strongest identity key: DOI, else arXiv ID, else title hash.
+
+        Kept as the paper's canonical one-line identity (logs, cache keys,
+        stable ordering). Dedup itself matches on :meth:`identity_keys` —
+        see that method for why one key is not enough.
+        """
+        return self.identity_keys()[0]
+
     def bibtex_key(self) -> str:
-        """Deterministic BibTeX cite key."""
+        """Deterministic BibTeX cite key.
+
+        Why the ``surname_tokens`` guard: ``authors`` is not guaranteed to hold
+        printable names. An MCP ``export`` payload written by an LLM agent, or a
+        scraped record whose author cell was blank, can carry ``("",)`` — and
+        ``"".split()[-1]`` is an ``IndexError``. Because ``bibtex_key`` is called
+        from the PDF downloader, the OA resolver and the per-paper deck emitter,
+        that single blank string used to abort a whole run. Fall back to
+        ``"anon"``, exactly as for a paper with no authors at all.
+
+        Example: ``Paper(authors=("",), title="On X", year=2024).bibtex_key()``
+        returns ``"anon2024untitled"``-style output instead of raising.
+        """
         first_author_last = "anon"
         if self.authors:
-            first_author_last = self.authors[0].split()[-1].lower()
+            surname_tokens = self.authors[0].split()
+            if surname_tokens:
+                first_author_last = surname_tokens[-1].lower()
         year_part = str(self.year) if self.year else "nd"
         title_word = "untitled"
         for token in self.title.split():
@@ -241,10 +309,41 @@ class Paper:
             "citation_count": self.citation_count,
             "pdf_url": self.pdf_url,
             "summary": _summary_to_dict(self.summary),
+            "provenance": [
+                {
+                    "field": entry.field,
+                    "source": entry.source,
+                    "source_id": entry.source_id,
+                }
+                for entry in self.provenance
+            ],
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Paper:
+        """Rebuild a ``Paper`` from its ``to_dict()`` shape.
+
+        The four identity fields (``source`` / ``source_id`` / ``title`` /
+        ``url``) are required, but a missing one raises a named
+        :class:`ThesisAgentsError` rather than a bare ``KeyError``. Why: the
+        documented LLM-as-agent path hands hand-written paper dicts to the MCP
+        ``export`` / ``download_pdfs`` tools, and an omitted ``url`` used to
+        surface as an opaque ``KeyError: 'url'`` with no hint about which paper
+        or which field was at fault.
+
+        Example: ``Paper.from_dict({"source": "arxiv"})`` raises
+        ``"paper dict is missing required field(s): source_id, title, url"``.
+        """
+        missing = [
+            name
+            for name in ("source", "source_id", "title", "url")
+            if data.get(name) is None
+        ]
+        if missing:
+            raise ThesisAgentsError(
+                "paper dict is missing required field(s): "
+                f"{', '.join(missing)} (got keys: {', '.join(sorted(data)) or '<none>'})"
+            )
         return cls(
             source=data["source"],
             source_id=data["source_id"],
@@ -259,6 +358,18 @@ class Paper:
             citation_count=data.get("citation_count"),
             pdf_url=data.get("pdf_url"),
             summary=_summary_from_dict(data.get("summary")),
+            # Provenance is bookkeeping, never load-bearing: a half-written
+            # entry must not sink an otherwise valid paper, so entries are
+            # filled with "" rather than raising.
+            provenance=tuple(
+                FieldProvenance(
+                    field=str(entry.get("field") or ""),
+                    source=str(entry.get("source") or ""),
+                    source_id=str(entry.get("source_id") or ""),
+                )
+                for entry in (data.get("provenance") or ())
+                if isinstance(entry, dict)
+            ),
         )
 
 
@@ -379,8 +490,8 @@ class Query:
     min_citations: int | None = None
     #: When True, the pipeline drops papers whose venue isn't on the
     #: top-tier whitelist (see ``thesisagents/core/top_venues.py``).
-    #: Default is False so library callers see the historical behaviour;
-    #: the CLI flips this on by default.
+    #: Default is False everywhere; the CLI exposes it as the opt-in
+    #: ``--top-tier-only`` flag.
     top_tier_only: bool = False
 
     def __post_init__(self) -> None:
@@ -401,6 +512,23 @@ class Query:
 
     def with_max(self, max_results: int) -> Query:
         return replace(self, max_results=max_results)
+
+    @staticmethod
+    def clamp_max_results(count: int) -> int:
+        """Clamp a paper count into the legal ``max_results`` range.
+
+        For callers that build a *synthetic* Query purely to satisfy
+        ``PaperCollection`` — the MCP ``export`` / ``download_pdfs`` tools and
+        the CLI's ``--pdf <directory>`` mode — ``max_results`` describes nothing
+        the pipeline will act on; it just has to be valid. Passing the raw
+        paper count made a 250-paper export die on
+        ``ValueError: max_results must be in [1, 200]``, an error about a
+        per-source page size that the caller never set.
+
+        Example: ``Query.clamp_max_results(0)`` -> ``1``;
+        ``Query.clamp_max_results(250)`` -> ``200``.
+        """
+        return max(1, min(count, MAX_RESULTS_PER_SOURCE))
 
 
 @dataclass(frozen=True, slots=True)

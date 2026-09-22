@@ -5,8 +5,6 @@ from __future__ import annotations
 DEFAULT_PAGE_SIZE: int = 25
 MAX_RESULTS_PER_SOURCE: int = 200
 MAX_KEYWORD_LENGTH: int = 256
-CACHE_TTL_SECONDS: int = 86_400
-
 HTTP_TIMEOUT_SECONDS: float = 30.0
 HTTP_MAX_RETRIES: int = 3
 HTTP_BACKOFF_BASE_SECONDS: float = 1.5
@@ -138,7 +136,7 @@ AGGREGATE_EXPORTS: frozenset[str] = frozenset({
 EXPORT_DESCRIPTIONS: dict[str, str] = {
     EXPORT_PPTX: (
         "Thesis-style PowerPoint deck (rich / enriched / lightweight tiers; "
-        "dark mode default). One deck per paper in search mode."
+        "light mode default, dark mode opt-in). One deck per paper in search mode."
     ),
     EXPORT_XLSX: "Styled Excel workbook — one ranked row per paper.",
     EXPORT_MARKDOWN: (

@@ -48,6 +48,9 @@ def test_dedupe_merges_pdf_url_from_later_source():
     assert out[0].source == "acm"  # canonical (first) source preserved
     assert out[0].url == "https://dl.acm.org/doi/10.1145/x"  # canonical URL
     assert out[0].pdf_url == "https://author.example.com/preprint.pdf"  # merged
+    assert out[0].provenance[0].field == "pdf_url"
+    assert out[0].provenance[0].source == "openalex"
+    assert out[0].provenance[0].source_id == "W1"
 
 
 def test_dedupe_does_not_overwrite_populated_fields():
@@ -82,6 +85,9 @@ def test_dedupe_merges_multiple_optional_fields():
     assert out[0].citation_count == 42
     assert out[0].abstract == "filled in"
     assert out[0].year == 2024
+    assert {entry.field for entry in out[0].provenance} == {
+        "venue", "citation_count", "abstract", "year",
+    }
 
 
 def test_dedupe_collapses_title_punctuation_and_case():
@@ -121,10 +127,112 @@ def test_dedupe_distinguishes_different_surnames():
     assert len(dedupe([a, b])) == 2
 
 
+def test_dedupe_matches_across_a_missing_doi():
+    """A DOI-less record and a DOI-carrying record of the same paper are one.
+
+    Matching on only the strongest key each record happens to have keyed the ACM
+    copy under ``hash:…`` and the OpenAlex copy under ``doi:…``, so they never
+    compared: the user saw the paper twice AND the canonical ACM record never
+    inherited OpenAlex's PDF URL — defeating the field-merge this module exists
+    for.
+    """
+    acm = _paper(
+        source="acm", source_id="1", title="On Method X",
+        authors=("Ashish Vaswani",), year=2024, doi=None,
+    )
+    openalex = _paper(
+        source="openalex", source_id="W1", title="On Method X",
+        authors=("Ashish Vaswani",), year=2024, doi="10.1145/x",
+        pdf_url="https://oa.example/p.pdf",
+    )
+    crossref = _paper(
+        source="crossref", source_id="C1", title="On Method X",
+        authors=("Ashish Vaswani",), year=2024, doi="10.1145/x",
+    )
+    out = dedupe([acm, openalex, crossref])
+    assert len(out) == 1
+    assert out[0].source == "acm"                            # canonical preserved
+    assert out[0].doi == "10.1145/x"                         # backfilled
+    assert out[0].pdf_url == "https://oa.example/p.pdf"      # the PDF is not lost
+    assert {e.field for e in out[0].provenance} == {"doi", "pdf_url"}
+
+
+def test_dedupe_joins_two_groups_transitively():
+    """A record carrying both IDs unites an arXiv-keyed and a DOI-keyed group.
+
+    Titles differ enough that the fuzzy key never matches, so the join can only
+    happen through the strong identifiers — which is exactly the case a
+    single-key scheme cannot express.
+    """
+    preprint = _paper(source="arxiv", source_id="a", title="Method X, A Preprint",
+                      arxiv_id="2401.00001", authors=("Ann Bee",))
+    published = _paper(source="acm", source_id="b", title="Method X In Production",
+                       doi="10.1145/y", authors=("Ann Bee",))
+    linker = _paper(source="openalex", source_id="c", title="Method X: The Full Study",
+                    doi="10.1145/y", arxiv_id="2401.00001", authors=("Ann Bee",))
+    out = dedupe([preprint, published, linker])
+    assert len(out) == 1
+    assert out[0].source == "arxiv"
+    assert out[0].doi == "10.1145/y"
+
+
+def test_dedupe_keeps_records_whose_dois_disagree():
+    """A fuzzy title match must not merge two records with different DOIs.
+
+    Same title + same first author + same year with two different DOIs is how a
+    workshop paper and its extended journal version look; merging them would
+    silently drop one from the results.
+    """
+    workshop = _paper(source="acm", source_id="1", title="Method X",
+                      authors=("Ann Bee",), year=2024, doi="10.1145/workshop")
+    journal = _paper(source="ieee", source_id="2", title="Method X",
+                     authors=("Ann Bee",), year=2024, doi="10.1109/journal")
+    out = dedupe([workshop, journal])
+    assert len(out) == 2
+    assert {p.doi for p in out} == {"10.1145/workshop", "10.1109/journal"}
+
+
+def test_dedupe_does_not_collapse_title_less_records():
+    """A blank / punctuation-only title must not act as a merge magnet.
+
+    ``_canon_title`` strips every non-alphanumeric character, so ``"..."`` and
+    ``""`` hash identically. Without the guard, every record a source returned
+    without a title would collapse into a single paper.
+    """
+    out = dedupe([
+        _paper(source="s1", source_id="1", title=""),
+        _paper(source="s2", source_id="2", title="..."),
+        _paper(source="s3", source_id="3", title="   "),
+    ])
+    assert len(out) == 3
+
+
+def test_dedupe_still_merges_an_exact_doi_match_despite_different_titles():
+    """The conflict guard polices FUZZY links only — an exact DOI match wins."""
+    short = _paper(source="s1", source_id="1", doi="10.1/z", title="Short Title")
+    long_form = _paper(
+        source="s2", source_id="2", doi="10.1/z",
+        title="A Much Longer Rendering Of The Same Work", venue="ICML",
+    )
+    out = dedupe([short, long_form])
+    assert len(out) == 1
+    assert out[0].title == "Short Title"   # canonical title stays
+    assert out[0].venue == "ICML"          # optional field still backfilled
+
+
 def test_rank_prefers_recent_papers():
     old = _paper(source_id="old", year=2010)
     new = _paper(source_id="new", year=2024)
     ordered = rank([old, new], current_year=2025)
+    assert ordered[0].source_id == "new"
+
+
+def test_rank_defaults_current_year_to_today():
+    """`current_year=None` must fall back to the real current year, so recency
+    decay keeps working without a hard-coded constant going stale."""
+    old = _paper(source_id="old", year=2010)
+    new = _paper(source_id="new", year=2024)
+    ordered = rank([old, new])
     assert ordered[0].source_id == "new"
 
 
