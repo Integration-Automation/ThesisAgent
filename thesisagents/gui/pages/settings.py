@@ -86,10 +86,13 @@ _APP: Final[str] = "ThesisAgents"
 def settings_store() -> QSettings:
     """Return the QSettings handle for the GUI.
 
-    Centralised so tests can monkey-patch the storage location via
-    ``QSettings.setDefaultFormat(...)`` + ``setPath(...)``.
+    Uses ``QSettings.defaultFormat()`` (the registry on Windows unless
+    changed), so tests can redirect storage to a temporary directory with
+    ``QSettings.setDefaultFormat(IniFormat)`` + ``setPath(...)``. The
+    two-argument ``QSettings(org, app)`` constructor always uses the
+    native format and would ignore that redirect.
     """
-    return QSettings(_ORG, _APP)
+    return QSettings(QSettings.defaultFormat(), QSettings.UserScope, _ORG, _APP)
 
 
 def apply_saved_env() -> None:

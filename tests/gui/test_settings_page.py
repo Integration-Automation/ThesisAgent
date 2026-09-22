@@ -1,25 +1,21 @@
 """Tests for the Settings page.
 
-Uses a tmp QSettings path so saving in the test suite never touches the
-user's real registry / config file.
+QSettings is redirected to a tmp path by ``conftest.py``, so saving in the
+test suite never touches the user's real registry / config file.
 """
 
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QSettings
 
-from thesisagents.gui.pages.settings import SettingsPage
+from thesisagents.gui.pages.settings import SettingsPage, settings_store
 
 
 @pytest.fixture(autouse=True)
-def _isolated_qsettings(tmp_path, monkeypatch):
-    QSettings.setDefaultFormat(QSettings.IniFormat)
-    QSettings.setPath(
-        QSettings.IniFormat, QSettings.UserScope, str(tmp_path)
-    )
+def _clean_env(monkeypatch):
     # Make sure leftover env vars from the host shell don't pollute the
     # assertions — settings.py mirrors values into os.environ and we
     # check the absence too.
@@ -70,3 +66,9 @@ def test_save_message_is_localised(qtbot):
     qtbot.addWidget(page)
     page.trigger_save()
     assert "重新啟動" in page.status_text()
+
+
+def test_settings_store_follows_the_test_redirect(tmp_path):
+    # The autouse fixture in conftest.py points IniFormat at tmp_path; a store
+    # that ignored it would write to the real registry / config file.
+    assert Path(settings_store().fileName()).is_relative_to(tmp_path)
