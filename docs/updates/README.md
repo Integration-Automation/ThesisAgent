@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260922-07 | 2026-09-22 | New authoring rules; agent docs drop retired tooling | #docs #rules | [2026-09](2026-09.md) |
 | U-20260922-06 | 2026-09-22 | Docs synced to 15 sources and 13 MCP tools in 14 languages | #docs #i18n | [2026-09](2026-09.md) |
 | U-20260922-05 | 2026-09-22 | Offline search-quality evaluator | #done #evaluation | [2026-09](2026-09.md) |
 | U-20260922-04 | 2026-09-22 | Treat --export pdf as the PDF download stage | #done #cli #mcp | [2026-09](2026-09.md) |
@@ -69,4 +70,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 6 |
+| [2026-09.md](2026-09.md) | 2026-09 | 7 |

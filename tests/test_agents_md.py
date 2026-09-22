@@ -90,7 +90,9 @@ def test_agents_md_pins_rich_first_anti_patterns():
         "Do NOT",
     ):
         assert phrase in text, f"AGENTS.md lost the anti-pattern phrase: {phrase!r}"
-    assert "regen_llm_security_batch.py" in text
+    # The batch script that shipped the fabricated-URL incident was later
+    # removed; pin the lesson's wording rather than the dead filename.
+    assert "fabricated AAAI URLs" in text
 
 
 def test_claude_md_mirrors_anti_patterns():
@@ -99,7 +101,9 @@ def test_claude_md_mirrors_anti_patterns():
     assert "Decision tree" in claude_md
     assert "Anti-patterns" in claude_md
     assert "you yourself are the LLM" in claude_md or "you ARE the LLM" in claude_md
-    assert "regen_llm_security_batch.py" in claude_md
+    # The batch script that shipped the URL-fabrication incident was removed;
+    # pin the lesson via the incident token that survives in the rule set.
+    assert "view/fang2026" in claude_md
 
 
 def test_canonical_filename_rule_documented():
