@@ -131,6 +131,27 @@ async def _safe_search(fetcher, query: Query) -> list[Paper]:
 
     Other sources continue concurrently via ``asyncio.gather`` so a single
     slow source doesn't block the whole search.
+
+    The final ``except Exception`` is the containment boundary that makes the
+    paragraph above true. Source plugins normalise the failures they *expect*
+    into ``FetchError``, but an upstream schema change reaches the parser as a
+    plain ``KeyError`` / ``TypeError`` / ``AttributeError``, and
+    ``asyncio.gather`` propagates the first such exception — discarding the
+    results every other source already returned. One publisher renaming a JSON
+    field must degrade to "that source returned nothing", not to "the search
+    crashed". ``asyncio.CancelledError`` is deliberately NOT caught (it is a
+    ``BaseException`` in 3.8+, so ``except Exception`` already lets a real
+    cancellation through).
+
+    Anti-pattern this replaces::
+
+        except FetchError:      # only the expected shapes
+            return []
+        # KeyError from parse_work(...) escapes -> whole search dies
+
+    Example: with sources ``("openalex", "arxiv")`` where OpenAlex's parser
+    raises ``KeyError``, the search now returns the arXiv papers and logs
+    ``Source openalex raised an unexpected error``.
     """
     source = fetcher.config.name
     for attempt in range(1, RATE_LIMIT_RETRY_ATTEMPTS + 1):
@@ -151,6 +172,13 @@ async def _safe_search(fetcher, query: Query) -> list[Paper]:
             await asyncio.sleep(wait)
         except FetchError as err:
             _LOG.warning("Source %s failed: %s", source, err)
+            return []
+        except Exception as err:  # noqa: BLE001 — containment boundary, see docstring
+            _LOG.warning(
+                "Source %s raised an unexpected error (%s: %s); "
+                "skipping it and keeping the other sources' results",
+                source, type(err).__name__, err,
+            )
             return []
     return []
 

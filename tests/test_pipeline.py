@@ -121,6 +121,36 @@ async def test_run_search_tolerates_per_source_fetch_error(monkeypatch):
     assert {p.source for p in collection.papers} == {"arxiv"}
 
 
+async def test_run_search_tolerates_unexpected_source_exception(monkeypatch):
+    """A non-FetchError escaping a plugin must not sink the whole search.
+
+    Source plugins normalise the failures they anticipate into ``FetchError``,
+    but an upstream schema change surfaces in the parser as a plain
+    ``KeyError`` / ``AttributeError``. Because ``asyncio.gather`` propagates the
+    first exception, such a bug used to discard the results every other source
+    had already returned — a whole multi-minute search lost to one publisher
+    renaming a JSON field.
+    """
+    rate = RateLimit(requests_per_second=100, burst=10, jitter_seconds=0)
+
+    class _Exploding(Fetcher):
+        def __init__(self) -> None:
+            self.config = FetcherConfig(name="openalex", rate_limit=rate)
+            super().__init__()
+
+        async def search(self, query):  # noqa: ARG002 (mirror real signature)
+            raise KeyError("best_oa_location")
+
+    pool = {
+        "arxiv": _make_fetcher("arxiv", [_paper("arxiv", "1", "survivor")]),
+        "openalex": _Exploding(),
+    }
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="x", sources=("arxiv", "openalex"), max_results=5)
+    collection = await pipeline_module.run_search(query)
+    assert {p.source for p in collection.papers} == {"arxiv"}
+
+
 async def test_run_search_merges_and_dedupes(monkeypatch):
     """Same paper coming from two sources should appear once."""
     dup_arxiv = Paper(

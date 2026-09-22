@@ -80,10 +80,46 @@ async def download_pdfs(
         async with sem:
             return await _download_one(paper, pdf_dir)
 
-    results = await asyncio.gather(
-        *(_bounded(paper) for paper in collection.papers)
+    # ``return_exceptions=True``: a download is per-paper best-effort, and the
+    # soft failures (404, wrong content-type, oversized body) are already turned
+    # into ``PdfDownloadResult`` values. What is left is the hard kind —
+    # ``OSError`` from a full disk or a path the filesystem rejects, say — and
+    # letting one of those propagate out of ``gather`` would throw away every
+    # PDF the other tasks had already written to disk. Each failed slot becomes
+    # a skipped result carrying the exception type as its reason instead.
+    outcomes = await asyncio.gather(
+        *(_bounded(paper) for paper in collection.papers),
+        return_exceptions=True,
     )
-    return list(results)
+    results: list[PdfDownloadResult] = []
+    for paper, outcome in zip(collection.papers, outcomes, strict=True):
+        if isinstance(outcome, BaseException):
+            reason = f"error_{type(outcome).__name__}"
+            _LOG.warning(
+                "pdf download raised for %s: %s: %s",
+                paper.source_id, type(outcome).__name__, outcome,
+            )
+            results.append(
+                PdfDownloadResult(
+                    paper_key=_safe_key(paper), path=None, skipped_reason=reason
+                )
+            )
+        else:
+            results.append(outcome)
+    return results
+
+
+def _safe_key(paper: Paper) -> str:
+    """``bibtex_key()`` that can't itself fail the error-reporting path.
+
+    Used only when building a failure result — if the paper is malformed
+    enough that key derivation raises, the report falls back to the source id
+    so the caller still learns which paper failed.
+    """
+    try:
+        return paper.bibtex_key()
+    except Exception:  # noqa: BLE001 — reporting must not raise
+        return paper.source_id or "unknown"
 
 
 async def _download_one(paper: Paper, pdf_dir: Path) -> PdfDownloadResult:

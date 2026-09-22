@@ -1813,3 +1813,132 @@ def test_rq_callout_renders_math_subscript():
     runs = [r for p in rect.text_frame.paragraphs for r in p.runs]
     assert any(_baseline(r) == "-25000" for r in runs)        # subscript rendered
     assert all(r.font.color.rgb is not None for r in runs)    # dark-mode contract
+
+
+def test_xlsx_survives_control_characters(tmp_path):
+    """A form feed in an abstract must not abort the whole workbook.
+
+    Scraped abstracts routinely carry ``\x0c`` (the PDF page break that
+    survives text extraction). openpyxl raises ``IllegalCharacterError`` on the
+    first one, and because the workbook is built in a single pass that used to
+    lose the entire ``.xlsx`` for a whole search over one stray byte.
+    """
+    from openpyxl import load_workbook
+
+    from thesisagents.core.models import Paper
+
+    paper = Paper(
+        source="ieee", source_id="1", title="Ti\x0btle", authors=("Ann Bee",),
+        year=2024, venue="ICSE\x01", abstract="page one\x0cpage two",
+        url="https://example.com/a",
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("ieee",), max_results=5),
+        papers=(paper,),
+    )
+    written = export_collection(
+        collection,
+        ExportOptions(formats=("xlsx",), out_dir=str(tmp_path), filename_stem="ctrl"),
+    )
+    sheet = load_workbook(written["xlsx"])["Papers"]
+    assert sheet.cell(row=2, column=2).value == "Title"
+    assert sheet.cell(row=2, column=11).value == "page onepage two"
+
+
+def test_pptx_table_tolerates_ragged_rows(tmp_path):
+    """A body row wider than the header must not IndexError the deck.
+
+    Hand-authored ``scripts/regen_*.py`` files (this project's documented
+    LLM-as-agent path) supply these tables directly, so an extra cell is an easy
+    authoring slip. Padding keeps every authored cell instead of aborting.
+    """
+    from pptx import Presentation
+
+    from thesisagents.core.models import Paper, PaperSummary
+
+    paper = Paper(
+        source="arxiv", source_id="1", title="T", authors=("Ann Bee",), year=2024,
+        venue=None, abstract="abs", url="https://example.com/a",
+        summary=PaperSummary(
+            language="en",
+            technique_table=(("MoE", "routing", "extra cell"), ("LoRA", "adapters")),
+        ),
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("arxiv",), max_results=5),
+        papers=(paper,),
+    )
+    written = export_collection(
+        collection,
+        ExportOptions(formats=("pptx",), out_dir=str(tmp_path), filename_stem="ragged"),
+    )
+    tables = [
+        shape.table
+        for slide in Presentation(str(written["pptx"])).slides
+        for shape in slide.shapes
+        if shape.has_table
+    ]
+    assert tables, "expected the technique-overview table on the deck"
+    widened = next(t for t in tables if len(t.columns) == 3)
+    assert widened.cell(1, 2).text == "extra cell"  # the extra cell survived
+    assert widened.cell(2, 2).text == ""            # short row padded, not dropped
+
+
+def test_export_collection_wraps_write_errors(sample_papers, tmp_path, monkeypatch):
+    """A locked / unwritable output file becomes an ExportError, not a traceback.
+
+    On Windows, re-running a search while the previous ``.xlsx`` is still open
+    in Excel raises ``PermissionError: [WinError 32]``; the CLI only translates
+    ``ThesisAgentsError``, so it reached the user as a raw stack trace.
+    """
+    import pytest
+
+    from thesisagents.core.exceptions import ExportError
+    from thesisagents.exporters import bibtex as bibtex_mod
+
+    def _locked(self, *args, **kwargs):  # noqa: ANN001, ARG001
+        raise PermissionError(13, "file is open in another application")
+
+    monkeypatch.setattr(bibtex_mod.Path, "write_text", _locked, raising=True)
+    with pytest.raises(ExportError, match="could not write the output file"):
+        export_collection(
+            _collection(sample_papers),
+            ExportOptions(
+                formats=("bib",), out_dir=str(tmp_path), filename_stem="locked"
+            ),
+        )
+
+
+def test_pptx_shape_error_names_the_summary_field(tmp_path):
+    """A wrong-shaped rich field must say WHICH field, not just "unpack".
+
+    Every rich field is a nested tuple (``research_questions`` is
+    ``((rq_id, question), ...)``), and the documented authoring path is a
+    hand-written ``scripts/regen_*.py``. A flat list of strings used to surface
+    as ``[pptx] render failed: too many values to unpack (expected 2)`` — true,
+    but naming neither the field nor the paper.
+    """
+    import pytest
+
+    from thesisagents.core.exceptions import ExportError
+    from thesisagents.core.models import Paper, PaperSummary
+
+    paper = Paper(
+        source="arxiv", source_id="1", title="Long Context Tuning",
+        authors=("Ann Bee",), year=2026, venue=None, abstract="abs",
+        url="https://example.com/a",
+        # Flat strings where (rq_id, question) pairs belong.
+        summary=PaperSummary(language="en", research_questions=("RQ1 accuracy",)),
+    )
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("arxiv",), max_results=5),
+        papers=(paper,),
+    )
+    with pytest.raises(ExportError, match="research_questions") as excinfo:
+        export_collection(
+            collection,
+            ExportOptions(formats=("pptx",), out_dir=str(tmp_path), filename_stem="bad"),
+        )
+    message = str(excinfo.value)
+    assert message.count("render failed") == 1   # not double-wrapped
+    assert "bee2026long" in message              # names the offending paper

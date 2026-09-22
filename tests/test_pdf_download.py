@@ -365,3 +365,32 @@ async def test_download_pdfs_caps_concurrency(tmp_path: Path, monkeypatch):
     results = await download_pdfs(_collection(*papers), tmp_path, concurrency=3)
     assert len(results) == 8
     assert 1 <= counters["peak"] <= 3  # never more than the cap in flight at once
+
+
+async def test_download_pdfs_isolates_a_hard_failure(tmp_path: Path, monkeypatch):
+    """One paper raising must not discard the PDFs already written for others.
+
+    The soft failures (404, wrong content-type, oversized body) are already
+    turned into results; what's left is the hard kind — an ``OSError`` from a
+    full disk or a path the filesystem rejects. Letting one propagate out of
+    ``asyncio.gather`` threw away every PDF the sibling tasks had saved.
+    """
+    transport = _CannedTransport(200, b"%PDF-1.4\nfake bytes")
+    _install_transport(monkeypatch, transport)
+    good = _paper(source_id="good", title="Good Paper")
+    bad = _paper(source_id="bad", title="Bad Paper")
+    real_fetch = pdf_download_module._fetch_and_validate  # noqa: SLF001
+
+    async def _explode(paper, target, key):
+        if paper.source_id == "bad":
+            raise OSError(28, "No space left on device")
+        return await real_fetch(paper, target, key)
+
+    monkeypatch.setattr(pdf_download_module, "_fetch_and_validate", _explode)
+    results = await download_pdfs(_collection(good, bad), tmp_path)
+
+    assert len(results) == 2
+    saved, failed = results
+    assert saved.path is not None and saved.path.exists()
+    assert failed.path is None
+    assert failed.skipped_reason == "error_OSError"

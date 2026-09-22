@@ -318,3 +318,26 @@ async def test_arxiv_fallback_rejects_non_https():
         mp.setattr("thesisagents.fetchers.base.load_fetcher", lambda _: fake_fetcher)
         result = await oa_resolver._query_arxiv_title(_paper())  # noqa: SLF001
     assert result is None
+
+
+async def test_resolve_never_raises_when_one_lookup_explodes(monkeypatch):
+    """The module docstring promises the resolver never raises — pin it.
+
+    The resolver runs at the very END of a search that has already spent
+    minutes on HTTP. An unforeseen error on one paper propagating out of
+    ``asyncio.gather`` would discard the whole ranked collection, so a failed
+    slot must fall back to the unresolved paper instead.
+    """
+    async def _explode(paper, semaphore):  # noqa: ARG001
+        if paper.source_id == "boom":
+            raise RuntimeError("unexpected upstream shape")
+        return paper
+
+    monkeypatch.setattr(oa_resolver, "_resolve_one", _explode)
+    collection = PaperCollection(
+        query=Query(keywords="x", sources=("openalex",)),
+        papers=(_paper(source_id="boom"), _paper(source_id="fine")),
+    )
+    result = await oa_resolver.resolve_oa_pdfs(collection)
+    assert [p.source_id for p in result.papers] == ["boom", "fine"]
+    assert result.papers[0].pdf_url is None  # unresolved, but still present

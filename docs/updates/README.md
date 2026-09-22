@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260922-03 | 2026-09-22 | Contain per-source, per-paper and write failures | #done #robustness | [2026-09](2026-09.md) |
 | U-20260922-02 | 2026-09-22 | Dedup on every identity key, with field provenance | #done #dedup | [2026-09](2026-09.md) |
 | U-20260922-01 | 2026-09-22 | Adopt progress/architecture/docs-updates rules | #docs #migration | [2026-09](2026-09.md) |
 
@@ -65,4 +66,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 2 |
+| [2026-09.md](2026-09.md) | 2026-09 | 3 |

@@ -34,7 +34,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pptx import Presentation
+from pptx.exc import PackageNotFoundError
 
+from thesisagents.core.exceptions import ExportError, ThesisAgentsError
 from thesisagents.exporters.audit import Issue, audit_prs
 from thesisagents.exporters.i18n import (
     DEFAULT_LANGUAGE,
@@ -164,8 +166,21 @@ def review_deck(path: str | Path, language: str | None = None) -> DeckReview:
 
     Loads the ``.pptx`` once and shares the open object across the overflow,
     contrast, and completeness passes. ``language`` is auto-detected when omitted.
+
+    A missing or non-OPC file raises :class:`ExportError` rather than
+    python-pptx's ``PackageNotFoundError``. Why: this function is the body of
+    both the ``review`` CLI subcommand and the MCP ``pptx_review`` tool, and
+    neither of those callers translates library exceptions — a mistyped deck
+    path printed a 20-line python-pptx traceback at the user.
     """
-    prs = Presentation(str(path))
+    try:
+        prs = Presentation(str(path))
+    except PackageNotFoundError as err:
+        raise ExportError(
+            "review",
+            f"not a readable .pptx file: {path} "
+            "(missing, or not a PowerPoint package)",
+        ) from err
     lang = normalise_language(language) if language else _detect_language(prs)
     overflow = tuple(check_pptx_from_prs(prs))
     contrast = tuple(audit_prs(prs))
@@ -247,12 +262,23 @@ def main(argv: list[str]) -> int:
     if not paths:
         print(usage)
         return 2
-    reviews = [review_deck(path, language) for path in paths]
+    # One unreadable path must not lose the reports for the decks that DID
+    # open — a batch `review exports/*.pptx` is the normal usage.
+    reviews: list[DeckReview] = []
+    unreadable = 0
+    for path in paths:
+        try:
+            reviews.append(review_deck(path, language))
+        except ThesisAgentsError as err:
+            unreadable += 1
+            print(f"error: {err}", file=sys.stderr)
+    if not reviews:
+        return 2
     if as_json:
         print(json.dumps([r.to_dict() for r in reviews], ensure_ascii=False, indent=2))
     else:
         print("\n\n".join(format_report(r) for r in reviews))
-    return sum(1 for r in reviews if not r.ok)
+    return sum(1 for r in reviews if not r.ok) + unreadable
 
 
 if __name__ == "__main__":
