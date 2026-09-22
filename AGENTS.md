@@ -262,6 +262,10 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   `py -m bandit -c pyproject.toml -r thesisagents/` before
   it can be committed. New code requires new tests.
 
+## Stage commits, progress.md, docs/updates, architecture.md
+
+Mirror of the `CLAUDE.md` section of the same name: commit at every stage (only the files that stage touched, never `git add -A`, no AI attribution; committing is not pushing); `progress.md` holds open items only; finished work goes to `docs/updates/YYYY-MM.md` with an index and query commands in `docs/updates/README.md`; `architecture.md` is the short architecture overview and is updated in the same commit as any structural change.
+
 ## Where to look for the rest
 
 - Slim overview + Git Commit hygiene + Browser-Automation hard rule:

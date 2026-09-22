@@ -16,7 +16,7 @@ autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 3
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "updates"]
 
 # Markdown reference pages ship side-by-side with the RST language indexes
 # — myst_parser handles the .md → docutils conversion so they slot into
