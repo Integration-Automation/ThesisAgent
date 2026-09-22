@@ -423,3 +423,71 @@ def test_pptx_delete_reorder_add_via_mcp(server, sample_papers, tmp_path):
     asyncio.run(_call(server, "pptx_delete_slide", path=pptx_path, slide_index=0))
     after_delete = asyncio.run(_call(server, "pptx_inspect", path=pptx_path))
     assert after_delete["slide_count"] == baseline_count
+
+
+def test_export_ignores_the_pdf_pseudo_format(server, sample_papers, tmp_path):
+    """``pdf`` appears in list_exports but names the download stage.
+
+    An agent that copies the list_exports format list wholesale used to get
+    "no exporter registered for this format" and lose every other format in the
+    same call. It must now be dropped and the real formats still written.
+    """
+    papers = [p.to_dict() for p in sample_papers]
+    payload = asyncio.run(
+        _call(
+            server,
+            "export",
+            papers=papers,
+            keywords="attention",
+            formats=["pdf", "bib"],
+            out_dir=str(tmp_path),
+            filename_stem="pdf-mixed",
+        )
+    )
+    assert Path(payload["written"]["bib"]).exists()
+    assert "pdf" not in payload["written"]
+
+
+def test_export_with_only_pdf_points_at_the_download_tool(server, sample_papers, tmp_path):
+    """``formats=["pdf"]`` alone has nothing to render — say so, by name."""
+    papers = [p.to_dict() for p in sample_papers]
+    with pytest.raises(Exception, match="download_pdfs"):
+        asyncio.run(
+            _call(
+                server,
+                "export",
+                papers=papers,
+                keywords="attention",
+                formats=["pdf"],
+                out_dir=str(tmp_path),
+            )
+        )
+
+
+def test_export_accepts_more_papers_than_the_page_size_cap(server, sample_papers, tmp_path):
+    """A 250-paper export must not die on the per-source page-size validator.
+
+    ``export`` builds a synthetic Query only to satisfy ``PaperCollection``;
+    its ``max_results`` describes nothing the caller set, so feeding it the raw
+    paper count used to raise "max_results must be in [1, 200]".
+    """
+    template = sample_papers[0].to_dict()
+    papers = []
+    for index in range(250):
+        entry = dict(template)
+        entry["source_id"] = f"paper-{index}"
+        entry["title"] = f"Paper Number {index}"
+        entry["doi"] = f"10.5555/n{index}"
+        papers.append(entry)
+    payload = asyncio.run(
+        _call(
+            server,
+            "export",
+            papers=papers,
+            keywords="bulk",
+            formats=["bib"],
+            out_dir=str(tmp_path),
+            filename_stem="bulk",
+        )
+    )
+    assert Path(payload["written"]["bib"]).exists()

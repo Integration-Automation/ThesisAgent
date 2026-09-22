@@ -24,6 +24,7 @@ from thesisagents.core.constants import (
     DEFAULT_SOURCES,
     EXPORT_BIBTEX,
     EXPORT_DESCRIPTIONS,
+    EXPORT_PDF,
     EXPORT_PPTX,
     EXPORT_XLSX,
     MAX_RESULTS_PER_SOURCE,
@@ -149,8 +150,9 @@ def build_parser() -> argparse.ArgumentParser:
             f"Comma-separated source list (used with --query). "
             f"Available: {', '.join(ALL_SOURCES)}. "
             f"Default: {','.join(DEFAULT_SOURCES)} "
-            "(opt-in plugins like ieee/scholar only contribute when their "
-            "env var is set; otherwise they are skipped silently)."
+            "(key-gated plugins like springer/core are skipped silently "
+            "until their API-key env var is set; ieee/scholar are on by "
+            "default with THESISAGENTS_DISABLE_*_SCRAPING=1 opt-outs)."
         ),
     )
     parser.add_argument(
@@ -426,6 +428,21 @@ def _print_results(collection, quiet: bool) -> None:
 async def _run(args: argparse.Namespace) -> int:
     formats = _resolve_formats(args)
     _validate_exports(formats)
+    # ``pdf`` is advertised by --list-exports but has no exporter class: it
+    # means "save the papers' PDFs", which is the --no-pdf download stage, not
+    # a rendered artefact. Left in the list it reached export_collection and
+    # raised "no exporter registered for this format" — AFTER the whole search
+    # and download had run. Translate it into the download flag instead.
+    if EXPORT_PDF in formats:
+        args.download_pdf = True
+        formats = tuple(f for f in formats if f != EXPORT_PDF)
+    if not formats:
+        # ``--export pdf`` on its own is a legitimate "just fetch the PDFs"
+        # run. ``ExportOptions`` requires at least one format, so this branch
+        # short-circuits before one is built rather than trading the old
+        # "no exporter registered" error for an equally confusing
+        # "at least one export format must be specified".
+        return await _run_download_only(args)
     options = ExportOptions(
         formats=formats,
         out_dir=args.out,
@@ -471,6 +488,34 @@ async def _run(args: argparse.Namespace) -> int:
         print(f"  - {fmt}: {Path(path).resolve()}")
     if args.download_pdf:
         _print_pdf_summary(pdf_results, args.quiet)
+    return 0
+
+
+async def _run_download_only(args: argparse.Namespace) -> int:
+    """Search (or resolve a single paper) and save the PDFs — render nothing.
+
+    Reached only via ``--export pdf`` with no other format. Returns 1 when the
+    search found nothing or no PDF could be retrieved, so an unattended caller
+    can branch on the exit code.
+    """
+    try:
+        collection = await _collect(args)
+        pdf_results = (
+            await download_pdfs(collection, args.out)
+            if collection.papers and not args.pdf
+            else []
+        )
+    finally:
+        await shutdown_clients()
+    if not collection.papers:
+        print("No results.", file=sys.stderr)
+        return 1
+    _print_results(collection, args.quiet)
+    _print_pdf_summary(pdf_results, args.quiet)
+    saved = sum(1 for r in pdf_results if r.path is not None)
+    if not saved:
+        print("error: no PDF could be downloaded.", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -792,7 +837,7 @@ def _build_from_local_pdf(args: argparse.Namespace) -> PaperCollection:
     query = Query(
         keywords=keywords,
         sources=("local",),
-        max_results=max(len(papers), 1),
+        max_results=Query.clamp_max_results(len(papers)),
     )
     return PaperCollection(query=query, papers=papers)
 

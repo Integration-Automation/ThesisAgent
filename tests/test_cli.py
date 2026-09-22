@@ -846,3 +846,40 @@ def test_cli_single_paper_mode_aborts_without_pdf(
     assert code == 1
 
 
+
+
+def test_cli_export_pdf_downloads_instead_of_failing(tmp_path, patched_pipeline):
+    """``--export pdf`` is advertised by --list-exports and must actually run.
+
+    ``pdf`` names the PDF *download* stage, not a rendered artefact — there is
+    no pdf exporter class. Left in the format list it reached
+    ``export_collection`` and raised "no exporter registered for this format",
+    but only AFTER the whole search and download had already run.
+    """
+    code = cli_module.main(
+        [
+            "--query", "attention",
+            "--source", "arxiv",
+            "--export", "pdf,bib",
+            "--out", str(tmp_path),
+            "--filename-stem", "pdfmode",
+        ]
+    )
+    assert code == 0
+    assert (tmp_path / "pdfmode.bib").exists()
+    assert not (tmp_path / "pdfmode.pdf").exists()  # never a rendered artefact
+    assert list((tmp_path / "pdfs").glob("*.pdf"))  # the download stage ran
+
+
+def test_cli_export_pdf_alone_is_a_download_only_run(tmp_path, patched_pipeline):
+    """``--export pdf`` on its own means "just fetch the PDFs"."""
+    code = cli_module.main(
+        [
+            "--query", "attention",
+            "--source", "arxiv",
+            "--export", "pdf",
+            "--out", str(tmp_path),
+        ]
+    )
+    assert code == 0
+    assert list((tmp_path / "pdfs").glob("*.pdf"))

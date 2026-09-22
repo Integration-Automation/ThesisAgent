@@ -57,6 +57,7 @@ from thesisagents.core.constants import (
     ALL_SOURCES,
     DEFAULT_SOURCES,
     EXPORT_DESCRIPTIONS,
+    EXPORT_PDF,
     EXPORT_PPTX,
 )
 from thesisagents.core.exceptions import ThesisAgentsError
@@ -226,8 +227,9 @@ def _register_pdf_download_tool(server: FastMCP) -> None:
         paper_objs = tuple(Paper.from_dict(p) for p in papers)
         synthetic_query = Query(
             keywords="download",
-            sources=tuple({p.source for p in paper_objs}) or ("arxiv",),
-            max_results=max(len(paper_objs), 1),
+            sources=tuple(sorted({p.source for p in paper_objs if p.source}))
+            or ("arxiv",),
+            max_results=Query.clamp_max_results(len(paper_objs)),
         )
         collection = PaperCollection(query=synthetic_query, papers=paper_objs)
         try:
@@ -367,15 +369,26 @@ def _register_export_tool(server: FastMCP) -> None:
         query = Query(
             keywords=normalize_query(keywords),
             sources=("arxiv",),
-            max_results=max(len(paper_objs), 1),
+            max_results=Query.clamp_max_results(len(paper_objs)),
         )
         collection = PaperCollection(query=query, papers=paper_objs)
         # 0 from the wire means "unlimited" — match the CLI semantics.
         slide_cap = (
             None if max_slides_per_paper in (None, 0) else int(max_slides_per_paper)
         )
+        # ``pdf`` appears in list_exports but names the PDF *download* stage,
+        # not a rendered artefact — there is no pdf exporter class. An agent
+        # that copies the format list wholesale used to get
+        # "no exporter registered for this format" and lose every other format
+        # in the same call. Drop it and point at the right tool instead.
+        render_formats = tuple(f for f in formats if f != EXPORT_PDF)
+        if not render_formats:
+            raise ThesisAgentsError(
+                "export has no renderable format left: 'pdf' is not a rendered "
+                "artefact — call the download_pdfs tool to save paper PDFs."
+            )
         options = ExportOptions(
-            formats=tuple(formats),
+            formats=render_formats,
             out_dir=out_dir,
             filename_stem=filename_stem,
             include_abstract=include_abstract,
