@@ -7,9 +7,9 @@
 > an MCP server, a PySide6 GUI or the Python library. The detailed design (pipeline diagram, dedup
 > and ranking rules, OA-PDF resolution, rendering tiers, design rationale) is in
 > [`docs/architecture.md`](docs/architecture.md); this file does not repeat it.
-> Last verified: 2026-09-22 against `ba74127` on `dev`. Many files are uncommitted (for example
-> `thesisagents/evaluation/`, `docs/search-quality.md`, `scripts/regen_chen2026_*.py`); this file
-> describes what is on disk.
+> Last verified: 2026-09-22 against `ba74127` on `dev` plus the work that was uncommitted then (for
+> example `thesisagents/evaluation/`, `docs/search-quality.md`, `scripts/regen_chen2026_*.py`),
+> which has since been committed on `dev`.
 
 ## 1. Purpose
 
