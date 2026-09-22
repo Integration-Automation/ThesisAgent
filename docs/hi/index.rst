@@ -49,7 +49,11 @@ MCP 6 चरण
    5. (आप प्रत्येक PDF पढ़ें और संरचित summary dict तैयार करें)
    6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 
-12 MCP उपकरण: :doc:`/mcp`।
+कुल 13 MCP उपकरण: डिस्कवरी (``list_sources``, ``list_exports``),
+``search``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+``export`` और छह ``pptx_*`` डेक ऑपरेशन (``pptx_inspect``,
+``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
+``pptx_reorder_slides``, ``pptx_add_slide``)। पूर्ण संदर्भ: :doc:`/mcp`।
 
 अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -93,8 +97,10 @@ xlsx ``exports/<run>/<slug>-<timestamp>.xlsx`` में लिखी जात�
 * कमिट, PR, कोड या डॉक्स में "Claude", "Claude Code", "AI-generated",
   "GPT", "Copilot" या किसी AI टूल/मॉडल का नाम न लिखें।
 
-उदाहरण: ``scripts/regen_llm_security_batch.py`` (en, 8 शोध-पत्र) और
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw)।
+कार्यशील उदाहरण: ``scripts/regen_fang2026.py`` में ठीक इसी तरह हाथ से
+लिखा गया समृद्ध सारांश है (एकल शोध-पत्र, rich-tier, zh-tw)। बहु-शोध-पत्र
+बैच उसी आकार का पालन करता है, ``PaperCollection`` टपल में प्रति
+शोध-पत्र एक प्रविष्टि के साथ।
 
 ----
 
@@ -145,7 +151,7 @@ CLI फ़्लैग की पूरी तालिका: :doc:`/cli`।
 --------------
 
 * CLI फ़्लैग और पर्यावरण चर: :doc:`/cli`
-* 12 MCP सर्वर उपकरण: :doc:`/mcp`
+* 13 MCP सर्वर उपकरण: :doc:`/mcp`
 * PPTX संपादन टूलकिट: :doc:`/pptx_editing`
 * repo जड़ में ``readmes/README.hi.md`` फ़ाइल में सुविधाओं की पूरी सूची है।
 * गहन तकनीकी संदर्भ (प्लगइन वास्तुकला, सुरक्षा नीतियाँ, Definition of

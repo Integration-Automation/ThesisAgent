@@ -87,7 +87,7 @@ venv-resolved binary directly:
 
 ## Tools
 
-The server exposes twelve tools, grouped into five concerns.
+The server exposes thirteen tools, grouped into five concerns.
 
 ### `list_sources`
 

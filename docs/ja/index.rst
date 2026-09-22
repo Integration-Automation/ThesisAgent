@@ -48,7 +48,7 @@ MCP 6 ステップ
    5. (各 PDF を読み、構造化 summary dict を生成)
    6. export(papers=[{...paper, "summary": {...}}], language="ja", ...)
 
-11 個の MCP ツールの完全な参照は :doc:`/mcp` にあります。
+13 個の MCP ツールの完全な参照は :doc:`/mcp` にあります。
 
 必須: 納品前 URL / DOI 検証
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -92,8 +92,10 @@ xlsx は ``exports/<run>/<slug>-<timestamp>.xlsx``\ に出力され、列 7 = DO
 * コミット、PR、コメント、ドキュメントで「Claude」「Claude Code」
   「AI-generated」「GPT」「Copilot」など AI ツール / モデル名に言及しない。
 
-ワーキング例: ``scripts/regen_llm_security_batch.py``\ (en、8 篇)と
-``scripts/regen_llm_security_batch_zh_tw.py``\ (zh-tw)。
+ワーキング例: ``scripts/regen_fang2026.py`` はまさにこの手順で
+手書きされたリッチサマリを収録しています(単一論文、rich-tier、zh-tw)。
+複数論文のバッチも同じ形で、``PaperCollection`` タプルに論文ごとに
+1 エントリを並べます。
 
 ----
 
@@ -146,7 +148,7 @@ CLI フラグの完全な表は :doc:`/cli` を参照してください。
 ------------
 
 * CLI フラグの完全な一覧と環境変数: :doc:`/cli`
-* MCP サーバーの 12 ツール: :doc:`/mcp`
+* MCP サーバーの 13 ツール: :doc:`/mcp`
 * PPTX 編集ツールキット: :doc:`/pptx_editing`
 * このリポジトリ言語別の README ファイル(``readmes/README.ja.md``\ など)に
   プロジェクトの全機能リストがあります

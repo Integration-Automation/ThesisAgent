@@ -45,7 +45,7 @@ MCP 6 步流程
    5. (你逐篇讀 PDF,自己產 structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-tw", ...)
 
-共 12 個 MCP 工具,完整參考見 :doc:`/mcp`。
+共 13 個 MCP 工具,完整參考見 :doc:`/mcp`。
 
 必做:交付前驗證 URL / DOI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -88,9 +88,10 @@ xlsx 寫在 ``exports/<run>/<slug>-<timestamp>.xlsx``\ ,第 7 欄是 DOI、
   「Claude」、「Claude Code」、「AI-generated」、「GPT」、「Copilot」
   或任何 AI 工具 / 模型名稱。
 
-範例:\ ``scripts/regen_llm_security_batch.py``\ (en)與
-``scripts/regen_llm_security_batch_zh_tw.py``\ (zh-tw)裡有 8 篇照
-這套流程手寫的 rich summary,當 template 用。
+範例:\ ``scripts/regen_fang2026.py``\ 是照這套流程手寫的 rich
+summary(單篇論文、rich-tier、zh-tw,每個 rich 欄位都填齊),當
+template 用。多篇搜尋照同樣形狀做,``PaperCollection``\ tuple 裡
+每篇一個 ``Paper(...summary=PaperSummary(...))`` entry。
 
 ----
 
@@ -182,18 +183,20 @@ CLI
    thesisagents --paper "https://pubmed.ncbi.nlm.nih.gov/34567890/" \
                 --out ./exports/
 
-   # IEEE document URL(需 opt-in env var)
-   THESISAGENTS_DISABLE_IEEE_SCRAPING=1 \
+   # IEEE document URL(預設啟用,走可見 Chrome;沒有 Chrome 的環境
+   # 可設 THESISAGENTS_DISABLE_IEEE_SCRAPING=1 停用)
    thesisagents --paper "https://ieeexplore.ieee.org/document/10965643" \
                 --out ./exports/
 
 可用的 source plugin
 ^^^^^^^^^^^^^^^^^^^^
 
-沒給 ``--source`` 時的預設組合是「所有不需要 API key 的 plugin」:
+沒給 ``--source`` 時的預設組合是「所有不需要付費 API key 的 plugin」
+加上 ``ieee`` + ``scholar``\ (兩者預設啟用,走可見 Chrome):
 ``arxiv``、``semantic_scholar``、``openalex``、``pubmed``、``acm``、
-``dblp``、``crossref``、``openaire``。設下面三個 env var 之一,對應
-plugin 也會加進來:
+``dblp``、``crossref``、``openaire``、``europepmc``、``doaj``、
+``hal``、``ieee``、``scholar``。設好 env var 後 ``springer`` 與
+``core`` 也會加入(共 15 個 plugin):
 
 .. list-table::
    :header-rows: 1
@@ -203,22 +206,29 @@ plugin 也會加進來:
      - Env var
      - 備註
    * - ``ieee``
-     - ``THESISAGENTS_IEEE_API_KEY``\ (建議)**或**\
-       ``THESISAGENTS_DISABLE_IEEE_SCRAPING=1``
-     - 官方 Xplore API 在訂閱範圍內會帶 ``pdf_url``;沒 key 時可用
-       fallback 爬取路徑。
+     - 預設啟用;``THESISAGENTS_IEEE_API_KEY``\ 切換到官方 Xplore
+       API(訂閱範圍內會帶 ``pdf_url``),
+       ``THESISAGENTS_DISABLE_IEEE_SCRAPING=1``\ 完全停用
+     - 沒 API key 時,搜尋 + 單篇抓取都走可見 Chrome(selenium)。
+       httpx fallback 是給 CI / 沒有 Chrome 環境的安全網。
    * - ``springer``
      - ``THESISAGENTS_SPRINGER_API_KEY``
      - 免費 key 申請 https://dev.springernature.com/。
        涵蓋 Nature、Scientific Reports、LNCS 等 Springer 全系。
        沒 key 時 plugin 會在建構時拋 ``ConfigError``,被 pipeline
        靜默跳過。
+   * - ``core``
+     - ``THESISAGENTS_CORE_API_KEY``
+     - 免費 key 申請 https://core.ac.uk/services/api。最大的開放
+       取用彙整庫(2.5 億+ 筆);同一把 key 也驅動 OA resolver 的
+       CORE 查詢。跟 ``springer`` 一樣,沒 key 時被靜默跳過。
    * - ``scholar``
-     - ``THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1``
-     - Google Scholar ToS 禁止爬取,預設關閉。
+     - 預設啟用;``THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1``\ 停用
+     - SERP 抓取走可見 Chrome。Google ToS 禁止自動存取,想避開
+       captcha / IP 封鎖風險就 opt-out。
 
-搜尋管線預設套用「頂級期刊白名單」(旗艦級 CS 會議 + Nature / Science /
-PNAS / CACM / LNCS);傳 ``--all-venues`` 可關閉。
+搜尋管線可選用「頂級期刊白名單」(旗艦級 CS 會議 + Nature / Science /
+PNAS / CACM / LNCS)，可傳入 ``--top-tier-only`` 啟用(預設關閉)。
 
 在地化 deck 與 LLM enrichment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -300,10 +310,12 @@ PPTX 配置
 MCP server
 ----------
 
-ThesisAgents 附帶一個暴露 **12 個工具** 的 MCP server —— 來源探索
-(``list_sources``)、搜尋、單篇抓取、單一 PDF 本文擷取
-(``fetch_pdf_text``)、批次 PDF 下載(``download_pdfs``)、匯出,
-以及 5 個 PPTX 編輯操作。任何支援 MCP 的 LLM client(Claude Code、
+ThesisAgents 附帶一個暴露 **13 個工具** 的 MCP server:探索
+(``list_sources``、``list_exports``)、搜尋、單篇抓取、單一 PDF
+本文擷取(``fetch_pdf_text``)、批次 PDF 下載(``download_pdfs``)、
+匯出,以及 6 個 PPTX deck 操作(``pptx_inspect``、``pptx_review``、
+``pptx_update_slide``、``pptx_delete_slide``、``pptx_reorder_slides``、
+``pptx_add_slide``)。任何支援 MCP 的 LLM client(Claude Code、
 Claude Desktop、Cursor …)都能驅動整套流程。
 
 設定 MCP client(以 Claude Code 為例):
@@ -336,6 +348,9 @@ Claude Desktop、Cursor …)都能驅動整套流程。
    * - ``list_sources``
      - 列出所有 plugin + 回報目前 process 下哪些已啟用。
        ``search`` 前先呼叫,agent 才知道要傳什麼 ``sources``。
+   * - ``list_exports``
+     - 列出 ``export`` 接受的所有匯出格式與說明。與 ``list_sources``
+       對稱,``export`` 前先呼叫,就不會傳到不認得的格式。
    * - ``search``
      - 關鍵字 → 論文列表(shape 同 ``Paper.to_dict()``)。可帶
        ``top_tier_only``\ (預設 ``True``\ )與 ``min_citations``\ ;
@@ -350,8 +365,9 @@ Claude Desktop、Cursor …)都能驅動整套流程。
    * - ``export``
      - 論文列表 + 格式 → 寫出 ``.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json``\ 。每篇
        論文可附 ``summary``\ 欄位走 thesis-style;支援 ``language``\
-       走 i18n,以及 ``max_slides_per_paper``\ (預設 25;傳 ``0``\
-       代表不限)。
+       走 i18n,``max_slides_per_paper``\ (預設 25;傳 ``0``\
+       代表不限),以及 ``dark_mode``\ (預設 ``false``\ ,即亮色
+       navy 色帶 deck,傳 ``true``\ 得到暗色 OLED / 低光版本)。
    * - ``pptx_inspect``
      - 讀既有投影片檔的 slide / shape 結構。
    * - ``pptx_review``
@@ -425,22 +441,24 @@ Python 模組)讓你在不重跑搜尋的情況下繼續對它做迭代:
    │   ├── exporters/                # pptx(thesis-style + lightweight)、xlsx、
    │   │                             #   bibtex、markdown、json + pptx_edit + i18n
    │   ├── intelligence/             # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
-   │   ├── mcp/                      # 註冊 12 個工具的 FastMCP server
+   │   ├── evaluation/               # 離線搜尋品質評測(docs/search-quality.md)
+   │   ├── mcp/                      # 註冊 13 個工具的 FastMCP server
+   │   ├── sources/<name>/           # 各來源 plugin(arxiv、semantic_scholar、
+   │   │                             #   openalex、pubmed、acm、ieee、scholar、
+   │   │                             #   dblp、crossref、openaire、springer、
+   │   │                             #   europepmc、doaj、hal、core)
    │   ├── utils/                    # logging、path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`
-   ├── sources/                      # 各來源 plugin(arxiv、semantic_scholar、
-   │                                 #   openalex、pubmed、acm、ieee、scholar、
-   │                                 #   dblp、crossref、openaire、springer)
    ├── tests/                        # pytest suite + 錄製 fixture,不打活 HTTP
-   ├── docs/                         # 這份 Sphinx 文件(en + zh-tw + zh-cn)
+   ├── docs/                         # 這份 Sphinx 文件(14 個語言樹)
    ├── scripts/                      # 一次性 regen / fixture-record 腳本
    └── pyproject.toml                # metadata + ruff / bandit + optional extras
 
 核心 vs 來源外掛
 ^^^^^^^^^^^^^^^^
 
-``thesisagents/``\ (核心)與 ``sources/<name>/``\ (外掛)的分界線是
+核心模組與 ``thesisagents/sources/<name>/``\ (外掛)的分界線是
 **相依負擔與失敗隔離**,不是「跟來源有關的東西全丟外掛」:
 
 * **核心**\ 跑在預設相依集
@@ -484,9 +502,9 @@ Definition of Done
 
    .venv\Scripts\python.exe -m pytest tests/
    .venv\Scripts\python.exe -m ruff check .
-   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 
-bandit 的 ``-c``\ 旗標是 **必要的**\ —— 沒它 bandit 不會讀專案 skip 設定,
+bandit 的 ``-c``\ 旗標是 **必要的**：沒它 bandit 不會讀專案 skip 設定,
 跑出來會充滿假警報。
 
 測試
@@ -496,9 +514,9 @@ bandit 的 ``-c``\ 旗標是 **必要的**\ —— 沒它 bandit 不會讀專案
 ``thesisagents/<area>/<feature>.py``\ 都有一個對應的
 ``tests/test_<feature>.py``\ 。來源外掛測試在 ``tests/sources/<name>/``\ 。
 
-測試是 **hermetic**\ —— 每個 fetcher 測試都透過 monkeypatched HTTP
-transport 載入錄製好的 fixture。錄新的 fixture 是獨立的手動步驟
-(``scripts/record_fixture.py``),錄完的檔要 commit 進去。
+測試是 **hermetic**：每個 fetcher 測試都透過 monkeypatched HTTP
+transport 載入錄製好的 fixture。錄新的 fixture 是獨立的手動步驟,把
+上游回應存進 ``tests/fixtures/<source>/`` 並 commit 進去。
 
 跑整個 suite:
 
@@ -506,7 +524,7 @@ transport 載入錄製好的 fixture。錄新的 fixture 是獨立的手動步�
 
    .venv\Scripts\python.exe -m pytest tests/
 
-目前 89 個測試,約 2 秒跑完。
+目前 644 個測試。
 
 Lint + 安全
 ^^^^^^^^^^^

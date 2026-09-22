@@ -16,7 +16,7 @@ class Query:
     max_results: int = 25             # 1..200 per source
     year_from: int | None = None      # inclusive lower bound
     year_to: int | None = None        # inclusive upper bound
-    top_tier_only: bool = True        # apply the venue whitelist
+    top_tier_only: bool = False       # apply the venue whitelist
     min_citations: int | None = None  # discard below this (MCP-only flag)
 ```
 
@@ -26,7 +26,7 @@ class Query:
 | `sources` | yes | Empty tuple is rejected at construction. Use `ALL_SOURCES` from `core.constants` to get the full list. |
 | `max_results` | no | Clamped to `[1, MAX_RESULTS_PER_SOURCE]` (200) by `pydantic` validation. |
 | `year_from` / `year_to` | no | Either or both. `year_from > year_to` is rejected. |
-| `top_tier_only` | no | When True (default), filters to the curated CS top-tier whitelist + arXiv pass-through. |
+| `top_tier_only` | no | Off by default. When True (CLI: `--top-tier-only`), filters to the curated CS top-tier whitelist + arXiv pass-through. |
 | `min_citations` | no | Surfaced via the MCP `search` tool's `min_citations` parameter only. |
 
 ## `Paper`
@@ -51,6 +51,7 @@ class Paper:
     citation_count: int | None = None
     raw: dict[str, Any] | None = None # the source's raw payload
     summary: PaperSummary | None = None
+    provenance: tuple[FieldProvenance, ...] = ()  # which source filled which field
 ```
 
 ### Field reference
@@ -71,6 +72,7 @@ class Paper:
 | `citation_count` | no | Integer when the source reports one. Used in the rank score. |
 | `raw` | no | The source's raw payload (parsed JSON / dict). Available for debugging and for the LLM-as-agent flow (`raw["extracted_text"]` when populated by `--pdf`). Excluded from `.json` export when too large. |
 | `summary` | no | A `PaperSummary` dataclass — populated by `--enrich`, the LLM-as-agent flow, or hand-authored regen scripts. |
+| `provenance` | no | Tuple of `FieldProvenance(field, source, source_id)` records appended by the dedup merge. Each entry names the duplicate-source record that filled a field the canonical record was missing (e.g. an OpenAlex mirror supplying `pdf_url` to an ACM-canonical paper), so cross-source merges stay auditable without keeping the whole upstream payload. Empty for papers seen by only one source. Round-trips through `to_dict()` / `from_dict()`. |
 
 ### Derived methods
 

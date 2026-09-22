@@ -51,7 +51,12 @@ Workflow MCP en 6 étapes
    5. (vous lisez chaque PDF et produisez un dict de résumé structuré)
    6. export(papers=[{...paper, "summary": {...}}], language="fr", ...)
 
-Les 12 outils MCP complets : :doc:`/mcp`.
+13 outils MCP au total : découverte (``list_sources``,
+``list_exports``), ``search``, ``fetch_paper``, ``fetch_pdf_text``,
+``download_pdfs``, ``export`` et six opérations de deck ``pptx_*``
+(``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
+``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
+Référence complète : :doc:`/mcp`.
 
 Obligatoire : vérification URL / DOI avant livraison
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -99,8 +104,10 @@ colonne 7 = DOI, colonne 8 = URL. Auditez votre script regen à la fin :
   « GPT », « Copilot » ni aucun nom d'outil / modèle IA dans les
   commits, PRs, code ou docs.
 
-Exemples : ``scripts/regen_llm_security_batch.py`` (en, 8 articles) et
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw).
+Exemple travaillé : ``scripts/regen_fang2026.py`` contient un résumé
+enrichi rédigé à la main exactement de cette façon (un seul article,
+rich-tier, zh-tw). Un lot multi-articles suit la même forme, avec une
+entrée par article dans le tuple ``PaperCollection``.
 
 ----
 
@@ -151,7 +158,7 @@ Où chercher plus loin
 ---------------------
 
 * Flags CLI + variables d'environnement : :doc:`/cli`
-* 12 outils du serveur MCP : :doc:`/mcp`
+* 13 outils du serveur MCP : :doc:`/mcp`
 * Boîte à outils d'édition PPTX : :doc:`/pptx_editing`
 * Le fichier ``readmes/README.fr.md`` à la racine du repo donne la liste
   complète des fonctionnalités.

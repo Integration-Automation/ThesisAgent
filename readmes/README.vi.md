@@ -37,7 +37,7 @@ Sản phẩm mặc định là **một `.pptx` phong cách luận văn, đầy �
 6. export(papers=[{...paper, "summary": {...}}], language="vi", ...)
 ```
 
-Mười hai công cụ MCP (gồm `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` v.v.) được tài liệu hóa tại [`docs/mcp.md`](docs/mcp.md).
+Mười ba công cụ MCP (gồm `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` v.v.) được tài liệu hóa tại [`docs/mcp.md`](docs/mcp.md).
 
 ### Bắt buộc: xác minh URL / DOI trước khi giao
 
@@ -62,7 +62,7 @@ Hai trường hợp ngụy tạo bị bắt theo cách này trong sản xuất: 
 
 ### Ví dụ thực tế
 
-[`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py) chứa 8 bản tóm tắt rich được soạn tay đúng theo quy trình này. Dùng làm template cho mọi tìm kiếm đa-bài. Phiên bản zh-tw tại [`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py).
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) chứa một bản tóm tắt rich được soạn tay đúng theo quy trình này (một bài, rich-tier, zh-tw, mọi trường rich đều được điền). Tìm kiếm đa-bài theo cùng khuôn dạng, với một mục `Paper(...summary=PaperSummary(...))` cho mỗi bài trong tuple `PaperCollection`.
 
 ### Cấm
 
@@ -76,7 +76,7 @@ Hai trường hợp ngụy tạo bị bắt theo cách này trong sản xuất: 
 
 ## Tính năng
 
-- **Mười lăm nguồn cắm-ngoài**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (giới hạn ACM qua Crossref), `dblp`, `crossref` (tổng quát), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (cần API key), `ieee` (API key hoặc opt-in scraping), `scholar` (opt-in scraping). Mỗi nguồn nằm dưới `sources/<name>/` sau adapter `Fetcher`. Danh sách trắng venue top-tier lọc kết quả về các hội nghị/tạp chí CS chủ lực + Nature/Science/PNAS mặc định; `--all-venues` tắt nó.
+- **Mười lăm nguồn cắm-ngoài**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (giới hạn ACM qua Crossref), `dblp`, `crossref` (tổng quát), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (cần API key), `ieee` (bật mặc định qua Chrome hiển thị, API key chuyển sang API Xplore chính thức), `scholar` (bật mặc định qua Chrome hiển thị). Mỗi nguồn nằm dưới `sources/<name>/` sau adapter `Fetcher`. Truyền `--top-tier-only` để lọc kết quả về các hội nghị/tạp chí CS chủ lực + Nature/Science/PNAS. Tìm kiếm mặc định giữ mọi venue.
 - **Chế độ bài đơn**: dán arXiv ID, URL arXiv, DOI, PMID hoặc URL tài liệu IEEE — ThesisAgents giải qua nguồn đúng và phát ra cùng gói xuất. Hữu ích cho ghi chú đọc và chuẩn bị bảo vệ.
 - **Chế độ PDF nội bộ** (`--pdf <đường-dẫn>`): truyền một PDF hoặc thư mục. Bộ trích heuristic lấy **tiêu đề, tác giả, năm, arXiv ID, DOI và tóm tắt thật** ngay từ đầu mỗi PDF (neo vào tiêu đề rõ ràng `Abstract` / `ABSTRACT` / `摘要`, không phải tiền tố mù). `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` ghi đè khi gọi một PDF; với thư mục, trích xuất từng file thắng — mỗi bài có deck riêng tên theo khóa BibTeX của nó.
 - **Năm exporter**:
@@ -86,13 +86,13 @@ Hai trường hợp ngụy tạo bị bắt theo cách này trong sản xuất: 
   - `.bib` — khóa trích dẫn không xung đột, các trường đã escape LaTeX.
   - `.json` — payload thô cho công cụ downstream.
   - **Bộ nhận diện hình ảnh được thiết kế** (không phải vẻ ngoài Calibri-on-white mặc định): typography theo từng ngôn ngữ (Inter cho Latin; Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI cho CJK + Hindi), accent geometry theo chương trình (thanh trên cùng trên mỗi slide nội dung + dải trái trên trang bìa), bảng kiểu học thuật (bỏ lưới đen mặc định, đường rule navy ở header, divider nhẹ giữa các hàng, sọc xen kẽ, căn dọc giữa, cột đầu in đậm). Bảng 5 màu (navy / teal / grey / light / white) — **cấm** dùng đỏ làm màu chữ; dùng **đậm + teal `#0E7490`** để nhấn mạnh.
-  - **Chế độ tối là mặc định**. Dựng deck với palette sáng rồi post-build pass đổi RGB của text + fill + viền cell sang chế độ tối (nền slide `#12151B`, chữ thân `#E5E7EB`, teal accent sáng hơn `#2DD4BF`). Tối ưu cho máy chiếu OLED và phòng tối. Để in ấn hay phòng sáng, dùng `--light-mode` (CLI), bỏ chọn **Light mode** trong tab Deck của GUI, hoặc truyền `ExportOptions(dark_mode=False)` trong Python.
+  - **Chế độ sáng (nền trắng + dải navy) là đường render mặc định**. Truyền `--dark-mode` (CLI), bật ô **Dark mode** trong tab Deck của GUI, hoặc đặt `ExportOptions(dark_mode=True)` trong Python để opt in chế độ tối. Khi opt in, deck được dựng với palette sáng rồi post-build pass đổi RGB của text + fill + viền cell sang chế độ tối (nền slide `#12151B`, chữ thân `#E5E7EB`, teal accent sáng hơn `#2DD4BF`). Phù hợp cho máy chiếu OLED và phòng tối.
 - **Bộ chỉnh sửa PPT**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) làm việc với bất kỳ deck nào exporter sinh ra, cộng với các công cụ MCP `pptx_*` tương đương để LLM agent lặp trên deck đã sinh.
-- **Server MCP**: 12 công cụ — `list_sources` (khám phá), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export` và năm công cụ chỉnh sửa `pptx_*`. Cho phép bất kỳ LLM tương thích MCP (Claude Code, Claude Desktop, Cursor, …) điều khiển toàn bộ workflow.
+- **Server MCP**: 13 công cụ (`list_sources` + `list_exports` (khám phá), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export` và sáu công cụ deck `pptx_*`: `inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`). Cho phép bất kỳ LLM tương thích MCP (Claude Code, Claude Desktop, Cursor, …) điều khiển toàn bộ workflow.
 - **Hai lối làm giàu** để vượt qua tóm tắt đến deck phong cách luận văn thực sự:
   - **LLM-as-agent (không cần API key)** — LLM gọi đọc văn bản PDF qua `fetch_pdf_text`, viết tóm tắt có cấu trúc trong ngữ cảnh và truyền cho `export`.
   - **Pipeline Python (`--enrich`)** — CLI tự gọi API Anthropic; mô hình mặc định `claude-opus-4-7`.
-- **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit từng nguồn (token bucket), `defusedxml` cho mọi payload XML, đường xuất tránh path-traversal, không `eval` / `exec` / `pickle` trên input người dùng. Scraping Scholar và IEEE tắt mặc định (opt-in qua env var).
+- **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit từng nguồn (token bucket), `defusedxml` cho mọi payload XML, đường xuất tránh path-traversal, không `eval` / `exec` / `pickle` trên input người dùng.
 
 ## Bắt đầu nhanh
 
@@ -154,10 +154,11 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--enrich` | Tải PDF + tóm tắt Anthropic. Cần `ANTHROPIC_API_KEY` và extra `[intelligence]`. |
 | `--lightweight` | Buộc deck nhẹ kể cả khi `ANTHROPIC_API_KEY` đã đặt. |
 | `--llm-model` | Ghi đè mô hình mặc định `claude-opus-4-7`. |
-| `--all-venues` | Tắt danh sách trắng top-tier (mặc định giữ venue CS chủ lực + Nature / Science / PNAS / CACM / LNCS). |
+| `--top-tier-only` | Giới hạn kết quả vào arXiv + danh sách trắng CS chủ lực được tuyển chọn (S&P, CCS, NDSS, USENIX Security, NeurIPS, ICML, ICSE, …). Tắt mặc định. |
 | `--paywall-threshold` | Tỉ lệ kết quả có paywall kích hoạt prompt xác nhận. Mặc định 0.30. |
 | `--yes` | Bỏ qua prompt paywall. |
 | `--max-slides` | Giới hạn slide mỗi bài (mặc định 25; 0 = không giới hạn). |
+| `--dark-mode` | Render pptx với nền tối (`#12151B`) + chữ gần trắng (`#E5E7EB`). Mặc định là deck sáng dải navy. |
 | `--quiet` | Tắt in từng bài. |
 
 ### Biến môi trường
@@ -170,13 +171,13 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_NCBI_API_KEY` | PubMed | Nâng giới hạn ẩn danh NCBI (3/s) lên 10/s. Tùy chọn. |
 | `THESISAGENTS_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Đưa request vào polite pool của Crossref. |
 | `THESISAGENTS_IEEE_API_KEY` | IEEE (đường API) | API chính thức IEEE Xplore; phơi `pdf_url` cho bài thuộc phạm vi đăng ký. |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE (đường scraping) | `=1` bật scraping. Không cần khi đã có API key. |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE bật mặc định qua Chrome hiển thị.** Đặt `=1` để opt out (ví dụ CI không có Chrome). |
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Token thuê bao Crossref Plus (header Bearer). Tùy chọn. |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer | Bắt buộc; key miễn phí tại <https://dev.springernature.com/>. Plugin bị bỏ qua âm thầm nếu thiếu. |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
 | `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` bật scraping. Mặc định tắt — ToS Scholar cấm scraping. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar bật mặc định qua Chrome hiển thị.** Đặt `=1` để opt out (ToS của Google cấm truy cập tự động, bật mặc định vì độ phủ, opt out để tránh rủi ro captcha / chặn IP). |
 | `THESISAGENTS_PDF_COOKIES_FILE` | Trình tải PDF | `cookies.txt` định dạng Netscape. Mặc định tắt. Chỉ dùng với nhà xuất bản bạn có quyền truy cập tổ chức. |
 | `THESISAGENTS_LOG_LEVEL` | logger | Mặc định `INFO`; `DEBUG` cho trace chi tiết. |
 
@@ -214,6 +215,7 @@ Công cụ:
 | `download_pdfs` | Tải hàng loạt PDF của danh sách bài vào `{out_dir}/pdfs/`. Trả về kết quả từng bài có khóa BibTeX. |
 | `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận `summary` mỗi bài (schema phong cách luận văn) và `max_slides_per_paper` (mặc định 25). |
 | `pptx_inspect` | Đọc cấu trúc slide / shape của deck hiện có. |
+| `pptx_review` | Kiểm toán deck trong một lời gọi (overflow + hợp đồng màu + độ đầy đủ mục `paper_rule`). Tự phát hiện ngôn ngữ deck. Phía CLI là `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Thay `title` / `body` / `meta` (theo tên shape) hoặc shape bất kỳ theo index. |
 | `pptx_delete_slide` | Xóa một slide và part relationship của nó. |
 | `pptx_reorder_slides` | Đảo thứ tự slide qua `sldIdLst`. |
@@ -242,13 +244,14 @@ ThesisAgents/
 │   ├── fetchers/                    # client async chỉ-HTTPS, rate limit token bucket
 │   ├── exporters/                   # pptx (phong cách luận văn) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # tải PDF + bộ tóm tắt Anthropic ([intelligence] extra)
-│   ├── mcp/                         # server FastMCP (12 công cụ)
+│   ├── evaluation/                  # benchmark chất lượng tìm kiếm offline (docs/search-quality.md)
+│   ├── mcp/                         # server FastMCP (13 công cụ)
+│   ├── sources/<name>/              # thư mục plugin: arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # CLI argparse
 │   └── __main__.py
-├── sources/                         # thư mục plugin: arxiv, semantic_scholar,
-│                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # bộ pytest + fixture đã ghi (không HTTP trực tiếp)
 ├── docs/                            # Sphinx (14 cây ngôn ngữ)
 ├── scripts/                         # script regen dùng một lần

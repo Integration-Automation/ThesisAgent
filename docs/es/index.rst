@@ -51,7 +51,12 @@ Flujo MCP de 6 pasos
    5. (lee cada PDF y produce dict summary estructurado)
    6. export(papers=[{...paper, "summary": {...}}], language="es", ...)
 
-Las 12 herramientas MCP completas están en :doc:`/mcp`.
+13 herramientas MCP en total: descubrimiento (``list_sources``,
+``list_exports``), ``search``, ``fetch_paper``, ``fetch_pdf_text``,
+``download_pdfs``, ``export`` y seis operaciones de deck ``pptx_*``
+(``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
+``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
+Referencia completa: :doc:`/mcp`.
 
 Obligatorio: verificación URL / DOI antes de entregar
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -98,8 +103,10 @@ Prohibiciones
   "Copilot" ni ningún nombre de herramienta/modelo IA en commits,
   PRs, código o docs.
 
-Ejemplos: ``scripts/regen_llm_security_batch.py`` (en, 8 artículos) y
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw).
+Ejemplo trabajado: ``scripts/regen_fang2026.py`` incluye un resumen
+enriquecido escrito a mano exactamente de esta manera (un solo
+artículo, rich-tier, zh-tw). Un lote multi-artículo sigue la misma
+forma, con una entrada por artículo en la tupla ``PaperCollection``.
 
 ----
 
@@ -150,7 +157,7 @@ Dónde buscar más
 ----------------
 
 * Flags CLI y variables de entorno: :doc:`/cli`
-* 12 herramientas del servidor MCP: :doc:`/mcp`
+* 13 herramientas del servidor MCP: :doc:`/mcp`
 * Kit de edición PPTX: :doc:`/pptx_editing`
 * El archivo ``readmes/README.es.md`` en la raíz del repo tiene la lista
   completa de funcionalidades del proyecto.
