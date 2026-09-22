@@ -31,7 +31,7 @@
 | `thesisagents/sources/<name>/` | One plugin per source: `__init__.py` exposes `fetcher_class`, `fetcher.py`, `parser.py`; browser-backed sources (`ieee`, `scholar`) add `webrunner_backend.py` |
 | `thesisagents/exporters/` | `Exporter` strategies (`pptx`, `xlsx`, `bibtex`, `markdown`, `json`, `ris`, `csv`, `csl`) and the `_REGISTRY` in `__init__.py`; `pptx_edit.py`, `review.py` / `audit.py` / `overflow.py` (deck audits), `i18n.py` (deck strings) |
 | `thesisagents/intelligence/` | PDF text / asset / metadata extraction and the API summariser (`summarise.py`), `[intelligence]` extra |
-| `thesisagents/mcp/` | FastMCP server (`server.build_server()`), `[mcp]` extra |
+| `thesisagents/mcp/` | FastMCP server (`server.build_server()`), `[mcp]` extra (held below mcp 2.0, which renamed FastMCP) |
 | `thesisagents/gui/` | PySide6 desktop app (`app.py`, `main_window.py`, `pages/`, `workers.py` on `QThreadPool`, `i18n.py`), `[gui]` extra |
 | `thesisagents/evaluation/` | Offline search-quality benchmark (`search_quality.py`; see `docs/search-quality.md`) |
 | `thesisagents/utils/` | Logging and path safety |
