@@ -42,14 +42,33 @@ _REGISTRY: Mapping[str, type[Exporter]] = {
 def export_collection(
     collection: PaperCollection, options: ExportOptions
 ) -> dict[str, Path]:
-    """Run every requested exporter; return {format: output path}."""
+    """Run every requested exporter; return {format: output path}.
+
+    Every exporter already wraps its *render* step in an ``ExportError``, but
+    each one then writes to disk outside that guard. The write is where the
+    most common real-world failure lives: on Windows, re-running a search while
+    the previous ``.xlsx`` / ``.pptx`` is still open in Excel or PowerPoint
+    raises ``PermissionError: [WinError 32]``, which reached the CLI as a raw
+    traceback because ``main()`` only translates ``ThesisAgentsError``. Wrapping
+    ``OSError`` here — one place, every format, including any added later —
+    turns that into ``error: [xlsx] could not write ...`` with the fix in the
+    message.
+    """
     written: dict[str, Path] = {}
     for fmt in options.formats:
         exporter_cls = _REGISTRY.get(fmt)
         if exporter_cls is None:
             raise ExportError(fmt, "no exporter registered for this format")
         exporter = exporter_cls()
-        path = exporter.export(collection, options)
+        try:
+            path = exporter.export(collection, options)
+        except OSError as err:
+            raise ExportError(
+                fmt,
+                f"could not write the output file ({err}). If the previous "
+                f"export is still open in another application, close it and "
+                f"re-run, or pass a different --out directory.",
+            ) from err
         written[fmt] = path
     return written
 

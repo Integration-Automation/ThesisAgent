@@ -50,7 +50,7 @@ Fluxo MCP de 6 passos
    5. (você lê cada PDF e produz dict summary estruturado)
    6. export(papers=[{...paper, "summary": {...}}], language="pt", ...)
 
-As 11 ferramentas MCP completas: :doc:`/mcp`.
+As 13 ferramentas MCP completas: :doc:`/mcp`.
 
 Obrigatório: verificação URL / DOI antes da entrega
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -95,8 +95,10 @@ Proibições
   "Copilot" nem qualquer nome de ferramenta/modelo IA em commits,
   PRs, código ou docs.
 
-Exemplos: ``scripts/regen_llm_security_batch.py`` (en, 8 artigos) e
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw).
+Exemplo prático: ``scripts/regen_fang2026.py`` traz um resumo
+enriquecido escrito à mão exatamente desta forma (um único artigo,
+rich-tier, zh-tw). Um lote com vários artigos segue o mesmo formato,
+com uma entrada por artigo na tupla ``PaperCollection``.
 
 ----
 
@@ -147,7 +149,7 @@ Onde procurar mais
 ------------------
 
 * Flags CLI e variáveis de ambiente: :doc:`/cli`
-* 11 ferramentas do servidor MCP: :doc:`/mcp`
+* 13 ferramentas do servidor MCP: :doc:`/mcp`
 * Toolkit de edição PPTX: :doc:`/pptx_editing`
 * O arquivo ``readmes/README.pt.md`` na raiz do repo tem a lista completa de
   funcionalidades.

@@ -34,7 +34,9 @@ You are the env-vars + environment reference for ThesisAgents. When invoked, sur
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM / Crossref plugin | Crossref Plus subscriber token; attached as `Crossref-Plus-API-Token: Bearer …`. Raises rate limits + cache freshness. |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer plugin | Free key from https://dev.springernature.com/. **Required** — the Springer plugin raises `ConfigError` without it. Covers Nature, Scientific Reports, Lecture Notes in CS. |
 | `THESISAGENTS_PDF_COOKIES_FILE` | PDF downloader | Path to a Netscape-format `cookies.txt`. Cookies whose domain matches a PDF URL's host are attached on the request. Off by default. Use when publishers return 403 to anonymous requests for paywalled PDFs you have institutional access to. **You are responsible for compliance with each publisher's terms of service.** A startup warning fires when the env var is loaded. |
-| `THESISAGENTS_ENABLE_SCHOLAR_SCRAPING` | Scholar plugin | Must be `=1`. Google Scholar terms forbid scraping; off by default. When on, also goes through WebRunner (visible Chrome), not httpx. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Scholar plugin | Opt-OUT switch. Scholar is on by default and goes through WebRunner (visible Chrome), not httpx, with aggressive pacing (Google Scholar terms forbid bulk scraping). Set `=1` to skip Scholar entirely. |
+| `THESISAGENTS_CORE_API_KEY` | CORE plugin | Free key from https://core.ac.uk/services/api. **Required** — the CORE plugin raises `ConfigError` without it, so the pipeline silently skips `core` until the key is set. |
+| `THESISAGENTS_DISABLE_WEBRUNNER` | all WebRunner flows (`fetchers/webrunner_browser.py`, `fetchers/webrunner_pdf.py`) | Set `=1` to make `is_available()` report False everywhere — IEEE / Scholar fall through to their httpx safety net and PDF downloads skip the Chrome route. CI / no-Chrome environments only; on a user machine this silently degrades paywalled results (see `compliance-auditor`). |
 | `THESISAGENTS_LOG_LEVEL` | logger | `INFO` default; set `DEBUG` for verbose tracing. |
 
 ## Interaction notes

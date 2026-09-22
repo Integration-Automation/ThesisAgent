@@ -491,6 +491,25 @@ right bucket.
 | 中間件 | 中介軟體 | middleware |
 | 全棧 | 全端 | full-stack |
 
+#### PRC tech-jargon verbs in deliverable prose (reactive, 2026-07)
+
+| PRC jargon (avoid in zh-tw deliverables) | T-Chinese | Meaning |
+|---|---|---|
+| 落地 (tech "ship / put into production" sense) | 部署 / 實現 / 實行 / 運作 | deploy / realise in production |
+| 落檔 | 留檔 / 寫入檔案 | write (an artefact) to file |
+
+> Why these entries (per the reactive-path rule below): `post-author-audit`
+> on `scripts/regen_chen2026_tcse_features.py` (2026-07-03) caught 落地 ×3
+> in authored deck strings, and the same candidate's own de-AI pass on
+> 論文_v3.2 had already replaced 落地 ×8 → 部署 / 運作 / 實現 / 實行 — a
+> confirmed repeat offender across two surfaces, so it earns an entry.
+> 落檔 is the same 落-jargon family (caught in the same audit, → 留檔).
+> **False-positive guard**: 落地 in its literal physical sense is correct
+> zh-tw (飛機落地, 落地窗, 落地生根) — flag only the tech "上線 / 部署"
+> sense. Do NOT add a bare `落地` regex to
+> `test_zh_tw_files_use_traditional_chinese_vocabulary` without a context
+> guard; report-and-review each hit instead.
+
 ---
 
 ## When to stop adding patterns (note to future maintainers)

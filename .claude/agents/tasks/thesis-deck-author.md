@@ -1,6 +1,6 @@
 ---
 name: thesis-deck-author
-description: Author a degree-thesis ORAL-DEFENCE deck (學位論文口試/答辯簡報) from the candidate's OWN thesis — not a summary of someone else's paper. Reads the candidate's thesis files (PDF / .md / .docx / chapter drafts) when supplied, or consumes a section-by-section content brief the parent gathered interactively, then hand-authors a rich PaperSummary covering the seven canonical paper_rule sections, drops a scripts/regen_<thesis>.py, runs it, and chains the completeness + overflow + math audits. Use when the user wants a defence deck for their own dissertation, with or without ANTHROPIC_API_KEY (you, the LLM, are the author either way).
+description: Author a degree-thesis ORAL-DEFENCE deck (學位論文口試/答辯簡報) from the candidate's OWN thesis — not a summary of someone else's paper. Also authors conference-talk cuts of the same thesis (研討會十分鐘版, re-weighted second cuts). Reads the candidate's thesis files (PDF / .md / .docx / chapter drafts) when supplied, or consumes a section-by-section content brief the parent gathered interactively, then hand-authors a rich PaperSummary covering the seven canonical paper_rule sections, drops a scripts/regen_<thesis>.py, runs it, and chains the completeness + overflow + math audits. Use when the user wants a defence deck for their own dissertation, with or without ANTHROPIC_API_KEY (you, the LLM, are the author either way).
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
@@ -167,6 +167,42 @@ Run from the project root: `.venv/Scripts/python.exe scripts/regen_<stem>.py`.
 the talk-time budget for the slot. A masters defence is often 15-20 min, set a
 lower cap and prune to the takeaways rather than cramming (§13). Confirm the slot
 length with the user (via the parent) when it is not stated.
+
+## Conference / second-cut decks of the same thesis
+
+A thesis often spawns more than one deck: the defence deck, a conference
+ten-minute cut (研討會口頭報告), a re-weighted second cut (e.g. shifting emphasis
+from experiments to engineering features). All reuse this agent's flow, plus
+three rules that exist because their violations have already cost a session:
+
+1. **A new cut gets a NEW regen script + NEW `FILENAME_STEM` — never re-run an
+   old regen script once its exported deck has been hand-edited.** An export the
+   candidate has touched (reordered slides, renamed the file, edited cells) is a
+   user artefact, re-running the script writes a different file at best and wipes
+   the hand edits at worst. **Why**: the chen2026 TCSE deck was hand-renamed to
+   `exports/TCSE_簡報.pptx` and hand-corrected (表一 微調 ✗→✓), so its second cut
+   shipped as a separate `regen_chen2026_tcse_features.py` →
+   `chen2026-tcse-features-zh-tw.pptx`, leaving the first deck untouched.
+   **Anti-pattern**: "regenerating to apply one fix" over a hand-edited deck —
+   the fix lands, every hand edit dies.
+2. **Verify implementation-status claims against the repo code, not only the
+   manuscript.** For every「已支援 / 已實作 X」bullet on a feature slide, locate
+   X's module and test in the framework repo before authoring the claim, and
+   date recent features from git log (「2026-07 新增」). Manuscripts go stale in
+   BOTH directions. **Why**: 論文_v3.5 §6.4.3 still listed GitLab support as
+   future work when the framework repo had already shipped `GitLabAdapter`
+   (2026-07-02) — copying the manuscript would have under-claimed; the mirror
+   trap is reviving numbers the manuscript once floated but never measured.
+   **Anti-pattern**: pasting the thesis's future-work list onto a "features"
+   slide verbatim, or promoting a docker-variant default to "the framework
+   default" without checking the code's actual default.
+3. **Implemented ≠ evaluated (honest boundary).** When the source says a
+   mechanism is「已實作 + 單元測試,端到端效益未評估」, that boundary sentence
+   travels WITH the feature list — on the feature slide's subhead or bullet AND
+   on the limitations slide — and no cross-backend / cross-platform comparison
+   number may be invented to fill the gap. **Example**: the features cut carries
+   「已實作、已測試,效益評估留待未來」as the engineering subhead. **Anti-pattern**:
+   a KPI slide comparing backends the paper never benchmarked.
 
 ## Mandatory audits before reporting deck-ready
 

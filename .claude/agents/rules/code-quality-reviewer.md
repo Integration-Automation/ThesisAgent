@@ -23,7 +23,7 @@ You do NOT modify files. The parent agent decides whether to fix.
 - Prefer composition over inheritance. A `Paper` is a dataclass of fields + a `RawPayload` attachment, not a deep class hierarchy.
 - Follow SOLID: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion. The exporter layer depends on the `Paper` / `PaperCollection` interfaces, never on a concrete fetcher's response shape.
 - Apply DRY — extract shared HTTP / rate-limit / retry logic into `thesisagents/fetchers/`; never copy an `httpx` setup across source plugins.
-- Reuse existing patterns: `httpx.AsyncClient` for network, `asyncio.Semaphore` for per-source concurrency caps, FastAPI DI for cache + settings, Streamlit `st.session_state` (never module globals) for UI state.
+- Reuse existing patterns: `httpx.AsyncClient` via the shared per-source client registry (`thesisagents/fetchers/http.py`) for network, `asyncio.Semaphore` for per-source concurrency caps, Qt signals + `QThreadPool` workers (`thesisagents/gui/workers.py`, never module globals) for GUI state.
 
 ## Software Engineering Practices
 
@@ -41,15 +41,15 @@ You do NOT modify files. The parent agent decides whether to fix.
 - Batch operations: group fetches by source, run sources in parallel with `asyncio.gather`, but cap per-source concurrency with a semaphore.
 - Use appropriate data structures: dict for O(1) DOI / arXiv-ID lookup, set for the dedup key set, deque for the rate-limit token bucket history, dataclasses for hot record paths.
 - Profile and measure before optimising hot paths. `thesisagents/utils/profiling.py` exposes `with section("name"):`.
-- Cache expensive operations with `functools.lru_cache` (in-process) or the disk cache in `thesisagents/cache/`. Raw network responses are cached keyed by `sha256(source + normalized_query + page)`.
+- Cache expensive in-process operations with `functools.lru_cache`. There is no persistent response cache — the project deliberately re-contacts sources per run (see `docs/configuration.md` "Response caching"), so do not add one ad hoc inside a plugin.
 - Use generators / `AsyncIterator` for large result pages.
-- Never block the event loop with synchronous network calls. Use `httpx.AsyncClient`, not `requests`. Synchronous `requests` is allowed ONLY in the fixture-recording script.
+- Never block the event loop with synchronous network calls. Use `httpx.AsyncClient`, not `requests`. Synchronous `requests` is allowed ONLY in one-off scratch scripts that never ship in `thesisagents/`.
 
 ## Async & Concurrency
 
-- The FastAPI process owns **exactly one** `httpx.AsyncClient` per source, created at startup and reused for process lifetime. Do NOT create a fresh client per request.
+- The process owns **exactly one** `httpx.AsyncClient` per source (the registry in `thesisagents/fetchers/http.py`), created on first use and reused for process lifetime. Do NOT create a fresh client per request.
 - Per-source rate limits live in `thesisagents/fetchers/rate_limit.py` as a token-bucket decorator. Each source plugin declares its own bucket (`arxiv: 1 req/3s`, `semantic_scholar: 1 req/s`, `scholar: 1 req/10s with jitter`, etc.). Do NOT bypass the bucket — even retries go through it.
-- Streamlit runs the UI on a separate thread per session. Mutate `st.session_state` only, never module globals. Long-running export jobs are dispatched to the FastAPI backend and polled.
+- Qt's event loop runs on the main thread. Long-running search / export / enrich calls go through the `QThreadPool` workers in `thesisagents/gui/workers.py` and report back via signals — never block a button handler, never touch widgets from a worker thread.
 - All fixture-recording, CLI exports, and tests use `asyncio.run` at the outermost layer and never inside library code.
 - **Bounded fan-out over a paper collection.** A per-source token bucket caps traffic *within* one source, but a stage that fans one operation out over N papers (PDF download, OA resolve, LLM enrich) escapes those buckets — several papers can hit the *same* external API (Anthropic) or publisher CDN (`dl.acm.org`) at once through different source clients. Any `asyncio.gather(*(coro(item) for item in collection.papers))` MUST wrap each task in a module-level `asyncio.Semaphore` cap (the project uses 4–5: `pipeline._ENRICH_CONCURRENCY`, `pdf_download._DOWNLOAD_CONCURRENCY`, `oa_resolver._CONCURRENCY`). **Why:** an unbounded fan-out of a 25-paper search fires 25 concurrent Anthropic calls (an easy 429) or 25 hits on one CDN (an IP block) — it looks fine at 3 papers and fails at 30. **Anti-pattern:** `await asyncio.gather(*(_download_one(p, d) for p in collection.papers))` with no semaphore. **Pattern:** define `sem = asyncio.Semaphore(max(1, concurrency))` and a `_bounded` wrapper that does `async with sem: return await coro(item)`.
 
@@ -59,7 +59,7 @@ You do NOT modify files. The parent agent decides whether to fix.
 - Validate / sanitise external input at boundaries: strip control characters from keywords, cap query length, validate year ranges, reject `..` in paths.
 - File paths resolved through `thesisagents/utils/path_safety.py::resolve_safe(root, reference)`.
 - Least privilege: fetcher plugins only see the HTTP client + a logger. Never the filesystem, cache, or other sources' credentials.
-- Forbidden: `eval`, `exec`, `pickle.loads` on untrusted data, `subprocess(..., shell=True)`. Cached payloads are JSON or msgpack, never pickle.
+- Forbidden: `eval`, `exec`, `pickle.loads` on untrusted data, `subprocess(..., shell=True)`. Serialised payloads (fixtures, exports, round-trips) are JSON, never pickle.
 - HTTPS-only. The shared HTTP client rejects any non-`https` URL via the `_https_only_transport` wrapper.
 - SHA-256+ for cache keys; `secrets.token_urlsafe` for session tokens; constant-time compare for signatures.
 - Log security-relevant events (rejected URLs, malformed responses, rate-limit hits). Truncate to 256 chars; redact token-shaped strings.
@@ -73,22 +73,21 @@ Tests are part of the change. A feature without tests is incomplete and MUST NOT
 - **Edge cases** — empty / single-paper sets, missing optional fields (no DOI / abstract / year), Unicode-heavy titles, multi-author truncation, cross-source duplicates.
 - **Error handling** — every `except` branch exercised; HTTP 429 → `RateLimitError`; malformed JSON/HTML → `ParseError`; unwritable export path → `ExportError`.
 - **Boundary** — values just inside / outside any limit.
-- **Round-trips** — `Paper.to_dict → from_dict → equal`; `BibTeX render → parse → equal`; `cache write → cache read → equal`.
+- **Round-trips** — `Paper.to_dict → from_dict → equal`; `BibTeX render → parse → equal`.
 
 **Required test types:**
-- **Pure-helper tests.** Extract pure logic (dedup hashing, ranking, BibTeX key generation, abstract cleaning) and unit-test without `httpx` or FastAPI.
-- **Fetcher tests against recorded fixtures.** `tests/sources/<name>/test_<name>.py` loads `tests/fixtures/<name>/<scenario>.json|html|xml` via a monkeypatched transport.
-- **API tests.** FastAPI `TestClient` with the fetcher layer monkeypatched to return canned `Paper` records.
-- **UI smoke.** `streamlit.testing.v1.AppTest` to drive the page.
+- **Pure-helper tests.** Extract pure logic (dedup hashing, ranking, BibTeX key generation, abstract cleaning) and unit-test without `httpx`.
+- **Fetcher tests against recorded fixtures.** `tests/sources/test_<name>.py` loads `tests/fixtures/<name>/<scenario>.json|html|xml` via the shared `tests/sources/_mock.py` helpers (`MockTransport` = `httpx.AsyncBaseTransport` subclass, `install_mock` monkeypatching the client registry); arxiv predates the layout and stays flat as `tests/test_arxiv_fetcher.py` with the same pattern inline.
+- **MCP tool tests.** `tests/test_mcp_tools.py` calls the FastMCP tools with the fetcher layer monkeypatched to return canned `Paper` records.
+- **GUI smoke.** `pytest-qt` (`qtbot`) drives the PySide6 pages in `tests/gui/`.
 - **Exporter tests.** Render to `tmp_path`, re-open, assert structure — `python-pptx` for `.pptx`, `bibtexparser` for `.bib`, etc.
 - **Integration tests** where wiring is non-obvious — end-to-end fetch → dedup → rank → export.
 
 **Mechanics:**
 - `pytest` + `pytest-asyncio`. Module-level functions OR `Test*` classes; follow the file's style.
-- Naming: `tests/test_<module>.py` for core, `tests/sources/<name>/...` for fetchers, `tests/exporters/test_<format>.py` for exporters.
-- Use shared fixtures in `tests/conftest.py` (`http_recorder`, `fake_cache`, `sample_papers`, `tmp_export_root`).
-- The autouse `_isolate_user_paths` redirects cache + config to `tmp_path`. Never write to the user's real cache.
-- No live network. `http_recorder` loads JSON/HTML files and asserts the request URL + headers match recorded. Re-record via `scripts/record_fixture.py` — never let a test silently mutate fixtures.
+- Naming: `tests/test_<module>.py` for core, `tests/sources/test_<name>.py` for source plugins, `tests/test_exporters.py` for exporters, `tests/gui/test_<page>.py` for GUI pages.
+- Use the shared fixtures in `tests/conftest.py` (`sample_papers`, `arxiv_fixture_path`) and the shared mock-transport helpers in `tests/sources/_mock.py`.
+- No live network. The mock transport returns the recorded fixture body and captures the request URL so the test can assert query construction. Re-record a fixture by saving the upstream response into `tests/fixtures/<source>/` — never let a test silently mutate fixtures.
 - Run `py -m pytest tests/` before commit. Existing skips OK; new skips not OK.
 
 ---
@@ -147,13 +146,13 @@ Tests are part of the change. A feature without tests is incomplete and MUST NOT
 
 ### Security (bandit / SonarQube)
 
-- `pickle.load(s)` on untrusted data forbidden (`B301`, `python:S5135`). Cache payloads are JSON or msgpack.
+- `pickle.load(s)` on untrusted data forbidden (`B301`, `python:S5135`). Serialised payloads are JSON.
 - `yaml.load` without `SafeLoader` forbidden — use `yaml.safe_load` (`B506`).
 - MD5 / SHA-1 forbidden for security purposes — use SHA-256+ (`B303`, `B304`, `python:S4790`). Allowed for non-security (cache keys, dedup hashes) ONLY with `usedforsecurity=False`.
 - `subprocess` with `shell=True` forbidden when any arg is user input (`B602`). PDF export shells out via args-list form only.
 - `eval` / `exec` / `compile` on dynamic input forbidden (`B307`).
 - `tempfile.mktemp()` forbidden — use `mkstemp()` or `NamedTemporaryFile` (`B306`).
-- Network binds must not use `0.0.0.0` unless intentional + documented (`B104`). FastAPI app defaults to `127.0.0.1`.
+- Network binds must not use `0.0.0.0` unless intentional + documented (`B104`). The MCP server speaks stdio; nothing in this project should open a listening socket.
 - XML parsing MUST use `defusedxml`, never stdlib `xml.etree` on untrusted input (`B405`–`B411`).
 - HTML parsing uses `beautifulsoup4` + `lxml`; no `eval`-style attribute evaluators.
 - Random for security must use `secrets`, not `random` (`B311`). Backoff jitter MAY use `random` with a pinned test seed.
@@ -168,7 +167,7 @@ Tests are part of the change. A feature without tests is incomplete and MUST NOT
 
 ### Enforcement
 
-Mentally check each function against these rules before finalising. If unavoidable (FastAPI dependency signature forces extra params; a parser genuinely needs a long match block), add `# noqa: <rule>` / `# nosec B<NNN>` with a brief justification comment on the same line. See `compliance-auditor` for the suppression-comment conventions.
+Mentally check each function against these rules before finalising. If unavoidable (a framework signature forces extra params; a parser genuinely needs a long match block), add `# noqa: <rule>` / `# nosec B<NNN>` with a brief justification comment on the same line. See `compliance-auditor` for the suppression-comment conventions.
 
 ---
 

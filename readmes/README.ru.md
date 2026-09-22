@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="ru", ...)
 ```
 
-Все двенадцать MCP-инструментов (включая `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` / т. д.) задокументированы в [`docs/mcp.md`](docs/mcp.md).
+Все тринадцать MCP-инструментов (включая `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / т. д.) задокументированы в [`docs/mcp.md`](docs/mcp.md).
 
 ### Обязательно: проверка URL / DOI перед сдачей
 
@@ -62,7 +62,7 @@ for p in ALL_PAPERS:
 
 ### Образец
 
-В [`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py) лежат 8 написанных вручную обогащённых сводок ровно по этому процессу. Используйте как шаблон для любого многостатейного поиска. Парный zh-tw — в [`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py).
+В [`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) лежит написанная вручную обогащённая сводка ровно по этому процессу (одна статья, rich-уровень, zh-tw, каждое rich-поле заполнено). Многостатейный поиск следует той же форме с одной записью `Paper(...summary=PaperSummary(...))` на статью в кортеже `PaperCollection`.
 
 ### Запреты
 
@@ -76,7 +76,7 @@ for p in ALL_PAPERS:
 
 ## Возможности
 
-- **Пятнадцать подключаемых источников**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (ограничен ACM через Crossref), `dblp`, `crossref` (общий), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (нужен API-ключ), `ieee` (API-ключ или scraping-opt-in), `scholar` (scraping-opt-in). Каждый лежит под `sources/<name>/` за адаптером `Fetcher`. Whitelist топовых площадок фильтрует результаты до флагманских CS-конференций/журналов + Nature/Science/PNAS по умолчанию; `--all-venues` отключает.
+- **Пятнадцать подключаемых источников**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (ограничен ACM через Crossref), `dblp`, `crossref` (общий), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (нужен API-ключ), `ieee` (включён по умолчанию через видимый Chrome, API-ключ переключает на официальное API Xplore), `scholar` (включён по умолчанию через видимый Chrome). Каждый лежит под `sources/<name>/` за адаптером `Fetcher`. Передайте `--top-tier-only`, чтобы отфильтровать результаты до флагманских CS-конференций/журналов + Nature/Science/PNAS, поиск по умолчанию сохраняет все площадки.
 - **Режим одной статьи**: вставьте arXiv ID, arXiv URL, DOI, PMID или URL документа IEEE — ThesisAgents разрешит через нужный источник и выдаст тот же экспорт-пакет. Полезно для заметок чтения и подготовки защиты.
 - **Локальный PDF-режим** (`--pdf <путь>`): передайте один PDF или каталог. Эвристический экстрактор вытаскивает **заголовок, авторов, год, arXiv ID, DOI и настоящую аннотацию** прямо из начала каждого PDF (привязка к явному заголовку `Abstract` / `ABSTRACT` / `摘要`, а не слепому префиксу). `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` переопределяют при одиночном PDF; в режиме каталога побеждает per-file извлечение — каждая статья получает свой дек, названный по её BibTeX-ключу.
 - **Пять экспортёров**:
@@ -86,13 +86,13 @@ for p in ALL_PAPERS:
   - `.bib` — ключи цитирования без коллизий, поля с LaTeX-эскейпами.
   - `.json` — сырой payload для downstream-инструментов.
   - **Дизайнерская визуальная идентичность** (а не дефолтный Calibri-on-white): пер-языковая типографика (Inter для Latin; Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI для CJK + Hindi), программная accent geometry (верхняя акцентная полоса на каждом контентном слайде + левая полоса на обложке), академические таблицы (убрана дефолтная чёрная сетка, navy header rule, мягкие divider между строками, чередующиеся row stripes, выравнивание по центру, первая колонка bold). Палитра из 5 цветов (navy / teal / grey / light / white) — красный **запрещён** как цвет текста; используйте **bold + teal `#0E7490`** для акцента.
-  - **Тёмная тема по умолчанию**. Строится на светлой палитре, затем post-build pass меняет RGB текста + заливки + границ ячеек на тёмный вариант (фон слайда `#12151B`, основной текст `#E5E7EB`, более яркий teal `#2DD4BF`). Рассчитано на OLED-проекторы и тёмные залы. Для печати или светлых залов: `--light-mode` (CLI), снимите галочку **Light mode** на вкладке Deck в GUI, или передайте `ExportOptions(dark_mode=False)` в Python.
+  - **Светлая тема используется по умолчанию** (белый фон + navy-полоса). Тёмная тема включается по запросу: `--dark-mode` (CLI), галочка **Dark mode** на вкладке Deck в GUI, или `ExportOptions(dark_mode=True)` в Python. При включённой тёмной теме post-build pass меняет RGB текста + заливки + границ ячеек (фон слайда `#12151B`, основной текст `#E5E7EB`, более яркий teal `#2DD4BF`), рассчитано на OLED-проекторы и тёмные залы.
 - **Инструменты редактирования PPT**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) работает с любым деком, созданным экспортёром, плюс эквивалентные MCP-инструменты `pptx_*` для итераций над сгенерированным деком LLM-агентом.
-- **MCP-сервер**: 11 инструментов — `list_sources` (discovery), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, и пять `pptx_*`-инструментов. Любой MCP-совместимый LLM (Claude Code, Claude Desktop, Cursor, …) может управлять всем процессом.
+- **MCP-сервер**: 13 инструментов, а именно `list_sources` + `list_exports` (discovery), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, плюс шесть `pptx_*`-инструментов для деков (`inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`). Любой MCP-совместимый LLM (Claude Code, Claude Desktop, Cursor, …) может управлять всем процессом.
 - **Два пути обогащения** для выхода за пределы аннотации к настоящему деку в стиле дипломной:
   - **LLM-as-agent (без API-ключа)** — вызывающий LLM читает текст PDF через `fetch_pdf_text`, пишет структурированную сводку в контексте и передаёт её в `export`.
   - **Python pipeline (`--enrich`)** — CLI сама вызывает API Anthropic; модель по умолчанию `claude-opus-4-7`.
-- **Безопасность по умолчанию**: HTTP-транспорт только-HTTPS, rate limit на каждый источник (token bucket), `defusedxml` для любого XML-payload, безопасные от path-traversal экспорт-пути, без `eval` / `exec` / `pickle` на пользовательском вводе. Scraping Scholar и IEEE по умолчанию выключен (opt-in через env-var).
+- **Безопасность по умолчанию**: HTTP-транспорт только-HTTPS, rate limit на каждый источник (token bucket), `defusedxml` для любого XML-payload, безопасные от path-traversal экспорт-пути, без `eval` / `exec` / `pickle` на пользовательском вводе. Scholar и IEEE включены по умолчанию через видимый Chrome, отключение через `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1` и `THESISAGENTS_DISABLE_IEEE_SCRAPING=1`.
 
 ## Быстрый старт
 
@@ -154,10 +154,11 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--enrich` | Скачать PDF + сводка Anthropic. Нужны `ANTHROPIC_API_KEY` и extra `[intelligence]`. |
 | `--lightweight` | Принудительно лёгкий дек, даже если `ANTHROPIC_API_KEY` задана. |
 | `--llm-model` | Переопределить модель по умолчанию `claude-opus-4-7`. |
-| `--all-venues` | Отключить топовую whitelist (default сохраняет флагманские CS-площадки + Nature / Science / PNAS / CACM / LNCS). |
+| `--top-tier-only` | Ограничить результаты arXiv + курируемой whitelist флагманских CS-площадок (S&P, CCS, NDSS, USENIX Security, NeurIPS, ICML, ICSE, …). По умолчанию выключен. |
 | `--paywall-threshold` | Доля paywall-результатов, при которой появляется prompt подтверждения. Default 0.30. |
 | `--yes` | Пропустить paywall-prompt. |
 | `--max-slides` | Лимит слайдов на статью (default 25; 0 — без лимита). |
+| `--dark-mode` | Рендерит pptx с тёмным фоном (`#12151B`) + почти белым текстом (`#E5E7EB`). По умолчанию используется светлый дек с navy-полосой. |
 | `--quiet` | Подавить вывод по каждой статье. |
 
 ### Переменные окружения
@@ -170,13 +171,13 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_NCBI_API_KEY` | PubMed | Поднимает анонимный лимит NCBI (3/с) до 10/с. Опционально. |
 | `THESISAGENTS_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Помещает запросы в polite pool Crossref. |
 | `THESISAGENTS_IEEE_API_KEY` | IEEE (API-путь) | Официальное API IEEE Xplore; выдаёт `pdf_url` для статей в области подписки. |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE (scraping-путь) | `=1` включает scraping. Не нужна, когда задан API-ключ. |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE включён по умолчанию через видимый Chrome.** `=1` отключает (напр. CI без Chrome). `THESISAGENTS_IEEE_API_KEY` переключает на официальное API Xplore. |
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Токен подписчика Crossref Plus (Bearer-заголовок). Опционально. |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer | Обязательна; бесплатный ключ на <https://dev.springernature.com/>. Без неё плагин тихо пропускается. |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
 | `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` включает scraping. По умолчанию выключен — ToS Scholar запрещают scraping. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar включён по умолчанию через видимый Chrome.** `=1` отключает (ToS Google запрещают автоматизированный доступ, включено по умолчанию ради покрытия, отключайте против captcha / блокировки IP). |
 | `THESISAGENTS_PDF_COOKIES_FILE` | PDF-загрузчик | `cookies.txt` в формате Netscape. По умолчанию выключен. Используйте только с теми издателями, к которым имеете институциональные права. |
 | `THESISAGENTS_LOG_LEVEL` | logger | `INFO` по умолчанию; `DEBUG` для подробных трасс. |
 
@@ -214,6 +215,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `download_pdfs` | Пакетная загрузка PDF из списка статей в `{out_dir}/pdfs/`. Возвращает результаты по каждой статье, индексированные BibTeX-ключом. |
 | `export` | Список статей + форматы → пишет `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Принимает поле `summary` (rich thesis-style schema) и `max_slides_per_paper` (default 25). |
 | `pptx_inspect` | Читает структуру слайдов/шейпов существующего дека. |
+| `pptx_review` | Аудит дека одним вызовом: overflow + цветовые контракты + полнота секций `paper_rule`. Автоматически определяет язык дека, доступен и как CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Заменяет `title` / `body` / `meta` (по имени шейпа) или произвольные шейпы по индексу. |
 | `pptx_delete_slide` | Удаляет слайд и его part relationship. |
 | `pptx_reorder_slides` | Переставляет слайды через `sldIdLst`. |
@@ -242,13 +244,14 @@ ThesisAgents/
 │   ├── fetchers/                    # async-клиент только-HTTPS, rate limit token bucket
 │   ├── exporters/                   # pptx (стиль дипломной) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # загрузка PDF + сумматор Anthropic ([intelligence] extra)
-│   ├── mcp/                         # сервер FastMCP (11 инструментов)
+│   ├── evaluation/                  # офлайн-бенчмарк качества поиска (docs/search-quality.md)
+│   ├── mcp/                         # сервер FastMCP (13 инструментов)
+│   ├── sources/<name>/              # папки плагинов: arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # CLI argparse
 │   └── __main__.py
-├── sources/                         # папки плагинов: arxiv, semantic_scholar,
-│                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # pytest-сьют + записанные fixture (без живого HTTP)
 ├── docs/                            # Sphinx (14 языковых деревьев)
 ├── scripts/                         # одноразовые regen-скрипты

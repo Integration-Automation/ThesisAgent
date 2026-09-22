@@ -37,7 +37,7 @@ Le livrable par défaut est **un `.pptx` enrichi style thèse par article**, pas
 6. export(papers=[{...paper, "summary": {...}}], language="fr", ...)
 ```
 
-Les douze outils MCP (incluant `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` / etc.) sont documentés dans [`docs/mcp.md`](docs/mcp.md).
+Les treize outils MCP (incluant `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / etc.) sont documentés dans [`docs/mcp.md`](docs/mcp.md).
 
 ### Obligatoire : vérification URL / DOI avant livraison
 
@@ -62,7 +62,7 @@ Deux fabrications attrapées ainsi en production : mauvais volume AAAI (`v39i23.
 
 ### Exemple complet
 
-[`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py) livre 8 résumés enrichis rédigés à la main selon ce processus. Utilisez-le comme modèle pour toute recherche multi-articles. Le pendant zh-tw est dans [`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py).
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) livre un résumé enrichi rédigé à la main exactement selon ce processus (un seul article, niveau riche, zh-tw, chaque champ riche rempli). Une recherche multi-articles suit la même forme avec une entrée `Paper(...summary=PaperSummary(...))` par article dans le tuple `PaperCollection`.
 
 ### À ne pas faire
 
@@ -76,7 +76,7 @@ Deux fabrications attrapées ainsi en production : mauvais volume AAAI (`v39i23.
 
 ## Fonctionnalités
 
-- **Quinze sources branchables** : `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (limité à ACM via Crossref), `dblp`, `crossref` (générique), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (clé API requise), `ieee` (clé API ou scraping opt-in), `scholar` (scraping opt-in). Chacune vit sous `sources/<name>/` derrière un adaptateur `Fetcher`. Une liste blanche de revues prestigieuses filtre les résultats sur les conférences/revues CS phares plus Nature/Science/PNAS par défaut ; `--all-venues` désactive le filtre.
+- **Quinze sources branchables** : `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (limité à ACM via Crossref), `dblp`, `crossref` (générique), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (clé API requise), `ieee` (actif par défaut via Chrome visible, la clé API bascule sur l'API officielle Xplore), `scholar` (actif par défaut via Chrome visible). Chacune vit sous `sources/<name>/` derrière un adaptateur `Fetcher`. Passez `--top-tier-only` pour filtrer les résultats sur les conférences/revues CS phares plus Nature/Science/PNAS, la recherche par défaut conserve tous les lieux de publication.
 - **Mode article unique** : collez un ID arXiv, une URL arXiv, un DOI, un PMID ou une URL document IEEE — ThesisAgents le résout via la bonne source et produit le même paquet d'exports. Utile pour notes de lecture et préparation de soutenance.
 - **Mode PDF local** (`--pdf <chemin>`) : passez un PDF ou un répertoire. Un extracteur heuristique tire **titre, auteurs, année, ID arXiv, DOI et le vrai résumé** depuis le début de chaque PDF (ancré sur l'en-tête explicite `Abstract` / `ABSTRACT` / `摘要`, pas sur un préfixe aveugle). `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` surchargent en mode PDF unique ; en mode répertoire, l'extraction par fichier gagne, et chaque article obtient sa propre présentation nommée d'après sa clé BibTeX.
 - **Cinq exporteurs** :
@@ -86,13 +86,13 @@ Deux fabrications attrapées ainsi en production : mauvais volume AAAI (`v39i23.
   - `.bib` — clés de citation sans collision, champs échappés LaTeX.
   - `.json` — payload brut pour outillage en aval.
   - **Identité visuelle conçue** (pas l'apparence Calibri-on-white par défaut) : typographie par langue (Inter pour Latin ; Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI pour CJK + Hindi), géométrie d'accent programmatique (barre supérieure sur chaque diapositive de contenu + bande gauche sur la couverture), tables au style académique (grille noire supprimée, règle navy d'en-tête, fins séparateurs entre lignes, bandes alternées, alignement vertical centré, première colonne en gras). Palette à 5 couleurs (navy / teal / grey / light / white) — le rouge est **interdit** comme couleur de texte ; utilisez **gras + teal `#0E7490`** pour l'emphase.
-  - **Mode sombre par défaut**. Construit avec la palette claire puis un post-pass remplace les RGB de texte + remplissage + bordure de cellule pour le mode sombre (fond `#12151B`, texte `#E5E7EB`, teal plus clair `#2DD4BF`). Pensé pour les vidéoprojecteurs OLED et les salles peu éclairées. Pour l'impression ou les salles bien éclairées, utilisez `--light-mode` (CLI), décochez **Light mode** dans l'onglet Deck de la GUI, ou passez `ExportOptions(dark_mode=False)` en Python.
+  - **Le mode clair est le rendu par défaut** (fond blanc + bande navy). Le mode sombre est opt-in : passez `--dark-mode` (CLI), cochez **Dark mode** dans l'onglet Deck de la GUI, ou passez `ExportOptions(dark_mode=True)` en Python. Quand le mode sombre est activé, un post-pass remplace les RGB de texte + remplissage + bordure de cellule (fond `#12151B`, texte `#E5E7EB`, teal plus clair `#2DD4BF`), pensé pour les vidéoprojecteurs OLED et les salles peu éclairées.
 - **Boîte à outils d'édition PPT** : `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) fonctionne sur toute présentation produite par l'exporteur, plus les outils MCP équivalents `pptx_*` permettant à un agent LLM d'itérer sur une présentation générée.
-- **Serveur MCP** : 12 outils — `list_sources` (découverte), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export` et les cinq outils d'édition `pptx_*`. Permet à tout LLM compatible MCP (Claude Code, Claude Desktop, Cursor, …) de piloter l'ensemble du workflow.
+- **Serveur MCP** : 13 outils, soit `list_sources` + `list_exports` (découverte), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export` et les six outils de deck `pptx_*` (`inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`). Permet à tout LLM compatible MCP (Claude Code, Claude Desktop, Cursor, …) de piloter l'ensemble du workflow.
 - **Deux voies d'enrichissement** pour aller au-delà du résumé vers une présentation style thèse :
   - **LLM-as-agent (sans clé API)** — le LLM appelant lit le texte du PDF via `fetch_pdf_text`, écrit un résumé structuré en contexte et le passe à `export`.
   - **Pipeline Python (`--enrich`)** — la CLI appelle l'API Anthropic elle-même ; modèle par défaut `claude-opus-4-7`.
-- **Sûr par défaut** : transport HTTP en HTTPS uniquement, limitation de débit par source (token bucket), `defusedxml` pour tout payload XML, chemins d'export sécurisés contre path-traversal, pas d'`eval` / `exec` / `pickle` sur entrée utilisateur. Scraping Scholar et IEEE désactivés par défaut (opt-in via variable d'environnement).
+- **Sûr par défaut** : transport HTTP en HTTPS uniquement, limitation de débit par source (token bucket), `defusedxml` pour tout payload XML, chemins d'export sécurisés contre path-traversal, pas d'`eval` / `exec` / `pickle` sur entrée utilisateur. Scholar et IEEE sont actifs par défaut via Chrome visible, opt-out via `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1` et `THESISAGENTS_DISABLE_IEEE_SCRAPING=1`.
 
 ## Démarrage rapide
 
@@ -154,10 +154,11 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--enrich` | Télécharge le PDF + résumé Anthropic. Nécessite `ANTHROPIC_API_KEY` et l'extra `[intelligence]`. |
 | `--lightweight` | Force le rendu léger même si `ANTHROPIC_API_KEY` est définie. |
 | `--llm-model` | Surcharge le modèle par défaut `claude-opus-4-7`. |
-| `--all-venues` | Désactive la liste blanche (default conserve les lieux CS phares + Nature / Science / PNAS / CACM / LNCS). |
+| `--top-tier-only` | Restreint les résultats à arXiv + une liste blanche organisée de venues CS phares (S&P, CCS, NDSS, USENIX Security, NeurIPS, ICML, ICSE, …). Désactivé par défaut. |
 | `--paywall-threshold` | Fraction de résultats sous paywall déclenchant la confirmation. Default 0.30. |
 | `--yes` | Saute l'invite paywall. |
 | `--max-slides` | Plafond de diapos par article (default 25 ; 0 pour illimité). |
+| `--dark-mode` | Rend le pptx avec un fond sombre (`#12151B`) + texte quasi blanc (`#E5E7EB`). Le défaut est le deck clair à bande navy. |
 | `--quiet` | Supprime l'affichage par article. |
 
 ### Variables d'environnement
@@ -170,13 +171,13 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_NCBI_API_KEY` | PubMed | Élève la limite anonyme de NCBI (3/s) à 10/s. Optionnel. |
 | `THESISAGENTS_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Place les requêtes dans le pool poli de Crossref. |
 | `THESISAGENTS_IEEE_API_KEY` | IEEE (voie API) | API officielle IEEE Xplore ; expose `pdf_url` pour les articles couverts. |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE (voie scraping) | `=1` active le scraping. Inutile quand la clé API est définie. |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE est actif par défaut via Chrome visible.** `=1` désactive (par ex. CI sans Chrome). `THESISAGENTS_IEEE_API_KEY` bascule sur l'API officielle Xplore. |
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Jeton abonné Crossref Plus (en-tête Bearer). Optionnel. |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer | Obligatoire ; clé gratuite sur <https://dev.springernature.com/>. Le plugin est silencieusement ignoré sinon. |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
 | `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` active le scraping. Désactivé par défaut — les CGU de Scholar interdisent le scraping. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar est actif par défaut via Chrome visible.** `=1` désactive (les CGU de Google interdisent l'accès automatisé, actif par défaut pour la couverture, opt-out pour éviter captcha / blocage IP). |
 | `THESISAGENTS_PDF_COOKIES_FILE` | Téléchargeur PDF | `cookies.txt` au format Netscape. Désactivé par défaut. Utilisez uniquement avec des éditeurs pour lesquels vous avez des droits institutionnels. |
 | `THESISAGENTS_LOG_LEVEL` | logger | `INFO` par défaut ; `DEBUG` pour traces verbeuses. |
 
@@ -214,6 +215,7 @@ Outils :
 | `download_pdfs` | Téléchargement en lot des PDFs d'une liste d'articles vers `{out_dir}/pdfs/`. Renvoie les résultats par article, indexés par clé BibTeX. |
 | `export` | Liste d'articles + formats → écrit `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepte un champ `summary` par article pour le schéma style thèse enrichi et `max_slides_per_paper` (default 25). |
 | `pptx_inspect` | Lit la structure slides / shapes d'une présentation existante. |
+| `pptx_review` | Audite une présentation en un appel : overflow + contrats de couleur + complétude des sections `paper_rule`. Détecte automatiquement la langue du deck, aussi exposé par la CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Remplace `title` / `body` / `meta` (par nom de shape) ou des shapes arbitraires par index. |
 | `pptx_delete_slide` | Supprime une diapo et sa part relationship. |
 | `pptx_reorder_slides` | Réordonne les diapos via `sldIdLst`. |
@@ -242,13 +244,14 @@ ThesisAgents/
 │   ├── fetchers/                    # client async HTTPS uniquement, rate-limit token bucket
 │   ├── exporters/                   # pptx (style thèse) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # téléchargement PDF + résumeur Anthropic ([intelligence] extra)
-│   ├── mcp/                         # serveur FastMCP (12 outils)
+│   ├── evaluation/                  # benchmark hors-ligne de qualité de recherche (docs/search-quality.md)
+│   ├── mcp/                         # serveur FastMCP (13 outils)
+│   ├── sources/<name>/              # dossiers plugin : arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # CLI argparse
 │   └── __main__.py
-├── sources/                         # dossiers plugin : arxiv, semantic_scholar,
-│                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # suite pytest + fixtures enregistrés (pas de HTTP live)
 ├── docs/                            # Sphinx (14 arbres de langues)
 ├── scripts/                         # scripts regen uniques

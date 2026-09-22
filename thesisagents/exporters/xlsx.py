@@ -8,6 +8,7 @@ Excel / Numbers / LibreOffice.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -19,6 +20,29 @@ from thesisagents.core.constants import EXPORT_XLSX
 from thesisagents.core.exceptions import ExportError
 from thesisagents.core.models import ExportOptions, Paper, PaperCollection
 from thesisagents.exporters.base import Exporter
+
+#: Characters the XLSX format forbids inside a cell. OOXML allows only tab,
+#: newline and carriage return out of the C0 range, plus it rejects DEL and the
+#: C1 range; openpyxl enforces this by raising ``IllegalCharacterError``.
+_ILLEGAL_XLSX_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
+
+
+def _sheet_safe(value: str | None) -> str:
+    """Strip characters Excel refuses to store in a cell.
+
+    Why: scraped abstracts and titles routinely carry form feeds (``\\x0c``,
+    the PDF page break that survives text extraction) and other C0 control
+    characters. openpyxl raises ``IllegalCharacterError`` on the first one, and
+    because the workbook is built in a single pass that aborted the ENTIRE
+    ``.xlsx`` export — a whole search's spreadsheet lost to one stray byte in
+    one abstract. Dropping the character costs nothing: it was never visible.
+
+    Example: ``_sheet_safe("bad \\x0c form feed")`` -> ``"bad  form feed"``.
+    """
+    if not value:
+        return ""
+    return _ILLEGAL_XLSX_CHARS.sub("", value)
+
 
 _COLUMNS: tuple[tuple[str, int], ...] = (
     ("#", 4),
@@ -72,7 +96,7 @@ class XlsxExporter(Exporter):
     def _write_meta_sheet(workbook: Workbook, collection: PaperCollection) -> None:
         sheet = workbook.create_sheet("Query")
         rows = [
-            ("Query keywords", collection.query.keywords),
+            ("Query keywords", _sheet_safe(collection.query.keywords)),
             ("Sources", ", ".join(collection.query.sources)),
             ("Max per source", collection.query.max_results),
             ("Year from", collection.query.year_from or ""),
@@ -105,18 +129,23 @@ def _write_paper_row(
     sheet, row: int, index: int, paper: Paper, *, include_abstract: bool
 ) -> None:
     sheet.cell(row=row, column=1, value=index)
-    sheet.cell(row=row, column=2, value=paper.title)
-    sheet.cell(row=row, column=3, value=", ".join(paper.authors))
+    sheet.cell(row=row, column=2, value=_sheet_safe(paper.title))
+    sheet.cell(row=row, column=3, value=_sheet_safe(", ".join(paper.authors)))
     sheet.cell(row=row, column=4, value=paper.year)
-    sheet.cell(row=row, column=5, value=paper.venue or "")
-    sheet.cell(row=row, column=6, value=paper.source)
-    sheet.cell(row=row, column=7, value=paper.doi or "")
-    _write_hyperlink(sheet.cell(row=row, column=8, value=paper.url), paper.url)
+    sheet.cell(row=row, column=5, value=_sheet_safe(paper.venue))
+    sheet.cell(row=row, column=6, value=_sheet_safe(paper.source))
+    sheet.cell(row=row, column=7, value=_sheet_safe(paper.doi))
+    _write_hyperlink(
+        sheet.cell(row=row, column=8, value=_sheet_safe(paper.url)), paper.url
+    )
     if paper.pdf_url:
-        _write_hyperlink(sheet.cell(row=row, column=9, value=paper.pdf_url), paper.pdf_url)
+        _write_hyperlink(
+            sheet.cell(row=row, column=9, value=_sheet_safe(paper.pdf_url)),
+            paper.pdf_url,
+        )
     sheet.cell(row=row, column=10, value=paper.citation_count)
     if include_abstract:
-        sheet.cell(row=row, column=11, value=paper.abstract)
+        sheet.cell(row=row, column=11, value=_sheet_safe(paper.abstract))
     # Wrap the long-text columns.
     wrap = Alignment(wrap_text=True, vertical="top")
     for col in (2, 3, 11):

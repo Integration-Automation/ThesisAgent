@@ -23,7 +23,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
                 [--lang LANG]
                 [--enrich] [--lightweight]
                 [--llm-model MODEL]
-                [--all-venues]
+                [--top-tier-only]
                 [--paywall-threshold FLOAT] [--yes]
                 [--max-slides N] [--dark-mode]
                 [--quiet]

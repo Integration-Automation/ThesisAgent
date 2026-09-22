@@ -201,3 +201,36 @@ def test_review_json_output(tmp_path, capsys):
     }
     assert entry["ok"] is True
     assert code == 0
+
+
+def test_review_deck_reports_unreadable_file_cleanly(tmp_path):
+    """A missing / non-OPC path raises ExportError, not PackageNotFoundError.
+
+    ``review_deck`` is the body of both the ``review`` CLI subcommand and the
+    MCP ``pptx_review`` tool, and neither translates library exceptions — a
+    mistyped deck path used to print a python-pptx traceback at the user.
+    """
+    import pytest
+
+    from thesisagents.core.exceptions import ExportError
+    from thesisagents.exporters.review import review_deck as _review
+
+    with pytest.raises(ExportError, match="not a readable .pptx file"):
+        _review(tmp_path / "does-not-exist.pptx")
+
+    corrupt = tmp_path / "corrupt.pptx"
+    corrupt.write_bytes(b"this is not a PowerPoint package")
+    with pytest.raises(ExportError, match="not a readable .pptx file"):
+        _review(corrupt)
+
+
+def test_review_main_keeps_going_after_one_unreadable_deck(tmp_path, capsys):
+    """`review a.pptx missing.pptx` must still report on the deck that opened."""
+    from thesisagents.exporters import review as review_mod
+
+    good = _export(tmp_path, _FULL_THESIS_SUMMARY, stem="gooddeck")
+    code = review_mod.main([str(good), str(tmp_path / "missing.pptx")])
+    captured = capsys.readouterr()
+    assert "deck review" in captured.out          # the good deck still reported
+    assert "not a readable .pptx file" in captured.err
+    assert code == 1                              # the unreadable deck counted

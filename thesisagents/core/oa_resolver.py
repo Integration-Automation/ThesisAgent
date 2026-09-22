@@ -95,9 +95,28 @@ async def resolve_oa_pdfs(collection: PaperCollection) -> PaperCollection:
     )
 
     semaphore = asyncio.Semaphore(_CONCURRENCY)
-    resolved = await asyncio.gather(
-        *(_resolve_one(paper, semaphore) for paper in collection.papers)
+    # ``return_exceptions=True`` + the fall-back loop below is what makes the
+    # module docstring's "the resolver never raises" promise hold. Each lookup
+    # already swallows its own network errors, but the resolver runs at the very
+    # end of a search that has already spent minutes on HTTP — so an unforeseen
+    # error on ONE paper must not discard the whole ranked collection. Any
+    # failed slot falls back to the unresolved paper (it simply keeps
+    # ``pdf_url=None``, exactly as if no OA mirror had been found).
+    outcomes = await asyncio.gather(
+        *(_resolve_one(paper, semaphore) for paper in collection.papers),
+        return_exceptions=True,
     )
+    resolved: list[Paper] = []
+    for paper, outcome in zip(collection.papers, outcomes, strict=True):
+        if isinstance(outcome, BaseException):
+            _LOG.warning(
+                "OA resolver: lookup failed for %s (%s: %s); keeping the "
+                "paper without a pdf_url",
+                paper.source_id, type(outcome).__name__, outcome,
+            )
+            resolved.append(paper)
+        else:
+            resolved.append(outcome)
     found = sum(
         1
         for old, new in zip(collection.papers, resolved, strict=True)

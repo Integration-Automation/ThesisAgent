@@ -48,7 +48,7 @@ MCP 6 단계 워크플로
    5. (각 PDF 읽고 구조화된 summary dict 생성)
    6. export(papers=[{...paper, "summary": {...}}], language="ko", ...)
 
-12 개 MCP 도구의 완전한 참조: :doc:`/mcp`.
+13 개 MCP 도구의 완전한 참조: :doc:`/mcp`.
 
 필수: 인도 전 URL / DOI 검증
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -92,8 +92,10 @@ xlsx 는 ``exports/<run>/<slug>-<timestamp>.xlsx`` 에 작성되며 열 7 = DOI,
 * "Claude", "Claude Code", "AI-generated", "GPT", "Copilot" 등
   AI 도구/모델 이름을 커밋, PR, 코드 주석, 문서에 언급 금지.
 
-예제: ``scripts/regen_llm_security_batch.py`` (en, 8 편) 와
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw).
+예제: ``scripts/regen_fang2026.py`` 에 바로 이 절차대로 손으로 작성한
+리치 요약이 들어 있습니다(단일 논문, rich-tier, zh-tw). 다중 논문
+배치도 같은 형태로, ``PaperCollection`` 튜플에 논문마다 항목 하나씩
+넣으면 됩니다.
 
 ----
 
@@ -144,7 +146,7 @@ CLI 플래그 전체 표: :doc:`/cli`.
 ---------
 
 * CLI 플래그 + 환경 변수: :doc:`/cli`
-* 12 개 MCP 서버 도구: :doc:`/mcp`
+* 13 개 MCP 서버 도구: :doc:`/mcp`
 * PPTX 편집 툴킷: :doc:`/pptx_editing`
 * repo 루트의 ``readmes/README.ko.md`` 에 기능 전체 목록이 있습니다.
 * 깊이 있는 기술 참조 (플러그인 아키텍처, 보안 정책, Definition of

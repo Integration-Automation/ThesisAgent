@@ -50,7 +50,7 @@ Quy trình MCP 6 bước
    5. (bạn đọc mỗi PDF và tạo dict tóm tắt có cấu trúc)
    6. export(papers=[{...paper, "summary": {...}}], language="vi", ...)
 
-12 công cụ MCP đầy đủ: :doc:`/mcp`.
+13 công cụ MCP đầy đủ: :doc:`/mcp`.
 
 Bắt buộc: xác minh URL / DOI trước khi giao
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -94,8 +94,10 @@ Cấm
 * Đừng đề cập "Claude", "Claude Code", "AI-generated", "GPT", "Copilot"
   hoặc tên công cụ/mô hình AI nào trong commit, PR, code hay tài liệu.
 
-Ví dụ: ``scripts/regen_llm_security_batch.py`` (en, 8 bài) và
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw).
+Ví dụ thực tế: ``scripts/regen_fang2026.py`` chứa một bản tóm tắt
+phong phú được viết tay đúng theo cách này (một bài, rich-tier, zh-tw).
+Một lô nhiều bài theo cùng dạng, mỗi bài một mục trong tuple
+``PaperCollection``.
 
 ----
 
@@ -146,7 +148,7 @@ Tìm hiểu thêm
 -------------
 
 * Cờ CLI và biến môi trường: :doc:`/cli`
-* 12 công cụ máy chủ MCP: :doc:`/mcp`
+* 13 công cụ máy chủ MCP: :doc:`/mcp`
 * Toolkit chỉnh sửa PPTX: :doc:`/pptx_editing`
 * Tệp ``readmes/README.vi.md`` ở gốc repo có danh sách đầy đủ tính năng.
 * Tham chiếu kỹ thuật sâu (kiến trúc plugin, chính sách bảo mật,

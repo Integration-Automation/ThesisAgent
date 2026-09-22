@@ -50,7 +50,7 @@ Alur MCP 6 langkah
    5. (Anda membaca tiap PDF dan menghasilkan dict ringkasan terstruktur)
    6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 
-12 tool MCP lengkap: :doc:`/mcp`.
+13 tool MCP lengkap: :doc:`/mcp`.
 
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -95,8 +95,10 @@ Larangan
   "Copilot", atau nama tool/model AI lain di commit, PR, kode, atau
   dokumentasi.
 
-Contoh: ``scripts/regen_llm_security_batch.py`` (en, 8 makalah) dan
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw).
+Contoh nyata: ``scripts/regen_fang2026.py`` memuat satu ringkasan
+diperkaya yang ditulis tangan persis dengan cara ini (satu makalah,
+rich-tier, zh-tw). Batch multi-makalah mengikuti bentuk yang sama,
+dengan satu entri per makalah di tuple ``PaperCollection``.
 
 ----
 
@@ -147,7 +149,7 @@ Bacaan lebih lanjut
 -------------------
 
 * Flag CLI dan variabel lingkungan: :doc:`/cli`
-* 12 tool server MCP: :doc:`/mcp`
+* 13 tool server MCP: :doc:`/mcp`
 * Toolkit edit PPTX: :doc:`/pptx_editing`
 * Berkas ``readmes/README.id.md`` di akar repo berisi daftar fitur lengkap.
 * Referensi teknis mendalam (arsitektur plugin, kebijakan keamanan,

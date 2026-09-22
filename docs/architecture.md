@@ -36,7 +36,7 @@ a recorded fixture (zero live HTTP in the test suite).
 │  openalex, pubmed, …     │  markdown · json · pptx_edit     │
 ├──────────────────────────┴──────────────────────────────────┤
 │  Infra                                                      │
-│  HTTPS-only client · token-bucket rate limit · cache · i18n │
+│  HTTPS-only client · token-bucket rate limit · i18n         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -54,16 +54,16 @@ ThesisAgents/
 │   ├── fetchers/                   # HTTPS-only http client + Fetcher base
 │   ├── exporters/                  # pptx / xlsx / bib / md / json / ris / csv / csl + pptx_edit + i18n
 │   ├── intelligence/               # PDF + Anthropic summariser ([intelligence] extra)
-│   ├── mcp/                        # FastMCP server registering 12 tools ([mcp] extra)
+│   ├── evaluation/                 # offline search-quality benchmark (see docs/search-quality.md)
+│   ├── mcp/                        # FastMCP server registering 13 tools ([mcp] extra)
 │   ├── gui/                        # PySide6 desktop UI ([gui] extra)
 │   ├── utils/                      # logging, path safety, async helpers
 │   ├── cli.py                      # argparse CLI
 │   └── __main__.py                 # `python -m thesisagents`
-├── sources/<name>/                 # per-source plugins (arxiv, pubmed, …)
+├── thesisagents/sources/<name>/    # per-source plugins (arxiv, pubmed, …)
 │   ├── __init__.py                 # exports `fetcher_class`
-│   ├── fetcher.py                  # Fetcher subclass
-│   ├── parser.py                   # payload → Paper
-│   └── config.py                   # RateLimit + endpoint URL
+│   ├── fetcher.py                  # Fetcher subclass + RateLimit + endpoint URL
+│   └── parser.py                   # payload → Paper
 ├── tests/                          # pytest suite + recorded fixtures
 ├── docs/                           # Sphinx (en + 13 language stubs)
 ├── scripts/                        # regen / fixture-record helpers
@@ -72,7 +72,7 @@ ThesisAgents/
 
 ## Core vs source plugins
 
-The split between `thesisagents/` and `sources/<name>/` is
+The split between core modules and `thesisagents/sources/<name>/` is
 **dependency surface and failure isolation**, not "anything
 source-related is a plugin."
 
@@ -118,7 +118,7 @@ came back.
                   │
                   ▼
             ┌──────────┐
-            │ dedupe   │  by DOI → arXiv ID → SHA-256(title+1st-author+year)
+            │ dedupe   │  group on ANY of: DOI / arXiv ID / SHA-256(title+1st-author+year)
             └──────────┘
                   │
                   ▼
@@ -179,21 +179,34 @@ Disabled per-run via the CLI's `--no-oa-resolve` flag or
 
 ### Dedup
 
-`thesisagents.core.dedup` is a three-pass merge:
+`thesisagents.core.dedup` is a single pass that groups on *every*
+identity a paper carries, then unions the fields:
 
-1. Strong-ID pass — papers sharing a DOI or arXiv ID are merged
-   into one, keeping the most complete record (longest abstract,
-   most authors, citation count from the source that has it).
-2. Title pass — among papers without strong IDs, normalise the
-   title (NFKC + lowercase + strip punctuation), then
-   SHA-256-hash `title + first_author + year`. Identical hashes
-   are merged.
+1. Identity keys — `Paper.identity_keys()` returns up to three keys
+   per record: `doi:<lowercased>`, `arxiv:<version-stripped>`, and
+   always a fuzzy `hash:<sha256(canonical_title + first_author_surname
+   + year)>`. Two papers sharing **any** key are the same paper, so a
+   DOI-less ACM record and a DOI-carrying OpenAlex record of the same
+   work still meet. A record arriving later can also join two earlier
+   groups transitively (an arXiv record and a publisher record united
+   by a third that carries both IDs).
+2. Conflict guard — a *fuzzy* match alone never merges two records
+   whose DOIs (or arXiv IDs) disagree; same title + author + year with
+   two DOIs is how a workshop paper and its extended journal version
+   look. A blank / punctuation-only title is likewise barred from
+   linking, since `_canon_title` collapses every such title to the same
+   hash. An exact DOI match is unaffected by the guard.
 3. Field union — for merged duplicates, every optional field
-   ( `doi`, `arxiv_id`, `pdf_url`, `venue`, `citation_count`,
-   `abstract`) is taken from whichever source had it.
+   (`doi`, `arxiv_id`, `pdf_url`, `venue`, `citation_count`, `year`,
+   `abstract`, `authors`, `summary`) is taken from whichever source had
+   it, and each backfill is recorded in `Paper.provenance`. The
+   canonical record's `source` / `source_id` / `url` / `title` never
+   change, so links stay stable across runs.
 
-The dedup pass is O(N) — the bottleneck is hashing, not the
-field union step.
+The pass is O(N) in the common case; regrouping only walks the key
+index when a record unites two existing groups, which is rare.
+Measured at the full pipeline load (15 sources × 200 results = 3000
+papers, heavy overlap) it completes in under 50 ms.
 
 ### Ranking
 
@@ -254,7 +267,7 @@ library APIs return coroutines.
 
 ### MCP server (`thesisagents.mcp`)
 
-FastMCP registers twelve tools. The agent calls them in sequence
+FastMCP registers thirteen tools. The agent calls them in sequence
 (`list_sources` → `search` → `fetch_pdf_text` per paper →
 `export`); the server is stateless across tool calls so the
 agent's context is the only place state lives. See [MCP doc](mcp.md).
@@ -312,7 +325,7 @@ already closed (test-suite isolation requirement).
 ### Rate limiting
 
 Token bucket in `thesisagents.fetchers.rate_limit`. Each source
-declares its bucket parameters in `sources/<name>/config.py`:
+declares its bucket parameters in its fetcher module:
 
 ```python
 RATE_LIMIT = RateLimit(
@@ -326,12 +339,11 @@ The bucket is a decorator on the HTTP client — **retries also go
 through it**. There is no way to bypass the bucket without
 deleting code from the source plugin.
 
-### Cache
+### Request reuse
 
-`thesisagents.core.cache` provides an SHA-256-keyed disk cache
-for raw responses. Default TTL is 24h; override per-source if
-needed. Tests redirect the cache root to `tmp_path` so they never
-touch the user's cache.
+The shared HTTP client pools connections per source. ThesisAgents does
+not currently persist API responses, so repeated searches contact the
+configured sources again.
 
 ### i18n
 
@@ -348,17 +360,14 @@ Adding a new key requires filling in all 14 languages.
 
 ## Source plugin contract
 
-A source plugin lives at `sources/<name>/` and must expose:
+A source plugin lives at `thesisagents/sources/<name>/` and must expose:
 
-- `sources/<name>/__init__.py` setting `fetcher_class = FetcherClass`.
-- `sources/<name>/fetcher.py` with a `Fetcher` subclass.
-- `sources/<name>/parser.py` converting raw payloads → `Paper`.
-- `sources/<name>/config.py` declaring the `RateLimit`.
+- `thesisagents/sources/<name>/__init__.py` setting `fetcher_class = FetcherClass`.
+- `thesisagents/sources/<name>/fetcher.py` with a `Fetcher` subclass and rate limit.
+- `thesisagents/sources/<name>/parser.py` converting raw payloads to `Paper`.
 
-The pipeline finds plugins by injecting `sources/` into
-`sys.path` at startup (`thesisagents.app.source_manager`). At
-fetch time it imports `<name>`, reads `fetcher_class`, and
-instantiates it with the shared HTTP client + cache.
+The pipeline imports `thesisagents.sources.<name>`, reads
+`fetcher_class`, and instantiates it with the shared HTTP client.
 
 Full authoring guide: [Source plugin authoring](source_plugins.md).
 
@@ -419,7 +428,7 @@ near-white text inside a near-white-filled callout), and
 | **Frozen dataclasses** | Trivially thread/coroutine-safe; "edits" create new instances via `dataclasses.replace`. |
 | **Recorded fixtures only** | Tests run offline, deterministically, in <30 s. Live HTTP would make CI flaky and rate-limited. |
 | **Two i18n tables (UI vs deck)** | Lets the UI ship with fewer translations than the deck if needed; today both cover all 14 languages, but the split keeps optionality. |
-| **No global mutable state** | Singletons (HTTP clients, cache handle, rate-limit buckets) are encapsulated in module-level classes. Streamlit `st.session_state` is the only mutable per-session state, and it's per-session by design. |
+| **Controlled global state** | HTTP clients and rate-limit buckets are encapsulated in module-level registries and reset by test fixtures. |
 
 ## Performance notes
 
@@ -429,9 +438,10 @@ near-white text inside a near-white-filled callout), and
 - The `pptx` exporter is the single biggest CPU consumer — about
   200 ms per paper for the thesis-style tier. Lightweight tier is
   10× faster.
-- Dedup is O(N) on the number of papers; with `--max 200` × 11
-  sources that's ~2200 papers max, and dedup still finishes in
-  under 50 ms.
+- Dedup is O(N) on the number of papers in the common case; with
+  `--max 200` × 15 sources that's 3000 papers max, and dedup still
+  finishes in under 50 ms (measured with heavy cross-source overlap,
+  the case that exercises the group-merge path).
 - The `[intelligence]` extra's Anthropic API call is the dominant
   cost when `--enrich` is on — typically 5–15 s per paper. The
   pipeline batches these with a per-source semaphore.

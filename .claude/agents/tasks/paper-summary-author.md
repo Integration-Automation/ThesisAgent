@@ -26,20 +26,22 @@ The xlsx has columns `# | Title | Authors | Year | Source | Indexed via | DOI | 
 **VPN gate (applies to SEARCH, not just PDF download).** Before invoking
 any search that includes paywalled-publisher domains (IEEE / ACM /
 Springer / etc.) — including the parent agent's
-`python -m thesisagents -q ...` or `scripts/llm_driven_search.py` —
+`python -m thesisagents -q ...` or the MCP `search` tool —
 confirm the user's VPN / institutional access status. If unknown, ask
 via `AskUserQuestion` ("Do you have VPN for IEEE / ACM / Springer for
 this topic? Affects whether I include `ieee` and whether per-paper
 PDF download will work."). Without VPN: IEEE returns abstract-only /
 403 for the PDF stage; the run produces metadata but no readable
-papers. When the user confirms NO VPN, restrict the search to
-`arxiv,openalex,pubmed,crossref,dblp,openaire,scholar` — skip ONLY
+papers. When the user confirms NO VPN, pass `--source` with every
+default source except `ieee`
+(`arxiv,semantic_scholar,openalex,pubmed,acm,dblp,crossref,openaire,springer,scholar,europepmc,doaj,hal,core`)
+— skip ONLY
 `ieee`. Google Scholar is publicly accessible and stays in the mix
 even without VPN (Chrome still boots for it because of captcha
 resilience, but the SERP itself works).
 
-Even before you touch a PDF: if the user's run included IEEE (default on),
-Scholar (opt-in), or any paywalled publisher CDN, the canonical path is
+Even before you touch a PDF: if the user's run included IEEE (default-on),
+Scholar (default-on), or any paywalled publisher CDN, the canonical path is
 **visible Chrome via WebRunner**, never direct httpx. The IEEE plugin's
 `_scrape_search` tries WebRunner first; the httpx `POST /rest/search`
 branch is only a safety net for machines without Chrome. If you reviewed
@@ -67,24 +69,20 @@ driver.get("https://ieeexplore.ieee.org/document/<arnumber>")
 driver.quit()
 ```
 
-Reference scripts live at `scripts/llm_driven_search.py` (search → dump HTML/JSON) and `scripts/llm_parse_results.py` (parse → dedup → rank → export). They are the canonical pattern: capture stage and parse stage are split because a Selenium session dies on `driver.quit()`, so the LLM cannot keep state across separate Bash invocations — instead the capture writes artefacts to disk, the LLM reads them with the Read tool, decides next steps, then runs the next capture.
+The old `scripts/llm_*.py` reference scripts were retired once the pipeline's own WebRunner routing and the MCP `search` / `download_pdfs` tools covered their flow, but their canonical pattern still binds any capture script you hand-write: split the capture stage from the parse stage, because a Selenium session dies on `driver.quit()` and the LLM cannot keep state across separate Bash invocations — the capture writes artefacts (HTML / JSON / PDFs) to disk, you read them with the Read tool, decide next steps, then run the next capture.
 
 ### Concrete procedure for a paywalled PDF
 
 1. **Confirm VPN access.** Ask the user before booting Chrome — wasting a Chrome boot per paper on the off-chance it works is rude.
 2. **Read the URL from xlsx column 8** (NEVER guess — see the URL-from-xlsx rule below).
-3. **Prefer the batch driver `scripts/llm_download_pdfs.py`** when more than one paper needs a PDF:
-   ```
-   python -m scripts.llm_download_pdfs <path/to/aggregate.xlsx>
-   ```
-   It reads the xlsx, groups rows by publisher (`ieeexplore.ieee.org` → IEEE, `dl.acm.org` → ACM, `link.springer.com` → Springer), opens ONE Chrome session, and walks each paper in turn. Cookies / SSO solved once, no per-paper Chrome boot. Idempotent: papers whose canonical `<id>.pdf` already exists and validates skip immediately (`[ieee] cached 11005752.pdf`). Exit 0 when every paper landed, 1 when at least one failed. Verified 7/7 on a `test-time compute scaling` run (6 IEEE + 1 ACM, ~5 min wall time, 10.8 MB total).
-4. **Per-publisher single-paper CLIs** when iterating on selectors / debugging one entry:
-   - `python -m scripts.llm_download_ieee_pdf <arnumber>` — IEEE Xplore via `/document/<arnumber>` → `/stamp/stamp.jsp` → iframe `src` (`/stampPDF/getPDF.jsp`) when stamp.jsp wraps the PDF.
-   - `python -m scripts.llm_download_acm_pdf <doi>` — ACM via `/doi/<doi>` (sets cookies) → `/doi/pdf/<doi>` (streams directly with `plugins.always_open_pdf_externally=True`).
-   - `python -m scripts.llm_download_springer_pdf <doi>` — Springer via `/article/<doi>` (falls back to `/chapter/<doi>` on 404) → `/content/pdf/<doi>.pdf`.
-5. **For publishers not in the dispatcher** (Wiley, OUP, Nature, Science, etc.), write a one-off helper in the shape of `scripts/_pdf_downloaders.py::download_*`. The pattern is fixed: `_clear_pending` → `_snapshot_pdfs` baseline → `driver.get(landing)` → `wait_for_captcha_solved` → `driver.get(pdf_url)` (or click the PDF link) → `_wait_for_new_pdf(baseline)` → `_finalise(canonical_name)`. Selectors per publisher: Wiley = `a.PdfLink`, Nature = `a[data-track-action="download pdf"]`, Science = `a[data-track-action="download pdf"]`. Dump `driver.page_source` to disk + Read tool when the selector is unknown.
-6. **Move the resulting PDF** to `exports/<run>/pdfs/<key>.pdf` (the canonical path the rest of this workflow expects). The downloader scratch dir is `exports/_llm_scratch/pdfs/<arnumber-or-doi>.pdf`.
-7. **Validate**: file exists, non-zero, starts with `%PDF-`, AND the tail contains `%%EOF`. The shared helpers (`_pdf_downloaders.py::_is_valid_pdf`) do this; if you write your own downloader, reuse them. Common failure modes: stamp.jsp returns an abstract / "Sign in" HTML page; the file in the download dir is HTML masquerading as `.pdf`. Transient IEEE 404 on `/stampPDF/getPDF.jsp` is also possible — re-run the single-paper CLI for that arnumber later; what failed once often succeeds on retry.
+3. **Prefer the pipeline's own downloader** for papers that have a `pdf_url`: the CLI (`--download-pdf`, default on) and the MCP `download_pdfs` tool both wrap `thesisagents.core.pdf_download`, which routes paywalled-publisher URLs through **visible Chrome via WebRunner** automatically (`fetchers/webrunner_pdf.py` decides per URL) and only uses httpx for open hosts. One Chrome session serves the whole batch — cookies / SSO solved once, no per-paper Chrome boot — and every paper is reported per-`bibtex_key()` with a skip/failure reason you can act on.
+4. **Hand-drive Chrome via Bash + `make_driver()`** for papers with NO `pdf_url`, or whose pipeline download failed. Write a one-off capture script under `scripts/`; the pattern is fixed: snapshot the download dir as a baseline → `driver.get(landing)` → wait for the user to solve captcha / SSO in the visible window → `driver.get(pdf_url)` or click the PDF link → wait for a NEW pdf to appear vs the baseline → rename to the canonical name. Known per-publisher routes:
+   - IEEE — `/document/<arnumber>` → `/stamp/stamp.jsp` → iframe `src` (`/stampPDF/getPDF.jsp`) when stamp.jsp wraps the PDF.
+   - ACM — `/doi/<doi>` (sets cookies) → `/doi/pdf/<doi>` (streams directly with Chrome pref `plugins.always_open_pdf_externally=True`).
+   - Springer — `/article/<doi>` (falls back to `/chapter/<doi>` on 404) → `/content/pdf/<doi>.pdf`.
+   - Wiley = `a.PdfLink`, Nature / Science = `a[data-track-action="download pdf"]`. Dump `driver.page_source` to disk + Read tool when the selector is unknown.
+5. **Move the resulting PDF** to `exports/<run>/pdfs/<key>.pdf` (the canonical path the rest of this workflow expects), whatever scratch location your capture script downloaded it to.
+6. **Validate**: file exists, non-zero, starts with `%PDF-`, AND the tail contains `%%EOF` — bake this check into any capture script you write. Common failure modes: stamp.jsp returns an abstract / "Sign in" HTML page; the file in the download dir is HTML masquerading as `.pdf`. Transient IEEE 404 on `/stampPDF/getPDF.jsp` is also possible — retry that arnumber later; what failed once often succeeds on retry.
 
 ### Persistent profile for VPN / SSO sessions
 
@@ -221,7 +219,7 @@ The fields you write here are what `slide-deck-rules` and `paper_rule` later gov
 
 Delegate two audits before handing the deck back — these are non-negotiable:
 
-- **URL / DOI audit** — `post-author-audit` subagent (or do it inline if not delegating): re-open the xlsx, compare each authored `Paper.url` to the xlsx column 8, fail loud on any mismatch beyond a `v1/v2` version suffix. This caught two fabrications in `regen_llm_security_batch.py` (Wen 2025 wrong AAAI volume; Fang 2026 invented `view/fang2026` path) before they shipped.
+- **URL / DOI audit** — `post-author-audit` subagent (or do it inline if not delegating): re-open the xlsx, compare each authored `Paper.url` to the xlsx column 8, fail loud on any mismatch beyond a `v1/v2` version suffix. This caught two fabrications in an early batch regen script (Wen 2025 wrong AAAI volume; Fang 2026 invented `view/fang2026` path) before they shipped.
 - **Pruning off-topic** — also via `post-author-audit`: delete `pdfs/<key>.pdf` and the lightweight `<key>.pptx` for every paper you classified as off-topic. Keep the aggregate xlsx + bib intact (they're the honest search record).
 
 Run the slide-deck overflow check (`slide-overflow-check` subagent) on each rich `.pptx` before reporting success.
@@ -269,9 +267,9 @@ When the user says "search X and make a [lang] PPT", run the runbook below strai
 
 **Phase 2 — Fallback when CLI refused (no pdf_url path)**
 1. Re-run the CLI with `--no-pdf --no-oa-resolve` added so it skips the PDF gate and writes just the xlsx + bib + lightweight pptx. Yes, `--no-pdf` is normally an anti-pattern, but in this fallback context it is the recovery step. Document why in the run report.
-2. The xlsx is now on disk at `exports/<slug>-<timestamp>.xlsx`. Run `python -m scripts.llm_download_pdfs <xlsx_path>` to drive a single visible Chrome over every row.
-3. The batch dispatcher routes by URL host: `ieeexplore.ieee.org` → IEEE (VPN-gated), `dl.acm.org` → ACM, `link.springer.com` → Springer, `arxiv.org` → arXiv (open), `aclanthology.org` → ACL (open), `proceedings.neurips.cc` → NeurIPS (open), `openreview.net` → OpenReview (open). Opaque hosts (`openalex.org`, `semanticscholar.org`) pivot to DOI prefix (10.1145 → ACM, 10.1007/10.1038 → Springer). IEEE DOIs (10.1109/...) cannot recover an arnumber from the DOI alone — those rows are flagged.
-4. The PDFs land at `exports/_llm_scratch/pdfs/<canonical-name>.pdf`. Move them into the canonical run dir: `cp exports/_llm_scratch/pdfs/*.pdf exports/<run>/pdfs/` (rename to `<bibtex_key>.pdf` where you can).
+2. The xlsx is now on disk at `exports/<slug>-<timestamp>.xlsx`. For each row whose URL column points at a publisher CDN, hand-drive a single visible Chrome session over the batch per "When the CLI couldn't download a paywalled PDF" above — one `make_driver()` session, papers walked sequentially, canonical per-publisher routes as listed there.
+3. Route by URL host: `ieeexplore.ieee.org` → IEEE (VPN-gated), `dl.acm.org` → ACM, `link.springer.com` → Springer, `arxiv.org` → arXiv (open, `https://arxiv.org/pdf/<id>` needs no Chrome), `aclanthology.org` → ACL (open), `proceedings.neurips.cc` → NeurIPS (open), `openreview.net` → OpenReview (open). Opaque hosts (`openalex.org`, `semanticscholar.org`) pivot to DOI prefix (10.1145 → ACM, 10.1007/10.1038 → Springer). IEEE DOIs (10.1109/...) cannot recover an arnumber from the DOI alone — flag those rows.
+4. Move every captured PDF into the canonical run dir as `exports/<run>/pdfs/<bibtex_key>.pdf`.
 
 **Phase 3 — Rich authoring**
 1. For each downloaded PDF in `exports/<run>/pdfs/`, read it (use the Read tool; large PDFs go through `thesisagents.intelligence.pdf._extract_text`).
@@ -294,9 +292,9 @@ When the user says "search X and make a [lang] PPT", run the runbook below strai
 |---|---|
 | VPN status unknown | AskUserQuestion ONCE, then proceed |
 | VPN confirmed, query returns ≥1 paywalled paper | Include `ieee` in source mix; expect Chrome to boot for `/rest/search` |
-| No VPN, query is paywalled-heavy | Restrict to `arxiv,openalex,pubmed,crossref,dblp,openaire,scholar`; proceed |
+| No VPN, query is paywalled-heavy | Restrict to every default source except `ieee`; proceed |
 | CLI hard-errors "no pdf_url" | Re-run with `--no-pdf --no-oa-resolve` → Phase 2 fallback |
-| arXiv source rate-limited / failed | Retry once. If still failing, drop arXiv from `--source` and use `scripts/llm_download_pdfs.py` for the arXiv rows from the xlsx |
+| arXiv source rate-limited / failed | Retry once. If still failing, drop arXiv from `--source` and fetch the arXiv rows from the xlsx directly (`https://arxiv.org/pdf/<id>` — open host, plain httpx is fine) |
 | Single paper fails PDF download | Continue to other papers; lightweight tier for that one, surface in report |
 | Off-topic match (search false positive) | Delete its `pdfs/<key>.pdf` + `<key>.pptx`, keep in xlsx/bib |
 | Large run, 10+ papers | Use the batch downloader (one Chrome session). Don't loop the single-paper CLIs |

@@ -162,9 +162,9 @@ for p in ALL_PAPERS:
 ```
 
 Any `!` line means a fabricated URL — fix it before handing the deck
-to the user. `scripts/regen_llm_security_batch.py` was rebuilt this
-way after two papers (Wen, Fang) were caught with fabricated AAAI
-URLs that pointed nowhere.
+to the user. An early batch regen script (since removed) had to be
+rebuilt this way after two papers (Wen, Fang) were caught with
+fabricated AAAI URLs that pointed nowhere.
 
 ### Pruning irrelevant downloads (mandatory)
 
@@ -199,36 +199,42 @@ over-include than to silently drop a possible match.
 
 ## Sources you can search
 
-Default mix (no env vars required): `arxiv`, `semantic_scholar`, `openalex`,
-`pubmed`, `acm` (Crossref-scoped), `dblp`, `crossref` (unscoped),
-`openaire`. Pulled in automatically when `--source` is not given.
+All fifteen sources sit in the default mix (used when `--source` is not
+given): `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `ieee`, `acm`
+(Crossref-scoped), `dblp`, `crossref` (unscoped), `openaire`, `springer`,
+`scholar`, `europepmc`, `doaj`, `hal`, `core` — see
+`thesisagents.core.constants.DEFAULT_SOURCES`.
 
-Opt-in plugins (need an env var or explicit flag):
-- `ieee` — **on by default**, search and document fetch go through
+Per-source gates (opt-out env vars and API keys):
+- `ieee` — **default-on**, search and document fetch go through
   **visible Chrome via WebRunner** (`thesisagents/sources/ieee/webrunner_backend.py`).
   See "IEEE / paywalled domains use WebRunner" below — this is a hard
   rule, not a perf hint. Set `THESISAGENTS_IEEE_API_KEY` to switch
   to the official Xplore API path; set
   `THESISAGENTS_DISABLE_IEEE_SCRAPING=1` to opt out entirely
   (CI / no-Chrome environments only).
-- `springer` — set `THESISAGENTS_SPRINGER_API_KEY` (free key from
-  https://dev.springernature.com/). Required — the plugin raises
-  `ConfigError` without it.
-- `scholar` — set `THESISAGENTS_ENABLE_SCHOLAR_SCRAPING=1`. Google
-  Scholar ToS forbids scraping; off by default. When on, also goes
-  through WebRunner (visible Chrome), not httpx.
+- `scholar` — **default-on**, also goes through WebRunner (visible
+  Chrome), not httpx, with aggressive ToS-respecting pacing. Set
+  `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1` to opt out.
+- `springer` — needs `THESISAGENTS_SPRINGER_API_KEY` (free key from
+  https://dev.springernature.com/). The plugin raises `ConfigError`
+  without it, so the pipeline silently skips springer until the key
+  is set.
+- `core` — needs `THESISAGENTS_CORE_API_KEY` (free key); silently
+  skipped from the default mix without it, same pattern as springer.
 
-For top-tier-only searches (the default), the filter in
-`thesisagents/core/top_venues.py` accepts arXiv passthrough plus a
-curated whitelist of CS conferences/journals and multidisciplinary
-flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
-`--all-venues` to disable the filter.
+The top-tier venue filter in `thesisagents/core/top_venues.py` (arXiv
+passthrough plus a curated whitelist of CS conferences/journals and
+multidisciplinary flagships — Nature, Science, PNAS, CACM, Lecture
+Notes in CS, …) is **off by default**. Pass `--top-tier-only` to
+enable it.
 
 ## Other rules you will trip on
 
 - **No live network in tests.** Every fetcher test uses recorded
   fixtures under `tests/fixtures/<source>/`. Re-recording is a
-  separate manual step (`scripts/record_fixture.py`).
+  separate manual step — save the upstream response into that
+  directory and commit it; never let a test fetch live.
 - **HTTPS-only.** All outbound HTTP goes through
   `thesisagents/fetchers/http.py::get_client(source)`. The transport
   rejects non-HTTPS requests, including mid-flight redirects. Do not
@@ -253,6 +259,22 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   `FOOTER_GUARD = 7.05"`. Every textbox runs through `_truncate(...)`
   with the per-layout cap. Don't add slides that balance "stacks + tail
   callout" inside a fixed height — split onto their own slides.
+- **Prose punctuation in paper / deck deliverables.** Join clauses with
+  `，` / `,`; never use `；` / `;` or a 破折號 / em-dash (`—`, `——`,
+  `──`, `―`) to break, insert, or join a clause — swap for `，`, or `：`
+  to open an enumeration (English: `, `). CLI flags (`--redact-secrets`),
+  HTML markers (`<!-- … -->`), en-dash ranges (`1–5`, `[1]–[22]`) and the
+  minus sign (`+a −b`) are code / notation and stay. Full rule:
+  `CLAUDE.md` "Prose punctuation in additions" + `.claude/agents/rules/`
+  `paper_rule.md` "破折號 / em-dash banned as a clause break".
+- **Feature claims must match the code; implemented ≠ evaluated.** Before
+  a paper / deck claims「已支援 X」, find X's module + test in the actual
+  repo (manuscripts go stale in both directions — GitLab support had
+  shipped while the thesis §6.4.3 still called it future work), date
+  recent features from git log, and keep the honest boundary
+  (「已實作 + 單元測試,端到端效益未評估」) next to any feature list. Never
+  invent comparison numbers. Full rule: `CLAUDE.md` + `.claude/agents/`
+  `tasks/thesis-deck-author.md` "Conference / second-cut decks".
 - **Commits.** Never add `Co-Authored-By` lines. Never mention any AI
   tool / model name in commit messages, PR titles, PR descriptions,
   code comments, or docs. (See `CLAUDE.md` "Git Commits" for full
@@ -261,6 +283,10 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   `py -m ruff check .`, and
   `py -m bandit -c pyproject.toml -r thesisagents/` before
   it can be committed. New code requires new tests.
+
+## Stage commits, progress.md, docs/updates, architecture.md
+
+Mirror of the `CLAUDE.md` section of the same name: commit at every stage (only the files that stage touched, never `git add -A`, no AI attribution; committing is not pushing); `progress.md` holds open items only; finished work goes to `docs/updates/YYYY-MM.md` with an index and query commands in `docs/updates/README.md`; `architecture.md` is the short architecture overview and is updated in the same commit as any structural change.
 
 ## Where to look for the rest
 
@@ -283,4 +309,5 @@ flagships (Nature, Science, PNAS, CACM, Lecture Notes in CS, …). Pass
   `.claude/agents/tasks/thesis-deck-author.md`.
 - Per-source plugin contract and recorded fixtures: `thesisagents/sources/<name>/`
   + `tests/fixtures/<name>/`.
+- General thesis evidence, academic writing, document versioning, reproducibility, and handoff principles: `.claude/agents/rules/thesis-authoring-lessons.md`.
 - LLM-as-agent flow examples: `scripts/regen_*.py`.

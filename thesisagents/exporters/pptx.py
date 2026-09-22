@@ -357,6 +357,11 @@ class PptxExporter(Exporter):
     def export(self, collection: PaperCollection, options: ExportOptions) -> Path:
         try:
             presentation = self._build(collection, options)
+        except ExportError:
+            # Already a named, actionable error (e.g. _run_slide_builder's
+            # "in summary field 'research_questions'"). Re-wrapping would
+            # nest two "[pptx] render failed:" prefixes and bury the detail.
+            raise
         except Exception as err:
             raise ExportError(self.format, f"render failed: {err}") from err
         out_path = self.resolve_out_path(collection, options)
@@ -506,14 +511,67 @@ def _add_rich_summary_slides(
     _ = index, total  # reserved for future per-slide footers
     for predicate, builder in _build_rich_plan(summary):
         if predicate:
-            builder(prs, layout, paper, summary, ctx)
+            _run_slide_builder(builder, prs, layout, paper, summary, ctx)
     rq_lookup = {rq_id: question for rq_id, question in summary.research_questions}
     for rq in summary.rq_results:
         _add_rq_result_slide(prs, layout, paper, rq, ctx, rq_lookup=rq_lookup)
     for predicate, builder in _build_rich_plan_tail(summary):
         if predicate:
-            builder(prs, layout, paper, summary, ctx)
+            _run_slide_builder(builder, prs, layout, paper, summary, ctx)
     _add_qa_slide(prs, layout, paper, ctx)
+
+
+#: Rich ``PaperSummary`` field each slide builder reads, so a shape error can
+#: name the field the author has to fix rather than the private function.
+_BUILDER_SOURCE_FIELD: dict[str, str] = {
+    "_add_pain_points_slide": "pain_points",
+    "_add_research_question_slide": "research_question",
+    "_add_contributions_detailed_slide": "contributions_detailed / headline_metrics",
+    "_add_technique_table_slide": "technique_table",
+    "_add_literature_table_slide": "literature_table",
+    "_add_system_overview_slide": "system_flow",
+    "_add_figure_slides": "figures",
+    "_add_method_details_slides": "method_sections",
+    "_add_evaluation_slide": "evaluation_sections",
+    "_add_paper_table_slides": "paper_tables",
+    "_add_research_questions_slide": "research_questions",
+    "_add_contribution_summary_slide": "contributions_detailed / core_observation",
+    "_add_limitations_future_slide": "limitations / future_work",
+}
+
+
+def _run_slide_builder(builder, prs, layout, paper, summary, ctx) -> None:
+    """Call one rich-tier slide builder, naming the guilty field if it raises.
+
+    Why: every rich field is a nested tuple shape (``pain_points`` is
+    ``((heading, (bullet, ...)), ...)``; ``research_questions`` is
+    ``((rq_id, question), ...)``), and this project's documented authoring path
+    is a hand-written ``scripts/regen_*.py``. Passing a flat list of strings
+    where a pair was expected surfaced as
+    ``[pptx] render failed: too many values to unpack (expected 2)`` — a true
+    statement that names neither the field nor the paper, leaving the author to
+    bisect a 15-field summary by hand.
+
+    Example message after this wrapper::
+
+        [pptx] render failed for 'chen2026longtext' in summary field
+        'research_questions': too many values to unpack (expected 2)
+
+    Anti-pattern: catching and *skipping* the failed builder — that ships a deck
+    silently missing a section the author wrote.
+    """
+    try:
+        builder(prs, layout, paper, summary, ctx)
+    except (ValueError, TypeError, AttributeError, IndexError, KeyError) as err:
+        field_name = _BUILDER_SOURCE_FIELD.get(
+            getattr(builder, "__name__", ""), "an unknown field"
+        )
+        raise ExportError(
+            EXPORT_PPTX,
+            f"render failed for {paper.bibtex_key()!r} in summary field "
+            f"{field_name!r}: {err}. Check that field's shape against "
+            f"PaperSummary in thesisagents/core/models.py.",
+        ) from err
 
 
 def _add_flat_summary_slides(
@@ -2007,20 +2065,56 @@ def _add_table(
       descriptions in the same row sit on a shared baseline.
     * First column of body rows: bold, slightly emphasised — most tables
       in this project use the leftmost cell as a row label.
+
+    Rows are rectangularised before anything is drawn (see
+    ``_rectangular_rows``) because ragged input used to crash the render.
     """
-    if not rows:
+    grid = _rectangular_rows(rows)
+    if not grid:
         return
-    row_count = len(rows)
-    col_count = len(rows[0])
+    row_count = len(grid)
+    col_count = len(grid[0])
     table_shape = slide.shapes.add_table(
         rows=row_count, cols=col_count, left=left, top=top, width=width, height=height,
     )
     table = table_shape.table
+    # Widths beyond the real column count would IndexError on
+    # ``table.columns[i]``; widths short of it leave python-pptx's own even
+    # split in place, which is the right fallback for an extra column.
     for col_index, w in enumerate(col_widths):
+        if col_index >= col_count:
+            break
         table.columns[col_index].width = w
-    for r, row_values in enumerate(rows):
+    for r, row_values in enumerate(grid):
         for c, value in enumerate(row_values):
             _style_table_cell(table.cell(r, c), str(value), r, c)
+
+
+def _rectangular_rows(rows) -> list[tuple[str, ...]]:
+    """Pad every row out to the widest row's column count.
+
+    Why this guard exists: ``_add_table`` sizes the PowerPoint table from the
+    header row, then writes cell ``(r, c)`` for each supplied value. A body row
+    with MORE cells than the header — trivially easy to produce in a
+    hand-authored ``scripts/regen_*.py``, which is this project's documented
+    LLM-as-agent path for rich ``PaperSummary`` tables — walked off the end of
+    ``table.columns`` and aborted the whole deck with a bare
+    ``IndexError: list index out of range``. Padding keeps every authored cell
+    on the slide and never drops content.
+
+    Example: ``_rectangular_rows([("Technique", "Role"), ("MoE", "routing",
+    "2024")])`` returns a 3-column grid whose header gains one empty cell.
+
+    Anti-pattern: silently truncating the long row to the header's width —
+    that ships a deck missing a column the author wrote, with no error.
+    """
+    grid = [tuple(row) for row in (rows or ()) if row is not None]
+    if not grid:
+        return []
+    width = max(len(row) for row in grid)
+    if width == 0:
+        return []
+    return [row + ("",) * (width - len(row)) for row in grid]
 
 
 def _style_table_cell(cell, value: str, r: int, c: int) -> None:

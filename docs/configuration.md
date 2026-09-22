@@ -46,7 +46,7 @@ each value into `os.environ` before any fetcher initialises.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `THESISAGENTS_LOG_LEVEL` | `INFO` | Set to `DEBUG` for verbose tracing — every HTTP request, every fetcher cache hit/miss, every rate-limit wait. `WARNING` quiets the normal per-paper progress line. |
+| `THESISAGENTS_LOG_LEVEL` | `INFO` | Set to `DEBUG` for verbose HTTP and rate-limit tracing. `WARNING` quiets the normal per-paper progress line. |
 
 ### Qt / GUI
 
@@ -117,14 +117,13 @@ Behaviour you don't see in `--help` because it's hard-coded:
 |---|---|---|
 | Default page size (`--max`) | `25` | `thesisagents.core.constants.DEFAULT_PAGE_SIZE` |
 | Max results per source (`--max` ceiling) | `200` | `thesisagents.core.constants.MAX_RESULTS_PER_SOURCE` |
-| Default cache TTL | `86400` seconds (24 h) | `thesisagents.core.constants.CACHE_TTL_SECONDS` |
 | Default output dir | `./exports` | `thesisagents.cli._DEFAULT_OUT_DIR` |
 | Default export formats (`--query`) | `pptx, xlsx, bibtex` | `thesisagents.cli._DEFAULT_EXPORTS_SEARCH` |
 | Default export formats (`--paper`) | `pptx, bibtex` | `thesisagents.cli._DEFAULT_EXPORTS_SINGLE` |
 | Default slide language (`--lang`) | `en` | `thesisagents.exporters.i18n.DEFAULT_LANGUAGE` |
 | Default max slides per paper | `25` | `thesisagents.cli` (`--max-slides`) |
 | Paywall warning threshold | `0.30` (30%) | `thesisagents.cli.DEFAULT_PAYWALL_THRESHOLD` |
-| Top-tier-only filter | on (off via `--all-venues`) | `thesisagents.cli` |
+| Top-tier-only filter | off (on via `--top-tier-only`) | `thesisagents.cli` |
 
 ## Per-source rate limits
 
@@ -155,19 +154,11 @@ These are enforced by a decorator on the HTTP client; retries on
 429 / 5xx also go through the bucket so a burst can't slip past
 the limit.
 
-## Cache layout
+## Response caching
 
-`thesisagents.core.cache` (used internally by fetchers) keys
-every raw response by `sha256(source + normalised_query + page)`
-and stores under `${XDG_CACHE_HOME:-~/.cache}/thesisagents/`.
-Override via:
-
-| Variable | Default | Effect |
-|---|---|---|
-| `THESISAGENTS_CACHE_DIR` | `~/.cache/thesisagents` (Linux), `~/Library/Caches/thesisagents` (macOS), `%LOCALAPPDATA%\thesisagents\Cache` (Windows) | Override the cache root. The autouse `_isolate_user_paths` test fixture redirects this to `tmp_path` so tests never write to your real cache. |
-
-Clear the cache by deleting the directory; ThesisAgents
-re-creates it on demand.
+ThesisAgents currently pools HTTP connections but does not persist API
+responses between runs. Repeating a search contacts its sources again and
+remains subject to their current rate limits.
 
 ## Suppressing Scholar captchas with a persistent Chrome profile
 

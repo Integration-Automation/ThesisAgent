@@ -1,6 +1,6 @@
-"""Google Scholar plugin (opt-in scraping).
+"""Google Scholar plugin (default-on scraping).
 
-Set ``THESISAGENTS_ENABLE_SCHOLAR_SCRAPING=1`` to enable. Google's terms
+Set ``THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1`` to opt out. Google's terms
 forbid bulk automated scraping; this plugin paces requests aggressively
 (1 every 10s with jitter) and surfaces a clear error when the upstream
 returns the CAPTCHA / sorry page.

@@ -17,6 +17,7 @@ from thesisagents.core.exceptions import (
 )
 from thesisagents.core.models import (
     ExportOptions,
+    FieldProvenance,
     Paper,
     PaperCollection,
     PaperSummary,
@@ -37,6 +38,7 @@ __all__ = [
     "RateLimitError",
     "SourceUnavailableError",
     "ExportOptions",
+    "FieldProvenance",
     "Paper",
     "PaperCollection",
     "PaperSummary",

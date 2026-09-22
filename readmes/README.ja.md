@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="ja", ...)
 ```
 
-12 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 等)の完全な参照は [`docs/mcp.md`](docs/mcp.md) にあります。
+13 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` 等)の完全な参照は [`docs/mcp.md`](docs/mcp.md) にあります。
 
 ### 必須: 納品前に URL / DOI を検証
 
@@ -62,7 +62,7 @@ for p in ALL_PAPERS:
 
 ### 実例
 
-[`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py) にこの流れで手書きされた 8 篇のリッチサマリが収録されています。複数論文検索のテンプレートとして使ってください。zh-tw コンパニオンは [`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py)。
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) にこの流れで手書きされたリッチサマリが 1 篇収録されています(単一論文、rich 層、zh-tw、すべての rich フィールドを埋めたもの)。複数論文検索も同じ形に従い、`PaperCollection` タプル内に論文ごとの `Paper(...summary=PaperSummary(...))` エントリを 1 件ずつ置きます。
 
 ### 禁止事項
 
@@ -76,7 +76,7 @@ for p in ALL_PAPERS:
 
 ## 機能
 
-- **15 個のプラガブルソース**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref スコープ)、`dblp`、`crossref`(汎用)、`openaire`、`europepmc`、`doaj`、`hal`、`core`、`springer`(API キー必須)、`ieee`(API キーまたはスクレイピングオプトイン)、`scholar`(スクレイピングオプトイン)。各々が `sources/<name>/` 配下で `Fetcher` アダプタとして実装されています。デフォルトでは旗艦級 CS 学会誌 + Nature/Science/PNAS をホワイトリストし、`--all-venues` で無効化可能。
+- **15 個のプラガブルソース**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref スコープ)、`dblp`、`crossref`(汎用)、`openaire`、`europepmc`、`doaj`、`hal`、`core`、`springer`(API キー必須)、`ieee`(可視 Chrome 経由でデフォルト有効、API キーを設定すると公式 Xplore API に切替)、`scholar`(可視 Chrome 経由でデフォルト有効)。各々が `sources/<name>/` 配下で `Fetcher` アダプタとして実装されています。`--top-tier-only` を渡すと結果を旗艦級 CS 学会誌 + Nature/Science/PNAS に絞り込めます。デフォルトの検索はすべての venue を保持します。
 - **単一論文モード**: arXiv ID、arXiv URL、DOI、PMID、または IEEE 文書 URL を貼り付けると、ThesisAgents が対応するソース経由でそれを解決し、同じエクスポートバンドルを生成します。論文読書ノート・修論発表準備に最適。
 - **ローカル PDF モード** (`--pdf <path>`): PDF 1 つまたはディレクトリを渡す。ヒューリスティック抽出器が各 PDF の先頭から **タイトル、著者、年度、arXiv ID、DOI、本物の要約** を引き出し(明示的な `Abstract` / `ABSTRACT` / `摘要` ヘッダーを基準とし、適当な前置切りではない)。単一 PDF では `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` で上書き可能。ディレクトリでは各ファイル独自の抽出結果が優先され、各論文は自身の BibTeX キー名でデッキを生成。
 - **5 つのエクスポータ**:
@@ -86,13 +86,13 @@ for p in ALL_PAPERS:
   - `.bib` — 衝突しない引用キー、LaTeX エスケープ済みフィールド。
   - `.json` — 下流ツーリング用の生ペイロード。
   - **デザイン済みのビジュアルアイデンティティ**(デフォルトの Calibri-on-white ではありません):言語ごとのタイポグラフィ(Latin に Inter、CJK + Hindi に Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI)、プログラム生成のアクセント幾何(コンテンツスライド上端のアクセントバー + カバーの左帯)、学術風テーブル(デフォルトの黒グリッド除去、navy ヘッダールール、淡色の行間 divider、交互の行ストライプ、垂直中央揃え、行ラベルは太字)。5 色 palette(navy / teal / grey / light / white)— テキストの赤色は禁止、強調は **太字 + teal `#0E7490`** で。
-  - **ダークモードがデフォルト**。light palette で構築してから post-build pass で text + fill + cell-border の RGB をダークに置換(slide bg `#12151B`、本文 `#E5E7EB`、teal accent はより明るい `#2DD4BF` に)。OLED プロジェクター/暗所での発表を想定。明るい会場や印刷用には `--light-mode`(CLI)、GUI の Deck タブの **Light mode** チェック、または `ExportOptions(dark_mode=False)`(プログラム)でオプトアウト。
+  - **ライトモード(白背景 + navy バンド)がデフォルトのレンダーパス**。`--dark-mode`(CLI)、GUI の Deck タブの **Dark mode** チェック、または `ExportOptions(dark_mode=True)`(プログラム)でダークモードにオプトイン。オプトイン時は light palette で構築してから post-build pass で text + fill + cell-border の RGB をダークに置換(slide bg `#12151B`、本文 `#E5E7EB`、teal accent はより明るい `#2DD4BF` に)。OLED プロジェクター/暗所での発表を想定。
 - **PPT 編集ツールキット**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)はエクスポータが生成した任意のデッキに対して動作。LLM エージェントが生成済みデッキで反復できる `pptx_*` MCP ツールも同梱。
-- **MCP サーバー**: 12 ツール — `list_sources`(発見)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 5 個の `pptx_*` 編集ツール。MCP 対応 LLM(Claude Code、Claude Desktop、Cursor、…)から全ワークフローを駆動可能。
+- **MCP サーバー**: 13 ツール(`list_sources` + `list_exports`(発見)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 6 個の `pptx_*` デッキツール: `inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。MCP 対応 LLM(Claude Code、Claude Desktop、Cursor、…)から全ワークフローを駆動可能。
 - **2 つのエンリッチパス**(要約だけでなく本物の論文発表級デッキへ):
   - **LLM-as-agent(API キー不要)** — 呼び出し側 LLM が `fetch_pdf_text` で本文を読み、構造化サマリをコンテキスト内で書き、`export` に渡す。
   - **Python パイプライン (`--enrich`)** — CLI が Anthropic API を直接呼ぶ。デフォルトモデルは `claude-opus-4-7`。
-- **デフォルトで安全**: HTTPS-only HTTP トランスポート、ソースごとのレート制限(トークンバケット)、任意の XML ペイロードには `defusedxml`、パストラバーサル対策済みエクスポートパス、ユーザー入力に `eval` / `exec` / `pickle` を使わない。Scholar・IEEE スクレイピングはデフォルト無効(env var オプトイン)。
+- **デフォルトで安全**: HTTPS-only HTTP トランスポート、ソースごとのレート制限(トークンバケット)、任意の XML ペイロードには `defusedxml`、パストラバーサル対策済みエクスポートパス、ユーザー入力に `eval` / `exec` / `pickle` を使わない。
 
 ## クイックスタート
 
@@ -154,10 +154,11 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--enrich` | PDF を DL → Anthropic 要約。`ANTHROPIC_API_KEY` と `[intelligence]` extra が必要。 |
 | `--lightweight` | `ANTHROPIC_API_KEY` 設定済みでも軽量デッキを強制。 |
 | `--llm-model` | エンリッチのデフォルト `claude-opus-4-7` を上書き。 |
-| `--all-venues` | トップティアホワイトリストを無効化(デフォルトは旗艦級 CS 学会誌 + Nature / Science / PNAS / CACM / LNCS のみ)。 |
+| `--top-tier-only` | 結果を arXiv + 精選された CS 旗艦級ホワイトリスト(S&P、CCS、NDSS、USENIX Security、NeurIPS、ICML、ICSE、…)に限定。デフォルトは無効。 |
 | `--paywall-threshold` | 確認プロンプトをトリガする paywall 結果の割合。デフォルト 0.30。 |
 | `--yes` | paywall プロンプトをスキップ。 |
 | `--max-slides` | 論文ごとのスライド上限(デフォルト 25、0 は無制限)。 |
+| `--dark-mode` | ダーク背景(`#12151B`)+ ほぼ白のテキスト(`#E5E7EB`)で pptx をレンダリング。デフォルトはライトの navy バンドデッキ。 |
 | `--quiet` | 論文ごとの出力を抑制。 |
 
 ### 環境変数
@@ -170,13 +171,13 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_NCBI_API_KEY` | PubMed | NCBI の匿名上限(3/s)を 10/s に引き上げ。任意。 |
 | `THESISAGENTS_CONTACT_EMAIL` | PubMed、ACM、Crossref、OpenAlex | リクエストを Crossref の polite プールに入れる。 |
 | `THESISAGENTS_IEEE_API_KEY` | IEEE(API パス) | 公式 IEEE Xplore API、対象論文の `pdf_url` を公開。 |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE(スクレイピングパス) | `=1` でスクレイピング有効。API キー設定時は不要。 |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE は可視 Chrome 経由でデフォルト有効。** `=1` でオプトアウト(例: Chrome の無い CI)。 |
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM、Crossref | Crossref Plus 加入者トークン(Bearer ヘッダ)。任意。 |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer | 必須。<https://dev.springernature.com/> から無料キー。未設定だとプラグインは沈黙してスキップされる。 |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
 | `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` でスクレイピング有効。デフォルト無効 — Scholar ToS がスクレイピングを禁止。 |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar は可視 Chrome 経由でデフォルト有効。** `=1` でオプトアウト(Google の ToS は自動アクセスを禁止するため、カバレッジ優先でデフォルト有効、captcha / IP ブロックのリスクを避けたい場合はオプトアウト)。 |
 | `THESISAGENTS_PDF_COOKIES_FILE` | PDF ダウンローダ | Netscape 形式 `cookies.txt`。デフォルト無効。所属機関アクセス権を持つ出版社にのみ使用してください。 |
 | `THESISAGENTS_LOG_LEVEL` | logger | デフォルト `INFO`、詳細ログは `DEBUG`。 |
 
@@ -214,6 +215,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `download_pdfs` | 論文リストの PDF を `{out_dir}/pdfs/` に一括ダウンロード。BibTeX キーをキーとする論文ごとの結果を返す。 |
 | `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出し。リッチ thesis-style スキーマの `summary` フィールドと、`max_slides_per_paper`(デフォルト 25)を受理。 |
 | `pptx_inspect` | 既存デッキのスライド / シェイプ構造を読む。 |
+| `pptx_review` | 1 回の呼び出しでデッキを監査(overflow + 色コントラクト + `paper_rule` セクション網羅性)。デッキ言語を自動検出。CLI 版は `python -m thesisagents review <deck.pptx>`。 |
 | `pptx_update_slide` | `title` / `body` / `meta`(シェイプ名経由)または任意のシェイプ(インデックス経由)を置換。 |
 | `pptx_delete_slide` | スライドとその part relationship を削除。 |
 | `pptx_reorder_slides` | `sldIdLst` 経由でスライド順序を入れ替え。 |
@@ -242,13 +244,14 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async クライアント、トークンバケットレート制限
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF 取得 + Anthropic 要約([intelligence] extra)
-│   ├── mcp/                         # FastMCP サーバー(12 ツール)
+│   ├── evaluation/                  # オフライン検索品質ベンチマーク(docs/search-quality.md)
+│   ├── mcp/                         # FastMCP サーバー(13 ツール)
+│   ├── sources/<name>/              # プラグインフォルダ: arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 │   ├── utils/                       # logging、path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
-├── sources/                         # プラグインフォルダ: arxiv, semantic_scholar,
-│                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # pytest スイート + 記録済み fixture(ライブ HTTP 不可)
 ├── docs/                            # Sphinx(14 言語ツリー)
 ├── scripts/                         # 一回限りの regen スクリプト

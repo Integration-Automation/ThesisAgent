@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="ko", ...)
 ```
 
-12 개의 MCP 도구 (`list_sources`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 등) 의 전체 참조는 [`docs/mcp.md`](docs/mcp.md) 에 있습니다.
+13 개의 MCP 도구 (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` 등) 의 전체 참조는 [`docs/mcp.md`](docs/mcp.md) 에 있습니다.
 
 ### 필수: 인도 전 URL / DOI 검증
 
@@ -62,7 +62,7 @@ for p in ALL_PAPERS:
 
 ### 작업 예제
 
-[`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py) 에 이 절차대로 손으로 작성한 8 편의 리치 요약이 포함되어 있습니다. 다중 논문 검색의 템플릿으로 사용하세요. zh-tw 짝은 [`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py).
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) 에 이 절차대로 손으로 작성한 리치 요약 한 편이 포함되어 있습니다 (단일 논문, rich-tier, zh-tw, 모든 rich 필드 채움). 다중 논문 검색도 같은 형태를 따르며, `PaperCollection` 튜플 안에 논문마다 `Paper(...summary=PaperSummary(...))` 항목을 하나씩 둡니다.
 
 ### 금지
 
@@ -76,7 +76,7 @@ for p in ALL_PAPERS:
 
 ## 기능
 
-- **15 개 플러그인형 소스**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (Crossref 로 ACM 한정), `dblp`, `crossref` (일반), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (API 키 필요), `ieee` (API 키 또는 스크래핑 opt-in), `scholar` (스크래핑 opt-in). 각각 `sources/<name>/` 아래에서 `Fetcher` 어댑터로 구현됩니다. 최상위급 출판처 화이트리스트가 기본적으로 결과를 주요 CS 학회/저널 + Nature/Science/PNAS 로 필터링하며, `--all-venues` 로 비활성화 가능.
+- **15 개 플러그인형 소스**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (Crossref 로 ACM 한정), `dblp`, `crossref` (일반), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (API 키 필요), `ieee` (보이는 Chrome 경유 기본 활성, API 키를 설정하면 공식 Xplore API 사용), `scholar` (보이는 Chrome 경유 기본 활성). 각각 `sources/<name>/` 아래에서 `Fetcher` 어댑터로 구현됩니다. `--top-tier-only` 를 전달하면 결과를 주요 CS 학회/저널 + Nature/Science/PNAS 로 필터링합니다. 기본 검색은 모든 출판처를 유지합니다.
 - **단일 논문 모드**: arXiv ID, arXiv URL, DOI, PMID, 또는 IEEE 문서 URL 을 붙여 넣으면 ThesisAgents 가 적절한 소스로 해당 논문을 가져와 동일한 내보내기 번들을 생성합니다. 논문 읽기 노트 및 학위 심사 준비에 유용.
 - **로컬 PDF 모드** (`--pdf <경로>`): PDF 하나 또는 디렉토리를 전달. 휴리스틱 추출기가 각 PDF 의 앞부분에서 **제목, 저자, 연도, arXiv ID, DOI, 진짜 초록** 을 끌어냅니다 (명시적 `Abstract` / `ABSTRACT` / `摘要` 헤더에 고정, 임의 prefix 가 아님). 단일 PDF 호출에서는 `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` 가 override 합니다. 디렉토리 모드에서는 파일별 추출이 이깁니다 — 각 논문은 자신의 BibTeX 키 이름으로 덱이 생성됩니다.
 - **5 개 내보내기**:
@@ -86,13 +86,13 @@ for p in ALL_PAPERS:
   - `.bib` — 충돌 없는 인용 키, LaTeX 이스케이프된 필드.
   - `.json` — 다운스트림 도구를 위한 원시 페이로드.
   - **디자인된 시각 정체성** (기본 Calibri-on-white 모습이 아님): 언어별 타이포그래피 (Latin 은 Inter, CJK + Hindi 는 Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI), 프로그램으로 그리는 accent geometry (모든 콘텐츠 슬라이드 상단의 accent bar + 표지 좌측 띠), 학술 스타일 표 (기본 검정 그리드 제거, navy 헤더 룰, 부드러운 행간 divider, 교대 행 stripe, 수직 중앙 정렬, 첫 열 굵게). 5색 팔레트 (navy / teal / grey / light / white) — 빨간 텍스트는 **금지**, 강조는 **굵게 + teal `#0E7490`** 으로.
-  - **다크 모드가 기본**. light palette 로 빌드한 다음 post-build pass 가 text + fill + cell-border 의 RGB 를 다크 모드로 교체 (슬라이드 배경 `#12151B`, 본문 `#E5E7EB`, teal accent 은 더 밝은 `#2DD4BF` 로). OLED 프로젝터와 어두운 발표장을 위한 기본. 인쇄나 밝은 환경에서는 `--light-mode` (CLI), GUI Deck 탭의 **Light mode** 체크 해제, 또는 Python 에서 `ExportOptions(dark_mode=False)` 로 opt out.
+  - **라이트 모드 (흰 배경 + navy 밴드) 가 기본 렌더 경로**. `--dark-mode` (CLI), GUI Deck 탭의 **Dark mode** 체크, 또는 Python 에서 `ExportOptions(dark_mode=True)` 로 다크 모드에 opt in. opt in 하면 light palette 로 빌드한 다음 post-build pass 가 text + fill + cell-border 의 RGB 를 다크 모드로 교체 (슬라이드 배경 `#12151B`, 본문 `#E5E7EB`, teal accent 은 더 밝은 `#2DD4BF` 로). OLED 프로젝터와 어두운 발표장에 적합.
 - **PPT 편집 툴킷**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) 는 익스포터가 생성한 모든 덱에 대해 작동. 동등한 `pptx_*` MCP 도구로 LLM 에이전트가 생성된 덱을 반복적으로 수정 가능.
-- **MCP 서버**: 12 개 도구 — `list_sources` (디스커버리), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, 그리고 5 개의 `pptx_*` 편집 도구. MCP 호환 LLM (Claude Code, Claude Desktop, Cursor, …) 이 전체 워크플로를 구동 가능.
+- **MCP 서버**: 13 개 도구 (`list_sources` + `list_exports` (디스커버리), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, 그리고 6 개의 `pptx_*` 덱 도구: `inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`). MCP 호환 LLM (Claude Code, Claude Desktop, Cursor, …) 이 전체 워크플로를 구동 가능.
 - **두 가지 enrichment 경로** 초록을 넘어 진짜 논문 발표 스타일 덱으로:
   - **LLM-as-agent (API 키 불필요)** — 호출 LLM 이 `fetch_pdf_text` 로 PDF 본문을 읽고, 컨텍스트 내에서 구조화 요약을 작성, `export` 에 전달.
   - **Python 파이프라인 (`--enrich`)** — CLI 가 Anthropic API 를 직접 호출. 기본 모델 `claude-opus-4-7`.
-- **기본 안전**: HTTPS-only HTTP 전송, 소스별 레이트 리미트 (토큰 버킷), 모든 XML 페이로드에 `defusedxml`, path-traversal 안전 내보내기 경로, 사용자 입력에 `eval` / `exec` / `pickle` 사용 안 함. Scholar 및 IEEE 스크래핑은 기본적으로 비활성 (env var opt-in).
+- **기본 안전**: HTTPS-only HTTP 전송, 소스별 레이트 리미트 (토큰 버킷), 모든 XML 페이로드에 `defusedxml`, path-traversal 안전 내보내기 경로, 사용자 입력에 `eval` / `exec` / `pickle` 사용 안 함.
 
 ## 빠른 시작
 
@@ -154,10 +154,11 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--enrich` | PDF 다운로드 + Anthropic 요약. `ANTHROPIC_API_KEY` 와 `[intelligence]` extra 필요. |
 | `--lightweight` | `ANTHROPIC_API_KEY` 가 있어도 라이트 덱 강제. |
 | `--llm-model` | enrichment 기본 `claude-opus-4-7` override. |
-| `--all-venues` | 최상위 화이트리스트 비활성화 (기본은 주요 CS 출판처 + Nature / Science / PNAS / CACM / LNCS 유지). |
+| `--top-tier-only` | 결과를 arXiv + 엄선된 CS 플래그십 화이트리스트 (S&P, CCS, NDSS, USENIX Security, NeurIPS, ICML, ICSE, …) 로 제한. 기본은 비활성. |
 | `--paywall-threshold` | 확인 프롬프트를 트리거하는 paywall 결과 비율. 기본 0.30. |
 | `--yes` | paywall 프롬프트 건너뜀. |
 | `--max-slides` | 논문별 슬라이드 상한 (기본 25, 0 은 무제한). |
+| `--dark-mode` | 다크 배경 (`#12151B`) + 거의 흰색 텍스트 (`#E5E7EB`) 로 pptx 렌더링. 기본은 라이트 navy 밴드 덱. |
 | `--quiet` | 논문별 출력 억제. |
 
 ### 환경 변수
@@ -170,13 +171,13 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_NCBI_API_KEY` | PubMed | NCBI 익명 한도 (3/s) 를 10/s 로 상향. 선택. |
 | `THESISAGENTS_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | 요청을 Crossref polite pool 에 넣음. |
 | `THESISAGENTS_IEEE_API_KEY` | IEEE (API 경로) | 공식 IEEE Xplore API; 구독 범위 논문에 `pdf_url` 노출. |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE (스크래핑 경로) | `=1` 로 스크래핑 활성. API 키가 설정된 경우 불필요. |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE 는 보이는 Chrome 경유 기본 활성.** `=1` 로 opt out (예: Chrome 없는 CI). |
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref Plus 구독자 토큰 (Bearer 헤더). 선택. |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer | 필수; <https://dev.springernature.com/> 에서 무료 키. 없으면 플러그인이 조용히 건너뜀. |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
 | `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` 로 스크래핑 활성. 기본 비활성 — Scholar ToS 가 스크래핑 금지. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar 는 보이는 Chrome 경유 기본 활성.** `=1` 로 opt out (Google ToS 는 자동 접근을 금지, 커버리지를 위해 기본 활성이며 captcha / IP 차단 위험을 피하려면 opt out). |
 | `THESISAGENTS_PDF_COOKIES_FILE` | PDF 다운로더 | Netscape 형식 `cookies.txt`. 기본 비활성. 기관 접근 권한이 있는 출판사에만 사용하세요. |
 | `THESISAGENTS_LOG_LEVEL` | logger | 기본 `INFO`; verbose 추적은 `DEBUG`. |
 
@@ -214,6 +215,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 에 일괄 다운로드. BibTeX 키로 인덱싱된 논문별 결과 반환. |
 | `export` | 논문 목록 + 포맷 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 작성. 논문별 `summary` 필드 (논문 발표 스타일 스키마) 와 `max_slides_per_paper` (기본 25) 수용. |
 | `pptx_inspect` | 기존 덱의 슬라이드 / 셰이프 구조 읽기. |
+| `pptx_review` | 한 번의 호출로 덱 감사 (overflow + 색 계약 + `paper_rule` 섹션 완전성). 덱 언어 자동 감지. CLI 버전은 `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | `title` / `body` / `meta` (셰이프 이름으로) 또는 임의 셰이프 (인덱스로) 교체. |
 | `pptx_delete_slide` | 슬라이드와 그 part relationship 제거. |
 | `pptx_reorder_slides` | `sldIdLst` 경유 슬라이드 재정렬. |
@@ -242,13 +244,14 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async 클라이언트, 토큰 버킷 레이트 리미트
 │   ├── exporters/                   # pptx (논문 발표 스타일) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF 다운로드 + Anthropic 요약기 ([intelligence] extra)
-│   ├── mcp/                         # FastMCP 서버 (12 도구)
+│   ├── evaluation/                  # 오프라인 검색 품질 벤치마크 (docs/search-quality.md)
+│   ├── mcp/                         # FastMCP 서버 (13 도구)
+│   ├── sources/<name>/              # 플러그인 폴더: arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
-├── sources/                         # 플러그인 폴더: arxiv, semantic_scholar,
-│                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # pytest 스위트 + 녹화된 fixture (live HTTP 없음)
 ├── docs/                            # Sphinx (14 개 언어 트리)
 ├── scripts/                         # 일회용 regen 스크립트

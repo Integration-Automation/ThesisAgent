@@ -37,7 +37,7 @@ Deliverable default adalah **satu `.pptx` gaya tesis yang diperkaya per makalah*
 6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 ```
 
-Dua belas tool MCP (termasuk `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` dll.) didokumentasikan di [`docs/mcp.md`](docs/mcp.md).
+Tiga belas tool MCP (termasuk `list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` dll.) didokumentasikan di [`docs/mcp.md`](docs/mcp.md).
 
 ### Wajib: verifikasi URL / DOI sebelum penyerahan
 
@@ -62,7 +62,7 @@ Dua fabrikasi yang tertangkap dengan cara ini di produksi: volume AAAI salah (`v
 
 ### Contoh kerja
 
-[`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py) memuat 8 ringkasan diperkaya yang ditulis tangan persis dengan proses ini. Gunakan sebagai template untuk pencarian multi-makalah. Pasangan zh-tw ada di [`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py).
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) memuat satu ringkasan diperkaya yang ditulis tangan persis dengan proses ini (satu makalah, rich-tier, zh-tw, semua field rich terisi). Pencarian multi-makalah mengikuti bentuk yang sama, dengan satu entri `Paper(...summary=PaperSummary(...))` per makalah di dalam tuple `PaperCollection`.
 
 ### Larangan
 
@@ -76,7 +76,7 @@ Dua fabrikasi yang tertangkap dengan cara ini di produksi: volume AAAI salah (`v
 
 ## Fitur
 
-- **Lima belas sumber pluggable**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (dibatasi ACM via Crossref), `dblp`, `crossref` (umum), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (perlu API key), `ieee` (API key atau scraping opt-in), `scholar` (scraping opt-in). Masing-masing berada di `sources/<name>/` di balik adapter `Fetcher`. Whitelist venue tingkat-atas menyaring hasil ke konferensi/jurnal CS unggulan + Nature/Science/PNAS secara default; `--all-venues` menonaktifkannya.
+- **Lima belas sumber pluggable**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (dibatasi ACM via Crossref), `dblp`, `crossref` (umum), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (perlu API key), `ieee` (aktif secara default via Chrome yang terlihat, API key beralih ke API Xplore resmi), `scholar` (aktif secara default via Chrome yang terlihat). Masing-masing berada di `sources/<name>/` di balik adapter `Fetcher`. Berikan `--top-tier-only` untuk menyaring hasil ke konferensi/jurnal CS unggulan + Nature/Science/PNAS. Pencarian default mempertahankan semua venue.
 - **Mode makalah tunggal**: tempel arXiv ID, URL arXiv, DOI, PMID, atau URL dokumen IEEE — ThesisAgents menyelesaikannya via sumber yang tepat dan menghasilkan bundle ekspor yang sama. Berguna untuk catatan bacaan dan persiapan sidang.
 - **Mode PDF lokal** (`--pdf <path>`): teruskan satu PDF atau direktori. Ekstraktor heuristik menarik **judul, penulis, tahun, arXiv ID, DOI, dan abstrak nyata** langsung dari awal setiap PDF (terikat ke header eksplisit `Abstract` / `ABSTRACT` / `摘要`, bukan prefiks buta). `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` meng-override pada panggilan PDF tunggal; di mode direktori, ekstraksi per-file menang — setiap makalah mendapat deck-nya sendiri dengan nama kunci BibTeX-nya.
 - **Lima eksportir**:
@@ -86,13 +86,13 @@ Dua fabrikasi yang tertangkap dengan cara ini di produksi: volume AAAI salah (`v
   - `.bib` — kunci sitasi bebas tabrakan, field dengan escape LaTeX.
   - `.json` — payload mentah untuk tooling hilir.
   - **Identitas visual yang dirancang** (bukan tampilan default Calibri-on-white): tipografi per bahasa (Inter untuk Latin; Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI untuk CJK + Hindi), geometri aksen secara programatik (bar atas di setiap slide konten + band kiri di sampul), tabel bergaya akademik (grid hitam default dihapus, navy header rule, divider lembut antar baris, baris bergantian, alignment vertikal tengah, kolom pertama tebal). Palet 5 warna (navy / teal / grey / light / white) — merah **dilarang** sebagai warna teks; gunakan **bold + teal `#0E7490`** untuk penekanan.
-  - **Mode gelap sebagai default**. Dibangun dengan palet terang lalu post-build pass menukar RGB teks + fill + border sel ke mode gelap (latar slide `#12151B`, teks body `#E5E7EB`, teal accent lebih terang `#2DD4BF`). Dirancang untuk proyektor OLED dan ruang minim cahaya. Untuk cetak atau ruang terang, gunakan `--light-mode` (CLI), hilangkan centang **Light mode** di tab Deck GUI, atau berikan `ExportOptions(dark_mode=False)` di Python.
+  - **Mode terang (latar putih + band navy) adalah jalur render default**. Berikan `--dark-mode` (CLI), centang **Dark mode** di tab Deck GUI, atau set `ExportOptions(dark_mode=True)` di Python untuk opt in ke mode gelap. Saat opt in, deck dibangun dengan palet terang lalu post-build pass menukar RGB teks + fill + border sel ke mode gelap (latar slide `#12151B`, teks body `#E5E7EB`, teal accent lebih terang `#2DD4BF`). Cocok untuk proyektor OLED dan ruang minim cahaya.
 - **Toolkit edit PPT**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) bekerja terhadap deck apa pun yang dihasilkan eksportir, plus tool MCP setara `pptx_*` agar agen LLM dapat beriterasi di atas deck yang sudah dibuat.
-- **Server MCP**: 12 tool — `list_sources` + `list_exports` (discovery), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, dan lima tool edit `pptx_*`. Memungkinkan LLM apa pun yang kompatibel MCP (Claude Code, Claude Desktop, Cursor, …) menjalankan seluruh alur.
+- **Server MCP**: 13 tool (`list_sources` + `list_exports` (discovery), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, dan enam tool deck `pptx_*`: `inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`). Memungkinkan LLM apa pun yang kompatibel MCP (Claude Code, Claude Desktop, Cursor, …) menjalankan seluruh alur.
 - **Dua jalur pengayaan** untuk melampaui abstrak menuju deck gaya tesis sejati:
   - **LLM-as-agent (tanpa API key)** — LLM pemanggil membaca teks PDF via `fetch_pdf_text`, menulis ringkasan terstruktur dalam konteks, dan meneruskannya ke `export`.
   - **Pipeline Python (`--enrich`)** — CLI memanggil API Anthropic sendiri; model default `claude-opus-4-7`.
-- **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per sumber (token bucket), `defusedxml` untuk payload XML apa pun, jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle` pada input pengguna. Scraping Scholar dan IEEE nonaktif secara default (opt-in via env var).
+- **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per sumber (token bucket), `defusedxml` untuk payload XML apa pun, jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle` pada input pengguna.
 
 ## Mulai cepat
 
@@ -154,10 +154,11 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--enrich` | Unduh PDF + ringkasan Anthropic. Butuh `ANTHROPIC_API_KEY` dan extra `[intelligence]`. |
 | `--lightweight` | Paksa deck ringan walau `ANTHROPIC_API_KEY` di-set. |
 | `--llm-model` | Override model default `claude-opus-4-7`. |
-| `--all-venues` | Nonaktifkan whitelist tingkat-atas (default tetap venue CS unggulan + Nature / Science / PNAS / CACM / LNCS). |
+| `--top-tier-only` | Batasi hasil ke arXiv + whitelist CS unggulan terkurasi (S&P, CCS, NDSS, USENIX Security, NeurIPS, ICML, ICSE, …). Nonaktif secara default. |
 | `--paywall-threshold` | Fraksi hasil paywall yang memicu konfirmasi. Default 0.30. |
 | `--yes` | Lewati prompt paywall. |
 | `--max-slides` | Batas slide per makalah (default 25; 0 untuk tanpa batas). |
+| `--dark-mode` | Render pptx dengan latar gelap (`#12151B`) + teks hampir putih (`#E5E7EB`). Default adalah deck terang band navy. |
 | `--quiet` | Tekan output per makalah. |
 
 ### Variabel lingkungan
@@ -170,13 +171,13 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_NCBI_API_KEY` | PubMed | Menaikkan limit anonim NCBI (3/s) ke 10/s. Opsional. |
 | `THESISAGENTS_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | Menempatkan permintaan ke polite pool Crossref. |
 | `THESISAGENTS_IEEE_API_KEY` | IEEE (jalur API) | API resmi IEEE Xplore; mengekspos `pdf_url` untuk makalah dalam cakupan. |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE (jalur scraping) | `=1` mengaktifkan scraping. Tidak perlu saat API key sudah diset. |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE aktif secara default via Chrome yang terlihat.** Set `=1` untuk opt out (mis. CI tanpa Chrome). |
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Token pelanggan Crossref Plus (header Bearer). Opsional. |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer | Wajib; kunci gratis di <https://dev.springernature.com/>. Tanpa kunci, plugin dilewati diam-diam. |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
 | `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` mengaktifkan scraping. Default mati — ToS Scholar melarang scraping. |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar aktif secara default via Chrome yang terlihat.** Set `=1` untuk opt out (ToS Google melarang akses otomatis, default aktif demi cakupan, opt out untuk menghindari risiko captcha / blokir IP). |
 | `THESISAGENTS_PDF_COOKIES_FILE` | Pengunduh PDF | `cookies.txt` format Netscape. Default mati. Gunakan hanya dengan penerbit yang Anda miliki hak institusi. |
 | `THESISAGENTS_LOG_LEVEL` | logger | Default `INFO`; `DEBUG` untuk jejak verbose. |
 
@@ -214,6 +215,7 @@ Tool:
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per makalah berindeks kunci BibTeX. |
 | `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah (skema gaya tesis kaya) dan `max_slides_per_paper` (default 25). |
 | `pptx_inspect` | Membaca struktur slide / shape deck yang ada. |
+| `pptx_review` | Audit deck dalam satu panggilan (overflow + kontrak warna + kelengkapan bagian `paper_rule`). Mendeteksi bahasa deck secara otomatis. Versi CLI: `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Mengganti `title` / `body` / `meta` (berdasarkan nama shape) atau shape sembarang berdasarkan indeks. |
 | `pptx_delete_slide` | Menghapus slide dan part relationship-nya. |
 | `pptx_reorder_slides` | Mengubah urutan slide via `sldIdLst`. |
@@ -242,13 +244,14 @@ ThesisAgents/
 │   ├── fetchers/                    # client async HTTPS-only, rate limit token bucket
 │   ├── exporters/                   # pptx (gaya tesis) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # unduh PDF + summarizer Anthropic ([intelligence] extra)
-│   ├── mcp/                         # server FastMCP (12 tool)
+│   ├── evaluation/                  # benchmark kualitas pencarian offline (docs/search-quality.md)
+│   ├── mcp/                         # server FastMCP (13 tool)
+│   ├── sources/<name>/              # folder plugin: arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # CLI argparse
 │   └── __main__.py
-├── sources/                         # folder plugin: arxiv, semantic_scholar,
-│                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # suite pytest + fixture terekam (tanpa HTTP langsung)
 ├── docs/                            # Sphinx (14 pohon bahasa)
 ├── scripts/                         # skrip regen sekali pakai

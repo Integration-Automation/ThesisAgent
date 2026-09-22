@@ -766,7 +766,7 @@ locales). Three sub-rules:
 | at this point in time | now |
 | a wide range of | many, varied, broad — pick the actual scope |
 | play a (crucial / vital / important) role in | (rewrite — name the actual role) |
-| Em-dash overuse — like — this — throughout | one em-dash per paragraph max |
+| Em-dash / 破折號 as a clause break — like — this | **banned** in paper / deck text — use `,` (or `:` to open a list); see "破折號 / em-dash banned as a clause break" below |
 
 **ZH-TW — 禁用詞 → 改用：**
 
@@ -789,6 +789,52 @@ locales). Three sub-rules:
 | 探索性的研究 | 探索性研究 |
 | 一系列的 …… | （多刪「一系列的」，直接寫名詞複數） |
 | 相關的研究表明 | XX 等人 (20XX) 指出 …… |
+| 破折號（—／——／──）作子句連接 | **禁用**，改以「，」連接，或以「：」帶出條列（見下「破折號禁作子句連接」） |
+
+### 破折號 / em-dash banned as a clause break (HARD) / 破折號禁作子句連接（HARD）
+
+**EN.** In any paper / thesis / deck this project ships, the dash used to
+break, insert, or join a clause is **banned** — this covers `—` (em-dash
+U+2014), `——` / `──` (a doubled CJK 破折號, sometimes stored as a
+box-drawing run), and `―` (horizontal bar). Replace it with full-width
+`，` (clause join) or `：` (to open an enumeration); in English prose use
+`, `. This is the punctuation sibling of the banned-AI-phrasing rule above
+and mirrors `CLAUDE.md` "Prose punctuation in additions" and
+`REWRITE_BRIEF §1.3` (子句以「，」連接).
+
+**ZH-TW.** 論文／學位論文／簡報之交付文字中，凡以破折號「斷句、插入、連接」
+子句者一律**禁用**，含 `—`（em-dash）、`——`／`──`（全形破折號，有時以
+box-drawing run 儲存）、`―`（橫槓）。改以全形「，」連接，或以「：」帶出條列；
+英文行文則用「, 」。
+
+**Why / 為何**：破折號讀來像 AI 生成之 em-dash 濫用，且與 `；` 一樣迫使讀者
+把被打斷的子句懸著等它接回，增加掃讀負擔。本規則源於一宗實際事件：
+`論文_v3.3.docx` 在規則訂立前夾帶 35 處 prose 破折號方才被清掉。
+
+**Example / 範例（套用後）**：
+
+| Before（破折號，禁用） | After（改用） |
+|---|---|
+| `而無需每次重新訓練模型——這是「可維護性」之來源` | `而無需每次重新訓練模型，這是「可維護性」之來源` |
+| `三大問題——幻覺、輸出不穩定、缺乏領域規範——提出整合框架` | `三大問題：幻覺、輸出不穩定、缺乏領域規範，提出整合框架` |
+| `solves a different problem—preserving the teacher's ability—and thus` | `solves a different problem, preserving the teacher's ability, and thus` |
+
+**Anti-pattern / 反例（不可這樣寫）**：`本研究聚焦於三大問題——幻覺、輸出不穩定
+與缺乏領域規範——並提出一套框架`（一句之內用兩個破折號夾一段插入語，正是被禁之
+樣態，改為「三大問題：幻覺、輸出不穩定與缺乏領域規範，並提出一套框架」）。
+
+**Exceptions kept / 保留之例外（皆非破折號）**：
+
+1. CLI flag／選項語法（`--redact-secrets`、`git log --since`、`--kg-ground`）與
+   HTML marker（`<!-- prthinker:summary -->`）屬程式碼，半形 `--` 保留。
+2. en-dash 之數字／章節／引用範圍（`1–5 分`、`§3.3.2–§3.3.9`、`[1]–[22]`）屬範圍
+   記號，保留。
+3. 減號 `−`（如變更徽章 `+a −b`）屬數學記號，保留。
+
+**Self-audit / 自我檢查**：交付前以 codepoint 掃描全文（含表格與圖內 textbox
+之 `<w:t>`），確認 U+2014／U+2500／U+2015 為 0；命中之 CLI flag 半形 `--`、
+en-dash 範圍與減號逐一確認屬上列例外。參考腳本：
+`Code-Review-Framework…/paper/_fix_dash.py`（破折號 → 全形標點，含 0-殘留 safety net）。
 
 ### Filler / 冗詞
 

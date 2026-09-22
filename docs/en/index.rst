@@ -98,9 +98,10 @@ Don'ts
   "Copilot", or any AI tool / model name in commits, PRs, code
   comments, or documentation.
 
-Worked example: ``scripts/regen_llm_security_batch.py`` (en) and
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw) ship 8
-hand-authored rich summaries built exactly this way.
+Worked example: ``scripts/regen_fang2026.py`` ships a hand-authored
+rich summary built exactly this way (single paper, rich-tier, zh-tw).
+A multi-paper batch follows the same shape with one entry per paper
+in the ``PaperCollection`` tuple.
 
 ----
 
@@ -381,17 +382,19 @@ catches Simplified-Chinese loan words rendered in Traditional hanzi
 — e.g. ``內存`` (should be ``記憶體``), ``魯棒性`` (``穩健性``),
 ``軟件`` (``軟體``), ``緩存`` (``快取``). The same guard runs in
 reverse for zh-cn strings. Full rule + the regex catalogue live in
-``.claude/agents/language-vocabulary-check.md``.
+``.claude/agents/rules/language-vocabulary-check.md``.
 
 ----
 
 MCP server
 ----------
 
-ThesisAgents ships an MCP server exposing **twelve tools** — source
-discovery (``list_sources``), search, single-paper fetch, single-PDF
-text extraction (``fetch_pdf_text``), batch PDF download
-(``download_pdfs``), export, and five PPTX edit operations. Any
+ThesisAgents ships an MCP server exposing **thirteen tools** — discovery
+(``list_sources``, ``list_exports``), search, single-paper fetch,
+single-PDF text extraction (``fetch_pdf_text``), batch PDF download
+(``download_pdfs``), export, and six PPTX deck operations
+(``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
+``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``). Any
 MCP-aware LLM client (Claude Code, Claude Desktop, Cursor, …) can
 drive the whole workflow.
 
@@ -539,7 +542,7 @@ Architecture
    │   ├── exporters/                # pptx (thesis-style + lightweight), xlsx,
    │   │                             #   bibtex, markdown, json + pptx_edit + i18n
    │   ├── intelligence/             # PDF fetch + Anthropic summariser ([intelligence] extra)
-   │   ├── mcp/                      # FastMCP server registering 12 tools
+   │   ├── mcp/                      # FastMCP server registering 13 tools
    │   ├── utils/                    # logging, path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`
@@ -614,13 +617,14 @@ Tests
 
 Tests mirror the package layout: each production module
 ``thesisagents/<area>/<feature>.py`` has a paired
-``tests/test_<feature>.py``. Source plugins live under
-``tests/sources/<name>/``.
+``tests/test_<feature>.py``. Source-plugin tests live under
+``tests/sources/test_<name>.py`` (arxiv predates the layout and
+stays flat as ``tests/test_arxiv_fetcher.py``).
 
 Tests are **hermetic** — every fetcher test uses a recorded fixture
 loaded through a monkeypatched HTTP transport. Recording new
-fixtures is a separate manual step
-(``scripts/record_fixture.py``) and the recorded file is committed.
+fixtures is a separate manual step — save the upstream response
+into ``tests/fixtures/<source>/`` and commit it.
 
 Run the whole suite:
 

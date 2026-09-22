@@ -35,9 +35,10 @@ name names its two pillars, and both bind the code rather than just the branding
 
 Concretely, the assistant:
 
-1. **Searches academic papers** by user-supplied keywords across multiple sources
+1. **Searches academic papers** by user-supplied keywords across fifteen sources
    (arXiv, Semantic Scholar, OpenAlex, PubMed, IEEE Xplore, ACM Digital Library, DBLP,
-   Crossref, OpenAIRE, Springer Nature, Google Scholar). Each source ships behind a
+   Crossref, OpenAIRE, Springer Nature, Google Scholar, Europe PMC, DOAJ, HAL,
+   CORE). Each source ships behind a
    fetcher adapter — adding a source does not touch the exporter layer or MCP server.
 2. **Normalises** results into a `Paper` record, de-duplicates by DOI / arXiv ID /
    title-fuzzy-match, ranks by recency + citation count.
@@ -46,8 +47,9 @@ Concretely, the assistant:
    Python pipeline (`ANTHROPIC_API_KEY` set — Anthropic API call).
 4. **Generates** `.pptx` (three rendering tiers — lightweight / enriched-flat /
    thesis-style), `.xlsx`, `.bib`, `.md`, `.json` outputs.
-5. **Exposes** every step as an MCP tool (`search`, `fetch_paper`, `fetch_pdf_text`,
-   `export`, `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
+5. **Exposes** every step as an MCP tool (13 in all: `list_sources`, `list_exports`,
+   `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`,
+   `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
    `pptx_reorder_slides`, `pptx_add_slide`). `pptx_review` audits an existing deck
    (overflow + colour contracts + `paper_rule` section completeness) in one call —
    the same audit the CLI exposes as `python -m thesisagents review <deck.pptx>`.
@@ -66,7 +68,8 @@ ThesisAgents/
 │   ├── intelligence/                 # PDF fetch/extract + Anthropic summariser ([intelligence] extra)
 │   ├── mcp/                          # FastMCP server registering all tools
 │   ├── sources/<name>/               # per-source plugins (arxiv/, semantic_scholar/, openalex/, pubmed/,
-│   │                                 # ieee/, acm/, scholar/, dblp/, crossref/, openaire/, springer/)
+│   │                                 # ieee/, acm/, scholar/, dblp/, crossref/, openaire/, springer/,
+│   │                                 # europepmc/, doaj/, hal/, core/)
 │   ├── utils/                        # logging, path safety, async helpers
 │   ├── cli.py                        # argparse CLI
 │   └── __main__.py
@@ -134,6 +137,57 @@ syntax, not prose), and APA in-text citation grouping like
 `(Lee, 2023; Smith et al., 2024)` keeps `;` because APA mandates it as
 the separator inside a single citation parenthesis.
 
+**No 破折號 / em-dash as a clause break in any paper or deck this project
+ships (HARD for deliverables).** The same scanning rationale extends from
+the `；` to the dash — `—` (em-dash U+2014), `——` / `──` (a doubled CJK
+破折號 or box-drawing run), and `―` (horizontal bar) — whenever it breaks,
+inserts, or joins a clause in deliverable prose. **Why**: a prose dash
+reads as AI-generated em-dash overuse and, like a `；`, forces the reader
+to hold an interrupted clause open until it resumes; concretely,
+`論文_v3.3.docx` had shipped 35 prose 破折號 (e.g.
+`三大問題——幻覺、輸出不穩定、缺乏領域規範——提出`) before this rule was
+written. **How to apply**: a trailing / appositive dash becomes `，`
+(`重新訓練模型——這是…` → `重新訓練模型，這是…`); a dash that opens an
+enumeration becomes `：` (`三大問題——…——提出` → `三大問題：…，提出`);
+English prose uses `, ` (`a different problem—preserving…` →
+`a different problem, preserving…`). **Exceptions kept**: CLI flags /
+option syntax (`--redact-secrets`, `git log --since`) and HTML markers
+(`<!-- … -->`) are code, the en-dash in numeric / section / citation
+ranges (`1–5`, `§3.3.2–§3.3.9`, `[1]–[22]`) and the minus sign
+(`+a −b`) are notation — none of these is a 破折號, so all stay. Full
+bilingual rule + self-audit: `paper_rule` "破折號 / em-dash banned as a
+clause break".
+
+**Implementation-status claims in deliverables must be verified against
+the code, and "implemented" stays distinct from "evaluated" (HARD for
+deliverables).** When a paper / deck this project produces claims a
+framework「已支援 / 已實作 X」, locate X's module and test in the actual
+repo before authoring the claim — manuscripts go stale in BOTH
+directions. **Why**: 論文_v3.5 §6.4.3 still listed GitLab support as
+future work when the framework repo had already shipped `GitLabAdapter`
+(2026-07-02), so copying the manuscript would have under-claimed a
+headline feature, and the mirror trap (reviving comparison numbers a
+manuscript once floated but never measured) has also shipped before.
+**How to apply**: date recent features from git log (「2026-07 新增」),
+keep the honest boundary sentence(「已實作 + 單元測試,端到端效益未評估」)
+next to any feature list AND on the limitations page, never invent
+cross-backend / cross-platform numbers to fill the gap. Worked rules +
+examples: `.claude/agents/tasks/thesis-deck-author.md` "Conference /
+second-cut decks of the same thesis".
+
+## Stage commits, `progress.md`, `docs/updates/` and `architecture.md`
+
+Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes\CLAUDE.md`).
+
+- **Commit at every stage.** A stage is the smallest piece of work that leaves the repository consistent and passes this project's checks (definition of done, tests, lint): one finished `progress.md` item, or one self-contained step of a larger one. Commit it before starting the next stage, before switching to another repository, and before the session ends. Do not leave work uncommitted across sessions; if a stage cannot be finished, commit the consistent part and record the rest in `progress.md`.
+  - Stage only the files that stage touched (`git add <path>`, never `git add -A`), follow this file's commit-message rules, and never add AI attribution.
+  - Committing is not pushing: push or open a PR only as this project's branch flow says or when asked.
+- **`progress.md`** (repository root, tracked) holds outstanding work only: no finished items, no history, no rules.
+- **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `progress.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
+- **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those.
+- **Cross-project contracts** are listed in `architecture.md` §6: what other repositories rely on here (CLI flags, import paths, constructor arguments, file layouts) and what this repository relies on elsewhere. No test here protects them, so never rename or remove one without changing its consumers in the same round, and update §6 whenever a contract is added or changes.
+- `docs/architecture.md` remains the detailed architecture document; `architecture.md` links to it.
+
 ## Git Commits
 
 - NEVER add `Co-Authored-By` lines.
@@ -149,14 +203,14 @@ the user's VPN / institutional access status first** — either by
 recalling a recent statement, or by asking via `AskUserQuestion`
 ("Do you have VPN for IEEE / ACM / Springer for this topic?").
 Without VPN, IEEE returns abstract-only / 403 for the PDF stage and
-the per-paper download fails. When the user says no VPN, restrict
-the search to `arxiv,openalex,pubmed,crossref,dblp,openaire,scholar`
-— that is, **skip only `ieee`**. Google Scholar is publicly
+the per-paper download fails. When the user says no VPN, pass
+`--source` with every default source except `ieee` — that is,
+**skip only `ieee`**. Google Scholar is publicly
 accessible and stays in the mix even without VPN (Chrome still boots
 for it because of captcha resilience, but the search itself works).
-This gate applies BEFORE running `python -m thesisagents -q …`,
-before `scripts/llm_driven_search.py`, and before any
-`scripts/llm_download_*pdf*.py` invocation.
+This gate applies BEFORE running `python -m thesisagents -q …` and
+before calling the MCP `search` / `download_pdfs` tools with `ieee`
+in the source mix or paywalled-publisher PDFs in the batch.
 
 IEEE search, IEEE document fetch, Google Scholar search, and any paywalled-PDF
 download from publisher CDNs (ieeexplore.ieee.org, dl.acm.org, link.springer.com,
@@ -166,8 +220,11 @@ Two paths exist:
 1. **Python pipeline** — IEEE / Scholar plugins under `thesisagents/sources/<name>/` call their own `webrunner_backend`
    from inside `asyncio.gather`. Used by the CLI in unattended mode.
 2. **LLM-as-agent** — the LLM in a Claude Code session drives Chrome itself via
-   Bash + `thesisagents.fetchers.webrunner_browser.make_driver()`. Reference:
-   `scripts/llm_driven_search.py` + `scripts/llm_parse_results.py`. The
+   Bash + `thesisagents.fetchers.webrunner_browser.make_driver()`. Worked
+   patterns: the per-source `webrunner_backend.py` modules under
+   `thesisagents/sources/{ieee,scholar}/` (the old `scripts/llm_*.py`
+   reference scripts were retired once the MCP `search` / `download_pdfs`
+   tools covered the same flow). The
    `mcp__webrunner__*` server registered for this project only exposes static
    helpers (lint / translate / score) — it does NOT expose
    `webrunner_run_actions` or any other browser-driving tool, so the LLM cannot

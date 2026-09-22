@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="zh-cn", ...)
 ```
 
-12 个 MCP 工具(包含 `list_sources`、`download_pdfs`、`pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` 等)的完整参考在 [`docs/mcp.md`](docs/mcp.md)。
+13 个 MCP 工具(包含 `list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` 等)的完整参考在 [`docs/mcp.md`](docs/mcp.md)。
 
 ### 必做:交付前验证 URL / DOI
 
@@ -78,7 +78,7 @@ for key in irrelevant_keys:
 
 ### 示例
 
-[`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py) 内有 8 篇手写的 rich summary,完全照这套流程做的。任何多篇论文的搜索都用它当 template。繁中版在 [`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py)。
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) 是完全照这套流程手写的 rich summary 示例(单篇论文、rich-tier、zh-tw,每个 rich 字段都填齐),当 template 用。多篇搜索照同样的形状做,`PaperCollection` tuple 里每篇一个 `Paper(...summary=PaperSummary(...))` entry。
 
 ### 禁忌
 
@@ -92,23 +92,26 @@ for key in irrelevant_keys:
 
 ## 功能
 
-- **十五种可插拔来源**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref 限定 ACM)、`dblp`、`crossref`(通用)、`openaire`、`europepmc`、`doaj`、`hal`、`core`、`springer`(需 API key)、`ieee`(API key 或 opt-in 爬取)、`scholar`(opt-in 爬取)。每个都在 `sources/<name>/` 后面以 `Fetcher` 接口实现。默认启用「顶级期刊白名单」过滤器,保留旗舰级 CS 会议/期刊 + Nature/Science/PNAS 等;传 `--all-venues` 可关闭。
+- **十五种可插拔来源**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref 限定 ACM)、`dblp`、`crossref`(通用)、`openaire`、`europepmc`、`doaj`、`hal`、`core`、`springer`(需 API key)、`ieee`(默认启用,走可见 Chrome;设 API key 可切换官方 Xplore API)、`scholar`(默认启用,走可见 Chrome)。每个都在 `sources/<name>/` 后面以 `Fetcher` 接口实现。「顶级期刊白名单」过滤器默认关闭,传 `--top-tier-only` 可只保留旗舰级 CS 会议/期刊 + Nature/Science/PNAS 等;默认搜索收所有 venue。
 - **单篇论文模式**: 粘贴 arXiv ID、arXiv URL、DOI、PMID、或 IEEE 文档 URL,ThesisAgents 会走对应 source plugin 拉那一篇并出同一套导出包。适合做论文阅读笔记或答辩准备。
 - **本地 PDF 模式** (`--pdf <path>`): 传一个 PDF 或一整个目录。内置启发式抽取器会从每个 PDF 的首页直接抽出 **标题、作者、年份、arXiv ID、DOI、真正的摘要**(以「Abstract」/「ABSTRACT」/「摘要」标题为锚点,而不是随便切前 N 字)。单 PDF 时 `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` 会覆盖抽取结果;目录模式下以每个文件自己的抽取结果为准,每篇都会输出一份以 BibTeX key 命名的幻灯片。
-- **五种导出器**:
+- **八种导出器**:
   - `.pptx` —— 16:9 宽屏、带页码。三种 rendering tier(轻量摘要 / 扁平结构化 / **论文答辩级 thesis-style**:痛点四宫格、研究问题 callout、KPI 区、技术比较表、文献定位表、系统总览、方法细节、每个 RQ 结果表、贡献总结、核心观察、限制与未来工作、Q&A、参考文献)。所有模板字符串都做 i18n,共 **14 种语言**:English、繁體中文、简体中文、日本語、Español、Français、Deutsch、한국어、Português、Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia。
   - **设计过的视觉识别**(不是默认 Calibri-on-white 的样子):按语言字体 pass(Latin 用 Inter,CJK + Hindi 用 Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI)、程式化的 accent geometry(每张内容幻灯片顶部的 accent bar + 封面的左侧色带)、学术风表格(去掉默认黑色 grid、navy header rule、淡色 inter-row divider、交替 row stripe、垂直居中、首列加粗作行标签),搭配五色 palette 纪律(navy / teal / grey / light / white) —— 红色文字被禁用,强调用 **粗体 + teal `#0E7490`** 代替。
-  - **暗色模式为默认**。先用 light palette 构建 deck,再用 post-build pass 把 text + fill + cell-border 的 RGB 换成暗色版本(slide bg `#12151B`、body text `#E5E7EB`、teal accent 换成更亮的 `#2DD4BF`)。OLED 投影仪与昏暗会场直接拿到暗版本,作者无须额外配置;若要打印或在明亮场地用,加 `--light-mode`(CLI)、取消勾选 GUI Deck 页的 **Light mode**、或在程序里传 `ExportOptions(dark_mode=False)`。
+  - **亮色模式为默认 render 路径**(白底 + navy 色带)。暗色模式为 opt-in:加 `--dark-mode`(CLI)、勾选 GUI Deck 页的 **Dark mode**、或在程序里传 `ExportOptions(dark_mode=True)`。启用后 deck 仍先用 light palette 构建,再由 post-build pass 把 text + fill + cell-border 的 RGB 换成暗色版本(slide bg `#12151B`、body text `#E5E7EB`、teal accent 换成更亮的 `#2DD4BF`),适合 OLED 投影仪与昏暗会场。
   - `.xlsx` —— Papers 工作表 + Query 出处工作表,URL/PDF 带超链接、首行冻结、列宽自动。第 5 列 **Source** 显示真实刊登来源(例如「IEEE Access」),第 6 列 **Indexed via** 显示是哪个 fetcher 抓到的(例如「openalex」),两个信息不会混在一起。
   - `.md` —— 完整来源/标题/摘要清单。
   - `.bib` —— 不会撞 key、LaTeX 特殊字符已转义。
   - `.json` —— 原始 payload 供下游处理。
+  - `.ris` —— Zotero / Mendeley / EndNote / RefWorks 可导入的 RIS 交换格式(给非 LaTeX 文献管理器,BibTeX 的姊妹格式)。
+  - `.csv` —— 一篇一行的扁平表格,方便电子表格 / grep 快速筛选(RFC-4180 引号规则,标题含逗号也不会串列)。
+  - `.csl.json` —— 给 Pandoc / citeproc 的 CSL-JSON,可用任何 CSL 样式(APA、IEEE、Nature …)排出参考文献。用 `.csl.json` 扩展名与纯 `.json` dump 区分。
 - **PPT 编辑工具箱**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)能对 exporter 生成的任何幻灯片做编辑,对应的 `pptx_*` MCP 工具也让 LLM agent 能继续对 deck 做迭代。
-- **MCP server**: 12 个工具 —— `list_sources`(来源发现)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`(批量下载)、`export`,以及五个 `pptx_*` 编辑工具。任何支持 MCP 的 LLM(Claude Code、Claude Desktop、Cursor…)都能驱动整套流程。
+- **MCP server**: 13 个工具:`list_sources` + `list_exports`(发现)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`(批量下载)、`export`,以及六个 `pptx_*` deck 工具(`inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。任何支持 MCP 的 LLM(Claude Code、Claude Desktop、Cursor…)都能驱动整套流程。
 - **两条 enrichment 路径** 把 deck 从「只有摘要」升级到「真的读过全文」:
   - **LLM-as-agent(不需要 API key)** —— 调用端的 LLM 通过 `fetch_pdf_text` 拿 PDF 正文,在自己的 context 里产 structured summary,再丢给 `export`。
   - **Python pipeline(`--enrich`)** —— CLI 自己打 Anthropic API,默认模型 `claude-opus-4-7`。
-- **默认安全**: HTTPS-only HTTP transport、每个来源 token bucket 限流、任何 XML payload 都走 `defusedxml`、导出路径做 path-traversal 检查、用户输入完全不会碰到 `eval` / `exec` / `pickle`。Scholar 与 IEEE 爬取默认关闭,需 env var 开关。
+- **默认安全**: HTTPS-only HTTP transport、每个来源 token bucket 限流、任何 XML payload 都走 `defusedxml`、导出路径做 path-traversal 检查、用户输入完全不会碰到 `eval` / `exec` / `pickle`。Scholar 与 IEEE 的可见 Chrome 爬取默认启用,可分别设 `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1` / `THESISAGENTS_DISABLE_IEEE_SCRAPING=1` 禁用。
 
 ## 快速开始
 
@@ -166,15 +169,15 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--out` / `-o` | 导出目录。默认 `./exports`。 |
 | `--filename-stem` | 覆盖自动生成的文件名 stem。 |
 | `--no-abstract` | 不把摘要写进导出文件。 |
-| `--lang` / `-l` | Deck 语言: `en` / `zh-tw` / `zh-cn` / `ja`,默认 `en`。 |
+| `--lang` / `-l` | Deck 语言,14 种之一: `en`、`zh-tw`、`zh-cn`、`ja`、`es`、`fr`、`de`、`ko`、`pt`、`ru`、`it`、`vi`、`hi`、`id`。默认 `en`。 |
 | `--enrich` | 抓 PDF + 用 Anthropic 产 summary。需要 `ANTHROPIC_API_KEY` 与 `[intelligence]` 包。 |
 | `--lightweight` | 即使有 `ANTHROPIC_API_KEY` 也强制走「只用摘要」的轻量版。 |
 | `--llm-model` | 覆盖 enrichment 默认的 `claude-opus-4-7`。 |
-| `--all-venues` | 关闭顶级期刊白名单(默认只收旗舰级 CS 会议/期刊 + Nature / Science / PNAS / CACM / LNCS)。 |
+| `--top-tier-only` | 只保留顶级期刊白名单内的结果(arXiv + 旗舰级 CS 会议/期刊,如 S&P、CCS、NDSS、USENIX Security、NeurIPS、ICML、ICSE …)。默认关闭。 |
 | `--paywall-threshold` | 多少比例的结果是付费墙才会触发确认提示。默认 0.30。 |
 | `--yes` | 跳过付费墙提示。 |
 | `--max-slides` | 每篇 PPT 幻灯片上限(默认 25;传 0 表示不限)。 |
-| `--light-mode` | 用白底 + navy 文字 render 幻灯片。**暗色模式才是默认** —— 加这个 flag 是在明亮会场投影或打印手册时使用。 |
+| `--dark-mode` | 用暗色背景 `#12151B` + 近白文字 `#E5E7EB` render 幻灯片。默认是亮色 navy 色带 deck。 |
 | `--quiet` | 不打印每篇论文。 |
 
 默认值: `--query` → `pptx,xlsx,bib`;`--paper` → `pptx,bib`。一律可被 `--export` 覆盖。
@@ -189,13 +192,13 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_NCBI_API_KEY` | PubMed | 把 NCBI 匿名限额(3/s)提到 10/s,选用。 |
 | `THESISAGENTS_CONTACT_EMAIL` | PubMed、ACM、Crossref、OpenAlex | 让 Crossref 等把请求放进「礼貌池」。 |
 | `THESISAGENTS_IEEE_API_KEY` | IEEE(API 路径) | 切换到官方 Xplore API,订阅范围内会带 `pdf_url`。 |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE(爬取路径) | 设 `=1` 才启用爬取。若已设 API key,此变量不需要。 |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE 默认启用,走可见 Chrome。** 设 `=1` 可禁用(例如没有 Chrome 的 CI)。httpx 爬取分支只在 WebRunner 不可用时作为 fallback。 |
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM、Crossref | Crossref Plus 订阅 token(Bearer header),选用。 |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer | 必填;免费 key 申请 <https://dev.springernature.com/>。没设则该 plugin 会被静默跳过。 |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
 | `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | 设 `=1` 才启用。默认关闭(Scholar ToS 禁止爬取)。 |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar 默认启用,走可见 Chrome。** 设 `=1` 可禁用(Google ToS 禁止自动访问:默认启用是为了覆盖率,想避开 captcha / IP 封禁风险就 opt-out)。 |
 | `THESISAGENTS_PDF_COOKIES_FILE` | PDF 下载器 | Netscape `cookies.txt`,默认关闭。请只用在你有合法访问权的出版商。 |
 | `THESISAGENTS_LOG_LEVEL` | logger | 默认 `INFO`;`DEBUG` 可看更详细。 |
 
@@ -225,12 +228,14 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | Tool | 用途 |
 |---|---|
 | `list_sources` | 列出所有 plugin + 报告当前 env 下哪些已启用。`search` 之前先调一次。 |
+| `list_exports` | 列出 `export` 接受的所有导出格式与说明。与 `list_sources` 对称,`export` 之前先调一次,就不会传到不认识的格式。 |
 | `search` | 关键词 → 论文列表。可带 `top_tier_only`、`min_citations`;省略 `sources` 时默认扫所有不需要 API key 的来源。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 标识符 → 单篇论文。 |
 | `fetch_pdf_text` | 抓单个 PDF 并返回提取的正文。**MCP 路径下「让我读过论文」的入口。** |
 | `download_pdfs` | 批量把一组论文的 PDF 下载到 `{out_dir}/pdfs/`。返回以 BibTeX key 为索引的逐篇结果。 |
-| `export` | 论文列表 + 格式 → 写出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇可附 `summary` 走 thesis-style;支持 `max_slides_per_paper`(默认 25)。 |
+| `export` | 论文列表 + 格式 → 写出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇可附 `summary` 走 thesis-style;支持 `max_slides_per_paper`(默认 25)与 `dark_mode`(默认 `false`,即亮色 navy 色带 deck,传 `true` 得到暗色 OLED / 低光版本)。 |
 | `pptx_inspect` | 读已有幻灯片文件的 slide / shape 结构。 |
+| `pptx_review` | 一次调用审核整份 deck:溢出 + 颜色契约 + `paper_rule` 章节完整度。自动检测 deck 语言,同 CLI `python -m thesisagents review <deck.pptx>`。 |
 | `pptx_update_slide` | 替换 `title` / `body` / `meta`(通过 shape name)或任意 shape(通过 index)。 |
 | `pptx_delete_slide` | 删除一张 slide 及其 part relationship。 |
 | `pptx_reorder_slides` | 通过 `sldIdLst` 重排幻灯片。 |
@@ -245,7 +250,7 @@ LLM-as-agent 流程(不需要 `ANTHROPIC_API_KEY`,因为 LLM 本身就是 agent)
 4. fetch_pdf_text(pdf_url=paper.pdf_url)            # 每篇都做一次
 5. (LLM 读正文,自己产 structured summary dict)
 6. export(papers=[{...paper, "summary": {pain_points: [...], rq_results: [...]}}],
-          language="zh-tw", formats=["pptx","bib"], ...)
+          language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
 完整参考: [`docs/mcp.md`](docs/mcp.md)。
@@ -259,15 +264,16 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client、token-bucket 限流
 │   ├── exporters/                   # pptx(thesis-style)/ xlsx / bib / md / json / pptx_edit / i18n
 │   ├── intelligence/                # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
-│   ├── mcp/                         # FastMCP server(12 个工具)
+│   ├── evaluation/                  # 离线搜索质量评测(docs/search-quality.md)
+│   ├── mcp/                         # FastMCP server(13 个工具)
+│   ├── sources/<name>/              # plugin 目录: arxiv、semantic_scholar、
+│   │                                #   openalex、pubmed、acm、ieee、scholar、
+│   │                                #   dblp、crossref、openaire、springer、europepmc、doaj、hal、core
 │   ├── utils/                       # logging、path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
-├── sources/                         # plugin 目录: arxiv、semantic_scholar、
-│                                    #   openalex、pubmed、acm、ieee、scholar、
-│                                    #   dblp、crossref、openaire、springer、europepmc、doaj、hal、core
 ├── tests/                           # pytest suite + 录制 fixture(不打活 HTTP)
-├── docs/                            # Sphinx(en + zh-tw + zh-cn)
+├── docs/                            # Sphinx(14 个语言树)
 ├── scripts/                         # 一次性 regen 脚本
 └── pyproject.toml                   # ruff、bandit、build、optional extras
 ```

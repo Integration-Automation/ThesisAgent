@@ -45,10 +45,9 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Iterable
+from datetime import UTC, datetime
 
 from thesisagents.core.models import Paper
-
-_CURRENT_YEAR_FALLBACK = 2026
 
 # Relevance weights. Title overlap dominates; abstract overlap is a softer
 # secondary signal. Tuned together with _CITATION_WEIGHT so that a full
@@ -184,7 +183,7 @@ def rank(
     abstract share terms with it rank higher. ``None`` disables the relevance
     axis (single-paper / query-less callers).
     """
-    year_base = current_year or _CURRENT_YEAR_FALLBACK
+    year_base = current_year if current_year is not None else datetime.now(UTC).year
     terms = frozenset(_ordered_tokens(keywords)) if keywords else frozenset()
     bigrams = _bigrams(keywords) if keywords else frozenset()
     return sorted(

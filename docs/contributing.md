@@ -46,8 +46,8 @@ the gates pass.
      — every documented tool present.
 6. **No live network calls in tests.** Use recorded fixtures
    under `tests/fixtures/<source>/`. Re-recording is a manual
-   step (`scripts/record_fixture.py`) and the recorded file is
-   committed.
+   step — save the upstream response into that directory — and
+   the recorded file is committed.
 7. **Commit message** contains no AI tool/model names and no
    `Co-Authored-By` line.
 
@@ -91,19 +91,23 @@ For every change:
 | Edge cases | Empty / one-item / missing-optional-field inputs. |
 | Error handling | Every `except` branch exercised. HTTP 429 → `RateLimitError`. Malformed JSON → `ParseError`. Unwritable path → `ExportError`. |
 | Boundary conditions | Values just inside and outside any limit (max keyword length, max results, year filter). |
-| Round-trips | `Paper.to_dict → from_dict → equal`, BibTeX render → parse → equal, cache write → read → equal. |
+| Round-trips | `Paper.to_dict → from_dict → equal`, BibTeX render → parse → equal. |
 
 Test placement:
 
 - `tests/test_<module>.py` for core modules.
-- `tests/sources/<name>/test_<name>.py` for fetchers (with
-  recorded fixtures under `tests/fixtures/<source>/`).
-- `tests/exporters/test_<format>.py` for exporters.
+- `tests/sources/test_<name>.py` for source plugins (with recorded
+  fixtures under `tests/fixtures/<source>/`; arxiv predates the
+  layout and stays flat as `tests/test_arxiv_fetcher.py` /
+  `tests/test_arxiv_parser.py`).
+- `tests/test_exporters.py` for exporters.
 - `tests/gui/test_<page>.py` for GUI pages (uses `pytest-qt`).
 
-Use the shared fixtures in `tests/conftest.py` (`http_recorder`,
-`fake_cache`, `sample_papers`, `tmp_export_root`). Do not roll
-your own async loop or `httpx` client.
+Use the shared fixtures in `tests/conftest.py` (`sample_papers`,
+`arxiv_fixture_path`). For fetcher tests, mock HTTP through the
+shared helpers in `tests/sources/_mock.py` (`MockTransport` +
+`install_mock`, which monkeypatch the client registry). Do not roll
+your own async loop or live `httpx` client.
 
 ## Code quality rules
 
@@ -158,11 +162,11 @@ default rule sets:
 
 ### Security
 
-- `pickle.load(s)` on untrusted data forbidden. Cache uses JSON or
-  msgpack.
+- `pickle.load(s)` on untrusted data forbidden. Serialised payloads
+  (fixtures, exports, round-trips) are JSON.
 - `yaml.load` without SafeLoader forbidden — use `yaml.safe_load`.
 - MD5 / SHA-1 forbidden for security purposes — use SHA-256+.
-  Allowed for cache keys / dedup hashes **only** with
+  Allowed for dedup hashes **only** with
   `usedforsecurity=False`.
 - `subprocess` with `shell=True` forbidden when any argument
   comes from user input.

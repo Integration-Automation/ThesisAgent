@@ -45,7 +45,7 @@ MCP 6 步流程
    5. (你逐篇读 PDF,自己产 structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-cn", ...)
 
-共 12 个 MCP 工具,完整参考见 :doc:`/mcp`。
+共 13 个 MCP 工具,完整参考见 :doc:`/mcp`。
 
 必做:交付前验证 URL / DOI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -88,9 +88,10 @@ xlsx 写在 ``exports/<run>/<slug>-<timestamp>.xlsx``\ ,第 7 列是 DOI、
   「Claude」、「Claude Code」、「AI-generated」、「GPT」、「Copilot」
   或任何 AI 工具 / 模型名称。
 
-示例:\ ``scripts/regen_llm_security_batch.py``\ (en)与
-``scripts/regen_llm_security_batch_zh_tw.py``\ (zh-tw)里有 8 篇照
-这套流程手写的 rich summary,当 template 用。
+示例:\ ``scripts/regen_fang2026.py`` 里有一篇照这套流程手写的 rich
+summary(单篇论文、rich-tier、zh-tw、每个 rich 字段都填了)。多篇搜索
+沿用同一形状,``PaperCollection`` tuple 里每篇论文放一个
+``Paper(...summary=PaperSummary(...))`` 条目。
 
 ----
 
@@ -182,18 +183,20 @@ CLI
    thesisagents --paper "https://pubmed.ncbi.nlm.nih.gov/34567890/" \
                 --out ./exports/
 
-   # IEEE document URL(需 opt-in env var)
-   THESISAGENTS_DISABLE_IEEE_SCRAPING=1 \
+   # IEEE document URL(默认启用,走可见 Chrome;没有 Chrome 的环境
+   # 可设 THESISAGENTS_DISABLE_IEEE_SCRAPING=1 停用)
    thesisagents --paper "https://ieeexplore.ieee.org/document/10965643" \
                 --out ./exports/
 
 可用的 source plugin
 ^^^^^^^^^^^^^^^^^^^^
 
-不传 ``--source`` 时的默认组合是「所有不需要 API key 的 plugin」:
+不传 ``--source`` 时的默认组合是「所有不需要付费 API key 的 plugin」
+加上 ``ieee`` + ``scholar``\ (两者默认启用,走可见 Chrome):
 ``arxiv``、``semantic_scholar``、``openalex``、``pubmed``、``acm``、
-``dblp``、``crossref``、``openaire``。设下面三个 env var 之一,对应
-plugin 也会加入:
+``dblp``、``crossref``、``openaire``、``europepmc``、``doaj``、
+``hal``、``ieee``、``scholar``。设好 env var 后 ``springer`` 与
+``core`` 也会加入(共 15 个 plugin):
 
 .. list-table::
    :header-rows: 1
@@ -203,22 +206,29 @@ plugin 也会加入:
      - Env var
      - 备注
    * - ``ieee``
-     - ``THESISAGENTS_IEEE_API_KEY``\ (建议)**或**\
-       ``THESISAGENTS_DISABLE_IEEE_SCRAPING=1``
-     - 官方 Xplore API 在订阅范围内会带 ``pdf_url``;没 key 时可用
-       fallback 爬取路径。
+     - 默认启用;``THESISAGENTS_IEEE_API_KEY``\ 切换到官方 Xplore
+       API(订阅范围内会带 ``pdf_url``),
+       ``THESISAGENTS_DISABLE_IEEE_SCRAPING=1``\ 完全停用
+     - 没 API key 时,搜索 + 单篇抓取都走可见 Chrome(selenium)。
+       httpx fallback 是给 CI / 没有 Chrome 环境的安全网。
    * - ``springer``
      - ``THESISAGENTS_SPRINGER_API_KEY``
      - 免费 key 申请 https://dev.springernature.com/。
        涵盖 Nature、Scientific Reports、LNCS 等 Springer 全系。
        没 key 时 plugin 会在构造时抛 ``ConfigError``,被 pipeline
        静默跳过。
+   * - ``core``
+     - ``THESISAGENTS_CORE_API_KEY``
+     - 免费 key 申请 https://core.ac.uk/services/api。最大的开放
+       获取汇整库(2.5 亿+ 笔);同一把 key 也驱动 OA resolver 的
+       CORE 查询。跟 ``springer`` 一样,没 key 时被静默跳过。
    * - ``scholar``
-     - ``THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1``
-     - Google Scholar ToS 禁止爬取,默认关闭。
+     - 默认启用;``THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1``\ 停用
+     - SERP 抓取走可见 Chrome。Google ToS 禁止自动获取,想避开
+       captcha / IP 封锁风险就 opt-out。
 
-搜索流水线默认套用「顶级期刊白名单」(旗舰级 CS 会议 + Nature / Science /
-PNAS / CACM / LNCS);传 ``--all-venues`` 可关闭。
+搜索流水线可选用「顶级期刊白名单」(旗舰级 CS 会议 + Nature / Science /
+PNAS / CACM / LNCS)，可传入 ``--top-tier-only`` 启用(默认关闭)。
 
 本地化 deck 与 LLM enrichment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -299,10 +309,12 @@ PPTX 布局
 MCP server
 ----------
 
-ThesisAgents 附带一个暴露 **12 个工具** 的 MCP server —— 来源发现
-(``list_sources``)、搜索、单篇抓取、单个 PDF 正文提取
+ThesisAgents 附带一个暴露 **13 个工具** 的 MCP server:发现
+(``list_sources``、``list_exports``)、搜索、单篇抓取、单个 PDF 正文提取
 (``fetch_pdf_text``)、批量 PDF 下载(``download_pdfs``)、导出,
-以及 5 个 PPTX 编辑操作。任何支持 MCP 的 LLM client(Claude Code、
+以及 6 个 PPTX deck 操作(``pptx_inspect``、``pptx_review``、
+``pptx_update_slide``、``pptx_delete_slide``、``pptx_reorder_slides``、
+``pptx_add_slide``)。任何支持 MCP 的 LLM client(Claude Code、
 Claude Desktop、Cursor …)都能驱动整套流程。
 
 配置 MCP client(以 Claude Code 为例):
@@ -424,13 +436,15 @@ Python 模块)让你在不重跑搜索的情况下继续对它做迭代:
    │   ├── exporters/                # pptx(thesis-style + lightweight)、xlsx、
    │   │                             #   bibtex、markdown、json + pptx_edit + i18n
    │   ├── intelligence/             # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
-   │   ├── mcp/                      # 注册 12 个工具的 FastMCP server
+   │   ├── evaluation/               # 离线搜索质量评测(docs/search-quality.md)
+   │   ├── mcp/                      # 注册 13 个工具的 FastMCP server
+   │   ├── sources/<name>/           # 各来源 plugin(arxiv、semantic_scholar、
+   │   │                             #   openalex、pubmed、acm、ieee、scholar、
+   │   │                             #   dblp、crossref、openaire、springer、
+   │   │                             #   europepmc、doaj、hal、core)
    │   ├── utils/                    # logging、path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`
-   ├── sources/                      # 各来源 plugin(arxiv、semantic_scholar、
-   │                                 #   openalex、pubmed、acm、ieee、scholar、
-   │                                 #   dblp、crossref、openaire、springer)
    ├── tests/                        # pytest suite + 录制 fixture,不打活 HTTP
    ├── docs/                         # 这份 Sphinx 文档(en + zh-tw + zh-cn)
    ├── scripts/                      # 一次性 regen / fixture-record 脚本
@@ -439,7 +453,7 @@ Python 模块)让你在不重跑搜索的情况下继续对它做迭代:
 核心 vs 来源插件
 ^^^^^^^^^^^^^^^^
 
-``thesisagents/``\ (核心)与 ``sources/<name>/``\ (插件)的分界线是
+核心模块与 ``thesisagents/sources/<name>/``\ (插件)的分界线是
 **依赖负担与失败隔离**,不是"跟来源有关的东西全丢插件":
 
 * **核心**\ 跑在默认依赖集
@@ -483,7 +497,7 @@ Definition of Done
 
    .venv\Scripts\python.exe -m pytest tests/
    .venv\Scripts\python.exe -m ruff check .
-   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+   .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 
 bandit 的 ``-c``\ 标志是 **必需的**\ —— 没它 bandit 不会读项目 skip 配置,
 跑出来会充满假警报。
@@ -495,9 +509,9 @@ bandit 的 ``-c``\ 标志是 **必需的**\ —— 没它 bandit 不会读项目
 ``thesisagents/<area>/<feature>.py``\ 都有一个对应的
 ``tests/test_<feature>.py``\ 。来源插件测试在 ``tests/sources/<name>/``\ 。
 
-测试是 **hermetic**\ —— 每个 fetcher 测试都通过 monkeypatched HTTP
-transport 载入录制好的 fixture。录新的 fixture 是独立的手动步骤
-(``scripts/record_fixture.py``),录完的文件要 commit 进去。
+测试是 **hermetic**:每个 fetcher 测试都通过 monkeypatched HTTP
+transport 载入录制好的 fixture。录新的 fixture 是独立的手动步骤,把
+上游响应存进 ``tests/fixtures/<source>/`` 并 commit 进去。
 
 跑整个 suite:
 

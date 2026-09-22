@@ -62,7 +62,7 @@ for p in ALL_PAPERS:
 
 ### कार्यान्वित उदाहरण
 
-[`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py) में इस प्रक्रिया के अनुसार हाथ से लिखे 8 समृद्ध सारांश हैं। किसी भी बहु-शोध-पत्र खोज के लिए टेम्पलेट के रूप में उपयोग करें। zh-tw समकक्ष [`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py) में।
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) में ठीक इसी प्रक्रिया के अनुसार हाथ से लिखा एक समृद्ध सारांश है (एकल शोध-पत्र, rich-tier, zh-tw, हर समृद्ध फ़ील्ड भरा हुआ)। बहु-शोध-पत्र खोज इसी आकार का अनुसरण करती है — `PaperCollection` tuple में प्रति शोध-पत्र एक `Paper(...summary=PaperSummary(...))` प्रविष्टि।
 
 ### निषेध
 
@@ -76,7 +76,7 @@ for p in ALL_PAPERS:
 
 ## विशेषताएँ
 
-- **पंद्रह प्लग-इन योग्य स्रोत**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (Crossref के माध्यम से ACM तक सीमित), `dblp`, `crossref` (सामान्य), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (API key आवश्यक), `ieee` (API key या स्क्रैपिंग opt-in), `scholar` (स्क्रैपिंग opt-in)। प्रत्येक `sources/<name>/` के अंतर्गत एक `Fetcher` एडाप्टर के पीछे रहता है। शीर्ष-स्तर वेन्यू श्वेतसूची डिफ़ॉल्ट रूप से परिणामों को प्रमुख CS सम्मेलनों/जर्नल + Nature/Science/PNAS तक फ़िल्टर करती है; `--all-venues` से अक्षम।
+- **पंद्रह प्लग-इन योग्य स्रोत**: `arxiv`, `semantic_scholar`, `openalex`, `pubmed`, `acm` (Crossref के माध्यम से ACM तक सीमित), `dblp`, `crossref` (सामान्य), `openaire`, `europepmc`, `doaj`, `hal`, `core`, `springer` (API key आवश्यक), `ieee` (डिफ़ॉल्ट रूप से चालू, दृश्यमान Chrome से; API key आधिकारिक Xplore API जोड़ता है), `scholar` (डिफ़ॉल्ट रूप से चालू, दृश्यमान Chrome से)। प्रत्येक `thesisagents/sources/<name>/` के अंतर्गत एक `Fetcher` एडाप्टर के पीछे रहता है। शीर्ष-स्तर वेन्यू श्वेतसूची (प्रमुख CS सम्मेलन/जर्नल + Nature/Science/PNAS) डिफ़ॉल्ट रूप से **बंद** है; `--top-tier-only` से चालू करें।
 - **एकल-शोध-पत्र मोड**: arXiv ID, arXiv URL, DOI, PMID, या IEEE दस्तावेज़ URL चिपकाएँ — ThesisAgents इसे सही स्रोत के माध्यम से हल करता है और वही निर्यात बंडल जारी करता है। पठन नोट्स और रक्षा तैयारी के लिए उपयोगी।
 - **स्थानीय PDF मोड** (`--pdf <पथ>`): एक PDF या निर्देशिका पास करें। एक हेयूरिस्टिक एक्सट्रैक्टर प्रत्येक PDF के आरंभ से **शीर्षक, लेखक, वर्ष, arXiv ID, DOI और वास्तविक सार** निकालता है (स्पष्ट `Abstract` / `ABSTRACT` / `摘要` हेडर पर एंकर, अंधे उपसर्ग पर नहीं)। `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` एकल-PDF कॉल पर ओवरराइड करते हैं; निर्देशिका मोड में, प्रति-फ़ाइल निष्कर्षण जीतता है — प्रत्येक शोध-पत्र अपनी BibTeX कुंजी के नाम पर अपना डेक प्राप्त करता है।
 - **पाँच एक्सपोर्टर**:
@@ -86,9 +86,9 @@ for p in ALL_PAPERS:
   - `.bib` — टकराव-मुक्त उद्धरण कुंजियाँ, LaTeX-एस्केप्ड फ़ील्ड्स।
   - `.json` — डाउनस्ट्रीम टूलिंग के लिए कच्चा payload।
   - **डिज़ाइन की गई विज़ुअल आइडेंटिटी** (डिफ़ॉल्ट Calibri-on-white जैसा नहीं): प्रति भाषा टाइपोग्राफी (Latin के लिए Inter; CJK + Hindi के लिए Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI), प्रोग्रामेटिक accent geometry (हर content slide के ऊपर accent bar + cover के बाएँ band), academic-style tables (default काली grid हटी, navy header rule, soft inter-row dividers, alternating row stripe, vertical middle alignment, पहली column bold)। 5-color palette (navy / teal / grey / light / white) — टेक्स्ट रंग के रूप में लाल **प्रतिबंधित**; emphasis के लिए **bold + teal `#0E7490`** उपयोग करें।
-  - **Dark mode डिफ़ॉल्ट है**। light palette पर बनता है, फिर post-build pass text + fill + cell-border के RGB को dark mode पर swap करता है (slide bg `#12151B`, body text `#E5E7EB`, अधिक चमकीला teal accent `#2DD4BF`)। OLED projectors और low-light venues के लिए डिज़ाइन। प्रिंट या उज्ज्वल कमरे के लिए: `--light-mode` (CLI), GUI के Deck tab में **Light mode** uncheck करें, या Python में `ExportOptions(dark_mode=False)` पास करें।
+  - **Light mode डिफ़ॉल्ट है** (सफ़ेद पृष्ठभूमि + navy band)। Dark mode opt-in है: `--dark-mode` (CLI), GUI के Deck tab में **Dark mode** चेक करें, या Python में `ExportOptions(dark_mode=True)` पास करें। तब एक post-build pass text + fill + cell-border के RGB को dark mode पर swap करता है (slide bg `#12151B`, body text `#E5E7EB`, अधिक चमकीला teal accent `#2DD4BF`), जो OLED projectors और low-light venues के लिए उपयुक्त है।
 - **PPT संपादन टूलकिट**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) एक्सपोर्टर द्वारा उत्पन्न किसी भी डेक पर काम करता है, साथ ही समकक्ष `pptx_*` MCP उपकरण ताकि एक LLM एजेंट उत्पन्न डेक पर पुनरावृत्ति कर सके।
-- **MCP सर्वर**: 12 उपकरण — `list_sources` (खोज), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, और पाँच `pptx_*` संपादन उपकरण। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
+- **MCP सर्वर**: 13 उपकरण — `list_sources` + `list_exports` (खोज/सूची), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, और छह `pptx_*` डेक उपकरण (`pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`, `pptx_reorder_slides`, `pptx_add_slide`)। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
 - **दो समृद्धि पथ** सार से आगे एक वास्तविक थीसिस-शैली डेक तक:
   - **LLM-as-agent (कोई API key नहीं)** — कॉलिंग LLM `fetch_pdf_text` के माध्यम से PDF टेक्स्ट पढ़ता है, संदर्भ में संरचित सारांश लिखता है, और `export` को पास करता है।
   - **Python pipeline (`--enrich`)** — CLI स्वयं Anthropic API कॉल करती है; डिफ़ॉल्ट मॉडल `claude-opus-4-7`।
@@ -154,10 +154,11 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--enrich` | PDF डाउनलोड + Anthropic सारांश। `ANTHROPIC_API_KEY` और `[intelligence]` extra आवश्यक। |
 | `--lightweight` | `ANTHROPIC_API_KEY` सेट होने पर भी हल्के डेक के लिए बाध्य करें। |
 | `--llm-model` | डिफ़ॉल्ट `claude-opus-4-7` ओवरराइड। |
-| `--all-venues` | शीर्ष-स्तर श्वेतसूची अक्षम (डिफ़ॉल्ट प्रमुख CS स्थल + Nature / Science / PNAS / CACM / LNCS रखता है)। |
+| `--top-tier-only` | परिणामों को arXiv + क्यूरेटेड शीर्ष-स्तर CS श्वेतसूची (S&P, CCS, NDSS, USENIX Security, NeurIPS, ICML, ICSE, SIGMOD, … + Nature / Science / PNAS / CACM / LNCS) तक सीमित करें। डिफ़ॉल्ट बंद। |
 | `--paywall-threshold` | paywall परिणामों का अनुपात जो पुष्टिकरण प्रॉम्प्ट ट्रिगर करता है। डिफ़ॉल्ट 0.30। |
 | `--yes` | paywall प्रॉम्प्ट छोड़ें। |
 | `--max-slides` | प्रति-शोध-पत्र स्लाइड सीमा (डिफ़ॉल्ट 25; 0 असीमित के लिए)। |
+| `--dark-mode` | pptx को गहरे पृष्ठभूमि (`#12151B`) + लगभग-सफ़ेद टेक्स्ट (`#E5E7EB`) के साथ render करें। डिफ़ॉल्ट हल्का navy-band डेक है। |
 | `--quiet` | प्रति-शोध-पत्र प्रिंट दबाएँ। |
 
 ### पर्यावरण चर
@@ -170,13 +171,13 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_NCBI_API_KEY` | PubMed | NCBI की अनाम सीमा (3/s) को 10/s तक बढ़ाता है। वैकल्पिक। |
 | `THESISAGENTS_CONTACT_EMAIL` | PubMed, ACM, Crossref, OpenAlex | अनुरोधों को Crossref के polite pool में रखता है। |
 | `THESISAGENTS_IEEE_API_KEY` | IEEE (API पथ) | आधिकारिक IEEE Xplore API; दायरे में आने वाले शोध-पत्रों के लिए `pdf_url` उजागर करता है। |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE (स्क्रैपिंग पथ) | `=1` स्क्रैपिंग सक्षम करता है। API key सेट होने पर आवश्यक नहीं। |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE (स्क्रैपिंग पथ) | IEEE डिफ़ॉल्ट रूप से **चालू** है, दृश्यमान Chrome से। `=1` इसे पूरी तरह बंद कर देता है (जैसे Chrome रहित CI)। |
 | `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM, Crossref | Crossref Plus ग्राहक टोकन (Bearer हेडर)। वैकल्पिक। |
 | `THESISAGENTS_SPRINGER_API_KEY` | Springer | अनिवार्य; मुफ्त कुंजी <https://dev.springernature.com/> से। इसके बिना plugin चुपचाप छोड़ दिया जाता है। |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
 | `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | `=1` स्क्रैपिंग सक्षम करता है। डिफ़ॉल्ट बंद — Scholar ToS स्क्रैपिंग निषेध। |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | Scholar डिफ़ॉल्ट रूप से **चालू** है, दृश्यमान Chrome से (Scholar ToS थोक स्क्रैपिंग निषेध करता है, इसलिए pacing आक्रामक है)। `=1` इसे पूरी तरह बंद कर देता है। |
 | `THESISAGENTS_PDF_COOKIES_FILE` | PDF डाउनलोडर | Netscape-स्वरूप `cookies.txt`। डिफ़ॉल्ट बंद। केवल उन प्रकाशकों के साथ उपयोग करें जिनके लिए आपके पास संस्थागत अधिकार हैं। |
 | `THESISAGENTS_LOG_LEVEL` | logger | डिफ़ॉल्ट `INFO`; विस्तृत ट्रेस के लिए `DEBUG`। |
 
@@ -208,12 +209,14 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | उपकरण | उद्देश्य |
 |---|---|
 | `list_sources` | प्रत्येक plugin की गणना + वर्तमान env में कौन से सक्षम हैं रिपोर्ट करें। `search` से पहले एक बार कॉल करें। |
+| `list_exports` | प्रत्येक निर्यात प्रारूप की एक-पंक्ति व्याख्या + वह एक aggregate फ़ाइल लिखता है या प्रति-शोध-पत्र एक। |
 | `search` | कीवर्ड → शोध-पत्र सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूरा API-key-रहित स्रोत मिश्रण। |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE पहचानकर्ता → एकल शोध-पत्र। |
 | `fetch_pdf_text` | एक PDF डाउनलोड करें, निकाला गया मुख्य पाठ लौटाएँ। **"मैंने शोध-पत्र पढ़ा" तक का MCP पथ।** |
 | `download_pdfs` | शोध-पत्र सूची की PDFs को `{out_dir}/pdfs/` में बैच डाउनलोड करें। BibTeX कुंजी द्वारा अनुक्रमित प्रति-शोध-पत्र परिणाम लौटाता है। |
-| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। प्रति-शोध-पत्र `summary` फ़ील्ड (rich thesis-style schema) और `max_slides_per_paper` (डिफ़ॉल्ट 25) स्वीकार करता है। |
+| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। प्रति-शोध-पत्र `summary` फ़ील्ड (rich thesis-style schema), `max_slides_per_paper` (डिफ़ॉल्ट 25) और `dark_mode` (डिफ़ॉल्ट `false` — डिफ़ॉल्ट हल्का navy-band डेक; dark post-pass के लिए `true` पास करें) स्वीकार करता है। |
 | `pptx_inspect` | मौजूदा डेक की स्लाइड / शेप संरचना पढ़ें। |
+| `pptx_review` | एक ही कॉल में डेक ऑडिट करें — overflow + रंग अनुबंध + `paper_rule` अनुभाग पूर्णता। डेक भाषा स्वतः पहचानता है; CLI `python -m thesisagents review <deck.pptx>` भी। |
 | `pptx_update_slide` | `title` / `body` / `meta` (शेप नाम से) या मनमाने शेप (अनुक्रमणिका से) प्रतिस्थापित करें। |
 | `pptx_delete_slide` | एक स्लाइड और उसका part relationship हटाएँ। |
 | `pptx_reorder_slides` | `sldIdLst` के माध्यम से स्लाइड क्रम बदलें। |
@@ -242,13 +245,14 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (थीसिस-शैली) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF डाउनलोड + Anthropic सारांश ([intelligence] extra)
-│   ├── mcp/                         # FastMCP सर्वर (12 उपकरण)
+│   ├── evaluation/                  # ऑफ़लाइन search-quality benchmark (docs/search-quality.md)
+│   ├── mcp/                         # FastMCP सर्वर (13 उपकरण)
+│   ├── sources/<name>/              # plugin फ़ोल्डर: arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
-├── sources/                         # plugin फ़ोल्डर: arxiv, semantic_scholar,
-│                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer, europepmc, doaj, hal, core
 ├── tests/                           # pytest सूट + रिकॉर्डेड fixtures (कोई लाइव HTTP नहीं)
 ├── docs/                            # Sphinx (14 भाषा वृक्ष)
 ├── scripts/                         # एक-बार regen स्क्रिप्ट
@@ -260,7 +264,7 @@ ThesisAgents/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 ```
 
 bandit का `-c` फ़्लैग अनिवार्य है — इसके बिना bandit परियोजना के skip कॉन्फ़िगरेशन को अनदेखा करता है। pptx एक्सपोर्टर को छूते समय, overflow जाँच भी चलाएँ (`CLAUDE.md` "Slide Deck Rules" देखें)।

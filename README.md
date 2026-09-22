@@ -125,10 +125,11 @@ possible match.
 
 ### Worked example
 
-[`scripts/regen_llm_security_batch.py`](scripts/regen_llm_security_batch.py)
-ships 8 hand-authored rich summaries built exactly this way. Use it as
-the template for any multi-paper search. The zh-tw companion is at
-[`scripts/regen_llm_security_batch_zh_tw.py`](scripts/regen_llm_security_batch_zh_tw.py).
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) ships a
+hand-authored rich summary built exactly this way (single paper,
+rich-tier, zh-tw, every rich field populated). A multi-paper search
+follows the same shape with one `Paper(...summary=PaperSummary(...))`
+entry per paper in the `PaperCollection` tuple.
 
 ### Don'ts
 
@@ -165,9 +166,9 @@ the template for any multi-paper search. The zh-tw companion is at
   works), `ieee` (default-on via visible Chrome; API key adds official
   Xplore API), `scholar` (default-on via visible Chrome). Each lives in
   `sources/<name>/` behind a `Fetcher`
-  adapter. A top-tier-venue whitelist filters results to flagship CS
-  conferences/journals plus Nature/Science/PNAS by default; pass
-  `--all-venues` to disable.
+  adapter. Pass `--top-tier-only` to filter results to flagship CS
+  conferences/journals plus Nature/Science/PNAS. The default search
+  keeps all venues.
 - **Single-paper mode**: paste an arXiv ID, arXiv URL, DOI, PMID, or IEEE
   document URL — ThesisAgents resolves it via the right source and
   emits the same export bundle. Useful for paper reading notes and thesis
@@ -199,14 +200,10 @@ the template for any multi-paper search. The zh-tw companion is at
     row labels), and a five-colour palette discipline (navy / teal /
     grey / light / white) with red **banned** for text (use bold +
     teal `#0E7490` for emphasis instead).
-  - **Dark mode is the default render path.** Build runs on the light
-    palette, then a post-build pass swaps text + fill + cell-border
-    RGBs to a dark deck (slide bg `#12151B`, body text `#E5E7EB`,
-    accent teal swapped to a brighter `#2DD4BF`). OLED projectors and
-    low-light venues get the dark deck without authors having to think
-    about it; pass `--light-mode` (CLI), uncheck **Light mode** (GUI
-    Deck tab), or `ExportOptions(dark_mode=False)` (programmatic) to
-    opt out for projectors in well-lit rooms or for printed handouts.
+  - **Light mode is the default render path.** Pass `--dark-mode`, enable
+    **Dark mode** in the GUI Deck tab, or set
+    `ExportOptions(dark_mode=True)` to apply the dark post-pass (slide
+    background `#12151B`, body text `#E5E7EB`).
   - `.xlsx` — Papers sheet + Query provenance sheet, hyperlinked URL /
     PDF, frozen header, auto column widths. Column 5 (**Source**) shows
     the real publication venue (e.g. "IEEE Access"); column 6
@@ -226,9 +223,11 @@ the template for any multi-paper search. The zh-tw companion is at
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   works against any deck the exporter produces, plus the equivalent
   `pptx_*` MCP tools so an LLM agent can iterate on a generated deck.
-- **MCP server**: 12 tools — `list_sources` + `list_exports`
+- **MCP server**: 13 tools — `list_sources` + `list_exports`
   (discovery), `search`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, and the five `pptx_*` editing tools. Lets
+  `download_pdfs`, `export`, and the six `pptx_*` deck tools
+  (`inspect`, `review`, `update_slide`, `delete_slide`,
+  `reorder_slides`, `add_slide`). Lets
   any MCP-aware LLM
   (Claude Code, Claude Desktop, Cursor, …) drive the whole workflow.
 - **Two enrichment paths** for going beyond the abstract into a true
@@ -244,13 +243,9 @@ the template for any multi-paper search. The zh-tw companion is at
   real visible Chrome session via `selenium`. The user solves captcha
   / completes SSO in the live window once; `THESISAGENTS_CHROME_PROFILE_DIR`
   persists the cookies across runs.
-- **LLM-as-agent flow** (`scripts/llm_*.py`): when the LLM in your editor
-  wants to drive the browser itself (rather than let `asyncio.gather` do
-  it), `scripts/llm_driven_search.py` opens Chrome on Scholar + IEEE,
-  `scripts/llm_download_pdfs.py` walks an xlsx and downloads every paper
-  in one Chrome session (IEEE / ACM / Springer / arXiv / ACL Anthology /
-  NeurIPS / OpenReview), and `scripts/regen_*.py` shows the worked
-  pattern for hand-authoring a rich `PaperSummary` per paper.
+- **LLM-as-agent flow**: MCP tools provide search, PDF download and text
+  extraction. `scripts/regen_*.py` contains reproducible examples for
+  hand-authoring a rich `PaperSummary` per paper.
 - **OA PDF resolver**: post-dedup, every paper without `pdf_url`
   goes through Unpaywall → S2 `openAccessPdf` → arXiv title search →
   CORE.ac.uk (when keys are set). Typical lift on IEEE / ACM / Springer
@@ -334,7 +329,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--paywall-threshold` | Fraction of paywalled results that triggers the confirmation prompt. Default 0.30. |
 | `--yes` | Skip the paywall prompt and proceed. |
 | `--max-slides` | Per-paper slide cap (default 25; pass 0 for unlimited). |
-| `--light-mode` | Render the pptx with a white background + navy text. Default is dark mode (dark background + near-white text) — pass this for projectors in well-lit rooms or when the deck will be printed. |
+| `--dark-mode` | Render the pptx with a dark background + near-white text. The default is the light navy-band deck. |
 | `--quiet` | Suppress per-paper printout. |
 
 ### Environment variables
@@ -362,18 +357,10 @@ overridable with explicit `--export`.
 
 ## LLM-as-agent flow
 
-When an LLM in your editor (Claude Code, Cursor, Aider, Codex CLI, …)
-wants to drive the publisher browser itself — pick URLs, inspect the
-returned DOM, decide which papers to dig into — five scripts under
-`scripts/` cover the canonical path:
-
-| Script | What it does |
-|---|---|
-| `scripts/llm_driven_search.py "<query>"` | Boots visible Chrome, navigates Scholar SERP for the query, JS-fetches IEEE `/rest/search` from inside the IEEE origin, dumps SERP HTML + IEEE JSON to `exports/_llm_scratch/`. |
-| `scripts/llm_parse_results.py` | Reads the dumped artefacts, runs the project's parsers, dedups + ranks + exports `.xlsx` + `.md` for the LLM to inspect. |
-| `scripts/llm_download_pdfs.py <xlsx>` | Walks the xlsx, dispatches each row to the right per-publisher downloader (IEEE / ACM / Springer / arXiv / ACL Anthology / NeurIPS / OpenReview) in ONE Chrome session. Idempotent: papers with a valid `<id>.pdf` already on disk skip immediately. |
-| `scripts/llm_download_{ieee,acm,springer}_pdf.py <id>` | Single-paper variants for iterating on selectors / debugging one entry. |
-| `scripts/regen_*.py` | Worked example of hand-authored rich `PaperSummary` per paper → rich-tier `.pptx`. Look at `scripts/regen_speculative_decoding_zh_tw.py` for the canonical shape. |
+When an LLM in your editor drives the workflow, use the MCP tools in
+sequence: `search`, `download_pdfs`, `fetch_pdf_text`, then `export` with
+a hand-authored rich `PaperSummary`. The existing `scripts/regen_*.py`
+files are reproducible examples for the final authoring and export step.
 
 Full end-to-end runbook (search → rich deck) lives in
 `.claude/agents/tasks/paper-summary-author.md` — open it before starting a
@@ -405,6 +392,7 @@ Tools:
 | Tool | Purpose |
 |---|---|
 | `list_sources` | Enumerate every plugin + report whether each is enabled in the current env. Call this once before `search`. |
+| `list_exports` | Enumerate every export format with its one-line description and whether it writes one aggregate file or one file per paper. |
 | `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
@@ -440,14 +428,15 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
-│   ├── mcp/                         # FastMCP server (12 tools)
+│   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
+│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer,
+│   │                                #   europepmc, doaj, hal, core
 │   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
-├── sources/                         # plugin folders: arxiv, semantic_scholar,
-│                                    #   openalex, pubmed, acm, ieee, scholar,
-│                                    #   dblp, crossref, openaire, springer,
-│                                    #   europepmc, doaj, hal, core
 ├── tests/                           # pytest suite + recorded fixtures (no live HTTP)
 ├── docs/                            # Sphinx (14 language trees)
 ├── scripts/                         # one-off regen scripts

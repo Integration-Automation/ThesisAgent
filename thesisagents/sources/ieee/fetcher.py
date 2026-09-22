@@ -7,11 +7,12 @@ Two paths, selected at runtime:
   key attached. This path is fully sanctioned, returns ``pdf_url`` for
   documents inside the key's subscription scope, and does not need the
   scraping opt-in flag.
-* **Scraping fallback** — when no API key is available the plugin falls back
-  to the public website's ``/rest/search`` endpoint, guarded by
-  ``THESISAGENTS_ENABLE_IEEE_SCRAPING=1``. IEEE Xplore terms restrict
-  bulk automated scraping; this path paces requests, requires the env-var
-  opt-in, and surfaces clear errors when the upstream blocks.
+* **Scraping path (default)** — when no API key is available the plugin
+  falls back to the public website's ``/rest/search`` endpoint via
+  WebRunner (visible Chrome). IEEE Xplore terms restrict bulk automated
+  scraping; this path paces requests, honours the
+  ``THESISAGENTS_DISABLE_IEEE_SCRAPING=1`` opt-out, and surfaces clear
+  errors when the upstream blocks.
 
 Single-paper lookup also takes the API key when present (via the document
 endpoint ``/api/v1/search/document/<arnumber>``); otherwise it falls back

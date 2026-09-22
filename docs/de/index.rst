@@ -51,7 +51,12 @@ MCP-Workflow in 6 Schritten
    5. (Sie lesen jedes PDF und erzeugen strukturierten Summary-Dict)
    6. export(papers=[{...paper, "summary": {...}}], language="de", ...)
 
-Alle 12 MCP-Tools: :doc:`/mcp`.
+Insgesamt 13 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
+``search``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+``export`` und sechs ``pptx_*``-Deck-Operationen (``pptx_inspect``,
+``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
+``pptx_reorder_slides``, ``pptx_add_slide``). Vollständige Referenz:
+:doc:`/mcp`.
 
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -99,8 +104,11 @@ Verbote
 * Keine „Claude", „Claude Code", „AI-generated", „GPT", „Copilot"
   oder andere KI-Tool-/Modellnamen in Commits, PRs, Code oder Docs.
 
-Beispiele: ``scripts/regen_llm_security_batch.py`` (en, 8 Paper) und
-``scripts/regen_llm_security_batch_zh_tw.py`` (zh-tw).
+Ausgearbeitetes Beispiel: ``scripts/regen_fang2026.py`` enthält eine
+genau auf diese Weise von Hand verfasste angereicherte Zusammenfassung
+(ein einzelnes Paper, Rich-Tier, zh-tw). Ein Mehr-Paper-Batch folgt
+derselben Form, mit einem Eintrag pro Paper im
+``PaperCollection``-Tupel.
 
 ----
 
@@ -151,7 +159,7 @@ Weiterführende Quellen
 ----------------------
 
 * CLI-Flags und Umgebungsvariablen: :doc:`/cli`
-* 12 MCP-Server-Tools: :doc:`/mcp`
+* 13 MCP-Server-Tools: :doc:`/mcp`
 * PPTX-Edit-Toolkit: :doc:`/pptx_editing`
 * Die Datei ``readmes/README.de.md`` im Repo-Root enthält die vollständige
   Feature-Liste.
