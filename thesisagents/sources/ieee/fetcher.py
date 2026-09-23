@@ -87,7 +87,7 @@ class IeeeFetcher(Fetcher):
         return papers[: query.max_results]
 
     async def _scrape_search(self, body: dict[str, object]) -> dict:
-        """Try the WebRunner backend first (real browser via je_web_runner)
+        """Try the WebRunner backend first (a real browser driven through Selenium)
         because IEEE's REST endpoint blocks httpx-style POSTs. Fall back
         to httpx only when WebRunner is unavailable or fails (so the
         plugin still degrades cleanly when Chrome isn't installed).

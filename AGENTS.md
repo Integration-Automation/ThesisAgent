@@ -248,8 +248,9 @@ enable it.
   download from publisher CDNs (ieeexplore.ieee.org, dl.acm.org,
   link.springer.com, sciencedirect.com, wiley/oup/nature/science/…)
   MUST go through visible Chrome — the IEEE plugin's WebRunner backend,
-  the Scholar plugin's WebRunner backend, or `mcp__webrunner__*` tools
-  from the LLM-as-agent session. The httpx branch in those plugins is
+  the Scholar plugin's WebRunner backend, or a Bash + Selenium script
+  (`thesisagents.fetchers.webrunner_browser.make_driver()`) from the
+  LLM-as-agent session. The httpx branch in those plugins is
   a CI safety net for environments without Chrome; on a user machine
   with VPN access, a silent fall-through to httpx is a bug, not an
   acceptable degradation. If you don't see a Chrome window open for an

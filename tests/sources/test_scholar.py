@@ -157,7 +157,7 @@ async def test_search_403_surfaces_unavailable(monkeypatch):
 
 
 async def test_webrunner_backend_used_when_available(monkeypatch):
-    """When je_web_runner is importable, search() uses the real-browser
+    """When selenium is importable, search() uses the real-browser
     backend instead of httpx."""
     from thesisagents.sources.scholar import webrunner_backend
 
@@ -199,7 +199,7 @@ async def test_webrunner_failure_falls_back_to_httpx(monkeypatch):
 
 def test_webrunner_is_available_respects_disable_env(monkeypatch):
     """THESISAGENTS_DISABLE_WEBRUNNER=1 forces the httpx path even
-    when je_web_runner is installed."""
+    when selenium is installed."""
     from thesisagents.sources.scholar import webrunner_backend
 
     monkeypatch.setenv("THESISAGENTS_DISABLE_WEBRUNNER", "1")

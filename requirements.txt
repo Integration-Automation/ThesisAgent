@@ -8,3 +8,4 @@ bibtexparser>=1.4
 beautifulsoup4>=4.12
 lxml>=5.2
 markdown-it-py>=3.0
+selenium>=4.11

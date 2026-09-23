@@ -94,7 +94,7 @@ class ScholarFetcher(Fetcher):
         WebRunner survives Google's standard bot-detection because it
         drives a real Chrome with the auto-control flag disabled; the
         httpx path gets captcha'd within a few requests. We prefer
-        WebRunner whenever ``je_web_runner`` is importable and
+        WebRunner whenever ``selenium`` is importable and
         ``THESISAGENTS_DISABLE_WEBRUNNER`` is not set.
         """
         from . import webrunner_backend

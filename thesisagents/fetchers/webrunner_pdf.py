@@ -70,7 +70,7 @@ _PAYWALLED_SUFFIXES: tuple[str, ...] = (
 
 
 def is_available() -> bool:
-    """True when je_web_runner is importable AND not explicitly disabled."""
+    """True when selenium is importable AND not explicitly disabled."""
     if os.environ.get(_DISABLE_ENV) == "1":
         return False
     try:

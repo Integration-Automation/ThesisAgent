@@ -117,10 +117,10 @@ no key, no model → lightweight, abstract-based deck
 
 ## 6. Cross-project boundaries
 
-- Declares `je_web_runner>=0.0.60` (the workspace's WebRunner project) but does **not** import it:
-  `thesisagents/fetchers/webrunner_browser.py` drives raw Selenium with one Chrome per call because
-  WebRunner's module-level driver singleton breaks concurrent sources. Selenium itself currently
-  arrives through that dependency, so removing it needs an explicit `selenium` requirement.
+- No dependency on the workspace's WebRunner project: `thesisagents/fetchers/webrunner_browser.py`
+  drives Selenium directly with one Chrome per call, because WebRunner's module-level driver
+  singleton breaks concurrent sources. `selenium>=4.11` is declared directly; the module and the
+  `THESISAGENTS_DISABLE_WEBRUNNER` variable keep their historical names.
 - `scripts/regen_chen2026_codereview.py`, `regen_chen2026_tcse.py` and
   `regen_chen2026_tcse_features.py` cite the prthinker repository's `paper/` manuscripts by absolute
   path as their source of truth; numbers are copied into the scripts and figures into

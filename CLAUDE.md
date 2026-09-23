@@ -224,11 +224,12 @@ Two paths exist:
    patterns: the per-source `webrunner_backend.py` modules under
    `thesisagents/sources/{ieee,scholar}/` (the old `scripts/llm_*.py`
    reference scripts were retired once the MCP `search` / `download_pdfs`
-   tools covered the same flow). The
-   `mcp__webrunner__*` server registered for this project only exposes static
-   helpers (lint / translate / score) — it does NOT expose
-   `webrunner_run_actions` or any other browser-driving tool, so the LLM cannot
-   skip the Bash + Selenium step.
+   tools covered the same flow). No `mcp__webrunner__*` server is registered
+   for this project (it is registered for `D:/Codes/WebRunner` and the old
+   `D:/Codes/AutoPaperToPPT` path), and where it is registered it only exposes
+   static helpers (lint / translate / score), not `webrunner_run_actions` or
+   any other browser-driving tool. So the LLM cannot skip the Bash + Selenium
+   step.
 
 The httpx branch in those plugins is a CI safety net for no-Chrome environments;
 on a user machine with VPN, silent fall-through to httpx is a bug. **Never
