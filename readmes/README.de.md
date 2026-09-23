@@ -263,7 +263,7 @@ ThesisAgents/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 ```
 
 Das `-c`-Flag bei bandit ist obligatorisch — ohne es ignoriert bandit die Skip-Konfiguration des Projekts. Beim Bearbeiten des pptx-Exporters auch eine Overflow-Prüfung laufen lassen (siehe `CLAUDE.md` „Slide Deck Rules").

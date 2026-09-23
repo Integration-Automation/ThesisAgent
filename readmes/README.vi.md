@@ -263,7 +263,7 @@ ThesisAgents/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 ```
 
 Cờ `-c` của bandit là bắt buộc — không có nó, bandit bỏ qua cấu hình skip của dự án. Khi đụng đến exporter pptx, hãy chạy thêm kiểm tra overflow (xem `CLAUDE.md` "Slide Deck Rules").

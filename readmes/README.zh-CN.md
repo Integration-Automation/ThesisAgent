@@ -283,7 +283,7 @@ ThesisAgents/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
 .venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/ sources/
+.venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 ```
 
 bandit 的 `-c` 标志是必需的 —— 没有它 bandit 不会读项目 skip 配置。动到 pptx exporter 时,还要跑 overflow check(见 `CLAUDE.md` 的「Slide Deck Rules」一节)。
