@@ -7,12 +7,11 @@ import json
 from pathlib import Path
 
 import pytest
-from mcp.server.fastmcp.exceptions import ToolError
 
 from thesisagents import mcp as mcp_pkg
 from thesisagents.core.exceptions import ThesisAgentsError
 from thesisagents.core.models import PaperCollection, Query
-from thesisagents.mcp.server import _as_tool_error
+from thesisagents.mcp.server import ToolError, _as_tool_error
 
 
 @pytest.fixture()

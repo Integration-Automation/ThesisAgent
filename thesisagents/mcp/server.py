@@ -52,8 +52,12 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.exceptions import ToolError
+try:  # mcp 2.x renamed FastMCP to MCPServer and moved it to mcp.server.mcpserver
+    from mcp.server.mcpserver import MCPServer as FastMCP
+    from mcp.server.mcpserver.exceptions import ToolError
+except ImportError:  # mcp 1.x
+    from mcp.server.fastmcp import FastMCP
+    from mcp.server.fastmcp.exceptions import ToolError
 
 from thesisagents.core.constants import (
     AGGREGATE_EXPORTS,
