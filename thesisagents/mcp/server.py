@@ -46,10 +46,14 @@ For an LLM-as-agent flow (no Anthropic API key needed):
 
 from __future__ import annotations
 
+import functools
+import inspect
 import os
+from collections.abc import Callable
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 
 from thesisagents.core.constants import (
     AGGREGATE_EXPORTS,
@@ -90,6 +94,44 @@ _PLUGIN_OPT_OUT_ENV: dict[str, tuple[str, ...]] = {
 }
 
 
+def _as_tool_error(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Re-raise :class:`ThesisAgentsError` from a tool as the SDK's ``ToolError``, message intact.
+
+    The SDK reports a ``ToolError`` to the client as the tool's error text. The 1.x SDK also
+    wraps any other exception that way, but 2.x treats other exceptions as a crash and the
+    client only sees ``Error executing tool <name>``, so a hint such as export's "call the
+    download_pdfs tool" would be lost. Example: ``search(..., exclude_sources=["arxiv"])`` with
+    ``sources=["arxiv"]`` reaches the client as "exclude_sources removed every source".
+    """
+    if inspect.iscoroutinefunction(func):
+        @functools.wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return await func(*args, **kwargs)
+            except ThesisAgentsError as error:
+                raise ToolError(str(error)) from error
+
+        return async_wrapper
+
+    @functools.wraps(func)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return func(*args, **kwargs)
+        except ThesisAgentsError as error:
+            raise ToolError(str(error)) from error
+
+    return sync_wrapper
+
+
+def _tool(server: FastMCP) -> Callable[[Callable[..., Any]], Any]:
+    """Register the decorated function as a tool on ``server``, through :func:`_as_tool_error`."""
+
+    def register(func: Callable[..., Any]) -> Any:
+        return server.tool()(_as_tool_error(func))
+
+    return register
+
+
 def build_server() -> FastMCP:
     """Build and register all tools on a FastMCP instance."""
     server = FastMCP("thesisagents")
@@ -103,7 +145,7 @@ def build_server() -> FastMCP:
 
 
 def _register_discovery_tools(server: FastMCP) -> None:
-    @server.tool()
+    @_tool(server)
     def list_sources() -> dict[str, Any]:
         """Report every available source plugin and whether it is currently enabled.
 
@@ -145,7 +187,7 @@ def _register_discovery_tools(server: FastMCP) -> None:
             "default_sources": list(DEFAULT_SOURCES),
         }
 
-    @server.tool()
+    @_tool(server)
     def list_exports() -> dict[str, Any]:
         """Report every export format ``export`` accepts, with a description.
 
@@ -181,7 +223,7 @@ def _env_var_truthy(name: str) -> bool:
 
 
 def _register_pdf_tool(server: FastMCP) -> None:
-    @server.tool()
+    @_tool(server)
     async def fetch_pdf_text(pdf_url: str, source: str = "intelligence") -> dict[str, Any]:
         """Download a paper's PDF over HTTPS-only and extract its body text.
 
@@ -206,7 +248,7 @@ def _register_pdf_tool(server: FastMCP) -> None:
 
 
 def _register_pdf_download_tool(server: FastMCP) -> None:
-    @server.tool()
+    @_tool(server)
     async def download_pdfs(
         papers: list[dict[str, Any]], out_dir: str
     ) -> dict[str, Any]:
@@ -253,7 +295,7 @@ def _register_pdf_download_tool(server: FastMCP) -> None:
 
 
 def _register_search_tools(server: FastMCP) -> None:
-    @server.tool()
+    @_tool(server)
     async def search(
         keywords: str,
         sources: list[str] | None = None,
@@ -312,7 +354,7 @@ def _register_search_tools(server: FastMCP) -> None:
             await shutdown_clients()
         return _collection_to_payload(collection)
 
-    @server.tool()
+    @_tool(server)
     async def fetch_paper(identifier: str) -> dict[str, Any]:
         """Fetch a single paper by identifier (arXiv ID/URL or DOI)."""
         parsed = parse_identifier(identifier)
@@ -329,7 +371,7 @@ def _register_search_tools(server: FastMCP) -> None:
 
 
 def _register_export_tool(server: FastMCP) -> None:
-    @server.tool()
+    @_tool(server)
     def export(
         papers: list[dict[str, Any]],
         keywords: str,
@@ -404,7 +446,7 @@ def _register_export_tool(server: FastMCP) -> None:
 
 
 def _register_pptx_tools(server: FastMCP) -> None:
-    @server.tool()
+    @_tool(server)
     def pptx_inspect(path: str) -> dict[str, Any]:
         """Return slide-by-slide structure (index, title, every text frame)."""
         slides = pptx_edit.inspect(path)
@@ -424,7 +466,7 @@ def _register_pptx_tools(server: FastMCP) -> None:
             ],
         }
 
-    @server.tool()
+    @_tool(server)
     def pptx_review(path: str, language: str | None = None) -> dict[str, Any]:
         """Audit a deck: overflow + colour contracts + section completeness.
 
@@ -436,7 +478,7 @@ def _register_pptx_tools(server: FastMCP) -> None:
         """
         return review.review_deck(path, language).to_dict()
 
-    @server.tool()
+    @_tool(server)
     def pptx_update_slide(
         path: str,
         slide_index: int,
@@ -463,7 +505,7 @@ def _register_pptx_tools(server: FastMCP) -> None:
         )
         return {"path": str(written), "slide_index": slide_index}
 
-    @server.tool()
+    @_tool(server)
     def pptx_delete_slide(
         path: str, slide_index: int, out_path: str | None = None
     ) -> dict[str, Any]:
@@ -471,7 +513,7 @@ def _register_pptx_tools(server: FastMCP) -> None:
         written = pptx_edit.delete_slide(path, slide_index, out_path=out_path)
         return {"path": str(written), "deleted": slide_index}
 
-    @server.tool()
+    @_tool(server)
     def pptx_reorder_slides(
         path: str, new_order: list[int], out_path: str | None = None
     ) -> dict[str, Any]:
@@ -479,7 +521,7 @@ def _register_pptx_tools(server: FastMCP) -> None:
         written = pptx_edit.reorder_slides(path, new_order, out_path=out_path)
         return {"path": str(written), "new_order": new_order}
 
-    @server.tool()
+    @_tool(server)
     def pptx_add_slide(
         path: str,
         title: str,

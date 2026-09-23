@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-08 | 2026-09-23 | MCP tools report expected failures as ToolError | #mcp #compat | [2026-09](2026-09.md) |
 | U-20260923-07 | 2026-09-23 | selenium replaces the je_web_runner dependency | #done #deps | [2026-09](2026-09.md) |
 | U-20260923-06 | 2026-09-23 | The GUI window remembers its size and position | #done #gui | [2026-09](2026-09.md) |
 | U-20260923-05 | 2026-09-23 | GUI tests wrote to the real settings registry | #bugfix #tests #gui | [2026-09](2026-09.md) |
@@ -78,4 +79,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 15 |
+| [2026-09.md](2026-09.md) | 2026-09 | 16 |

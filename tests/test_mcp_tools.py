@@ -7,9 +7,12 @@ import json
 from pathlib import Path
 
 import pytest
+from mcp.server.fastmcp.exceptions import ToolError
 
 from thesisagents import mcp as mcp_pkg
+from thesisagents.core.exceptions import ThesisAgentsError
 from thesisagents.core.models import PaperCollection, Query
+from thesisagents.mcp.server import _as_tool_error
 
 
 @pytest.fixture()
@@ -25,9 +28,11 @@ async def _call(server, name: str, **kwargs):
 
 
 def _first_text(result):
-    # FastMCP returns either a list[Content] or a tuple (contents, structured).
+    # The 1.x SDK returns a list[Content] or a tuple (contents, structured);
+    # 2.x returns a CallToolResult whose ``content`` is that list.
     if isinstance(result, tuple):
         result = result[0]
+    result = getattr(result, "content", result)
     for block in result:
         text = getattr(block, "text", None)
         if text is not None:
@@ -262,7 +267,7 @@ def test_search_exclude_all_sources_errors(monkeypatch, server):
         return None
 
     monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
-    with pytest.raises(Exception):  # noqa: B017,PT011  # FastMCP wraps the ThesisAgentsError
+    with pytest.raises(ToolError, match="exclude_sources removed every source"):
         asyncio.run(
             _call(
                 server,
@@ -451,7 +456,7 @@ def test_export_ignores_the_pdf_pseudo_format(server, sample_papers, tmp_path):
 def test_export_with_only_pdf_points_at_the_download_tool(server, sample_papers, tmp_path):
     """``formats=["pdf"]`` alone has nothing to render — say so, by name."""
     papers = [p.to_dict() for p in sample_papers]
-    with pytest.raises(Exception, match="download_pdfs"):
+    with pytest.raises(ToolError, match="download_pdfs"):
         asyncio.run(
             _call(
                 server,
@@ -491,3 +496,32 @@ def test_export_accepts_more_papers_than_the_page_size_cap(server, sample_papers
         )
     )
     assert Path(payload["written"]["bib"]).exists()
+
+
+def test_as_tool_error_turns_a_sync_tool_error_into_tool_error():
+    def failing():
+        raise ThesisAgentsError("nothing to render")
+
+    with pytest.raises(ToolError, match="nothing to render") as caught:
+        _as_tool_error(failing)()
+    assert isinstance(caught.value.__cause__, ThesisAgentsError)
+
+
+def test_as_tool_error_turns_an_async_tool_error_into_tool_error():
+    async def failing():
+        raise ThesisAgentsError("no paper found")
+
+    with pytest.raises(ToolError, match="no paper found"):
+        asyncio.run(_as_tool_error(failing)())
+
+
+def test_as_tool_error_passes_results_and_other_errors_through():
+    async def ok(value):
+        return {"value": value}
+
+    def broken():
+        raise KeyError("bug")
+
+    assert asyncio.run(_as_tool_error(ok)(3)) == {"value": 3}
+    with pytest.raises(KeyError):
+        _as_tool_error(broken)()
