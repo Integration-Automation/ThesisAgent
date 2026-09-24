@@ -198,9 +198,14 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
 search source or MCP tool, a CLI command or flag, install / setup, an env var
 or configuration, a requirement, or a quoted count) updates `README.md` **and
 every language variant in the same commit**, structure and content aligned.
-Never update one language and leave the others stale. No parity test guards
-these, so the check is manual — diff the section list against `README.md`
-before committing.
+Never update one language, or `README.md` alone, and leave the other languages
+or the docs stale. Each translation must reflect the English README's actual
+content, not merely share its headings. The same rule covers the Sphinx docs
+under `docs/` — the English pages plus every translated locale tree (`en`,
+`zh-tw`, `zh-cn`, `ja`, `ko`, `es`, `fr`, `de`, `pt`, `it`, `ru`, `hi`, `id`,
+`vi`): a user-facing change updates them in the same commit, structure and
+content aligned across languages. No parity test guards any of this, so the
+check is manual — diff the section list against `README.md` before committing.
 
 ## Git Commits
 
