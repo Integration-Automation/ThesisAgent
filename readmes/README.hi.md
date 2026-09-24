@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 ```
 
-बारह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_update_slide` / `pptx_add_slide` आदि सहित) [`docs/mcp.md`](docs/mcp.md) में प्रलेखित हैं।
+तेरह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` आदि सहित) [`docs/mcp.md`](docs/mcp.md) में प्रलेखित हैं।
 
 ### अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 
@@ -92,7 +92,7 @@ for p in ALL_PAPERS:
 - **दो समृद्धि पथ** सार से आगे एक वास्तविक थीसिस-शैली डेक तक:
   - **LLM-as-agent (कोई API key नहीं)** — कॉलिंग LLM `fetch_pdf_text` के माध्यम से PDF टेक्स्ट पढ़ता है, संदर्भ में संरचित सारांश लिखता है, और `export` को पास करता है।
   - **Python pipeline (`--enrich`)** — CLI स्वयं Anthropic API कॉल करती है; डिफ़ॉल्ट मॉडल `claude-opus-4-7`।
-- **डिफ़ॉल्ट रूप से सुरक्षित**: HTTPS-only HTTP परिवहन, प्रति-स्रोत दर सीमा (token bucket), किसी भी XML payload के लिए `defusedxml`, path-traversal-सुरक्षित निर्यात पथ, उपयोगकर्ता इनपुट पर `eval` / `exec` / `pickle` नहीं। Scholar और IEEE स्क्रैपिंग डिफ़ॉल्ट रूप से बंद (env-var opt-in)।
+- **डिफ़ॉल्ट रूप से सुरक्षित**: HTTPS-only HTTP परिवहन, प्रति-स्रोत दर सीमा (token bucket), किसी भी XML payload के लिए `defusedxml`, path-traversal-सुरक्षित निर्यात पथ, उपयोगकर्ता इनपुट पर `eval` / `exec` / `pickle` नहीं। Scholar और IEEE डिफ़ॉल्ट रूप से दृश्यमान Chrome के माध्यम से चालू हैं, `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1` तथा `THESISAGENTS_DISABLE_IEEE_SCRAPING=1` से opt-out करें।
 
 ## त्वरित शुरुआत
 
