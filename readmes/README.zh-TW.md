@@ -126,7 +126,7 @@ for key in irrelevant_keys:
   撰寫階段的開始,不是結束。
 - **不要**發明論文裡沒有的數字、RQ、貢獻或限制。
 - **不要**捏造 URL / DOI / arXiv ID —— 見上面的規則。
-- **不要**把不相關的下載留在執行目錄裡。關鍵字搜尋的比對可能包含離題
+- **不要**把不相關下載留在執行目錄裡。關鍵字搜尋的比對可能包含離題
   論文(一次「Claude code」查詢拉進了一篇 Viterbi 解碼器論文;
   「LLM code review」拉進了一篇物件偵測文獻回顧)。判定論文離題後,
   刪掉它們的 `pdfs/<key>.pdf` 與輕量 `<key>.pptx`;保留彙總 xlsx / bib
@@ -162,7 +162,7 @@ for key in irrelevant_keys:
   - `.pptx` —— 16:9 寬螢幕、有頁碼、三種渲染層級(只有摘要的輕量 ·
     加值扁平 · **論文口試級**,附痛點四象限、KPI 標註、技術比較表、
     每個 RQ 的結果表、貢獻摘要、核心觀察、限制與未來工作、Q&A、參考
-    文獻)。所有模板字串都跨 **14 種語言**做了 i18n:English、繁體中文、
+    文獻)。所有範本字串都跨 **14 種語言**做了 i18n:English、繁體中文、
     简体中文、日本語、Español、Français、Deutsch、한국어、Português、
     Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia。
   - **設計過的投影片視覺識別**(不是預設的 Calibri-on-white 樣貌):
@@ -224,9 +224,9 @@ for key in irrelevant_keys:
   對任何 XML payload 用 `defusedxml`、防路徑穿越的匯出路徑、不對
   使用者輸入用 `eval` / `exec` / `pickle`。
 - **zh-tw / zh-cn 詞彙守衛**:`tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary`
-  裡約 244 條正規表達式會抓出用繁體漢字寫成的簡體中文外來詞
-  (例如 `內存` → `記憶體`、`魯棒性` → `穩健性`、`軟件` → `軟體`、
-  `緩存` → `快取`)。同一套守衛也反向地跑在 zh-cn 語系字串上。完整規則
+  裡約 244 條正規表達式會抓出用繁體漢字寫成的簡體中文外來詞,
+  一律導向台灣慣用詞(例如 `記憶體`、`穩健性`、`軟體`、
+  `快取`)。同一套守衛也反向地跑在 zh-cn 語系字串上。完整規則
   與正規表達式目錄住在
   `.claude/agents/rules/language-vocabulary-check.md`。
 
@@ -316,7 +316,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar 透過可見 Chrome 預設開啟。** 設 `=1` 可退出(Google 的 ToS 禁止自動化存取 —— 為覆蓋率而預設開啟,退出以避免 captcha / IP 封鎖風險)。 |
 | `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + 付費牆 PDF 下載 | 持久的 Chrome `--user-data-dir`。設好它並完成一次 VPN / SSO / Google 登入;後續執行會繼承 cookie,讓 IEEE 回傳付費牆 metadata、Scholar 提供不被限流的 SERP。 |
 | `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + 付費牆 PDF 下載 | `=1` 強制走 httpx 路徑而非驅動真實 Chrome。對沒有 Chrome 二進位檔的 CI / Docker 有用;否則請保持不設。 |
-| `THESISAGENTS_CORE_API_KEY` | OA 解析器 + `core` 搜尋來源 | 免費金鑰來自 <https://core.ac.uk/services/api>。啟用 CORE.ac.uk 的 OA 查找步驟(2 億+ 機構 / 區域 OA 項目)**以及** `core` 搜尋來源。沒有它,`core` 來源會被默默跳過,其他 OA 策略(Unpaywall、S2、arXiv)仍會執行。 |
+| `THESISAGENTS_CORE_API_KEY` | OA 解析器 + `core` 搜尋來源 | 免費金鑰來自 <https://core.ac.uk/services/api>。啟用 CORE.ac.uk 的 OA 尋找步驟(2 億+ 機構 / 區域 OA 項目)**以及** `core` 搜尋來源。沒有它,`core` 來源會被默默跳過,其他 OA 策略(Unpaywall、S2、arXiv)仍會執行。 |
 | `THESISAGENTS_PDF_COOKIES_FILE` | PDF 下載器 | Netscape `cookies.txt`。預設關閉。只對你有機構權利的出版商使用。 |
 | `THESISAGENTS_LOG_LEVEL` | logger | 預設 `INFO`;`DEBUG` 用於冗長追蹤。 |
 
@@ -443,7 +443,7 @@ Español、Français、Deutsch、한국어、Português、Русский、Itali
 Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從你的 OS 語系挑選
 語言,之後 **Settings → Interface language** 讓你更改它。投影片輸出語言
 是一個獨立的下拉選單,所以你可以用一種語言跑 UI、用另一種語言產出
-投影片。版面是響應式的:每個表單都坐在一個 `QScrollArea` 裡,視窗可以
+投影片。版面是自適應的:每個表單都坐在一個 `QScrollArea` 裡,視窗可以
 縮小到 900×600(仍容得下 720p),並預設開啟 HiDPI 縮放。
 
 完整參考:[`docs/gui.md`](docs/gui.md)。
@@ -472,7 +472,7 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從
 - **`release.yml`** 等待 `ci.yml` 在 `main` 上完成(`workflow_run`
   觸發)。它只在 CI 成功時執行。**每一次 CI 成功推送到 `main` 都是一次
   發行** —— 工作流程會自動升 `pyproject.toml` 的 patch 版本、把版本升號
-  以 `chore: bump version to X.Y.Z` commit 回 `main`,並進行流水線:
+  以 `chore: bump version to X.Y.Z` commit 回 `main`,並進行管線:
   1. **`bump-version`** —— 從 `pyproject.toml` 讀出目前的 `X.Y.Z`,
      遞增到 `X.Y.(Z+1)`,用工作流程的 `GITHUB_TOKEN` commit + push 回
      `main`。那次推送**不會**重新觸發 CI(依 GitHub 規則,
@@ -507,7 +507,7 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從
 3. 允許 GitHub Actions 推送到 `main`:`Settings → Actions →
    General → Workflow permissions → Read and write permissions`。升號
    commit 由工作流程的 `GITHUB_TOKEN` 推送。
-4. 透過把 PR 併入 `main` 來發行。流水線需要約 3–5 分鐘發布到 PyPI,再
+4. 透過把 PR 併入 `main` 來發行。管線需要約 3–5 分鐘發布到 PyPI,再
    約 50–70 分鐘(冷)或約 5–10 分鐘(暖 Nuitka 快取)讓 Windows zip
    附上。
 
