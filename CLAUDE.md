@@ -188,6 +188,20 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
 - **Cross-project contracts** are listed in `architecture.md` §6: what other repositories rely on here (CLI flags, import paths, constructor arguments, file layouts) and what this repository relies on elsewhere. No test here protects them, so never rename or remove one without changing its consumers in the same round, and update §6 whenever a contract is added or changes.
 - `docs/architecture.md` remains the detailed architecture document; `architecture.md` links to it.
 
+## README stays current and in every language (HARD)
+
+`README.md` (English, the source) and every translation under `readmes/` —
+`README.de.md`, `README.es.md`, `README.fr.md`, `README.hi.md`,
+`README.id.md`, `README.it.md`, `README.ja.md`, `README.ko.md`,
+`README.pt.md`, `README.ru.md`, `README.vi.md`, `README.zh-CN.md`,
+`README.zh-TW.md` — MUST stay current with the code. Any user-facing change (a
+search source or MCP tool, a CLI command or flag, install / setup, an env var
+or configuration, a requirement, or a quoted count) updates `README.md` **and
+every language variant in the same commit**, structure and content aligned.
+Never update one language and leave the others stale. No parity test guards
+these, so the check is manual — diff the section list against `README.md`
+before committing.
+
 ## Git Commits
 
 - NEVER add `Co-Authored-By` lines.

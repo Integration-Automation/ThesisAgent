@@ -10,40 +10,66 @@
 > **語言**: [English](../README.md) · **繁體中文** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [한국어](README.ko.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Tiếng Việt](README.vi.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md)
 > **文件**: [thesisagents.readthedocs.io](https://thesisagents.readthedocs.io/en/latest/)
 
-以關鍵字驅動的論文搜尋助手。從 arXiv、Semantic Scholar、OpenAlex、PubMed、ACM(走 Crossref)、IEEE Xplore、DBLP、通用 Crossref、OpenAIRE、Springer Nature、Europe PMC、DOAJ、HAL、CORE、Google Scholar 抓論文,正規化成統一的 record,並把去重後的結果集匯出為 **論文口試級的 PowerPoint 投影片**、**Excel 工作簿**、**BibTeX 檔** —— 一次 CLI 呼叫或一次 MCP 工具呼叫即可完成全部。另可選擇讓 AI 讀 PDF 本文後產出每篇論文的結構化摘要(LLM-as-agent 路徑)或透過 Anthropic API 自動產(Python pipeline 路徑)。
+以關鍵字驅動的論文搜尋助手,從 arXiv、Semantic Scholar、OpenAlex、
+PubMed、ACM(走 Crossref)、IEEE Xplore、DBLP、通用 Crossref、
+OpenAIRE、Springer Nature、Europe PMC、DOAJ、HAL、CORE 與 Google Scholar
+抓取結果,把它們正規化成單一 record 形狀,並將去重後的結果集匯出為
+**論文口試級的 PowerPoint 投影片**、**Excel 工作簿**與
+**BibTeX 檔** —— 全部只需一次 CLI 呼叫或一次 MCP 工具呼叫即可完成。可選擇性地
+讓系統讀取每篇論文的 PDF、產生每篇的結構化摘要,方式可以是就地(LLM-as-agent
+路徑)或透過 Anthropic API(Python pipeline 路徑)。
 
 ## 給驅動本專案的 AI agent 看
 
-**如果你是 LLM(Claude Code、Cursor、Aider、Codex CLI …)正在讀這份 README 想搞清楚要做什麼 —— 從這節開始。** 下面的規則也釘在 [`AGENTS.md`](AGENTS.md)(跨 agent 鏡像)與 [`CLAUDE.md`](CLAUDE.md)(權威來源),做非小改動前請先讀。
+**如果你是一個 LLM(Claude Code、Cursor、Aider、Codex CLI …)正在讀這份
+README 想搞清楚要做什麼 —— 從這裡開始。** 底下的所有內容也都釘在
+[`AGENTS.md`](AGENTS.md)(跨 agent 鏡像)與 [`CLAUDE.md`](CLAUDE.md)
+(權威參考)裡;做非小改動之前請先讀那兩份。
 
 ### 使用者真正想要的
 
-預設交付物是 **每篇一份論文口試級的富版 `.pptx`**,不是 CLI 預設出的「只有摘要的輕量版」。輕量 emit 是中間產物,**你的工作就是把它升級**。
+預設交付物是**每篇論文一份論文口試級的豐富 `.pptx`**,而不是 CLI 預設
+產出的那種只有摘要的輕量投影片。輕量產出只是一個中間產物 —— 你的
+工作就是把它升級。
 
 ### 決策樹
 
-1. 環境變數有設 `ANTHROPIC_API_KEY` 嗎? → 直接跑 CLI,它會走 Anthropic API 自動產富版。你做完了。
-2. 沒 key 但你(LLM)正在驅動這次 session → **你自己手寫 rich summary**。每篇 PDF 自己讀,手寫 `PaperSummary` 含 rich-tier 欄位(`pain_points`、`research_question`、`contributions_detailed`、`headline_metrics`、`technique_table`、`method_sections`、`evaluation_sections`、`system_flow`、`research_questions`、`rq_results`、`core_observation`、`limitations`、`future_work`),放一份 `scripts/regen_<query>.py`,跑它。**不要叫使用者去設 API key** —— 你就是那個會寫 summary 的 LLM。
-3. 沒 LLM(CI / cron / 無人值守)→ 輕量版可以接受。
+1. 環境裡有設 `ANTHROPIC_API_KEY` 嗎? → 直接跑 CLI 就好;它會透過
+   Anthropic API 自動加值。你完成了。
+2. 沒有金鑰,但你(一個 LLM)正在驅動這個 session → **你自己產出豐富
+   摘要**。讀每一份 PDF,親手撰寫一份帶有豐富層欄位的 `PaperSummary`
+   (`pain_points`、`research_question`、`contributions_detailed`、
+   `headline_metrics`、`technique_table`、`method_sections`、
+   `evaluation_sections`、`system_flow`、`research_questions`、
+   `rq_results`、`core_observation`、`limitations`、`future_work`),
+   放一支 `scripts/regen_<query>.py`,執行它。**不要叫使用者去設定 API
+   金鑰** —— 你就是那個本來會寫出摘要的 LLM。
+3. 迴圈裡沒有 LLM(CI / cron / 無人值守)→ 輕量版可以接受。
 
-### MCP 6 步驟流程
+### 6 步 MCP 工作流程
 
 ```
-1. (選) list_sources()                                # 看哪些 plugin 已啟用
+1. (optional) list_sources()                              # see which plugins are enabled
 2. search(keywords, sources, top_tier_only=true, ...)
-3. (選) download_pdfs(papers, out_dir="./exports/...")
-4. fetch_pdf_text(pdf_url=paper.pdf_url)              # 每篇都要
-5. (你逐篇讀 PDF,自己產 structured summary dict)
+3. (optional) download_pdfs(papers, out_dir="./exports/...")
+4. fetch_pdf_text(pdf_url=paper.pdf_url)                  # per paper
+5. (you read each PDF and produce a structured summary dict)
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-13 個 MCP 工具(包含 `list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` 等)的完整參考在 [`docs/mcp.md`](docs/mcp.md)。
+全部十三個 MCP 工具(包含 `list_sources`、`list_exports`、
+`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` /
+`pptx_add_slide` / 等等)都記載於 [`docs/mcp.md`](docs/mcp.md)。
 
-### 必做:交付前驗證 URL / DOI
+### 必辦:出貨前先驗證 URL / DOI
 
-出版商的 URL 路徑 **不能用猜的** —— AAAI 用數字 ID(`v40i5.37389`),IEEE 用 opaque `arnumber`,ACM 用 opaque DOI。手寫 `Paper` 時,**`url` / `doi` / `arxiv_id` 必須逐字從同一次搜尋產生的 xlsx 抄過來** —— 不能憑印象,也不能從標題自己拼。
+出版商的 URL 路徑**猜不出來** —— AAAI 用數字 ID
+(`v40i5.37389`)、IEEE 用一組不透明的 `arnumber`、ACM 用不透明的 DOI。
+當你親手撰寫一個 `Paper` 時,**要從產生這次執行的那份搜尋 xlsx 逐字
+複製 `url` / `doi` / `arxiv_id`** —— 絕不要憑記憶,也絕不要從標題湊出來。
 
-xlsx 寫在 `exports/<run>/<slug>-<timestamp>.xlsx`,第 7 欄是 DOI、第 8 欄是 URL。Regen script 跑完做這個 audit:
+那份 xlsx 會寫到 `exports/<run>/<slug>-<timestamp>.xlsx`,第 7 欄是
+DOI、第 8 欄是 URL。完成時審核你的 regen 腳本:
 
 ```python
 from openpyxl import load_workbook
@@ -58,11 +84,16 @@ for p in ALL_PAPERS:
         print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 ```
 
-過去這套 audit 抓到兩個 production fabrication:寫錯 AAAI 卷期(`v39i23.34521` vs 真實的 `v39i22.34537`)、編造作者 slug 路徑(`view/fang2026` 而不是 `v40i5.37389`)。
+在正式環境裡用這個方法抓到過兩起捏造:錯誤的 AAAI 卷號
+(`v39i23.34521` vs 真實 `v39i22.34537`),以及發明出來的作者 slug 路徑
+(`view/fang2026` 而非 `v40i5.37389`)。
 
-### 必做:交付前剪除不相關下載
+### 必辦:出貨前先剔除不相關的下載
 
-搜尋是關鍵字比對,常會誤觸不相關論文:"Claude code" 抓到一篇 Viterbi 解碼器(因為都含 "code");"LLM code review" 抓到一篇物件偵測綜述。判定為不相關後,直接剪掉:
+搜尋是以關鍵字比對的,所以離題論文一定會混進來:一次「Claude code」
+查詢帶回了一篇 Viterbi 解碼器論文,因為兩者都含有「code」;
+「LLM code review」比對到一篇物件偵測的文獻回顧。一旦你讀了摘要、
+判定某篇論文對使用者的真正意圖離題,就從執行目錄剔除它:
 
 ```python
 from pathlib import Path
@@ -74,46 +105,132 @@ for key in irrelevant_keys:
             path.unlink()
 ```
 
-刪 `exports/<run>/pdfs/<key>.pdf` + `exports/<run>/<key>.pptx`。**保留** aggregate `<slug>-<timestamp>.xlsx` / `.bib` —— 那是搜尋的誠實紀錄。Borderline cases 寧可寫 rich summary 也不要默默丟掉可能的命中。
+刪掉 `exports/<run>/pdfs/<key>.pdf` 與 `exports/<run>/<key>.pptx`。
+**保留**彙總的 `<slug>-<timestamp>.xlsx` / `.bib` —— 那些是搜尋實際
+回傳了什麼的誠實紀錄。邊界案例就給它一份豐富摘要;寧可多收也不要
+默默漏掉一個可能的匹配。
 
-### 範例
+### 實作範例
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) 是完全照這套流程手寫的 rich summary 範例(單篇論文、rich-tier、zh-tw,每個 rich 欄位都填齊),當 template 用。多篇搜尋照同樣的形狀做,`PaperCollection` tuple 裡每篇一個 `Paper(...summary=PaperSummary(...))` entry。
+[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) 附了一份正是
+以這種方式親手撰寫的豐富摘要(單篇論文、豐富層、zh-tw、每個豐富欄位
+都填滿)。多篇論文的搜尋遵循同樣的形狀,在 `PaperCollection` tuple
+裡每篇論文一個 `Paper(...summary=PaperSummary(...))` 條目。
 
-### 禁忌
+### 不要做的事
 
-- **不要** 在多篇搜尋結束時告訴使用者「設 `ANTHROPIC_API_KEY` 才能拿到富版」—— 你就是那個會寫 summary 的 LLM。
-- **不要** 把每篇的輕量 `.pptx` 當成交付物。
-- **不要** 看到 `download_pdfs` 回報「N 份 PDF 已存」就停 —— 那是 rich-authoring 的開始,不是結束。
-- **不要** 編造論文裡沒有的數字、RQ、貢獻、限制。
-- **不要** 編造 URL / DOI / arXiv ID —— 見上面那條規則。
-- **不要** 把不相關下載留在 run 目錄裡。搜尋是關鍵字比對,常會誤觸到不相關的論文(例如 "Claude code" 帶到一篇 Viterbi 解碼器論文;"LLM code review" 帶到一篇物件偵測綜述)。判定為不相關後,把 `pdfs/<key>.pdf` 與輕量 `<key>.pptx` 刪掉;保留 aggregate xlsx / bib 作為搜尋的「誠實紀錄」。
-- **不要** 在 commit message、PR description、程式註解或文件裡提到「Claude」、「Claude Code」、「AI-generated」、「GPT」、「Copilot」或任何 AI 工具 / 模型名稱。
+- **不要**在多篇論文搜尋結束時告訴使用者「設 `ANTHROPIC_API_KEY` 就能
+  得到豐富投影片」—— 你就是那個本來能寫出摘要的 LLM。
+- **不要**把每篇論文的輕量 `.pptx` 當成交付物。
+- **不要**在 `download_pdfs` 回報存了 N 份 PDF 後就停手 —— 那是豐富
+  撰寫階段的開始,不是結束。
+- **不要**發明論文裡沒有的數字、RQ、貢獻或限制。
+- **不要**捏造 URL / DOI / arXiv ID —— 見上面的規則。
+- **不要**把不相關下載留在執行目錄裡。關鍵字搜尋的比對可能包含離題
+  論文(一次「Claude code」查詢拉進了一篇 Viterbi 解碼器論文;
+  「LLM code review」拉進了一篇物件偵測文獻回顧)。判定論文離題後,
+  刪掉它們的 `pdfs/<key>.pdf` 與輕量 `<key>.pptx`;保留彙總 xlsx / bib
+  作為搜尋實際回傳內容的誠實紀錄。
+- **不要**在 commit 訊息、PR 描述、程式註解或文件裡提到「Claude」、
+  「Claude Code」、「AI-generated」、「GPT」、「Copilot」或任何 AI 工具 /
+  模型名稱。
 
-## 功能
+## 功能特色
 
-- **十五種可外掛來源**: `arxiv`、`semantic_scholar`、`openalex`、`pubmed`、`acm`(Crossref 限縮 ACM)、`dblp`、`crossref`(通用)、`openaire`、`europepmc`、`doaj`、`hal`、`core`、`springer`(需 API key)、`ieee`(預設啟用,走可見 Chrome;設 API key 可切換官方 Xplore API)、`scholar`(預設啟用,走可見 Chrome)。每個都在 `sources/<name>/` 後面以 `Fetcher` 介面實作。「頂級期刊白名單」過濾器預設關閉,傳 `--top-tier-only` 可只保留旗艦級 CS 會議/期刊 + Nature/Science/PNAS 等;預設搜尋收所有 venue。
-- **單篇論文模式**: 貼上 arXiv ID、arXiv URL、DOI、PMID、或 IEEE 文件 URL,ThesisAgents 會走對應 source plugin 拉那一篇並出同一套匯出包。適合做論文閱讀筆記或口試準備。
-- **本機 PDF 模式** (`--pdf <path>`): 傳一個 PDF 或一整個資料夾。內建啟發式抽取器會從每個 PDF 的首頁直接撈出 **標題、作者、年份、arXiv ID、DOI、真正的摘要**(以「Abstract」/「ABSTRACT」/「摘要」標題為錨點,不是隨便切前 N 字)。單一 PDF 時 `--title` / `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` 會覆寫抽取結果;資料夾模式下以每個檔自己的抽取結果為準,每篇都會出一份以 BibTeX key 命名的投影片。
-- **八種匯出器**:
-  - `.pptx` —— 16:9 寬螢幕、附頁碼。三種 rendering tier(輕量摘要 / 扁平結構化 / **論文口試級 thesis-style**:痛點四宮格、研究問題 callout、KPI 區、技術比較表、文獻定位表、系統總覽、方法細節、每題 RQ 結果表、貢獻總結、核心觀察、限制與未來工作、Q&A、參考文獻)。所有樣板字串都做 i18n,共 **14 種語言**:English、繁體中文、简体中文、日本語、Español、Français、Deutsch、한국어、Português、Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia。
-  - **設計過的視覺識別**(不是預設 Calibri-on-white 的樣子):每語言字體 pass(Latin 用 Inter,CJK + Hindi 用 Microsoft JhengHei UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI)、程式化的 accent geometry(每張內容投影片頂端的 accent bar + 封面的左側帶)、學術風表格(去掉預設黑色 grid、navy header rule、淡色 inter-row divider、交替 row stripe、置中對齊、首欄粗體標籤),搭配五色 palette 紀律(navy / teal / grey / light / white) —— 紅色文字被禁用,強調用 **粗體 + teal `#0E7490`** 取代。
-  - **亮色模式為預設 render 路徑**(白底 + navy 色帶)。暗色模式為 opt-in:加 `--dark-mode`(CLI)、勾選 GUI Deck 分頁的 **Dark mode**、或在程式中傳 `ExportOptions(dark_mode=True)`。啟用後 deck 仍先用 light palette 建構,再由 post-build pass 把 text + fill + cell-border 的 RGB 換成暗色版本(slide bg `#12151B`、body text `#E5E7EB`、teal accent 換成更亮的 `#2DD4BF`),適合 OLED 投影機與昏暗會場。
-  - `.xlsx` —— Papers 工作表 + Query 出處工作表,URL/PDF 帶超連結、首列凍結、欄寬自動。第 5 欄 **Source** 顯示真實刊登來源(例如「IEEE Access」),第 6 欄 **Indexed via** 顯示是哪個 fetcher 抓到的(例如「openalex」),兩個資訊不會混在一起。
-  - `.md` —— 完整來源/標題/摘要清單。
-  - `.bib` —— 不會撞 key、LaTeX 特殊字元已跳脫。
-  - `.json` —— 原始 payload 供下游處理。
-  - `.ris` —— Zotero / Mendeley / EndNote / RefWorks 可匯入的 RIS 交換格式(給非 LaTeX 文獻管理器,BibTeX 的姊妹格式)。
-  - `.csv` —— 一篇一列的扁平表格,方便試算表 / grep 快速篩選(RFC-4180 引號規則,標題含逗號也不會位移欄位)。
-  - `.csl.json` —— 給 Pandoc / citeproc 的 CSL-JSON,可用任何 CSL 樣式(APA、IEEE、Nature …)排出參考書目。用 `.csl.json` 副檔名與純 `.json` dump 區隔。
-- **PPT 編輯工具箱**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)能對 exporter 產生的任何投影片做編輯,對應的 `pptx_*` MCP 工具也讓 LLM agent 能繼續對 deck 做迭代。
-- **MCP server**: 13 個工具:`list_sources` + `list_exports`(探索)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`(批次下載)、`export`,以及六個 `pptx_*` deck 工具(`inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。任何支援 MCP 的 LLM(Claude Code、Claude Desktop、Cursor…)都能驅動整套流程。
-- **兩條 enrichment 路徑** 把 deck 從「只有摘要」升級到「真的讀過全文」:
-  - **LLM-as-agent(不需要 API key)** —— 呼叫端的 LLM 透過 `fetch_pdf_text` 拿 PDF 本文,在自己 context 裡產 structured summary,再丟給 `export`。
-  - **Python pipeline(`--enrich`)** —— CLI 自己打 Anthropic API,預設模型 `claude-opus-4-7`。
-- **預設安全**: HTTPS-only HTTP transport、每來源 token bucket 限流、任何 XML payload 都走 `defusedxml`、匯出路徑做 path-traversal 檢查、使用者輸入完全不會碰到 `eval` / `exec` / `pickle`。Scholar 與 IEEE 的可見 Chrome 爬取預設啟用,可分別設 `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING=1` / `THESISAGENTS_DISABLE_IEEE_SCRAPING=1` 停用。
+- **十五個可插拔來源**:`arxiv`、`semantic_scholar`、`openalex`、
+  `pubmed`、`acm`(Crossref 範圍化)、`dblp`、`crossref`(未範圍化)、
+  `openaire`、`springer`(需要 API 金鑰)、`europepmc`(開放、免金鑰 ——
+  生命科學 + preprint + 農業)、`doaj`(開放、免金鑰 —— 開放取用期刊,
+  通常帶直接 PDF 連結)、`hal`(開放、免金鑰 —— 法國的資工 / 數學 /
+  物理典藏,附全文 PDF)、`core`(需要免費 API 金鑰 —— 最大的開放取用
+  彙整站,2.5 億+ 件作品)、`ieee`(透過可見 Chrome 預設開啟;API 金鑰
+  會加上官方 Xplore API)、`scholar`(透過可見 Chrome 預設開啟)。每個
+  都住在 `sources/<name>/` 裡、藏在一個 `Fetcher` 轉接器後面。傳
+  `--top-tier-only` 可把結果篩選到旗艦級資工會議 / 期刊外加
+  Nature/Science/PNAS。預設搜尋保留所有場館。
+- **單篇論文模式**:貼上一個 arXiv ID、arXiv URL、DOI、PMID 或 IEEE
+  文件 URL —— ThesisAgents 會透過對應來源解析它,並輸出同一套匯出組合。
+  對論文閱讀筆記與論文口試準備很有用。
+- **本機 PDF 模式**(`--pdf <path>`):傳入一份 PDF 或一個目錄。一個
+  啟發式擷取器會直接從每份 PDF 的前置頁抽出**標題、作者、年份、
+  arXiv ID、DOI 與真正的摘要**(錨定在明確的 `Abstract` / `ABSTRACT` /
+  `摘要` 標頭上,而非盲目截取前綴)。單一 PDF 呼叫時 `--title` /
+  `--authors` / `--year` / `--venue` / `--doi` / `--arxiv-id` 會覆寫;
+  對一個目錄則以每檔擷取為準,讓每篇論文都得到一份以其 BibTeX 鍵命名的
+  投影片。
+- **八個匯出器**:
+  - `.pptx` —— 16:9 寬螢幕、有頁碼、三種渲染層級(只有摘要的輕量 ·
+    加值扁平 · **論文口試級**,附痛點四象限、KPI 標註、技術比較表、
+    每個 RQ 的結果表、貢獻摘要、核心觀察、限制與未來工作、Q&A、參考
+    文獻)。所有範本字串都跨 **14 種語言**做了 i18n:English、繁體中文、
+    简体中文、日本語、Español、Français、Deutsch、한국어、Português、
+    Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia。
+  - **設計過的投影片視覺識別**(不是預設的 Calibri-on-white 樣貌):
+    依語言的字體(拉丁文用 Inter,CJK + 印地文用 Microsoft JhengHei
+    UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI)、
+    程式化的裝飾幾何(每張內容頁頂端一條裝飾條 + 封面左側色帶)、
+    學術風格的表格排版(拿掉預設格線、深藍表頭橫線、柔和的列間分隔、
+    交替列底紋、垂直置中對齊、粗體列標籤),以及五色調色盤紀律
+    (深藍 / 藍綠 / 灰 / 淺 / 白),文字**禁用**紅色(改用粗體 + 藍綠
+    `#0E7490` 來強調)。
+  - **淺色模式是預設的渲染路徑。** 傳 `--dark-mode`、在 GUI Deck 分頁
+    啟用 **Dark mode**,或設 `ExportOptions(dark_mode=True)`,即可套用
+    深色後製處理(投影片背景 `#12151B`、內文 `#E5E7EB`)。
+  - `.xlsx` —— Papers 工作表 + Query 出處工作表、超連結的 URL / PDF、
+    凍結表頭、自動欄寬。第 5 欄(**Source**)顯示真正的發表場館
+    (例如「IEEE Access」);第 6 欄(**Indexed via**)顯示是哪個
+    fetcher 回傳了 metadata(例如「openalex」),所以這兩項資訊絕不
+    相撞。
+  - `.md` —— 完整的來源 / 標題 / 摘要清單。
+  - `.bib` —— 無碰撞的引用鍵、經 LaTeX 跳脫的欄位。
+  - `.json` —— 給下游工具用的原始 payload。
+  - `.ris` —— 由 Zotero / Mendeley / EndNote / RefWorks 匯入的 RIS
+    交換格式(給非 LaTeX 參考文獻管理器用的 BibTeX 手足)。
+  - `.csv` —— 給試算表 / 快速 grep 分類用的每篇論文一列的扁平表格
+    (RFC-4180 引號規則,所以標題裡的逗號絕不會位移欄位)。
+  - `.csl.json` —— 給 Pandoc / citeproc 用的 CSL-JSON;可以用任何 CSL
+    樣式(APA、IEEE、Nature …)渲染參考文獻。`.csl.json` 副檔名讓它跟
+    純 `.json` dump 有所區別。
+- **PPT 編輯工具組**:`thesisagents.exporters.pptx_edit`
+  (inspect / update_slide / delete_slide / reorder_slides / add_slide)
+  可對匯出器產出的任何投影片運作,加上對應的 `pptx_*` MCP 工具,好讓
+  一個 LLM agent 能在產出的投影片上反覆迭代。
+- **MCP 伺服器**:13 個工具 —— `list_sources` + `list_exports`
+  (探索)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
+  `export`,以及六個 `pptx_*` 投影片工具(`inspect`、`review`、
+  `update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。讓任何
+  懂 MCP 的 LLM(Claude Code、Claude Desktop、Cursor …)驅動整個工作
+  流程。
+- **兩條加值路徑**,用來超越摘要、進入真正的論文口試級投影片:
+  - **LLM-as-agent(免 API 金鑰)** —— 呼叫端 LLM 透過
+    `fetch_pdf_text` 讀 PDF 本文,就地寫出一份結構化摘要,再傳給
+    `export`。
+  - **Python pipeline(`--enrich`)** —— CLI 自己呼叫 Anthropic 的 API;
+    預設模型 `claude-opus-4-7`。
+- **可見 Chrome 的出版商流程**:Scholar SERP、IEEE `/rest/search`,以及
+  每一次付費牆 PDF 下載(ieeexplore / dl.acm / link.springer /
+  sciencedirect / wiley / oup / nature / science / …)都在一個真實可見的
+  Chrome session 裡透過 `selenium` 執行。使用者在那個實況視窗裡解一次
+  captcha / 完成 SSO;`THESISAGENTS_CHROME_PROFILE_DIR` 會跨執行保存
+  cookie。
+- **LLM-as-agent 流程**:MCP 工具提供搜尋、PDF 下載與文字擷取。
+  `scripts/regen_*.py` 內含可重現的範例,示範如何為每篇論文親手撰寫
+  一份豐富的 `PaperSummary`。
+- **OA PDF 解析器**:去重之後,每篇沒有 `pdf_url` 的論文都會走
+  Unpaywall → S2 `openAccessPdf` → arXiv 標題搜尋 → CORE.ac.uk(在有設
+  金鑰時)。在 IEEE / ACM / Springer / Elsevier 為主的查詢上典型的
+  提升:40-70 個百分點。
+- **預設就安全**:僅 HTTPS 的 HTTP 傳輸、每來源速率限制(token bucket)、
+  對任何 XML payload 用 `defusedxml`、防路徑穿越的匯出路徑、不對
+  使用者輸入用 `eval` / `exec` / `pickle`。
+- **zh-tw / zh-cn 詞彙守衛**:`tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary`
+  裡約 244 條正規表達式會抓出用繁體漢字寫成的簡體中文外來詞,
+  一律導向台灣慣用詞(例如 `記憶體`、`穩健性`、`軟體`、
+  `快取`)。同一套守衛也反向地跑在 zh-cn 語系字串上。完整規則
+  與正規表達式目錄住在
+  `.claude/agents/rules/language-vocabulary-check.md`。
 
-## 快速開始
+## 快速上手
 
 ```powershell
 git clone <repo-url>
@@ -122,18 +239,19 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1            # Windows PowerShell
 # source .venv/bin/activate           # Linux / macOS
 
-# 安裝 dev extras(會一併拉進 MCP SDK 與 intelligence 相依)
+# Install with dev extras (also pulls in MCP SDK and intelligence deps)
 pip install -e .[dev]
 ```
 
-搜尋 arXiv 並輸出 deck + workbook + BibTeX(`--query` 預設):
+搜尋 arXiv 並匯出投影片 + 工作簿 + BibTeX(`--query` 的預設):
 
 ```powershell
 py -m thesisagents --query "diffusion models" --source arxiv --max 10 `
                       --out .\exports\
 ```
 
-抓單篇論文 —— 預設只出 `.pptx + .bib`(單篇沒必要出 `.xlsx`):
+用 URL 抓單篇論文 —— 預設是 `.pptx + .bib`(對只有一列的資料,`.xlsx`
+比較沒意義):
 
 ```powershell
 py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
@@ -141,14 +259,14 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --out .\exports\
 ```
 
-把 deck 改成繁體中文:
+用繁體中文渲染投影片:
 
 ```powershell
 py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --lang zh-tw --out .\exports\
 ```
 
-LLM-pipeline enrichment(Python 自己打 Anthropic,需要 API key):
+LLM-pipeline 加值(Python 自己呼叫 Anthropic —— 需要 API 金鑰):
 
 ```powershell
 $env:ANTHROPIC_API_KEY = "sk-ant-..."
@@ -156,61 +274,75 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
                       --enrich --lang zh-tw --out .\exports\
 ```
 
-## CLI 參數
+## CLI 旗標
 
-| 參數 | 用途 |
+| 旗標 | 用途 |
 |---|---|
-| `--query` / `-q` | 關鍵字(沒給 `--paper` 時必填)。 |
-| `--paper` / `-p` | arXiv ID / URL、DOI、PMID 或 IEEE 文件 URL,與 `--query` 互斥。 |
-| `--source` / `-s` | 用逗號分隔的來源列表。預設 `arxiv`。 |
-| `--max` / `-n` | 每個來源的最大結果數(1..200)。預設 25。 |
-| `--year-from` / `--year-to` | 年份過濾(含端點)。 |
-| `--export` / `-e` | 格式: `pptx,xlsx,md,bib,json,ris,csv,csl` 任意組合。預設依模式不同(見下)。 |
-| `--out` / `-o` | 匯出目錄。預設 `./exports`。 |
-| `--filename-stem` | 蓋掉自動產生的檔名 stem。 |
-| `--no-abstract` | 不要把摘要寫進匯出檔。 |
-| `--lang` / `-l` | Deck 語言,14 種之一: `en`、`zh-tw`、`zh-cn`、`ja`、`es`、`fr`、`de`、`ko`、`pt`、`ru`、`it`、`vi`、`hi`、`id`。預設 `en`。 |
-| `--enrich` | 抓 PDF + 用 Anthropic 產 summary。需要 `ANTHROPIC_API_KEY` 與 `[intelligence]` 套件。 |
-| `--lightweight` | 即使有 `ANTHROPIC_API_KEY` 也強制走「只用摘要」的輕量版。 |
-| `--llm-model` | 蓋掉 enrichment 預設的 `claude-opus-4-7`。 |
-| `--top-tier-only` | 只保留頂級期刊白名單內的結果(arXiv + 旗艦級 CS 會議/期刊,如 S&P、CCS、NDSS、USENIX Security、NeurIPS、ICML、ICSE …)。預設關閉。 |
-| `--paywall-threshold` | 多少比例的結果是付費牆才會觸發確認提示。預設 0.30。 |
-| `--yes` | 跳過付費牆提示。 |
-| `--max-slides` | 每篇 PPT 投影片上限(預設 25;傳 0 表示不限)。 |
-| `--dark-mode` | 用暗色背景 `#12151B` + 近白文字 `#E5E7EB` render 投影片。預設是亮色 navy 色帶 deck。 |
-| `--quiet` | 不要列印每篇論文。 |
-
-預設值: `--query` → `pptx,xlsx,bib`;`--paper` → `pptx,bib`。一律可被 `--export` 覆寫。
+| `--query` / `-q` | 關鍵字(除非用 `--paper`,否則必填)。 |
+| `--paper` / `-p` | arXiv ID / URL、DOI、PMID 或 IEEE 文件 URL。與 `--query` 互斥。 |
+| `--source` / `-s` | 逗號分隔的來源清單。預設 `arxiv`。 |
+| `--max` / `-n` | 每來源最多結果數(1..200)。預設 25。 |
+| `--year-from` / `--year-to` | 含邊界的年份篩選。 |
+| `--export` / `-e` | 格式:`pptx,xlsx,md,bib,json,ris,csv,csl` 之任意組合。預設依模式而定(見下)。 |
+| `--out` / `-o` | 輸出目錄。預設 `./exports`。 |
+| `--filename-stem` | 覆寫產生的檔名主幹。 |
+| `--no-abstract` | 從匯出中省略摘要內容。 |
+| `--lang` / `-l` | 投影片語言:14 種之一 —— `en`、`zh-tw`、`zh-cn`、`ja`、`es`、`fr`、`de`、`ko`、`pt`、`ru`、`it`、`vi`、`hi`、`id`。預設 `en`。 |
+| `--enrich` | 自動加值的失敗即報變體。需要 `ANTHROPIC_API_KEY` 與 `[intelligence]` extra。(設了金鑰時自動加值是預設。) |
+| `--lightweight` | 跳過加值 + 強制只有摘要的投影片。只用於快速 / 無人值守的執行;**當有 LLM agent 在驅動時,偏好下面的 LLM-as-agent 流程**。 |
+| `--llm-model` | 覆寫加值用的預設 `claude-opus-4-7`。 |
+| `--no-pdf` | 跳過自動 PDF 下載。也會停用每篇論文的 PPT 閘(沒 PDF → 沒完整內容)。 |
+| `--no-oa-resolve` | 跳過去重後的 OA PDF 解析器(Unpaywall + S2 + arXiv + CORE.ac.uk)。 |
+| `--top-tier-only` | 把結果限制到 arXiv + 一份精選的資工旗艦白名單(S&P、CCS、NDSS、USENIX Security、NeurIPS、ICML、ICSE …)。預設關閉。 |
+| `--paywall-threshold` | 觸發確認提示的付費牆結果比例。預設 0.30。 |
+| `--yes` | 跳過付費牆提示直接進行。 |
+| `--max-slides` | 每篇論文的投影片上限(預設 25;傳 0 表示無上限)。 |
+| `--dark-mode` | 以深色背景 + 近白文字渲染 pptx。預設是淺色深藍帶投影片。 |
+| `--quiet` | 抑制每篇論文的列印輸出。 |
 
 ### 環境變數
 
-| 變數 | 用於 | 用途 |
+| 變數 | 使用者 | 用途 |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | `--enrich` | LLM 認證。MCP 上的 LLM-as-agent 路徑不需要。 |
-| `THESISAGENTS_LLM_MODEL` | `--enrich` | 蓋掉預設的 `claude-opus-4-7`。 |
-| `THESISAGENTS_S2_API_KEY` | Semantic Scholar | 提高速率限制,選用。 |
-| `THESISAGENTS_NCBI_API_KEY` | PubMed | 把 NCBI 匿名限額(3/s)拉到 10/s,選用。 |
-| `THESISAGENTS_CONTACT_EMAIL` | PubMed、ACM、Crossref、OpenAlex | 讓 Crossref 等把請求放進「客氣池」。 |
-| `THESISAGENTS_IEEE_API_KEY` | IEEE(API 路徑) | 切換到官方 Xplore API,訂閱範圍內會帶 `pdf_url`。 |
-| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE 預設啟用,走可見 Chrome。** 設 `=1` 可停用(例如沒有 Chrome 的 CI)。httpx 爬取分支只在 WebRunner 不可用時作為 fallback。 |
-| `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM、Crossref | Crossref Plus 訂閱 token(Bearer header),選用。 |
-| `THESISAGENTS_SPRINGER_API_KEY` | Springer | 必填;免費 key 申請 <https://dev.springernature.com/>。沒設則該 plugin 會被靜默跳過。 |
-| `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + paywalled-PDF downloads | Persistent Chrome `--user-data-dir`. Set this and complete VPN / SSO once; subsequent runs inherit the cookies. |
-| `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + paywalled-PDF downloads | `=1` forces the httpx paths instead of driving real Chrome. For CI / Docker without a Chrome binary. |
-| `THESISAGENTS_CORE_API_KEY` | OA resolver | Free key from <https://core.ac.uk/services/api>. Enables the CORE.ac.uk lookup step in the OA PDF resolver. |
-| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar 預設啟用,走可見 Chrome。** 設 `=1` 可停用(Google ToS 禁止自動存取:預設啟用是為了涵蓋率,想避開 captcha / IP 封鎖風險就 opt-out)。 |
-| `THESISAGENTS_PDF_COOKIES_FILE` | PDF 下載器 | Netscape `cookies.txt`,預設關閉。請只用在你有合法存取權的出版商。 |
-| `THESISAGENTS_LOG_LEVEL` | logger | 預設 `INFO`;`DEBUG` 可看更詳細。 |
+| `ANTHROPIC_API_KEY` | `--enrich` | LLM 認證。走 MCP 的 LLM-as-agent 路徑不需要。 |
+| `THESISAGENTS_LLM_MODEL` | `--enrich` | 覆寫預設的 `claude-opus-4-7`。 |
+| `THESISAGENTS_S2_API_KEY` | Semantic Scholar + OA 解析器 | 更高的速率限制;也被 OA 解析器的 S2 `openAccessPdf` 步驟使用。免費金鑰在 <https://www.semanticscholar.org/product/api>。 |
+| `THESISAGENTS_NCBI_API_KEY` | PubMed | 把 NCBI 的匿名限制(3/s)提高到 10/s。選用。 |
+| `THESISAGENTS_CONTACT_EMAIL` | PubMed、ACM、Crossref、OpenAlex、**Unpaywall** | 禮貌池標記 + 啟用 OA 解析器的 Unpaywall 步驟(對 IEEE / ACM / Springer / Elsevier 付費牆論文的 PDF 覆蓋率提升最大;典型提升 40-70 pp)。 |
+| `THESISAGENTS_IEEE_API_KEY` | IEEE(API 路徑) | 官方 IEEE Xplore API;為範圍內論文帶出 `pdf_url`。 |
+| `THESISAGENTS_DISABLE_IEEE_SCRAPING` | IEEE | **IEEE 透過可見 Chrome 預設開啟。** 設 `=1` 可退出(例如沒有 Chrome 的 CI)。httpx 抓取分支只在 WebRunner 不可用時作為後備執行。 |
+| `THESISAGENTS_CROSSREF_PLUS_TOKEN` | ACM、Crossref | Crossref Plus 訂閱者 token(Bearer 標頭)。選用。 |
+| `THESISAGENTS_SPRINGER_API_KEY` | Springer | 必填;免費金鑰來自 <https://dev.springernature.com/>。沒有它外掛會丟 `ConfigError`。 |
+| `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING` | Google Scholar | **Scholar 透過可見 Chrome 預設開啟。** 設 `=1` 可退出(Google 的 ToS 禁止自動化存取 —— 為覆蓋率而預設開啟,退出以避免 captcha / IP 封鎖風險)。 |
+| `THESISAGENTS_CHROME_PROFILE_DIR` | Scholar + IEEE + 付費牆 PDF 下載 | 持久的 Chrome `--user-data-dir`。設好它並完成一次 VPN / SSO / Google 登入;後續執行會繼承 cookie,讓 IEEE 回傳付費牆 metadata、Scholar 提供不被限流的 SERP。 |
+| `THESISAGENTS_DISABLE_WEBRUNNER` | Scholar + IEEE + 付費牆 PDF 下載 | `=1` 強制走 httpx 路徑而非驅動真實 Chrome。對沒有 Chrome 二進位檔的 CI / Docker 有用;否則請保持不設。 |
+| `THESISAGENTS_CORE_API_KEY` | OA 解析器 + `core` 搜尋來源 | 免費金鑰來自 <https://core.ac.uk/services/api>。啟用 CORE.ac.uk 的 OA 尋找步驟(2 億+ 機構 / 區域 OA 項目)**以及** `core` 搜尋來源。沒有它,`core` 來源會被默默跳過,其他 OA 策略(Unpaywall、S2、arXiv)仍會執行。 |
+| `THESISAGENTS_PDF_COOKIES_FILE` | PDF 下載器 | Netscape `cookies.txt`。預設關閉。只對你有機構權利的出版商使用。 |
+| `THESISAGENTS_LOG_LEVEL` | logger | 預設 `INFO`;`DEBUG` 用於冗長追蹤。 |
 
-## MCP server
+預設:`--query` → `pptx,xlsx,bib`。`--paper` → `pptx,bib`。永遠可用明確的
+`--export` 覆寫。
 
-註冊到 Claude Code:
+## LLM-as-agent 流程
+
+當你編輯器裡的 LLM 在驅動這個工作流程時,依序使用 MCP 工具:
+`search`、`download_pdfs`、`fetch_pdf_text`,然後用一份親手撰寫的豐富
+`PaperSummary` 呼叫 `export`。既有的 `scripts/regen_*.py` 檔案就是最終
+撰寫與匯出步驟的可重現範例。
+
+完整的端到端執行手冊(搜尋 → 豐富投影片)住在
+`.claude/agents/tasks/paper-summary-author.md` —— 開一個新查詢前先打開它,
+好讓 LLM 能執行整個流程而不必停下來等使用者輸入。
+
+## MCP 伺服器
+
+向 Claude Code 註冊:
 
 ```powershell
 claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 ```
 
-或寫到 settings:
+或寫進你的設定檔:
 
 ```json
 {
@@ -225,60 +357,61 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 
 工具:
 
-| Tool | 用途 |
+| 工具 | 用途 |
 |---|---|
-| `list_sources` | 列出所有 plugin + 回報目前 env 下哪些已啟用。`search` 之前先呼叫這個。 |
-| `list_exports` | 列出 `export` 接受的所有匯出格式與說明。與 `list_sources` 對稱,`export` 之前先呼叫,就不會傳到不認得的格式。 |
-| `search` | 關鍵字 → 論文列表。可帶 `top_tier_only`、`min_citations`;省略 `sources` 時預設掃所有不需要 API key 的來源。 |
+| `list_sources` | 列舉每個外掛 + 回報各自在目前環境下是否啟用。在 `search` 前呼叫一次。 |
+| `list_exports` | 列舉每種匯出格式,附一行描述,並說明它寫一個彙總檔還是每篇論文一檔。 |
+| `search` | 關鍵字 → 論文清單。接受 `top_tier_only`、`min_citations`;預設走完整的免 API 金鑰來源組合。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別碼 → 單篇論文。 |
-| `fetch_pdf_text` | 抓單一 PDF 並回傳擷取的本文。**MCP 路徑下「讓我讀過論文」的入口。** |
-| `download_pdfs` | 批次把一組論文的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX key 為索引的逐篇結果。 |
-| `export` | 論文列表 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇可附 `summary` 欄位走 thesis-style;支援 `max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false`,即亮色 navy 色帶 deck,傳 `true` 得到暗色 OLED / 低光版本)。 |
-| `pptx_inspect` | 讀既有投影片檔的 slide / shape 結構。 |
-| `pptx_review` | 一次呼叫稽核整份 deck:溢位 + 色彩契約 + `paper_rule` 章節完整度。自動偵測 deck 語言,同 CLI `python -m thesisagents review <deck.pptx>`。 |
-| `pptx_update_slide` | 取代 `title` / `body` / `meta`(透過 shape name)或任意 shape(透過 index)。 |
-| `pptx_delete_slide` | 刪掉一張 slide 以及它的 part relationship。 |
+| `fetch_pdf_text` | 下載一份 PDF,回傳擷取出的本文文字。**這是「我讀了論文」的 MCP 路徑。** |
+| `download_pdfs` | 批次把一份論文清單的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX 鍵為索引的每篇論文結果。 |
+| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 |
+| `pptx_inspect` | 讀取既有投影片的 slide / shape 結構。 |
+| `pptx_review` | 一次呼叫審核一份投影片 —— 溢位 + 顏色契約 + `paper_rule` 章節完整度。自動偵測投影片語言;也是 CLI `python -m thesisagents review <deck.pptx>`。 |
+| `pptx_update_slide` | 替換 `title` / `body` / `meta`(依 shape 名稱)或依索引替換任意 shape。 |
+| `pptx_delete_slide` | 移除一張投影片與它的 part 關係。 |
 | `pptx_reorder_slides` | 透過 `sldIdLst` 重排投影片。 |
-| `pptx_add_slide` | 在尾端 append 或在指定 position 插入一張新的 title / body / meta slide。 |
+| `pptx_add_slide` | 附加或插入一張新的 title / body / meta 投影片。 |
 
-LLM-as-agent 流程(不需要 `ANTHROPIC_API_KEY`,因為 LLM 自己就是 agent):
+LLM-as-agent 流程(不需要 `ANTHROPIC_API_KEY` —— LLM 就是那個 agent):
 
 ```
-1. (選) list_sources()                              # 先看哪些 plugin 開著
+1. (optional) list_sources()                       # discover enabled plugins
 2. search(keywords=..., sources=[...], top_tier_only=true)
-3. (選) download_pdfs(papers, out_dir="./exports/...")  # 把 PDF 存到本機
-4. fetch_pdf_text(pdf_url=paper.pdf_url)            # 每篇都做一次
-5. (LLM 讀本文,自己產 structured summary dict)
+3. (optional) download_pdfs(papers, out_dir="./exports/...")  # persist PDFs
+4. fetch_pdf_text(pdf_url=paper.pdf_url)           # per paper
+5. (the LLM reads body text, produces a structured `summary` dict)
 6. export(papers=[{...paper, "summary": {pain_points: [...], rq_results: [...]}}],
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-完整參考: [`docs/mcp.md`](docs/mcp.md)。
+完整參考在 [`docs/mcp.md`](docs/mcp.md)。
 
 ## 專案結構
 
 ```
 ThesisAgents/
-├── thesisagents/                 # 主套件
+├── thesisagents/                 # main package
 │   ├── core/                        # Paper / PaperSummary / RqResult / dedup / ranking / pipeline
-│   ├── fetchers/                    # HTTPS-only async client、token-bucket 限流
-│   ├── exporters/                   # pptx(thesis-style)/ xlsx / bib / md / json / pptx_edit / i18n
-│   ├── intelligence/                # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
-│   ├── evaluation/                  # 離線搜尋品質評測(docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server(13 個工具)
-│   ├── sources/<name>/              # plugin 資料夾: arxiv、semantic_scholar、
-│   │                                #   openalex、pubmed、acm、ieee、scholar、
-│   │                                #   dblp、crossref、openaire、springer、europepmc、doaj、hal、core
-│   ├── utils/                       # logging、path safety
+│   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
+│   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
+│   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
+│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
+│   │                                #   openalex, pubmed, acm, ieee, scholar,
+│   │                                #   dblp, crossref, openaire, springer,
+│   │                                #   europepmc, doaj, hal, core
+│   ├── utils/                       # logging, path safety
 │   ├── cli.py                       # argparse CLI
 │   └── __main__.py
-├── tests/                           # pytest suite + 錄製 fixture(不打活 HTTP)
-├── docs/                            # Sphinx(14 個語言樹)
-├── scripts/                         # 一次性 regen 腳本
-└── pyproject.toml                   # ruff、bandit、build、optional extras
+├── tests/                           # pytest suite + recorded fixtures (no live HTTP)
+├── docs/                            # Sphinx (14 language trees)
+├── scripts/                         # one-off regen scripts
+└── pyproject.toml                   # ruff, bandit, build, optional extras
 ```
 
-## Definition of Done
+## 完成定義(Definition of Done)
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/
@@ -286,8 +419,105 @@ ThesisAgents/
 .venv\Scripts\python.exe -m bandit -c pyproject.toml -r thesisagents/
 ```
 
-bandit 的 `-c` 旗標是必要的 —— 沒有它 bandit 不會讀專案 skip 設定。動到 pptx exporter 時,還要跑 overflow check(見 `CLAUDE.md` 的「Slide Deck Rules」一節)。
+bandit 上的 `-c` 旗標是必要的 —— 沒有它 bandit 會忽略專案的 skip 設定。
+碰到 pptx 匯出器時,也要跑一次溢位檢查(見 `CLAUDE.md`「Slide Deck
+Rules」)。
+
+## 桌面 GUI(PySide6)
+
+一個原生桌面介面藏在 `[gui]` extra 後面出貨:
+
+```powershell
+pip install thesisagents[gui]
+thesisagents-gui                 # or: thesisagents gui
+```
+
+視窗有四個分頁 —— **Search**、**Settings**(透過 QSettings 保存 API
+金鑰)、**Enrich**(透過一個 `collection_ready` 訊號驅動 LLM-as-agent /
+Python-pipeline 加值),以及 **Deck**(淺色模式切換 + 投影片上限 +
+最大圖數控制項會流向 `ExportOptions`)。Windows 發行版 zip 出貨的是
+Nuitka 編譯的套件,已含 PySide6,所以 `thesisagents.exe gui` 不必另外
+裝 Python 就能運作。
+**UI 以全部 14 種語言出貨**(English、繁體中文、简体中文、日本語、
+Español、Français、Deutsch、한국어、Português、Русский、Italiano、
+Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從你的 OS 語系挑選
+語言,之後 **Settings → Interface language** 讓你更改它。投影片輸出語言
+是一個獨立的下拉選單,所以你可以用一種語言跑 UI、用另一種語言產出
+投影片。版面是自適應的:每個表單都坐在一個 `QScrollArea` 裡,視窗可以
+縮小到 900×600(仍容得下 720p),並預設開啟 HiDPI 縮放。
+
+完整參考:[`docs/gui.md`](docs/gui.md)。
+
+## 打包成獨立執行檔
+
+記載了兩個打包器,用來出貨一個不必安裝 Python 就能跑的單檔二進位檔:
+
+- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+  —— 快速建置(不到一分鐘)、輸出 200–300 MB、啟動 2–4 秒。當你在
+  迭代建置腳本時最合適。
+- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** ——
+  緩慢建置(5–15 分鐘)、輸出 80–150 MB、次秒級啟動,帶一些位元碼
+  保護。當終端使用者會多次執行二進位檔時最合適。
+
+兩份文件都涵蓋了專案特有的陷阱 —— `sources/<name>/` 下的動態來源
+外掛 —— 並附上一個經驗證、涵蓋 CLI 與 MCP 伺服器進入點的指令。
+
+## 持續整合與發行
+
+`.github/workflows/` 下住著兩個 GitHub Actions 工作流程:
+
+- **`ci.yml`** 在每次推送與對 `main` 的 PR 上執行。矩陣是 Ubuntu +
+  Windows × Python 3.12 / 3.13 / 3.14(6 個 job)。每個 job 跑
+  `ruff check`、`bandit -c pyproject.toml` 與 `pytest`。
+- **`release.yml`** 等待 `ci.yml` 在 `main` 上完成(`workflow_run`
+  觸發)。它只在 CI 成功時執行。**每一次 CI 成功推送到 `main` 都是一次
+  發行** —— 工作流程會自動升 `pyproject.toml` 的 patch 版本、把版本升號
+  以 `chore: bump version to X.Y.Z` commit 回 `main`,並進行管線:
+  1. **`bump-version`** —— 從 `pyproject.toml` 讀出目前的 `X.Y.Z`,
+     遞增到 `X.Y.(Z+1)`,用工作流程的 `GITHUB_TOKEN` commit + push 回
+     `main`。那次推送**不會**重新觸發 CI(依 GitHub 規則,
+     `GITHUB_TOKEN` 驅動的推送無法啟動新的 workflow run),所以這個
+     循環會自然終止。
+  2. **`publish-pypi`** —— 建置 sdist + wheel、`twine check`、透過
+     `PYPI_API_TOKEN` `twine upload`。
+  3. **`create-draft-release`** —— 在 tag `v<version>` 開一個*草稿*
+     GitHub release,附自動產生的說明。
+  4. **`build-nuitka`** —— 在一個 Windows runner 上編譯一個 Nuitka
+     standalone 套件(進入點:透過 `--python-flag=-m` 的
+     `python -m thesisagents`)、煙霧測試它、把產出的
+     `thesisagents.dist/` 資料夾打包成 zip,並把 zip + 一個 `.sha256`
+     校驗碼附到草稿 release。刻意設計成 standalone(不是 onefile):
+     onefile 每次啟動都會自解壓到 `%TEMP%`,增加啟動延遲並在鎖死的
+     機器上觸發防毒啟發式。也刻意只支援 Windows:Linux / macOS 使用者
+     從 PyPI 安裝。以 `pyproject.toml` 為鍵的建置快取把暖建置從約 70 分
+     冷建置削減到約 5–10 分。
+  5. **`publish-release`** —— 一旦 Nuitka 資產上傳完成就取消草稿標記,
+     讓使用者永遠不會看到一個做到一半的 release。
+
+  **跳過一次發行。** 在 commit 訊息任何地方包含 `[skip release]`,升號
+  加上每個下游 job 都會被跳過 —— 對不該燒掉一個版本號的純文件 / 錯字 /
+  重構 commit 使用它。
+
+要啟用 PyPI 發布 + 發行執行檔:
+
+1. 在 <https://pypi.org/manage/account/token/> 產生一個專案範圍的 API
+   token。
+2. 在 GitHub repo 裡:`Settings → Secrets and variables → Actions →
+   New repository secret`。命名為 `PYPI_API_TOKEN` 並貼上 token 值。
+3. 允許 GitHub Actions 推送到 `main`:`Settings → Actions →
+   General → Workflow permissions → Read and write permissions`。升號
+   commit 由工作流程的 `GITHUB_TOKEN` 推送。
+4. 透過把 PR 併入 `main` 來發行。管線需要約 3–5 分鐘發布到 PyPI,再
+   約 50–70 分鐘(冷)或約 5–10 分鐘(暖 Nuitka 快取)讓 Windows zip
+   附上。
+
+`publish-pypi` job 刻意**不**附加一個 GitHub Environment,所以每次執行
+都以 Release 條目(附它的 Nuitka `.exe`)呈現,而非以 repo 首頁上的
+「Deployment」側邊欄小工具呈現 —— release 有自己專屬的頁面,上頭再加一個
+Deployment 條目只會是多餘的雜訊。
 
 ## 授權
 
-見 `LICENSE`。arXiv API 的使用受 arXiv API 服務條款規範(<https://info.arxiv.org/help/api/tou.html>)—— 請遵守每 3 秒 1 次的軟限制;內建的 fetcher 已透過 token bucket 強制此速率。
+見 `LICENSE`。arXiv API 依 arXiv 的 API 使用條款
+(<https://info.arxiv.org/help/api/tou.html>)使用 —— 遵守每 3 秒 1 次
+請求的軟性限制;隨附的 fetcher 已透過它的 token bucket 強制此限制。
