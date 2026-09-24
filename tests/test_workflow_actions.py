@@ -63,3 +63,12 @@ def test_dependabot_keeps_pins_current_on_dev():
     assert {"pip", "github-actions"} <= ecosystems
     assert all(re.search(r"^\s*target-branch:\s*\"dev\"", block, re.MULTILINE)
                for block in blocks)
+
+
+def test_release_runs_only_for_pushes_to_this_repository():
+    # workflow_run's `branches:` filter compares the head branch *name*, so
+    # a pull request from a fork's `main` also completes CI "on main". The
+    # release job must additionally require a push to this repository.
+    text = (_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    assert "github.event.workflow_run.event == 'push'" in text
+    assert "github.event.workflow_run.head_repository.full_name == github.repository" in text
