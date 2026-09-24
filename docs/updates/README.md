@@ -58,6 +58,12 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-03 | 2026-09-24 | Test that every checkout decides on persisted credentials | #ci #tests | [2026-09](2026-09.md) |
+| U-20260924-02 | 2026-09-24 | Release runs only for pushes here; least-privilege workflow permissions | #ci #security | [2026-09](2026-09.md) |
+| U-20260924-01 | 2026-09-24 | Move CI to Node 24 actions pinned by commit | #ci #security #deps | [2026-09](2026-09.md) |
+| U-20260923-10 | 2026-09-23 | MCP server runs on mcp 1.x and 2.x; extras allow <3 | #done #mcp #compat | [2026-09](2026-09.md) |
+| U-20260923-09 | 2026-09-23 | Release 0.1.19 | #done #release | [2026-09](2026-09.md) |
+| U-20260923-08 | 2026-09-23 | MCP tools report expected failures as ToolError | #mcp #compat | [2026-09](2026-09.md) |
 | U-20260923-07 | 2026-09-23 | selenium replaces the je_web_runner dependency | #done #deps | [2026-09](2026-09.md) |
 | U-20260923-06 | 2026-09-23 | The GUI window remembers its size and position | #done #gui | [2026-09](2026-09.md) |
 | U-20260923-05 | 2026-09-23 | GUI tests wrote to the real settings registry | #bugfix #tests #gui | [2026-09](2026-09.md) |
@@ -78,4 +84,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 15 |
+| [2026-09.md](2026-09.md) | 2026-09 | 21 |
