@@ -192,8 +192,8 @@ entry per paper in the `PaperCollection` tuple.
     Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia.
   - **Designed-deck visual identity** (not the default Calibri-on-white
     look): per-language typography (Inter for Latin, Microsoft JhengHei
-    UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI for CJK
-    + Hindi), programmatic accent geometry (top accent bar on every
+    UI / YaHei UI / Yu Gothic UI / Malgun Gothic / Nirmala UI for
+    CJK + Hindi), programmatic accent geometry (top accent bar on every
     content slide + left band on the cover), academic-style table
     formatting (default grid stripped, navy header rule, soft inter-row
     dividers, alternating row stripe, middle-vertical alignment, bold
