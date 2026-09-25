@@ -321,14 +321,17 @@ the available height.
 
 ## CI / Release errors
 
-### `Nuitka build timed out at 45 min`
+### Nuitka build timed out
 
-The PySide6 cold build is heavy (~50-70 min). The timeout was
-bumped to 90 min in commit `ba28953`. If you're forking and seeing
-this on your fork's CI:
+The PySide6 cold build is heavy (~80-90 min on a GitHub Windows
+runner). `release.yml` caps the job at 120 min. If you're forking and
+seeing this on your fork's CI:
 
-- Make sure your fork inherits the 90-min cap from `release.yml`.
-- Subsequent runs should hit the Nuitka cache and finish in 5-10 min.
+- Make sure your fork inherits the 120-min cap and the
+  `NUITKA_CACHE_DIR` setting from `release.yml`.
+- Subsequent runs should hit the Nuitka cache. If the Nuitka log ends
+  with `Compiled N C files using clcache with 0 cache hits`, the cache
+  step is not saving the directory `NUITKA_CACHE_DIR` points at.
 
 ### `Failed to locate package 'arxiv' you asked to include`
 

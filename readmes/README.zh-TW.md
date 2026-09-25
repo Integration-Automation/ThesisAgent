@@ -489,7 +489,7 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從
      校驗碼附到草稿 release。刻意設計成 standalone(不是 onefile):
      onefile 每次啟動都會自解壓到 `%TEMP%`,增加啟動延遲並在鎖死的
      機器上觸發防毒啟發式。也刻意只支援 Windows:Linux / macOS 使用者
-     從 PyPI 安裝。以 `pyproject.toml` 為鍵的建置快取把暖建置從約 70 分
+     從 PyPI 安裝。以 `pyproject.toml` 為鍵的建置快取把暖建置從約 85 分
      冷建置削減到約 5–10 分。
   5. **`publish-release`** —— 一旦 Nuitka 資產上傳完成就取消草稿標記,
      讓使用者永遠不會看到一個做到一半的 release。
@@ -508,7 +508,7 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從
    General → Workflow permissions → Read and write permissions`。升號
    commit 由工作流程的 `GITHUB_TOKEN` 推送。
 4. 透過把 PR 併入 `main` 來發行。管線需要約 3–5 分鐘發布到 PyPI,再
-   約 50–70 分鐘(冷)或約 5–10 分鐘(暖 Nuitka 快取)讓 Windows zip
+   約 80–90 分鐘(冷)或約 5–10 分鐘(暖 Nuitka 快取)讓 Windows zip
    附上。
 
 `publish-pypi` job 刻意**不**附加一個 GitHub Environment,所以每次執行

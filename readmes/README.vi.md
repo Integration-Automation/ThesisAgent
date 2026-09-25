@@ -531,7 +531,7 @@ Hai workflow GitHub Actions nằm trong `.github/workflows/`:
      thêm độ trễ khởi động và kích hoạt heuristic diệt virus trên các
      máy bị khóa chặt. Cũng chỉ-Windows theo thiết kế: người dùng Linux /
      macOS cài từ PyPI. Cache build khóa trên `pyproject.toml`
-     cắt build ấm từ ~70 phút lạnh xuống ~5–10 phút.
+     cắt build ấm từ ~85 phút lạnh xuống ~5–10 phút.
   5. **`publish-release`** — bỏ đánh dấu nháp một khi asset Nuitka
      đã được tải lên, nên người dùng không bao giờ thấy một release dở dang.
 
@@ -551,7 +551,7 @@ Hai workflow GitHub Actions nằm trong `.github/workflows/`:
    General → Workflow permissions → Read and write permissions`.
    Commit tăng phiên bản được push bởi `GITHUB_TOKEN` của workflow.
 4. Cắt release bằng cách merge PR vào `main`. Pipeline mất
-   ~3–5 phút để xuất bản lên PyPI và ~50–70 phút nữa (lạnh) hoặc ~5–10 phút
+   ~3–5 phút để xuất bản lên PyPI và ~80–90 phút nữa (lạnh) hoặc ~5–10 phút
    (cache Nuitka ấm) để zip Windows được đính kèm.
 
 Job `publish-pypi` cố ý KHÔNG đính kèm một GitHub

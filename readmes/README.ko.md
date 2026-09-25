@@ -526,7 +526,7 @@ Python 설치 없이 실행되는 단일 파일 바이너리를 배포하기 위
      `%TEMP%` 로 자기 압축을 풀어 시작 지연을 더하고 잠긴 머신에서
      안티바이러스 휴리스틱을 건드립니다. 마찬가지로 설계상
      Windows 전용: Linux / macOS 사용자는 PyPI 에서 설치합니다.
-     `pyproject.toml` 에 키를 둔 빌드 캐시가 웜 빌드를 콜드 ~70분
+     `pyproject.toml` 에 키를 둔 빌드 캐시가 웜 빌드를 콜드 ~85분
      에서 ~5–10분으로 줄입니다.
   5. **`publish-release`** — Nuitka 자산이 업로드되면 초안 표시를
      해제하여 사용자가 절반만 완성된 릴리스를 결코 보지 않게 합니다.
@@ -546,7 +546,7 @@ PyPI 게시 + 릴리스 실행 파일을 활성화하려면:
    General → Workflow permissions → Read and write permissions`. 올림
    커밋은 워크플로의 `GITHUB_TOKEN` 이 푸시합니다.
 4. PR 을 `main` 에 병합하여 릴리스를 냅니다. 파이프라인은 PyPI 게시에
-   ~3–5분, Windows zip 첨부에 추가로 ~50–70분(콜드) 또는 ~5–10분
+   ~3–5분, Windows zip 첨부에 추가로 ~80–90분(콜드) 또는 ~5–10분
    (웜 Nuitka 캐시)이 걸립니다.
 
 `publish-pypi` 잡은 의도적으로 GitHub Environment 를 붙이지

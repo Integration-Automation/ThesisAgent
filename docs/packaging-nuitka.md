@@ -75,9 +75,12 @@ OS-neutral; the `;` separator quirk that PyInstaller has does not
 apply here).
 
 The binary lands at `./thesisagents` (or `.exe` on Windows) in the
-working directory. Subsequent rebuilds reuse the cache under
-`./<entrypoint>.build/` so the first build is slow but later builds
-are 2–3 minutes.
+working directory. The first build is slow. Later builds reuse Nuitka's
+compiler cache (clcache with MSVC, ccache elsewhere), which lives in
+Nuitka's cache directory rather than in `./<entrypoint>.build/`:
+`%LOCALAPPDATA%\Nuitka\Nuitka\Cache` on Windows, `~/.cache/Nuitka` on
+Linux, `~/Library/Caches/Nuitka` on macOS. Set `NUITKA_CACHE_DIR` to
+move it.
 
 ## Build the MCP server (`thesisagents-mcp`)
 
@@ -154,19 +157,23 @@ already compiled in the wheel; Nuitka just needs to copy it.
 `--include-package-data=lxml` covers it. If the link fails on Linux
 ensure `libxml2-dev` and `libxslt1-dev` are installed.
 
-**Slow CI builds.** Cache the Nuitka build dir between runs:
+**Slow CI builds.** Point Nuitka's cache at a fixed directory and
+save that directory between runs. The build folder is not the cache:
+restoring `thesisagents.build` alone still recompiles every C file.
 
 ```yaml
-- name: Restore Nuitka cache
-  uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
-  with:
-    path: |
-      ~/.nuitka
-      thesisagents.build
-    key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+env:
+  NUITKA_CACHE_DIR: ~/nuitka-cache   # job level, so the Nuitka step sees it
+steps:
+  - name: Restore Nuitka cache
+    uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+    with:
+      path: ~/nuitka-cache
+      key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
 ```
 
-Cuts subsequent builds from 15 minutes to 2–3 minutes.
+Later builds then recompile only the C files that changed. The Nuitka
+log reports it as `Compiled N C files using clcache with H cache hits`.
 
 **Console encoding on Windows.** Same trick as the PyInstaller doc:
 set `PYTHONUTF8=1` or `chcp 65001` before running the binary, so CJK
@@ -187,6 +194,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      NUITKA_CACHE_DIR: ~/nuitka-cache
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
@@ -195,9 +204,7 @@ jobs:
       - name: Cache Nuitka build
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
-          path: |
-            ~/.nuitka
-            thesisagents.build
+          path: ~/nuitka-cache
           key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
       - run: |
           python -m nuitka --standalone --onefile \

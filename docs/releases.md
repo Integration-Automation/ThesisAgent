@@ -144,14 +144,24 @@ the one-command install path. Windows is the only platform where
 | `bump-version` | ~5 s | ~5 s |
 | `publish-pypi` | ~3-5 min | ~3-5 min |
 | `create-draft-release` | ~10 s | ~10 s |
-| `build-nuitka` | **~50-70 min** | ~5-10 min |
+| `build-nuitka` | **~80-90 min** | ~5-10 min (expected) |
 | `publish-release` | ~5 s | ~5 s |
-| Total | ~55-75 min | ~10-15 min |
+| Total | ~85-95 min | ~10-15 min (expected) |
 
 The Nuitka cold build dominates because PySide6 + Qt are a huge
-amount of C++ to link. The cache (keyed on `pyproject.toml` +
-version) cuts subsequent builds dramatically. The timeout cap is
-90 min — generous for the cold case.
+amount of C++ to compile: about 2,700 C files, and the releases of
+2026-09-23 to 2026-09-25 each spent 82-88 min on it. Nuitka keeps a
+compiler cache (clcache with MSVC) under `NUITKA_CACHE_DIR`, and the
+workflow saves that directory with `actions/cache`, so a later build
+only recompiles the files that changed. The warm figures are what the
+cache is expected to give. Before 2026-09-25 the workflow cached
+directories Nuitka does not use on Windows, so no release has been
+measured warm yet.
+
+The timeout cap is 120 min, which leaves room for a cold build. A
+cold build still happens whenever the cache is missing, for example
+after a quiet week: GitHub evicts a cache that has not been used for
+7 days.
 
 ## Repo settings the pipeline needs
 

@@ -538,7 +538,7 @@ Dua workflow GitHub Actions ada di bawah `.github/workflows/`:
      memicu heuristik antivirus pada mesin yang terkunci. Windows-saja
      juga secara desain: pengguna Linux / macOS memasang dari PyPI.
      Cache build berkunci pada `pyproject.toml` memangkas build hangat
-     dari ~70 menit dingin menjadi ~5–10 menit.
+     dari ~85 menit dingin menjadi ~5–10 menit.
   5. **`publish-release`** — batalkan tanda draft begitu aset Nuitka
      terunggah, sehingga pengguna tidak pernah melihat rilis
      setengah-jadi.
@@ -559,7 +559,7 @@ Untuk mengaktifkan publikasi PyPI + executable rilis:
    General → Workflow permissions → Read and write permissions`. Commit
    kenaikan di-push oleh `GITHUB_TOKEN` workflow.
 4. Potong rilis dengan me-merge PR ke `main`. Pipeline memakan
-   ~3–5 menit untuk publikasi ke PyPI dan ~50–70 menit lagi (dingin) atau
+   ~3–5 menit untuk publikasi ke PyPI dan ~80–90 menit lagi (dingin) atau
    ~5–10 menit (cache Nuitka hangat) agar zip Windows terlampir.
 
 Job `publish-pypi` sengaja TIDAK melampirkan sebuah GitHub Environment,

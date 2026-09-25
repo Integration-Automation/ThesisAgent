@@ -359,7 +359,7 @@ Python がインストールされていなくても動く単一ファイルバ�
      ロックダウンされたマシンでアンチウイルスのヒューリスティックに引っかかる。
      設計上 Windows 専用でもある: Linux / macOS ユーザーは PyPI から
      インストール。`pyproject.toml` をキーとするビルドキャッシュが、
-     ウォームビルドをコールドの約 70 分から約 5〜10 分に短縮。
+     ウォームビルドをコールドの約 85 分から約 5〜10 分に短縮。
   5. **`publish-release`** — Nuitka アセットがアップロードされたら draft を
      解除、ユーザーが半端なリリースを見ないように。
 
@@ -378,7 +378,7 @@ PyPI 公開 + リリース実行ファイルを有効にするには:
    General → Workflow permissions → Read and write permissions`。bump
    コミットはワークフローの `GITHUB_TOKEN` によって push されます。
 4. PR を `main` にマージしてリリースを切る。パイプラインは PyPI 公開まで
-   約 3〜5 分、Windows zip の添付までさらに約 50〜70 分(コールド)または
+   約 3〜5 分、Windows zip の添付までさらに約 80〜90 分(コールド)または
    約 5〜10 分(ウォームな Nuitka キャッシュ)かかります。
 
 `publish-pypi` ジョブは意図的に GitHub Environment を付けません。そのため

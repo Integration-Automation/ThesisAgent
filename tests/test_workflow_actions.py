@@ -74,12 +74,17 @@ def test_release_runs_only_for_pushes_to_this_repository():
     assert "github.event.workflow_run.head_repository.full_name == github.repository" in text
 
 
-def _checkout_steps(path: Path) -> list[tuple[int, str]]:
-    """Return ``(line number, step text)`` for each ``actions/checkout`` step."""
-    lines = path.read_text(encoding="utf-8").splitlines()
+def _steps_using(text: str, action: str) -> list[tuple[int, str]]:
+    """Return ``(line number, step text)`` for each step that uses ``action``.
+
+    A step runs from its ``uses:`` line to the next line indented less than
+    ``uses:`` or starting another list item, e.g.
+    ``_steps_using(text, "actions/checkout")``.
+    """
+    lines = text.splitlines()
     steps = []
     for index, line in enumerate(lines):
-        if not re.search(r"uses:\s*actions/checkout@", line):
+        if not re.search(rf"uses:\s*{re.escape(action)}@", line):
             continue
         column = line.index("uses:")
         body = [line]
@@ -92,6 +97,11 @@ def _checkout_steps(path: Path) -> list[tuple[int, str]]:
     return steps
 
 
+def _checkout_steps(path: Path) -> list[tuple[int, str]]:
+    """Return ``(line number, step text)`` for each ``actions/checkout`` step."""
+    return _steps_using(path.read_text(encoding="utf-8"), "actions/checkout")
+
+
 @pytest.mark.parametrize("workflow", _WORKFLOWS, ids=lambda p: p.name)
 def test_every_checkout_decides_on_persisted_credentials(workflow):
     # actions/checkout leaves the job token in .git/config unless told not
@@ -100,3 +110,16 @@ def test_every_checkout_decides_on_persisted_credentials(workflow):
     bad = [f"{workflow.name}:{number}" for number, step in _checkout_steps(workflow)
            if not re.search(r"^\s*persist-credentials:\s*(true|false)\b", step, re.MULTILINE)]
     assert bad == []
+
+
+def test_nuitka_cache_step_saves_the_directory_nuitka_uses():
+    # Nuitka's compiler cache lives under NUITKA_CACHE_DIR. The release
+    # cached ~/.nuitka and ~/.cache/Nuitka instead, which Nuitka does not
+    # use on Windows, so every release compiled all ~2700 C files cold
+    # ("0 cache hits") and ran within minutes of its 90 min cap.
+    text = (_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    env = re.search(r"^\s*NUITKA_CACHE_DIR:\s*(\S+)\s*$", text, re.MULTILINE)
+    assert env, "release.yml must set NUITKA_CACHE_DIR for the Nuitka build"
+    cache_step = next(step for _number, step in _steps_using(text, "actions/cache")
+                      if "nuitka-" in step)
+    assert re.search(rf"^\s*path:\s*{re.escape(env.group(1))}\s*$", cache_step, re.MULTILINE)

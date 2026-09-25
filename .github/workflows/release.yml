@@ -214,12 +214,20 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-    # PySide6 cold builds run ~50-70 min on a fresh runner (Qt is
-    # a huge amount of C++ to link). With cache they're back to 5-10
-    # min. The cap below covers cold + slowest-case parallel link.
-    timeout-minutes: 90
+    # A cold build (every C file compiled) took 82-88 min in the
+    # 2026-09-23..25 releases, against the old 90 min cap. The cap
+    # leaves room for a cold build, which still happens whenever the
+    # cache below is missing: GitHub evicts caches unused for 7 days.
+    timeout-minutes: 120
     env:
       ASSET_NAME: thesisagents-windows-x86_64.zip
+      # Nuitka keeps its compiler cache (clcache on MSVC) and downloads
+      # under this directory. Unset, it defaults to
+      # %LOCALAPPDATA%\Nuitka\Nuitka\Cache on Windows, a path the cache
+      # step did not save, so every release recompiled all ~2700 C
+      # files ("0 cache hits" in the Nuitka log). Nuitka expands `~`
+      # the same way actions/cache does, so both see one directory.
+      NUITKA_CACHE_DIR: ~/nuitka-cache
     steps:
       - name: Checkout the bumped commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -237,14 +245,11 @@ jobs:
       - name: Cache Nuitka build artefacts
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
-          # ~/.nuitka holds Nuitka's own caches; *.build holds the
-          # generated C sources from the previous run. Caching both
-          # cuts subsequent builds from ~15 min to ~3 min.
-          path: |
-            ~/.nuitka
-            ~/.cache/Nuitka
-            thesisagents.build
-            thesisagents.dist
+          # Only Nuitka's own cache directory (NUITKA_CACHE_DIR above).
+          # The build and dist folders are not cached: Nuitka recompiled
+          # every file even with the old build folder restored, and a
+          # restored dist folder could carry a stale file into the zip.
+          path: ~/nuitka-cache
           key: nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-${{ needs.bump-version.outputs.version }}
           restore-keys: |
             nuitka-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}-

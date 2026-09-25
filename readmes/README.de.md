@@ -538,7 +538,7 @@ Zwei GitHub-Actions-Workflows leben unter `.github/workflows/`:
      Startlatenz hinzufügt und Antiviren-Heuristiken auf gesperrten Maschinen
      auslöst. Auch nur Windows nach Design: Linux-/macOS-Nutzer installieren
      von PyPI. Der auf `pyproject.toml` verschlüsselte Build-Cache reduziert
-     warme Builds von ~70 min kalt auf ~5–10 min.
+     warme Builds von ~85 min kalt auf ~5–10 min.
   5. **`publish-release`** — entfernt die Entwurfsmarkierung, sobald das
      Nuitka-Asset hochgeladen ist, sodass Nutzer nie ein halbfertiges Release
      sehen.
@@ -559,7 +559,7 @@ Um PyPI-Publishing + Release-Executables zu aktivieren:
    General → Workflow permissions → Read and write permissions`. Der
    Bump-Commit wird vom `GITHUB_TOKEN` des Workflows gepusht.
 4. Erstelle Releases durch das Mergen von PRs in `main`. Die Pipeline benötigt
-   ~3–5 min, um zu PyPI zu publizieren, und ~50–70 min mehr (kalt) oder ~5–10 min
+   ~3–5 min, um zu PyPI zu publizieren, und ~80–90 min mehr (kalt) oder ~5–10 min
    (warmer Nuitka-Cache), damit das Windows-Zip angehängt wird.
 
 Der `publish-pypi`-Job hängt absichtlich KEINE GitHub-Environment an, sodass

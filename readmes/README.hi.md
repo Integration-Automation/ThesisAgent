@@ -333,7 +333,7 @@ Python इंस्टॉल के बिना चलने वाला ए�
   1. **`bump-version`** — `pyproject.toml` से वर्तमान `X.Y.Z` पढ़ें, `X.Y.(Z+1)` तक बढ़ाएँ, workflow `GITHUB_TOKEN` का उपयोग करके `main` पर commit + push करें। वह push CI को फिर से trigger नहीं करता (GitHub के नियम के अनुसार कि `GITHUB_TOKEN`-चालित push नए workflow रन शुरू नहीं कर सकते), इसलिए चक्र स्वाभाविक रूप से समाप्त होता है।
   2. **`publish-pypi`** — sdist + wheel build करें, `twine check`, `PYPI_API_TOKEN` के माध्यम से `twine upload`।
   3. **`create-draft-release`** — auto-generated notes के साथ tag `v<version>` पर एक *draft* GitHub रिलीज़ खोलें।
-  4. **`build-nuitka`** — एक Windows runner पर एक Nuitka standalone बंडल compile करें (प्रवेश-बिंदु: `--python-flag=-m` के माध्यम से `python -m thesisagents`), उसे smoke-test करें, परिणामी `thesisagents.dist/` फ़ोल्डर को zip करें, और zip + एक `.sha256` checksum को draft रिलीज़ से attach करें। डिज़ाइन के अनुसार standalone (onefile नहीं): onefile हर launch पर `%TEMP%` में स्वयं-extract होता है, स्टार्टअप विलंब जोड़ता है और locked-down मशीनों पर antivirus heuristics को trigger करता है। डिज़ाइन के अनुसार Windows-only भी: Linux / macOS उपयोगकर्ता PyPI से इंस्टॉल करते हैं। `pyproject.toml` पर keyed build cache warm builds को ~70 मिनट cold से ~5–10 मिनट तक घटाता है।
+  4. **`build-nuitka`** — एक Windows runner पर एक Nuitka standalone बंडल compile करें (प्रवेश-बिंदु: `--python-flag=-m` के माध्यम से `python -m thesisagents`), उसे smoke-test करें, परिणामी `thesisagents.dist/` फ़ोल्डर को zip करें, और zip + एक `.sha256` checksum को draft रिलीज़ से attach करें। डिज़ाइन के अनुसार standalone (onefile नहीं): onefile हर launch पर `%TEMP%` में स्वयं-extract होता है, स्टार्टअप विलंब जोड़ता है और locked-down मशीनों पर antivirus heuristics को trigger करता है। डिज़ाइन के अनुसार Windows-only भी: Linux / macOS उपयोगकर्ता PyPI से इंस्टॉल करते हैं। `pyproject.toml` पर keyed build cache warm builds को ~85 मिनट cold से ~5–10 मिनट तक घटाता है।
   5. **`publish-release`** — Nuitka asset अपलोड होने पर draft को unmark करें, ताकि उपयोगकर्ता कभी अधूरी रिलीज़ न देखें।
 
   **एक रिलीज़ छोड़ना।** commit संदेश में कहीं भी `[skip release]` शामिल करें और bump + हर downstream job छोड़ दिया जाता है — इसे docs-only / typo / refactor commits के लिए उपयोग करें जिन्हें एक संस्करण संख्या नहीं जलानी चाहिए।
@@ -343,7 +343,7 @@ PyPI publishing + रिलीज़ निष्पादन योग्य �
 1. <https://pypi.org/manage/account/token/> पर एक project-scoped API token उत्पन्न करें।
 2. GitHub repo में: `Settings → Secrets and variables → Actions → New repository secret`। इसे `PYPI_API_TOKEN` नाम दें और token मान पेस्ट करें।
 3. GitHub Actions को `main` पर push करने की अनुमति दें: `Settings → Actions → General → Workflow permissions → Read and write permissions`। bump commit workflow के `GITHUB_TOKEN` द्वारा push किया जाता है।
-4. `main` में PRs मर्ज करके रिलीज़ करें। pipeline को PyPI पर publish करने में ~3–5 मिनट और Windows zip attach होने में ~50–70 मिनट अधिक (cold) या ~5–10 मिनट (warm Nuitka cache) लगते हैं।
+4. `main` में PRs मर्ज करके रिलीज़ करें। pipeline को PyPI पर publish करने में ~3–5 मिनट और Windows zip attach होने में ~80–90 मिनट अधिक (cold) या ~5–10 मिनट (warm Nuitka cache) लगते हैं।
 
 `publish-pypi` job जानबूझकर कोई GitHub Environment attach नहीं करता, इसलिए प्रत्येक रन repo home पर एक "Deployment" sidebar widget के बजाय एक Release प्रविष्टि (अपने Nuitka `.exe` attached के साथ) के रूप में दिखता है — रिलीज़ को अपना समर्पित पृष्ठ मिलता है और शीर्ष पर एक Deployment प्रविष्टि बस अनावश्यक शोर होगी।
 
