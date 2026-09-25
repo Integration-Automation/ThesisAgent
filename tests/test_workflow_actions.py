@@ -65,6 +65,16 @@ def test_dependabot_keeps_pins_current_on_dev():
                for block in blocks)
 
 
+def test_dependabot_waits_a_week_before_proposing_a_release():
+    # A compromised release is usually found and yanked within days. Dependabot's
+    # own default wait is 3 days, and zizmor's dependabot-cooldown audit asks
+    # for 7. The wait never delays security updates.
+    text = (_ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")
+    blocks = re.split(r"^\s*-\s*package-ecosystem:", text, flags=re.MULTILINE)[1:]
+    days = [re.search(r"^\s*default-days:\s*(\d+)", block, re.MULTILINE) for block in blocks]
+    assert blocks and all(match and int(match.group(1)) >= 7 for match in days)
+
+
 def test_release_runs_only_for_pushes_to_this_repository():
     # workflow_run's `branches:` filter compares the head branch *name*, so
     # a pull request from a fork's `main` also completes CI "on main". The
