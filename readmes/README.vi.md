@@ -25,8 +25,8 @@ LLM-as-agent) hoặc qua API Anthropic (luồng Python pipeline).
 
 **Nếu bạn là một LLM (Claude Code, Cursor, Aider, Codex CLI, …) đang đọc
 README này để tìm hiểu cần làm gì — hãy bắt đầu từ đây.** Mọi thứ bên dưới
-cũng được ghim trong [`AGENTS.md`](AGENTS.md) (bản phản chiếu cho mọi agent) và
-[`CLAUDE.md`](CLAUDE.md) (tham chiếu chính thức); hãy đọc chúng trước khi
+cũng được ghim trong [`AGENTS.md`](../AGENTS.md) (bản phản chiếu cho mọi agent) và
+[`CLAUDE.md`](../CLAUDE.md) (tham chiếu chính thức); hãy đọc chúng trước khi
 thực hiện các thay đổi không tầm thường.
 
 ### Điều người dùng thực sự muốn
@@ -67,7 +67,7 @@ nâng cấp nó.
 Cả mười ba công cụ MCP (gồm `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / v.v.) đều được
-tài liệu hóa trong [`docs/mcp.md`](docs/mcp.md).
+tài liệu hóa trong [`docs/mcp.md`](../docs/mcp.md).
 
 ### Bắt buộc: xác minh URL / DOI trước khi giao
 
@@ -125,7 +125,7 @@ thầm bỏ sót một khả năng khớp.
 
 ### Ví dụ thực tế
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) chứa một bản
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) chứa một bản
 tóm tắt rich được soạn tay đúng theo cách này (một bài,
 rich-tier, zh-tw, mọi trường rich đều được điền). Một tìm kiếm đa-bài
 theo cùng khuôn dạng với một mục `Paper(...summary=PaperSummary(...))`
@@ -418,7 +418,7 @@ Luồng LLM-as-agent (không cần `ANTHROPIC_API_KEY` — LLM chính là agent)
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Tham chiếu đầy đủ trong [`docs/mcp.md`](docs/mcp.md).
+Tham chiếu đầy đủ trong [`docs/mcp.md`](../docs/mcp.md).
 
 ## Bố cục dự án
 
@@ -482,17 +482,17 @@ slide ở ngôn ngữ khác. Bố cục responsive: mọi form nằm trong
 một `QScrollArea` và cửa sổ thu nhỏ xuống 900×600 (vẫn vừa
 720p), với HiDPI scaling bật theo mặc định.
 
-Tham chiếu đầy đủ: [`docs/gui.md`](docs/gui.md).
+Tham chiếu đầy đủ: [`docs/gui.md`](../docs/gui.md).
 
 ## Đóng gói thành file thực thi độc lập
 
 Hai packager được tài liệu hóa để giao một binary một-file chạy
 mà không cần cài Python:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — build nhanh (dưới một phút), đầu ra 200–300 MB, khởi động 2–4 giây.
   Tốt nhất khi bạn lặp trên build script.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   build chậm (5–15 phút), đầu ra 80–150 MB, khởi động dưới một giây,
   có chút bảo vệ bytecode. Tốt nhất khi người dùng cuối chạy binary
   nhiều lần.

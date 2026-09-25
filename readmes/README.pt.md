@@ -25,8 +25,8 @@ da Anthropic (fluxo de pipeline Python).
 
 **Se você é um LLM (Claude Code, Cursor, Aider, Codex CLI, …) lendo este
 README para descobrir o que fazer — comece aqui.** Tudo o que está abaixo
-também está fixado em [`AGENTS.md`](AGENTS.md) (espelho entre agentes) e
-[`CLAUDE.md`](CLAUDE.md) (referência canônica); leia-os antes de fazer
+também está fixado em [`AGENTS.md`](../AGENTS.md) (espelho entre agentes) e
+[`CLAUDE.md`](../CLAUDE.md) (referência canônica); leia-os antes de fazer
 alterações não triviais.
 
 ### O que o usuário realmente quer
@@ -64,7 +64,7 @@ emissão leve é um artefato intermediário — o seu trabalho é aprimorá-la.
 
 Todas as treze ferramentas MCP (incluindo `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
-`pptx_add_slide` / etc.) estão documentadas em [`docs/mcp.md`](docs/mcp.md).
+`pptx_add_slide` / etc.) estão documentadas em [`docs/mcp.md`](../docs/mcp.md).
 
 ### Obrigatório: verificação de URL / DOI antes de entregar
 
@@ -121,7 +121,7 @@ correspondência possível.
 
 ### Exemplo resolvido
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) traz um resumo rico
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) traz um resumo rico
 escrito à mão, construído exatamente desta forma (artigo único, nível rico,
 zh-tw, cada campo rico preenchido). Uma busca com vários artigos segue o mesmo
 formato, com uma entrada `Paper(...summary=PaperSummary(...))` por artigo na
@@ -418,7 +418,7 @@ agente):
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Referência completa em [`docs/mcp.md`](docs/mcp.md).
+Referência completa em [`docs/mcp.md`](../docs/mcp.md).
 
 ## Estrutura do projeto
 
@@ -481,17 +481,17 @@ você possa rodar a UI num idioma e emitir slides em outro. O layout é
 responsivo: cada formulário fica numa `QScrollArea` e a janela redimensiona
 até 900×600 (ainda cabe em 720p), com escalonamento HiDPI ativado por padrão.
 
-Referência completa: [`docs/gui.md`](docs/gui.md).
+Referência completa: [`docs/gui.md`](../docs/gui.md).
 
 ## Empacotamento como um executável independente
 
 Dois empacotadores estão documentados para distribuir um binário de arquivo
 único que roda sem Python instalado:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — build rápido (menos de um minuto), saída de 200–300 MB, inicialização de
   2–4 s. Melhor quando você itera no script de build.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   build lento (5–15 minutos), saída de 80–150 MB, inicialização em menos de um
   segundo, alguma proteção de bytecode. Melhor quando os usuários finais rodam
   o binário muitas vezes.

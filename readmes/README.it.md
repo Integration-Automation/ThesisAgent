@@ -25,7 +25,7 @@ LLM-as-agent) sia tramite l'API Anthropic (flusso Python pipeline).
 
 **Se sei un LLM (Claude Code, Cursor, Aider, Codex CLI, …) e leggi questo README
 per capire cosa fare — inizia qui.** Tutto ciò che segue è fissato anche in
-[`AGENTS.md`](AGENTS.md) (specchio cross-agent) e [`CLAUDE.md`](CLAUDE.md)
+[`AGENTS.md`](../AGENTS.md) (specchio cross-agent) e [`CLAUDE.md`](../CLAUDE.md)
 (riferimento canonico); leggili prima di apportare cambiamenti non banali.
 
 ### Cosa vuole davvero l'utente
@@ -64,7 +64,7 @@ leggero è un artefatto intermedio — il tuo lavoro è elevarlo.
 I tredici strumenti MCP (inclusi `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / ecc.) sono
-documentati in [`docs/mcp.md`](docs/mcp.md).
+documentati in [`docs/mcp.md`](../docs/mcp.md).
 
 ### Obbligatorio: verifica URL / DOI prima della consegna
 
@@ -123,7 +123,7 @@ silenziosamente una possibile corrispondenza.
 
 ### Esempio funzionante
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) include un riassunto
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) include un riassunto
 rich scritto a mano costruito esattamente in questo modo (articolo singolo,
 livello rich, zh-tw, ogni campo rich compilato). Una ricerca multi-articolo
 segue la stessa forma con una voce `Paper(...summary=PaperSummary(...))` per
@@ -422,7 +422,7 @@ l'agente):
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Riferimento completo in [`docs/mcp.md`](docs/mcp.md).
+Riferimento completo in [`docs/mcp.md`](../docs/mcp.md).
 
 ## Struttura del progetto
 
@@ -486,17 +486,17 @@ un'altra. Il layout è responsive: ogni form sta in una `QScrollArea` e la
 finestra si ridimensiona fino a 900×600 (sta ancora in 720p), con lo scaling
 HiDPI attivo di default.
 
-Riferimento completo: [`docs/gui.md`](docs/gui.md).
+Riferimento completo: [`docs/gui.md`](../docs/gui.md).
 
 ## Pacchettizzazione come eseguibile standalone
 
 Due packager sono documentati per distribuire un binario a file singolo che
 gira senza Python installato:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — build veloce (meno di un minuto), output di 200–300 MB, avvio in 2–4 s.
   Ideale quando iteri sullo script di build.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   build lento (5–15 minuti), output di 80–150 MB, avvio sotto il secondo, una
   certa protezione del bytecode. Ideale quando gli utenti finali eseguono il
   binario molte volte.

@@ -26,8 +26,8 @@ pipeline).
 
 **Jika Anda LLM (Claude Code, Cursor, Aider, Codex CLI, …) yang membaca
 README ini untuk mengetahui apa yang harus dilakukan — mulailah di sini.**
-Semua yang di bawah ini juga disematkan di [`AGENTS.md`](AGENTS.md) (cermin
-lintas-agen) dan [`CLAUDE.md`](CLAUDE.md) (referensi kanonik); baca itu
+Semua yang di bawah ini juga disematkan di [`AGENTS.md`](../AGENTS.md) (cermin
+lintas-agen) dan [`CLAUDE.md`](../CLAUDE.md) (referensi kanonik); baca itu
 sebelum melakukan perubahan non-sepele.
 
 ### Apa yang sebenarnya diinginkan pengguna
@@ -67,7 +67,7 @@ meningkatkannya.
 Ketiga belas tool MCP (termasuk `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / dll.)
-didokumentasikan di [`docs/mcp.md`](docs/mcp.md).
+didokumentasikan di [`docs/mcp.md`](../docs/mcp.md).
 
 ### Wajib: verifikasi URL / DOI sebelum penyerahan
 
@@ -125,7 +125,7 @@ menjatuhkan kemungkinan kecocokan.
 
 ### Contoh kerja
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) memuat sebuah
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) memuat sebuah
 ringkasan kaya yang ditulis-tangan persis dengan cara ini (satu makalah,
 rich-tier, zh-tw, setiap field rich terisi). Pencarian multi-makalah
 mengikuti bentuk yang sama, dengan satu entri
@@ -424,7 +424,7 @@ Alur LLM-as-agent (tanpa `ANTHROPIC_API_KEY` — LLM-nya sendiri yang menjadi ag
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Referensi lengkap di [`docs/mcp.md`](docs/mcp.md).
+Referensi lengkap di [`docs/mcp.md`](../docs/mcp.md).
 
 ## Tata letak proyek
 
@@ -488,17 +488,17 @@ menghasilkan slide dalam bahasa lain. Tata letaknya responsif: setiap
 form berada dalam sebuah `QScrollArea` dan jendela mengecil hingga
 900×600 (masih muat 720p), dengan penskalaan HiDPI aktif secara default.
 
-Referensi lengkap: [`docs/gui.md`](docs/gui.md).
+Referensi lengkap: [`docs/gui.md`](../docs/gui.md).
 
 ## Pemaketan sebagai executable mandiri
 
 Dua packager didokumentasikan untuk mengirim biner satu-berkas yang
 berjalan tanpa Python terpasang:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — build cepat (di bawah satu menit), output 200–300 MB, startup 2–4 s.
   Terbaik saat Anda beriterasi pada skrip build.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   build lambat (5–15 menit), output 80–150 MB, startup sub-detik,
   ada proteksi bytecode. Terbaik saat pengguna akhir menjalankan biner
   berkali-kali.

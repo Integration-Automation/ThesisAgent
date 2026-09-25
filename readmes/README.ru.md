@@ -25,8 +25,8 @@ API Anthropic (поток Python pipeline).
 
 **Если вы — LLM (Claude Code, Cursor, Aider, Codex CLI, …), читающий
 этот README, чтобы понять, что делать, — начните здесь.** Всё, что ниже,
-также закреплено в [`AGENTS.md`](AGENTS.md) (кросс-агентное зеркало) и
-[`CLAUDE.md`](CLAUDE.md) (канонический справочник); прочтите их перед
+также закреплено в [`AGENTS.md`](../AGENTS.md) (кросс-агентное зеркало) и
+[`CLAUDE.md`](../CLAUDE.md) (канонический справочник); прочтите их перед
 внесением нетривиальных изменений.
 
 ### Что на самом деле нужно пользователю
@@ -67,7 +67,7 @@ API Anthropic (поток Python pipeline).
 Все тринадцать MCP-инструментов (включая `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / и т. д.)
-задокументированы в [`docs/mcp.md`](docs/mcp.md).
+задокументированы в [`docs/mcp.md`](../docs/mcp.md).
 
 ### Обязательно: проверка URL / DOI перед выпуском
 
@@ -125,7 +125,7 @@ for key in irrelevant_keys:
 
 ### Разобранный пример
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) поставляется с
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) поставляется с
 вручную составленной насыщенной сводкой, построенной именно так (одна
 статья, насыщенный уровень, zh-tw, каждое насыщенное поле заполнено).
 Поиск по нескольким статьям следует той же форме с одной записью
@@ -420,7 +420,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Полный справочник в [`docs/mcp.md`](docs/mcp.md).
+Полный справочник в [`docs/mcp.md`](../docs/mcp.md).
 
 ## Структура проекта
 
@@ -484,17 +484,17 @@ language** позволяет его сменить. Язык вывода де�
 `QScrollArea`, а окно уменьшается до 900×600 (всё ещё помещается в
 720p), с масштабированием HiDPI, включённым по умолчанию.
 
-Полный справочник: [`docs/gui.md`](docs/gui.md).
+Полный справочник: [`docs/gui.md`](../docs/gui.md).
 
 ## Упаковка в автономный исполняемый файл
 
 Задокументированы два упаковщика для поставки однофайлового бинарника,
 который работает без установленного Python:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — быстрая сборка (менее минуты), вывод 200–300 МБ, запуск 2–4 с.
   Лучше всего, когда вы итерируете по сборочному скрипту.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   медленная сборка (5–15 минут), вывод 80–150 МБ, запуск менее секунды,
   некоторая защита байткода. Лучше всего, когда конечные пользователи
   запускают бинарник много раз.

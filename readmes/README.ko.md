@@ -24,8 +24,8 @@ DOAJ, HAL, CORE, Google Scholar 에서 결과를 가져와 하나의 레코드
 
 **당신이 LLM(Claude Code, Cursor, Aider, Codex CLI, …)이고 무엇을
 해야 하는지 파악하기 위해 이 README 를 읽고 있다면 — 여기서
-시작하세요.** 아래 내용은 모두 [`AGENTS.md`](AGENTS.md)(교차 에이전트
-미러)와 [`CLAUDE.md`](CLAUDE.md)(정본 레퍼런스)에도 고정되어 있으니,
+시작하세요.** 아래 내용은 모두 [`AGENTS.md`](../AGENTS.md)(교차 에이전트
+미러)와 [`CLAUDE.md`](../CLAUDE.md)(정본 레퍼런스)에도 고정되어 있으니,
 사소하지 않은 변경을 하기 전에 먼저 읽으세요.
 
 ### 사용자가 실제로 원하는 것
@@ -62,7 +62,7 @@ DOAJ, HAL, CORE, Google Scholar 에서 결과를 가져와 하나의 레코드
 
 열세 개의 MCP 도구 전체(`list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
-`pptx_add_slide` / 등 포함)는 [`docs/mcp.md`](docs/mcp.md)에
+`pptx_add_slide` / 등 포함)는 [`docs/mcp.md`](../docs/mcp.md)에
 문서화되어 있습니다.
 
 ### 필수: 배포 전 URL / DOI 검증
@@ -119,7 +119,7 @@ for key in irrelevant_keys:
 
 ### 작동 예시
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py)는 정확히 이
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py)는 정확히 이
 방식으로 만들어진 직접 작성한 리치 요약을 제공합니다(단일 논문,
 리치 티어, zh-tw, 모든 리치 필드가 채워짐). 다중 논문 검색은
 `PaperCollection` 튜플 안에 논문마다 하나의
@@ -412,7 +412,7 @@ LLM-as-agent 흐름(`ANTHROPIC_API_KEY` 불필요 — LLM 이 에이전트):
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-전체 레퍼런스는 [`docs/mcp.md`](docs/mcp.md) 에 있습니다.
+전체 레퍼런스는 [`docs/mcp.md`](../docs/mcp.md) 에 있습니다.
 
 ## 프로젝트 구성
 
@@ -476,17 +476,17 @@ Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — 첫 실행�
 줄어들며(720p 에도 여전히 맞음), HiDPI 스케일링이 기본으로
 켜져 있습니다.
 
-전체 레퍼런스: [`docs/gui.md`](docs/gui.md).
+전체 레퍼런스: [`docs/gui.md`](../docs/gui.md).
 
 ## 독립 실행형 바이너리로 패키징
 
 Python 설치 없이 실행되는 단일 파일 바이너리를 배포하기 위한 두
 패키저가 문서화되어 있습니다:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — 빠른 빌드(1분 미만), 200–300 MB 출력, 2–4초 시작. 빌드
   스크립트를 반복 개선할 때 최적.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   느린 빌드(5–15분), 80–150 MB 출력, 1초 미만 시작, 약간의 바이트
   코드 보호. 최종 사용자가 바이너리를 여러 번 실행할 때 최적.
 

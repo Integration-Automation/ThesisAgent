@@ -14,7 +14,7 @@
 
 ## इस परियोजना को चलाने वाले AI एजेंट के लिए
 
-**यदि आप एक LLM (Claude Code, Cursor, Aider, Codex CLI, …) हैं जो यह जानने के लिए इस README को पढ़ रहे हैं कि क्या करना है — यहाँ से शुरू करें।** नीचे दिया गया सब कुछ [`AGENTS.md`](AGENTS.md) (एजेंट-क्रॉस मिरर) और [`CLAUDE.md`](CLAUDE.md) (आधिकारिक संदर्भ) में भी पिन किया गया है; गैर-तुच्छ परिवर्तनों से पहले उन्हें पढ़ें।
+**यदि आप एक LLM (Claude Code, Cursor, Aider, Codex CLI, …) हैं जो यह जानने के लिए इस README को पढ़ रहे हैं कि क्या करना है — यहाँ से शुरू करें।** नीचे दिया गया सब कुछ [`AGENTS.md`](../AGENTS.md) (एजेंट-क्रॉस मिरर) और [`CLAUDE.md`](../CLAUDE.md) (आधिकारिक संदर्भ) में भी पिन किया गया है; गैर-तुच्छ परिवर्तनों से पहले उन्हें पढ़ें।
 
 ### उपयोगकर्ता वास्तव में क्या चाहता है
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 ```
 
-सभी तेरह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / आदि सहित) [`docs/mcp.md`](docs/mcp.md) में प्रलेखित हैं।
+सभी तेरह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / आदि सहित) [`docs/mcp.md`](../docs/mcp.md) में प्रलेखित हैं।
 
 ### अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 
@@ -78,7 +78,7 @@ for key in irrelevant_keys:
 
 ### कार्यान्वित उदाहरण
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) में ठीक इसी प्रक्रिया से हाथ से लिखा एक समृद्ध सारांश है (एकल शोध-पत्र, rich-tier, zh-tw, हर समृद्ध फ़ील्ड भरा हुआ)। बहु-शोध-पत्र खोज इसी आकार का अनुसरण करती है — `PaperCollection` tuple में प्रति शोध-पत्र एक `Paper(...summary=PaperSummary(...))` प्रविष्टि।
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) में ठीक इसी प्रक्रिया से हाथ से लिखा एक समृद्ध सारांश है (एकल शोध-पत्र, rich-tier, zh-tw, हर समृद्ध फ़ील्ड भरा हुआ)। बहु-शोध-पत्र खोज इसी आकार का अनुसरण करती है — `PaperCollection` tuple में प्रति शोध-पत्र एक `Paper(...summary=PaperSummary(...))` प्रविष्टि।
 
 ### निषेध
 
@@ -265,7 +265,7 @@ LLM-as-agent प्रवाह (`ANTHROPIC_API_KEY` की आवश्यक�
           language="hi", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-पूर्ण संदर्भ [`docs/mcp.md`](docs/mcp.md) में।
+पूर्ण संदर्भ [`docs/mcp.md`](../docs/mcp.md) में।
 
 ## परियोजना संरचना
 
@@ -313,14 +313,14 @@ thesisagents-gui                 # या: thesisagents gui
 विंडो में चार tab हैं — **Search**, **Settings** (QSettings के माध्यम से API keys बनाए रखता है), **Enrich** (एक `collection_ready` सिग्नल पर LLM-as-agent / Python-pipeline समृद्धि चलाता है), और **Deck** (Light mode toggle + slide-cap + max-figures नियंत्रण `ExportOptions` तक प्रवाहित होते हैं)। Windows रिलीज़ zip में PySide6 सहित Nuitka-compiled बंडल आता है, इसलिए `thesisagents.exe gui` एक अलग Python इंस्टॉल के बिना काम करता है।
 **UI सभी 14 भाषाओं में आता है** (English, 繁體中文, 简体中文, 日本語, Español, Français, Deutsch, 한국어, Português, Русский, Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — पहला रन आपके OS locale से भाषा चुनता है, फिर **Settings → Interface language** आपको इसे बदलने देता है। डेक आउटपुट भाषा एक अलग dropdown है ताकि आप UI को एक भाषा में चला सकें और स्लाइड दूसरी में जारी कर सकें। लेआउट उत्तरदायी है: हर फ़ॉर्म एक `QScrollArea` में बैठता है और विंडो 900×600 तक नीचे resize होती है (फिर भी 720p में फ़िट), डिफ़ॉल्ट रूप से HiDPI स्केलिंग चालू के साथ।
 
-पूर्ण संदर्भ: [`docs/gui.md`](docs/gui.md)।
+पूर्ण संदर्भ: [`docs/gui.md`](../docs/gui.md)।
 
 ## एक स्टैंडअलोन निष्पादन योग्य के रूप में पैकेजिंग
 
 Python इंस्टॉल के बिना चलने वाला एकल-फ़ाइल बाइनरी शिप करने के लिए दो packagers प्रलेखित हैं:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)** — तेज़ build (एक मिनट से कम), 200–300 MB आउटपुट, 2–4 s स्टार्टअप। तब सबसे अच्छा जब आप build स्क्रिप्ट पर पुनरावृत्ति करते हैं।
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** — धीमा build (5–15 मिनट), 80–150 MB आउटपुट, उप-सेकंड स्टार्टअप, कुछ bytecode सुरक्षा। तब सबसे अच्छा जब अंतिम उपयोगकर्ता बाइनरी को कई बार चलाते हैं।
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)** — तेज़ build (एक मिनट से कम), 200–300 MB आउटपुट, 2–4 s स्टार्टअप। तब सबसे अच्छा जब आप build स्क्रिप्ट पर पुनरावृत्ति करते हैं।
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** — धीमा build (5–15 मिनट), 80–150 MB आउटपुट, उप-सेकंड स्टार्टअप, कुछ bytecode सुरक्षा। तब सबसे अच्छा जब अंतिम उपयोगकर्ता बाइनरी को कई बार चलाते हैं।
 
 दोनों docs परियोजना-विशिष्ट पेच को कवर करते हैं — `sources/<name>/` के अंतर्गत dynamic source plugins — और CLI तथा MCP सर्वर प्रवेश-बिंदुओं के लिए एक सत्यापित कमांड शिप करते हैं।
 

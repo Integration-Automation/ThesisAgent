@@ -23,7 +23,7 @@ OpenAIRE、Springer Nature、Europe PMC、DOAJ、HAL、CORE 与 Google Scholar
 
 **如果你是一个 LLM(Claude Code、Cursor、Aider、Codex CLI …)正在读这份
 README 想搞清楚要做什么 —— 从这里开始。** 下面的所有内容也都钉在
-[`AGENTS.md`](AGENTS.md)(跨 agent 镜像)与 [`CLAUDE.md`](CLAUDE.md)
+[`AGENTS.md`](../AGENTS.md)(跨 agent 镜像)与 [`CLAUDE.md`](../CLAUDE.md)
 (权威参考)里;做非小改动之前请先读那两份。
 
 ### 用户真正想要的
@@ -59,7 +59,7 @@ README 想搞清楚要做什么 —— 从这里开始。** 下面的所有内�
 
 全部十三个 MCP 工具(包含 `list_sources`、`list_exports`、
 `download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` /
-`pptx_add_slide` / 等等)都记载于 [`docs/mcp.md`](docs/mcp.md)。
+`pptx_add_slide` / 等等)都记载于 [`docs/mcp.md`](../docs/mcp.md)。
 
 ### 必办:发货前先验证 URL / DOI
 
@@ -112,7 +112,7 @@ for key in irrelevant_keys:
 
 ### 实作范例
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) 附了一份正是
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) 附了一份正是
 以这种方式亲手撰写的丰富摘要(单篇论文、丰富层、zh-tw、每个丰富字段
 都填满)。多篇论文的搜索遵循同样的形状,在 `PaperCollection` tuple
 里每篇论文一个 `Paper(...summary=PaperSummary(...))` 条目。
@@ -385,7 +385,7 @@ LLM-as-agent 流程(不需要 `ANTHROPIC_API_KEY` —— LLM 就是那个 agent)
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-完整参考在 [`docs/mcp.md`](docs/mcp.md)。
+完整参考在 [`docs/mcp.md`](../docs/mcp.md)。
 
 ## 项目结构
 
@@ -446,16 +446,16 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次运行会从
 幻灯片。布局是响应式的:每个表单都坐在一个 `QScrollArea` 里,窗口可以
 缩小到 900×600(仍容得下 720p),并默认开启 HiDPI 缩放。
 
-完整参考:[`docs/gui.md`](docs/gui.md)。
+完整参考:[`docs/gui.md`](../docs/gui.md)。
 
 ## 打包成独立可执行文件
 
 记载了两个打包器,用来发货一个不必安装 Python 就能跑的单文件二进制:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   —— 快速构建(不到一分钟)、输出 200–300 MB、启动 2–4 秒。当你在
   迭代构建脚本时最合适。
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** ——
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** ——
   缓慢构建(5–15 分钟)、输出 80–150 MB、亚秒级启动,带一些字节码
   保护。当终端用户会多次运行二进制时最合适。
 

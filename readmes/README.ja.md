@@ -14,7 +14,7 @@
 
 ## このプロジェクトを駆動する AI エージェントへ
 
-**あなたが LLM(Claude Code、Cursor、Aider、Codex CLI、…)で、この README を読んで何をすべきか把握しようとしているなら、ここから始めてください。** 以下の内容はすべて [`AGENTS.md`](AGENTS.md)(エージェント横断のミラー)と [`CLAUDE.md`](CLAUDE.md)(正式な参照先)にも固定されています。非自明な変更を加える前にそちらを読んでください。
+**あなたが LLM(Claude Code、Cursor、Aider、Codex CLI、…)で、この README を読んで何をすべきか把握しようとしているなら、ここから始めてください。** 以下の内容はすべて [`AGENTS.md`](../AGENTS.md)(エージェント横断のミラー)と [`CLAUDE.md`](../CLAUDE.md)(正式な参照先)にも固定されています。非自明な変更を加える前にそちらを読んでください。
 
 ### ユーザーが本当に欲しいもの
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-13 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` など)はすべて [`docs/mcp.md`](docs/mcp.md) に記載されています。
+13 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` など)はすべて [`docs/mcp.md`](../docs/mcp.md) に記載されています。
 
 ### 必須: 納品前に URL / DOI を検証
 
@@ -78,7 +78,7 @@ for key in irrelevant_keys:
 
 ### 実例
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) には、まさにこの方法で手書きされたリッチサマリが収録されています(単一論文、リッチ層、zh-tw、すべてのリッチフィールドを埋めたもの)。複数論文検索も同じ形に従い、`PaperCollection` タプル内に論文ごとに `Paper(...summary=PaperSummary(...))` エントリを 1 件ずつ置きます。
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) には、まさにこの方法で手書きされたリッチサマリが収録されています(単一論文、リッチ層、zh-tw、すべてのリッチフィールドを埋めたもの)。複数論文検索も同じ形に従い、`PaperCollection` タプル内に論文ごとに `Paper(...summary=PaperSummary(...))` エントリを 1 件ずつ置きます。
 
 ### 禁止事項
 
@@ -265,7 +265,7 @@ LLM-as-agent フロー(`ANTHROPIC_API_KEY` 不要 — LLM 自身がエージェ�
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-完全な参照は [`docs/mcp.md`](docs/mcp.md)。
+完全な参照は [`docs/mcp.md`](../docs/mcp.md)。
 
 ## プロジェクト構成
 
@@ -313,16 +313,16 @@ thesisagents-gui                 # or: thesisagents gui
 ウィンドウには 4 つのタブがあります — **Search**、**Settings**(QSettings 経由で API キーを永続化)、**Enrich**(`collection_ready` シグナルを介して LLM-as-agent / Python パイプラインのエンリッチを駆動)、**Deck**(Light モードトグル + スライド上限 + 最大図数のコントロールが `ExportOptions` に流れる)。Windows リリース zip は PySide6 を含む Nuitka コンパイル済みバンドルを同梱するので、別途 Python をインストールせずに `thesisagents.exe gui` が動作します。
 **UI は 14 言語すべてで提供**(English、繁體中文、简体中文、日本語、Español、Français、Deutsch、한국어、Português、Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia) — 初回起動は OS ロケールから言語を選び、その後 **Settings → Interface language** で変更できます。デッキ出力言語は別のドロップダウンなので、UI を 1 つの言語で動かしつつ別の言語でスライドを出力できます。レイアウトはレスポンシブ: すべてのフォームが `QScrollArea` に収まり、ウィンドウは 900×600 まで縮小可能(720p にもなお収まる)、HiDPI スケーリングはデフォルトで有効です。
 
-完全な参照: [`docs/gui.md`](docs/gui.md)。
+完全な参照: [`docs/gui.md`](../docs/gui.md)。
 
 ## スタンドアロン実行ファイルとしてのパッケージング
 
 Python がインストールされていなくても動く単一ファイルバイナリを出荷するために、2 つのパッケージャがドキュメント化されています:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — 高速ビルド(1 分未満)、200〜300 MB の出力、2〜4 秒の起動。
   ビルドスクリプトを反復するときに最適。
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   低速ビルド(5〜15 分)、80〜150 MB の出力、1 秒未満の起動、
   いくらかのバイトコード保護。エンドユーザーがバイナリを
   何度も実行するときに最適。

@@ -26,8 +26,8 @@ Python).
 
 **Si vous êtes un LLM (Claude Code, Cursor, Aider, Codex CLI, …) en train de
 lire ce README pour comprendre quoi faire — commencez ici.** Tout ce qui suit
-est aussi épinglé dans [`AGENTS.md`](AGENTS.md) (miroir inter-agents) et
-[`CLAUDE.md`](CLAUDE.md) (référence canonique) ; lisez-les avant de faire des
+est aussi épinglé dans [`AGENTS.md`](../AGENTS.md) (miroir inter-agents) et
+[`CLAUDE.md`](../CLAUDE.md) (référence canonique) ; lisez-les avant de faire des
 changements non triviaux.
 
 ### Ce que l'utilisateur veut réellement
@@ -68,7 +68,7 @@ l'améliorer.
 Les treize outils MCP (y compris `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) sont
-documentés dans [`docs/mcp.md`](docs/mcp.md).
+documentés dans [`docs/mcp.md`](../docs/mcp.md).
 
 ### Obligatoire : vérification URL / DOI avant la livraison
 
@@ -128,7 +128,7 @@ silencieusement une correspondance possible.
 
 ### Exemple travaillé
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) fournit un résumé riche
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) fournit un résumé riche
 rédigé à la main construit exactement de cette manière (article unique, niveau
 riche, zh-tw, chaque champ riche renseigné). Une recherche multi-articles suit
 la même forme avec une entrée `Paper(...summary=PaperSummary(...))` par article
@@ -428,7 +428,7 @@ Flux LLM-as-agent (pas besoin d'`ANTHROPIC_API_KEY` — le LLM est l'agent) :
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Référence complète dans [`docs/mcp.md`](docs/mcp.md).
+Référence complète dans [`docs/mcp.md`](../docs/mcp.md).
 
 ## Structure du projet
 
@@ -493,17 +493,17 @@ chaque formulaire se trouve dans une `QScrollArea` et la fenêtre se redimension
 jusqu'à 900×600 (tient encore en 720p), avec la mise à l'échelle HiDPI activée
 par défaut.
 
-Référence complète : [`docs/gui.md`](docs/gui.md).
+Référence complète : [`docs/gui.md`](../docs/gui.md).
 
 ## Empaquetage en exécutable autonome
 
 Deux empaqueteurs sont documentés pour livrer un binaire mono-fichier qui
 s'exécute sans Python installé :
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — build rapide (moins d'une minute), sortie de 200–300 Mo, démarrage de
   2–4 s. Idéal quand vous itérez sur le script de build.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   build lent (5–15 minutes), sortie de 80–150 Mo, démarrage sous la seconde,
   une certaine protection du bytecode. Idéal quand les utilisateurs finaux
   exécutent le binaire de nombreuses fois.

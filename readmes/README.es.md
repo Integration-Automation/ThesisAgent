@@ -25,8 +25,8 @@ PDF y produciendo un resumen estructurado por artículo, ya sea en contexto
 
 **Si usted es un LLM (Claude Code, Cursor, Aider, Codex CLI, …) leyendo este
 README para entender qué hacer — empiece aquí.** Todo lo siguiente también
-está fijado en [`AGENTS.md`](AGENTS.md) (espejo entre agentes) y
-[`CLAUDE.md`](CLAUDE.md) (referencia canónica); léalos antes de hacer cambios
+está fijado en [`AGENTS.md`](../AGENTS.md) (espejo entre agentes) y
+[`CLAUDE.md`](../CLAUDE.md) (referencia canónica); léalos antes de hacer cambios
 no triviales.
 
 ### Lo que el usuario realmente quiere
@@ -66,7 +66,7 @@ es elevarlo.
 Las trece herramientas MCP (incluyendo `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) están
-documentadas en [`docs/mcp.md`](docs/mcp.md).
+documentadas en [`docs/mcp.md`](../docs/mcp.md).
 
 ### Obligatorio: verificación de URL / DOI antes de entregar
 
@@ -125,7 +125,7 @@ posible coincidencia.
 
 ### Ejemplo trabajado
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) incluye un resumen
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) incluye un resumen
 enriquecido escrito a mano construido exactamente de esta manera (un solo
 artículo, nivel rico, zh-tw, cada campo rico rellenado). Una búsqueda
 multi-artículo sigue la misma forma con una entrada
@@ -426,7 +426,7 @@ agente):
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Referencia completa en [`docs/mcp.md`](docs/mcp.md).
+Referencia completa en [`docs/mcp.md`](../docs/mcp.md).
 
 ## Estructura del proyecto
 
@@ -490,17 +490,17 @@ otro. La disposición es responsive: cada formulario está en un `QScrollArea` y
 la ventana se redimensiona hasta 900×600 (aún cabe en 720p), con escalado HiDPI
 activado por defecto.
 
-Referencia completa: [`docs/gui.md`](docs/gui.md).
+Referencia completa: [`docs/gui.md`](../docs/gui.md).
 
 ## Empaquetado como ejecutable independiente
 
 Dos empaquetadores están documentados para distribuir un binario de archivo
 único que se ejecuta sin Python instalado:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — build rápido (menos de un minuto), salida de 200–300 MB, arranque de
   2–4 s. Ideal cuando itera sobre el script de build.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   build lento (5–15 minutos), salida de 80–150 MB, arranque en menos de un
   segundo, cierta protección del bytecode. Ideal cuando los usuarios finales
   ejecutan el binario muchas veces.

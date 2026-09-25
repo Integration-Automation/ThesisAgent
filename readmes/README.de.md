@@ -26,8 +26,8 @@ entweder im Kontext (LLM-as-agent-Ablauf) oder über die Anthropic-API
 
 **Wenn du ein LLM bist (Claude Code, Cursor, Aider, Codex CLI, …) und diese
 README liest, um herauszufinden, was zu tun ist — beginne hier.** Alles
-Folgende ist auch in [`AGENTS.md`](AGENTS.md) (agentübergreifendes Spiegelbild)
-und [`CLAUDE.md`](CLAUDE.md) (kanonische Referenz) verankert; lies diese, bevor
+Folgende ist auch in [`AGENTS.md`](../AGENTS.md) (agentübergreifendes Spiegelbild)
+und [`CLAUDE.md`](../CLAUDE.md) (kanonische Referenz) verankert; lies diese, bevor
 du nicht-triviale Änderungen vornimmst.
 
 ### Was der Nutzer tatsächlich will
@@ -68,7 +68,7 @@ Zwischenartefakt — deine Aufgabe ist es, ihn aufzuwerten.
 Alle dreizehn MCP-Tools (einschließlich `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) sind
-in [`docs/mcp.md`](docs/mcp.md) dokumentiert.
+in [`docs/mcp.md`](../docs/mcp.md) dokumentiert.
 
 ### Pflicht: URL-/DOI-Verifikation vor der Auslieferung
 
@@ -125,7 +125,7 @@ stillschweigend einen möglichen Treffer fallen zu lassen.
 
 ### Durchgearbeitetes Beispiel
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) liefert eine von Hand
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) liefert eine von Hand
 verfasste reichhaltige Zusammenfassung, die genau auf diese Weise erstellt wurde
 (einzelnes Paper, reichhaltige Stufe, zh-tw, jedes reichhaltige Feld befüllt).
 Eine Suche über mehrere Paper folgt derselben Form mit einem
@@ -425,7 +425,7 @@ LLM-as-agent-Ablauf (kein `ANTHROPIC_API_KEY` nötig — das LLM ist der Agent):
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Vollständige Referenz in [`docs/mcp.md`](docs/mcp.md).
+Vollständige Referenz in [`docs/mcp.md`](../docs/mcp.md).
 
 ## Projektstruktur
 
@@ -489,17 +489,17 @@ anderen erzeugen kannst. Das Layout ist responsiv: Jedes Formular sitzt in
 einer `QScrollArea` und das Fenster lässt sich bis auf 900×600 verkleinern
 (passt noch auf 720p), mit standardmäßig aktivierter HiDPI-Skalierung.
 
-Vollständige Referenz: [`docs/gui.md`](docs/gui.md).
+Vollständige Referenz: [`docs/gui.md`](../docs/gui.md).
 
 ## Paketierung als eigenständige ausführbare Datei
 
 Zwei Packager sind dokumentiert, um eine einzelne Binärdatei auszuliefern, die
 ohne installiertes Python läuft:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — schneller Build (unter einer Minute), 200–300 MB Output, 2–4 s Startzeit.
   Am besten, wenn du am Build-Skript iterierst.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   langsamer Build (5–15 Minuten), 80–150 MB Output, Startzeit unter einer
   Sekunde, etwas Bytecode-Schutz. Am besten, wenn Endnutzer die Binärdatei
   viele Male ausführen.
