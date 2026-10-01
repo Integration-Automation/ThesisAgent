@@ -173,10 +173,12 @@ nothing else (no pip upgrade, no second install):
 python -m pip install --require-hashes --only-binary :all: -r .github/requirements/publish.txt
 ```
 
-- `.github/requirements/publish.in` names the tools the job runs:
-  `build` and `twine`.
+- `.github/requirements/publish.in` names the tools the job runs,
+  `build` and `twine`, and the build backend, `setuptools` and
+  `wheel`: every package in `[build-system] requires` of
+  `pyproject.toml`.
 - `.github/requirements/publish.txt` is generated from it with
-  `uv pip compile` and pins those two and their dependencies to exact
+  `uv pip compile` and pins those four and their dependencies to exact
   versions with the SHA-256 hash of every wheel, resolved for the
   job's Python (3.12) and runner (Linux x86_64). pip refuses a file
   whose hash is not listed, and `--only-binary :all:` refuses a
@@ -189,10 +191,31 @@ python -m pip install --require-hashes --only-binary :all: -r .github/requiremen
   runs any other `pip install`, or runs a tool `publish.in` does not
   name.
 
-`python -m build` still downloads the build backend (`setuptools`,
-`wheel`, from `[build-system] requires`) into its own isolated
-environment without hashes. `build-nuitka` does not receive the PyPI
-token and installs its dependencies unpinned.
+The job builds with `python -m build --no-isolation`. A plain
+`python -m build` creates an isolated environment and downloads the
+newest build backend into it without hashes, outside the lock. With
+`--no-isolation` the build imports the locked `setuptools` and `wheel`
+from the job's own environment, and nothing is downloaded at build
+time.
+
+`--no-isolation` does not install `[build-system] requires`, it checks
+that the environment already satisfies each entry and stops with
+"Unmet dependencies" when one does not. So the lock has to keep up
+with `pyproject.toml`:
+
+- Raising a floor there (for example `setuptools>=77` to a version
+  above the locked one) or adding a build requirement needs
+  `publish.in` updated and `publish.txt` regenerated in the same
+  change.
+- `tests/test_workflow_actions.py` fails when a `python -m build` in
+  the job lacks `--no-isolation`, when `publish.in` does not name
+  exactly the job's tools plus the `[build-system] requires` packages,
+  or when a locked version does not satisfy the specifier written in
+  `pyproject.toml`. The mismatch shows up in CI on `dev`, not in the
+  release.
+
+`build-nuitka` does not receive the PyPI token and installs its
+dependencies unpinned.
 
 ## Repo settings the pipeline needs
 

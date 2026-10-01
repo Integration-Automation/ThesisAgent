@@ -170,8 +170,11 @@ jobs:
         run: |
           python -m pip install --require-hashes --only-binary :all: -r .github/requirements/publish.txt
 
+      # --no-isolation: the build backend is the setuptools and wheel
+      # locked in publish.txt, not a fresh download into an isolated
+      # environment.
       - name: Build sdist + wheel
-        run: python -m build
+        run: python -m build --no-isolation
 
       - name: Verify distribution metadata
         run: python -m twine check dist/*

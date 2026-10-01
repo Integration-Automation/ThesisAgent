@@ -68,9 +68,12 @@ An exporter never imports a fetcher; it only consumes a `PaperCollection`.
 - **Build / release**: `pyproject.toml` extras (`mcp`, `intelligence`, `gui`, `web`, `dev`);
   `docs/packaging-nuitka.md`, `docs/packaging-pyinstaller.md`; `.github/workflows/ci.yml`, `release.yml`.
   The `publish-pypi` job of `release.yml` holds the PyPI token and installs nothing but
-  `.github/requirements/publish.txt` (`build`, `twine`): wheels only, at locked hashes, generated
-  from `publish.in` beside it. `tests/test_workflow_actions.py` fails when that job runs any other
-  `pip install`. Reference: `docs/releases.md`.
+  `.github/requirements/publish.txt` (`build`, `twine`, and the build backend `setuptools`, `wheel`):
+  wheels only, at locked hashes, generated from `publish.in` beside it. It builds with
+  `python -m build --no-isolation`, so the backend is the locked one and not a fresh download.
+  `tests/test_workflow_actions.py` fails when that job runs any other `pip install`, builds with
+  isolation, or when the lock does not satisfy `[build-system] requires` of `pyproject.toml`.
+  Reference: `docs/releases.md`.
 
 ## 4. Main flows
 

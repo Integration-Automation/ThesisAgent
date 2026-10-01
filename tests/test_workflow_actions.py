@@ -8,15 +8,17 @@ from lingering unnoticed: GitHub removed Node 20 from its runners on 2026-09-23.
 
 The rest of the workflow supply chain is guarded here too: Dependabot's
 settings, checkout credentials, job timeouts, the Nuitka cache, and the
-hash-locked tooling of the job that holds the PyPI token.
+hash-locked tooling and build backend of the job that holds the PyPI token.
 """
 from __future__ import annotations
 
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement  # pytest itself depends on packaging
 
 _ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".github" / "workflows").is_dir())
 _WORKFLOWS = sorted((_ROOT / ".github" / "workflows").glob("*.yml"))
@@ -224,13 +226,36 @@ def _tools(body: str) -> set[str]:
 def _requirements(name: str) -> set[str]:
     """Return the distributions a file in ``.github/requirements`` names at the start of a line.
 
-    Reads ``publish.in`` (the tools asked for) or ``publish.txt`` (every pin), e.g.
-    ``_requirements("publish.in") == {"build", "twine"}``. Comments, hashes and ``# via``
-    lines start with ``#`` or a space and are not matched.
+    Reads ``publish.in`` (the tools and build backend asked for) or ``publish.txt`` (every
+    pin), e.g. ``_requirements("publish.in") == {"build", "twine", "setuptools", "wheel"}``.
+    Comments, hashes and ``# via`` lines start with ``#`` or a space and are not matched.
     """
     text = (_REQUIREMENTS / name).read_text(encoding="utf-8")
     found = re.findall(r"^([A-Za-z0-9][\w.-]*)", text, re.MULTILINE)
     return {_distribution(requirement) for requirement in found}
+
+
+def _build_requires() -> list[Requirement]:
+    """Return ``[build-system] requires`` of ``pyproject.toml``, the metadata the job builds from.
+
+    ``python -m build --no-isolation`` does not install these: it checks that the job's
+    environment already satisfies each one and stops when it does not. For
+    ``requires = ["setuptools>=77", "wheel"]`` the names are ``["setuptools", "wheel"]`` and
+    the first specifier accepts ``84.0.0``.
+    """
+    metadata = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    return [Requirement(entry) for entry in metadata["build-system"]["requires"]]
+
+
+def _locked_versions() -> dict[str, str]:
+    """Return ``{distribution: version}`` for every pin in ``publish.txt``.
+
+    This is what the publish job has installed when it builds, e.g.
+    ``_locked_versions()["setuptools"] == "84.0.0"``.
+    """
+    text = (_REQUIREMENTS / "publish.txt").read_text(encoding="utf-8")
+    pins = re.findall(r"^([A-Za-z0-9][\w.-]*)==(\S+)", text, re.MULTILINE)
+    return {_distribution(name): version for name, version in pins}
 
 
 def test_the_job_that_holds_the_pypi_token_is_publish_pypi():
@@ -247,10 +272,34 @@ def test_publish_job_installs_only_the_hash_locked_tooling(body):
     assert [command.strip() for command in _PIP_INSTALL.findall(body)] == [_LOCKED_INSTALL]
 
 
-def test_publish_in_lists_exactly_the_tools_the_job_runs():
+def test_publish_in_lists_exactly_the_tools_the_job_runs_and_the_build_backend():
     # A tool the job starts using has to be locked first, or the release fails at that step.
+    # The build backend is never run by name: `python -m build --no-isolation` imports it
+    # from the job's environment, so it is locked beside the tools.
     used = set().union(*(_tools(body) for body in _PUBLISH_BODIES))
-    assert used == _requirements("publish.in")
+    backend = {_distribution(requirement.name) for requirement in _build_requires()}
+    assert backend
+    assert used | backend == _requirements("publish.in")
+
+
+@pytest.mark.parametrize("body", _PUBLISH_BODIES, ids=_PUBLISH_IDS)
+def test_publish_job_builds_without_an_isolated_environment(body):
+    # A plain `python -m build` creates an isolated environment and downloads the newest
+    # build backend into it, outside the lock, in the job that uploads with the token.
+    builds = re.findall(r"\bpython3? -m build\b[^\n]*", body)
+    assert builds
+    assert [command for command in builds if "--no-isolation" not in command.split()] == []
+
+
+def test_the_locked_build_backend_satisfies_build_system_requires():
+    # --no-isolation checks [build-system] requires instead of installing it. A floor raised
+    # in pyproject.toml without regenerating the lock (Dependabot edits both files) has to
+    # fail here and not in the publish job.
+    locked = _locked_versions()
+    unmet = [str(requirement) for requirement in _build_requires()
+             if _distribution(requirement.name) not in locked
+             or not requirement.specifier.contains(locked[_distribution(requirement.name)])]
+    assert unmet == []
 
 
 def test_publish_lock_pins_every_tool_of_publish_in():
