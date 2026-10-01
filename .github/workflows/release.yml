@@ -53,6 +53,7 @@ jobs:
           && github.event.workflow_run.event == 'push'
           && github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # about 3x the slowest recent run, at least 15
     permissions:
       contents: write
     outputs:
@@ -140,6 +141,7 @@ jobs:
     needs: bump-version
     if: needs.bump-version.outputs.skipped == 'false'
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # about 3x the slowest recent run, at least 15
     # No `environment:` block on purpose. Attaching one would make
     # GitHub categorise the publish as a Deployment and surface it
     # under the repo's "Deployments" sidebar widget. The artefact
@@ -181,6 +183,7 @@ jobs:
     name: Create draft GitHub release
     needs: [bump-version, publish-pypi]
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # about 3x the slowest recent run, at least 15
     permissions:
       contents: write
     steps:
@@ -367,6 +370,7 @@ jobs:
     name: Mark release as published
     needs: [bump-version, build-nuitka]
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # about 3x the slowest recent run, at least 15
     permissions:
       contents: write
     steps:
