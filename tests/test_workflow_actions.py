@@ -144,7 +144,8 @@ def _jobs(path: Path) -> list[tuple[str, str]]:
     start = next(i for i, line in enumerate(lines) if re.match(r"^jobs:\s*(#.*)?$", line))
     heads = [i for i in range(start + 1, len(lines)) if _JOB_HEAD.match(lines[i])]
     ends = [*heads[1:], len(lines)]
-    return [(lines[i].strip().rstrip(":"), "\n".join(lines[i:end])) for i, end in zip(heads, ends)]
+    pairs = zip(heads, ends, strict=True)
+    return [(lines[i].strip().rstrip(":"), "\n".join(lines[i:end])) for i, end in pairs]
 
 
 @pytest.mark.parametrize("workflow", _WORKFLOWS, ids=lambda p: p.name)

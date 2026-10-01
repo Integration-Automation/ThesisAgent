@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-02 | 2026-10-01 | Workflow-timeout test failed CI lint (ruff B905) | #incident #ci | [2026-10](2026-10.md) |
 | U-20261001-01 | 2026-10-01 | Every workflow job has a timeout | #ci #tests | [2026-10](2026-10.md) |
 | U-20260925-04 | 2026-09-25 | Translated READMEs link back to the repository root | #docs #tests | [2026-09](2026-09.md) |
 | U-20260925-03 | 2026-09-25 | License metadata uses the SPDX expression | #packaging | [2026-09](2026-09.md) |
@@ -89,5 +90,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 1 |
+| [2026-10.md](2026-10.md) | 2026-10 | 2 |
 | [2026-09.md](2026-09.md) | 2026-09 | 25 |
