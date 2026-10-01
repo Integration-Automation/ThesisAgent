@@ -163,6 +163,37 @@ cold build still happens whenever the cache is missing, for example
 after a quiet week: GitHub evicts a cache that has not been used for
 7 days.
 
+## Build tooling of `publish-pypi`
+
+`publish-pypi` is the only job that receives `PYPI_API_TOKEN`, so
+whatever it installs runs next to that token. It installs one file and
+nothing else (no pip upgrade, no second install):
+
+```
+python -m pip install --require-hashes --only-binary :all: -r .github/requirements/publish.txt
+```
+
+- `.github/requirements/publish.in` names the tools the job runs:
+  `build` and `twine`.
+- `.github/requirements/publish.txt` is generated from it with
+  `uv pip compile` and pins those two and their dependencies to exact
+  versions with the SHA-256 hash of every wheel, resolved for the
+  job's Python (3.12) and runner (Linux x86_64). pip refuses a file
+  whose hash is not listed, and `--only-binary :all:` refuses a
+  source distribution, which would run its own build script.
+- The command that regenerates the lock is in the header of both
+  files. Dependabot proposes updates to it on `dev`, after its 7-day
+  wait.
+- A tool the job starts using has to be added to `publish.in` and
+  locked first. `tests/test_workflow_actions.py` fails when the job
+  runs any other `pip install`, or runs a tool `publish.in` does not
+  name.
+
+`python -m build` still downloads the build backend (`setuptools`,
+`wheel`, from `[build-system] requires`) into its own isolated
+environment without hashes. `build-nuitka` does not receive the PyPI
+token and installs its dependencies unpinned.
+
 ## Repo settings the pipeline needs
 
 Configure once after forking / first deploy:

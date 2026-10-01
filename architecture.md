@@ -67,6 +67,10 @@ An exporter never imports a fetcher; it only consumes a `PaperCollection`.
   `THESISAGENTS_DISABLE_WEBRUNNER`. Reference: `docs/configuration.md`.
 - **Build / release**: `pyproject.toml` extras (`mcp`, `intelligence`, `gui`, `web`, `dev`);
   `docs/packaging-nuitka.md`, `docs/packaging-pyinstaller.md`; `.github/workflows/ci.yml`, `release.yml`.
+  The `publish-pypi` job of `release.yml` holds the PyPI token and installs nothing but
+  `.github/requirements/publish.txt` (`build`, `twine`): wheels only, at locked hashes, generated
+  from `publish.in` beside it. `tests/test_workflow_actions.py` fails when that job runs any other
+  `pip install`. Reference: `docs/releases.md`.
 
 ## 4. Main flows
 

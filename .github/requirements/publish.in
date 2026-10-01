@@ -1,0 +1,7 @@
+# The publish-pypi job of release.yml holds the PyPI token and builds and uploads with these two tools.
+# publish.txt is generated from this file:
+# uv pip compile .github/requirements/publish.in --generate-hashes --python-version 3.12 --python-platform x86_64-manylinux_2_28 --only-binary :all: --exclude-newer <7 days ago> -o .github/requirements/publish.txt
+# (--python-version is the one the job sets up, the platform is its ubuntu runner. --exclude-newer
+# keeps the 7-day wait Dependabot uses: nothing uploaded in the last week.)
+build
+twine
