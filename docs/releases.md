@@ -41,8 +41,8 @@ Push to main
 
 | Artefact | Where | Size |
 |---|---|---|
-| **`thesisagents-<version>.tar.gz`** (sdist) | PyPI | ~120 KB |
-| **`thesisagents-<version>-py3-none-any.whl`** | PyPI | ~140 KB |
+| **`thesisagents-<version>.tar.gz`** (sdist, without the test suite) | PyPI | ~250 KB |
+| **`thesisagents-<version>-py3-none-any.whl`** | PyPI | ~280 KB |
 | **`thesisagents-windows-x86_64.zip`** | GitHub Release | ~250-350 MB (Nuitka bundle + PySide6) |
 | **`thesisagents-windows-x86_64.zip.sha256`** | GitHub Release | 80 bytes |
 
