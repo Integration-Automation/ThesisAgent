@@ -65,7 +65,7 @@ l'améliorer.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Les quatorze outils MCP (y compris `list_sources`, `list_exports`,
+Les dix-sept outils MCP (y compris `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) sont
 documentés dans [`docs/mcp.md`](../docs/mcp.md).
@@ -251,8 +251,8 @@ dans le tuple `PaperCollection`.
   fonctionne avec toute présentation produite par l'exporteur, plus les outils
   MCP `pptx_*` équivalents afin qu'un agent LLM puisse itérer sur une
   présentation générée.
-- **Serveur MCP** : 14 outils — `list_sources` + `list_exports`
-  (découverte), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
+- **Serveur MCP** : 17 outils — `list_sources` + `list_exports`
+  (découverte), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export` et les six outils de deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Permet à
@@ -318,6 +318,18 @@ dans le tuple `PaperCollection`.
   d'OpenAlex, de Semantic Scholar et de Crossref, et les articles
   découverts sont notés par le même classement, si bien qu'être souvent
   cité ne vaut pas être dans le sujet.
+- **Bibliothèque de littérature** : `--library thesis.db` conserve ce
+  que trouvent vos exécutions dans un seul fichier SQLite, si bien
+  qu'une recherche ne disparaît plus à la fin du processus. Elle
+  contient les articles, l'exécution et la source qui ont trouvé chacun
+  d'eux, leurs scores, les liens de citation de `--snowball` et les
+  vérifications de DOI / URL. `--library-add` y fusionne une exécution
+  (un article déjà présent est mis à jour, jamais dupliqué),
+  `--library-search` retrouve les articles conservés sans accès au
+  réseau, et `--library-export` les envoie vers n'importe quel format
+  d'export. Un DOI ou une URL vérifié lors d'une exécution précédente
+  n'est pas revérifié pendant 30 jours. Également disponible via les
+  outils MCP `library_add`, `library_search` et `library_stats`.
 - **Sûr par défaut** : transport HTTP uniquement HTTPS, limite de débit par
   source (token bucket), `defusedxml` pour toute charge utile XML, chemins
   d'export résistants à la traversée de répertoire, pas d'`eval` / `exec` /
@@ -404,6 +416,10 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--diagnostics` | Explique le classement d'une recherche `--query` : affiche le score de chaque article (pertinence + récence + citations) et une recommandation indicative `keep` / `review` / `prune`, et écrit le détail complet dans `diagnostics.json` sous `--out`. Aucun article n'est supprimé. |
 | `--snowball` | Étend les résultats en suivant les liens de citation avant l'export : `references` (ce que citent les premiers résultats), `cited_by` (ce qui les cite) ou `both`. Les nouveaux articles sont ajoutés à la suite et passent par le même téléchargement et le même export. Désactivé par défaut. |
 | `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Bornes de `--snowball` : premiers résultats à étendre (5 par défaut), étapes à suivre (1, au plus 3), articles par graine et par direction (20), nouveaux articles au total (20) et pertinence minimale conservée (0..1, désactivée par défaut). |
+| `--library PATH` | Une bibliothèque de littérature : un fichier SQLite qui conserve articles, liens de citation et vérifications d'identifiants d'une exécution à l'autre. Créé s'il n'existe pas. Lors d'une exécution normale, il sert de cache d'identifiants, si bien qu'un DOI ou une URL déjà vérifié n'est pas revérifié. |
+| `--library-add` | Fusionne les articles de cette exécution dans `--library`, avec la requête, le score de chaque article et les liens de citation de `--snowball`. Un article déjà présent dans la bibliothèque est fusionné, pas dupliqué. |
+| `--library-search QUERY` | Liste les articles de `--library` qui correspondent à QUERY, les meilleurs d'abord, puis quitte. Rien n'est téléchargé. `--max` limite la liste, et `""` liste les articles vus le plus récemment. |
+| `--library-export [QUERY]` | Exporte les articles de `--library` via `--export`, tous ou ceux qui correspondent à QUERY. Formats par défaut : `xlsx,bib`. Aucun PDF n'est téléchargé sauf si `--export` contient `pdf`. |
 | `--quiet` | Supprime l'affichage par article. |
 
 ### Variables d'environnement
@@ -471,10 +487,13 @@ Outils :
 | `list_exports` | Énumère chaque format d'export avec sa description en une ligne et s'il écrit un fichier agrégé ou un fichier par article. |
 | `search` | Mots-clés → liste d'articles. Accepte `top_tier_only`, `min_citations` ; par défaut le mix complet de sources sans clé API. `diagnostics=true` ajoute le détail du score par article et une recommandation indicative `keep` / `review` / `prune` (rien n'est retiré de `papers`). Renvoie toujours `source_stats` : par source, `requested`, `returned`, `after_dedup` et `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` étend en plus les premiers résultats par leurs liens de citation et ajoute un bloc `snowball` (`papers` reste inchangé). |
 | `snowball` | Articles graines → articles qu'ils citent (`references`), articles qui les citent (`cited_by`) ou `both`, dans des bornes fixes (`depth`, `max_per_seed`, `max_total`). Chaque article découvert porte le chemin qui l'a atteint. Les `keywords` optionnels les notent et les ordonnent, et `min_relevance` écarte ceux qui sont hors sujet. |
+| `library_add` | Articles → une bibliothèque de littérature (le fichier SQLite indiqué par `library`), conservée pour les sessions suivantes. Ajouter, c'est fusionner : un article déjà présent est mis à jour, pas dupliqué. `relations` enregistre les liens de citation renvoyés par `snowball`. |
+| `library_search` | Requête → articles déjà présents dans la bibliothèque, notés comme lors d'une recherche, sans accès au réseau. Chacun est accompagné de son historique : première et dernière observation, et les sources qui l'ont renvoyé. |
+| `library_stats` | Bibliothèque → combien d'articles, d'exécutions et de liens de citation elle contient, les articles par source et les dernières importations. |
 | `fetch_paper` | Identifiant arXiv / DOI / PMID / IEEE → article unique. |
 | `fetch_pdf_text` | Télécharge un PDF, renvoie le texte du corps extrait. **Le chemin MCP vers « j'ai lu l'article ».** |
 | `download_pdfs` | Télécharge par lot les PDF d'une liste d'articles dans `{out_dir}/pdfs/`. Renvoie des résultats par article indexés par clé BibTeX. |
-| `export` | Liste d'articles + formats → écrit `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepte un champ `summary` par article pour le schéma riche de style thèse, `max_slides_per_paper` (défaut 25) et `dark_mode` (défaut `false` — le défaut du projet est la présentation claire à bande bleu marine, passez `true` pour la passe sombre OLED / faible luminosité). Vérifie chaque DOI / URL avant d'écrire (`verify_identifiers`, `true` par défaut) : un identifiant erroné ou injoignable fait échouer l'appel et indique l'article, et la réponse contient un rapport `verification`. |
+| `export` | Liste d'articles + formats → écrit `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepte un champ `summary` par article pour le schéma riche de style thèse, `max_slides_per_paper` (défaut 25) et `dark_mode` (défaut `false` — le défaut du projet est la présentation claire à bande bleu marine, passez `true` pour la passe sombre OLED / faible luminosité). Vérifie chaque DOI / URL avant d'écrire (`verify_identifiers`, `true` par défaut) : un identifiant erroné ou injoignable fait échouer l'appel et indique l'article, et la réponse contient un rapport `verification`. `library` désigne une bibliothèque de littérature où conserver les vérifications d'identifiants, si bien qu'un identifiant vérifié lors d'un appel précédent n'est pas revérifié. |
 | `pptx_inspect` | Lit la structure des diapositives / formes d'une présentation existante. |
 | `pptx_review` | Audite une présentation en un appel — débordement + contrats de couleur + complétude des sections `paper_rule`. Détecte automatiquement la langue de la présentation ; aussi la CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Remplace `title` / `body` / `meta` (par nom de forme) ou des formes arbitraires par index. |
@@ -505,8 +524,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (14 tools)
+│   ├── mcp/                         # FastMCP server (17 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

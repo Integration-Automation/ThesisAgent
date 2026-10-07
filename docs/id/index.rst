@@ -50,7 +50,7 @@ Alur MCP 6 langkah
    5. (Anda membaca tiap PDF dan menghasilkan dict ringkasan terstruktur)
    6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 
-14 tool MCP lengkap: :doc:`/mcp`.
+17 tool MCP lengkap: :doc:`/mcp`.
 
 **Untuk menemukan hasil yang melenceng dari topik, mulailah dari saran
 alat itu sendiri.** ``--diagnostics`` (CLI) atau ``diagnostics=true``
@@ -80,6 +80,15 @@ dibatasi (satu langkah secara default), setiap makalah yang ditemukan
 menyimpan jalur yang mencapainya, dan semuanya dinilai terhadap kata
 kunci Anda, sehingga sebuah makalah tidak dipertahankan hanya karena
 sering disitasi.
+
+**Simpan apa yang Anda temukan.** ``--library thesis.db --library-add``
+(CLI) atau tool ``library_add`` menyimpan makalah sebuah proses ke
+pustaka literatur, satu file SQLite yang tetap ada setelah sesi
+berakhir. Menambahkan pencarian yang sama lagi tidak menduplikasi apa
+pun: makalah dikenali dari DOI, arXiv ID, atau judulnya, dan temuan baru
+digabungkan ke catatan yang tersimpan. Setelah itu ``library_search``
+menemukan makalah tersimpan tanpa menyentuh jaringan, dan DOI serta URL
+yang sudah terverifikasi tidak diperiksa lagi selama 30 hari.
 
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -189,7 +198,7 @@ Bacaan lebih lanjut
 -------------------
 
 * Flag CLI dan variabel lingkungan: :doc:`/cli`
-* 14 tool server MCP: :doc:`/mcp`
+* 17 tool server MCP: :doc:`/mcp`
 * Toolkit edit PPTX: :doc:`/pptx_editing`
 * Berkas ``readmes/README.id.md`` di akar repo berisi daftar fitur lengkap.
 * Referensi teknis mendalam (arsitektur plugin, kebijakan keamanan,

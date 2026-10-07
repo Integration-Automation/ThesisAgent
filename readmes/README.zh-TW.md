@@ -57,7 +57,7 @@ README 想搞清楚要做什麼 —— 從這裡開始。** 底下的所有內�
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-全部十四個 MCP 工具(包含 `list_sources`、`list_exports`、
+全部十七個 MCP 工具(包含 `list_sources`、`list_exports`、
 `download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / 等等)都記載於 [`docs/mcp.md`](../docs/mcp.md)。
 
@@ -199,8 +199,8 @@ for key in irrelevant_keys:
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   可對匯出器產出的任何投影片運作,加上對應的 `pptx_*` MCP 工具,好讓
   一個 LLM agent 能在產出的投影片上反覆迭代。
-- **MCP 伺服器**:14 個工具 —— `list_sources` + `list_exports`
-  (探索)、`search`、`snowball`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
+- **MCP 伺服器**:17 個工具 —— `list_sources` + `list_exports`
+  (探索)、`search`、`snowball`、`library_add`、`library_search`、`library_stats`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
   `export`,以及六個 `pptx_*` 投影片工具(`inspect`、`review`、
   `update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。讓任何
   懂 MCP 的 LLM(Claude Code、Claude Desktop、Cursor …)驅動整個工作
@@ -228,6 +228,7 @@ for key in irrelevant_keys:
 - **可解釋的排名與修剪建議**: 每次搜尋都會記錄每篇論文排在該位置的原因 (相關性、新近度、引用數三部分,命中的查詢詞,每項貢獻一句說明),並為每筆結果建議 `keep`、`review` 或 `prune`,同時指出觸發的規則。單憑引用數低不會觸發任何建議。可用 `--diagnostics`、MCP `search` 工具的 `diagnostics=true`,或 GUI 的「建議」欄查看。僅供參考,不會移除任何論文。
 - **各來源的搜尋統計**: 每次搜尋都會回報每個來源回傳了幾筆記錄、去重後有幾篇論文歸屬於它,以及它是否失敗、被限流或未啟用。出錯的來源會被跳過而不中斷搜尋,所以要分辨「主題本來就冷門」與「搜尋掉了一半來源」,靠的就是這些數字。CLI 在每次 `--query` 搜尋後印出,MCP `search` 工具以 `source_stats` 回傳,GUI 則顯示在狀態列。
 - **引用滾雪球搜尋**: `--snowball references|cited_by|both` (或 MCP 的 `snowball` 工具) 會沿著引用關係擴充排名最前面的結果,往回找它們引用的文獻、往前找引用它們的文獻,補上關鍵字搜尋因作者用詞不同而漏掉的研究。每個維度都有上限 (預設深度 1、每個種子的篇數、總篇數),經由多條路徑找到的同一篇論文只算一篇,每篇新找到的論文都會記下找到它的路徑。引用資料來自 OpenAlex、Semantic Scholar 與 Crossref,新找到的論文同樣由排名器評分,所以被引用得多不代表切題。
+- **文獻庫**: `--library thesis.db` 把每次執行找到的內容保存在一個 SQLite 檔案裡,搜尋結果不再隨著程序結束而消失。裡面有論文、每篇論文是哪一次執行與哪個來源找到的、它們的分數、`--snowball` 找到的引用關係,以及 DOI / 網址的檢查結果。`--library-add` 把一次執行合併進去 (已經存在的論文會被更新,絕不重複), `--library-search` 不需要網路就能找出已保存的論文, `--library-export` 則把它們送到任何匯出格式。先前執行中已通過檢查的 DOI 或網址,30 天內不會再檢查一次。也能透過 MCP 工具 `library_add`、`library_search` 與 `library_stats` 使用。
 - **預設就安全**:僅 HTTPS 的 HTTP 傳輸、每來源速率限制(token bucket)、
   對任何 XML payload 用 `defusedxml`、防路徑穿越的匯出路徑、不對
   使用者輸入用 `eval` / `exec` / `pickle`。
@@ -310,6 +311,10 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--diagnostics` | 解釋 `--query` 搜尋的排名: 印出每篇論文的分數 (相關性 + 新近度 + 引用數) 與僅供參考的 `keep` / `review` / `prune` 建議,並把完整明細寫到 `--out` 目錄的 `diagnostics.json`。不會移除任何論文。 |
 | `--snowball` | 匯出前沿著引用關係擴充結果: `references` (最前面的結果所引用的文獻)、`cited_by` (引用它們的文獻) 或 `both`。新論文會附加在結果後面,並走同樣的下載與匯出流程。預設關閉。 |
 | `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` 的上限: 要擴充的前幾筆結果 (預設 5)、追蹤的步數 (1,最多 3)、每個種子每個方向的篇數 (20)、新論文總數 (20),以及保留的最低相關性 (0..1,預設不啟用)。 |
+| `--library PATH` | 文獻庫: 一個在多次執行之間保存論文、引用關係與識別碼檢查結果的 SQLite 檔案。不存在時會自動建立。搭配一般執行時,它就是識別碼快取,先前已通過檢查的 DOI 或網址不會再檢查一次。 |
+| `--library-add` | 把這次執行的論文合併進 `--library`,連同查詢、每篇論文的分數與 `--snowball` 找到的引用關係。文獻庫裡已有的論文會被合併,不會重複。 |
+| `--library-search QUERY` | 列出 `--library` 中符合 QUERY 的論文 (最相關的在前) 後結束。不會抓取任何東西。`--max` 限制筆數, `""` 則列出最近看到的論文。 |
+| `--library-export [QUERY]` | 透過 `--export` 匯出 `--library` 裡的論文,全部或只匯出符合 QUERY 的。預設格式: `xlsx,bib`。除非 `--export` 包含 `pdf`,否則不會下載 PDF。 |
 | `--quiet` | 抑制每篇論文的列印輸出。 |
 
 ### 環境變數
@@ -375,10 +380,13 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `list_exports` | 列舉每種匯出格式,附一行描述,並說明它寫一個彙總檔還是每篇論文一檔。 |
 | `search` | 關鍵字 → 論文清單。接受 `top_tier_only`、`min_citations`;預設走完整的免 API 金鑰來源組合。 `diagnostics=true` 會加上每篇論文的分數明細與僅供參考的 `keep` / `review` / `prune` 建議 (不會從 `papers` 移除任何項目)。 一律回傳 `source_stats`: 每個來源的 `requested`、`returned`、`after_dedup` 與 `status` (`ok` / `failed` / `rate_limited` / `disabled`)。 `snowball="both"` 還會沿著引用關係擴充最前面的結果,並加上 `snowball` 區塊 (`papers` 不變)。 |
 | `snowball` | 種子論文 → 它們引用的文獻 (`references`)、引用它們的文獻 (`cited_by`) 或 `both`,皆在固定上限內 (`depth`、`max_per_seed`、`max_total`)。每篇新找到的論文都帶有找到它的路徑。可選的 `keywords` 會評分並排序,`min_relevance` 會濾掉離題的論文。 |
+| `library_add` | 論文 → 文獻庫 (`library` 指向的 SQLite 檔案),保留給之後的工作階段使用。加入就是合併: 已經存在的論文會被更新,不會重複。`relations` 可存入 `snowball` 回傳的引用關係。 |
+| `library_search` | 查詢 → 文獻庫裡已有的論文,評分方式與搜尋相同,不需要網路。每篇都附上它的紀錄: 第一次與最近一次看到的時間,以及哪些來源回傳過它。 |
+| `library_stats` | 文獻庫 → 它保存了多少論文、執行紀錄與引用關係,各來源的論文數,以及最近幾次匯入。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別碼 → 單篇論文。 |
 | `fetch_pdf_text` | 下載一份 PDF,回傳擷取出的本文文字。**這是「我讀了論文」的 MCP 路徑。** |
 | `download_pdfs` | 批次把一份論文清單的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX 鍵為索引的每篇論文結果。 |
-| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 寫入前會驗證每個 DOI / 網址 (`verify_identifiers`,預設 `true`): 識別碼錯誤或無法連線時呼叫會失敗並指出是哪篇論文,回應中附有 `verification` 報告。 |
+| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 寫入前會驗證每個 DOI / 網址 (`verify_identifiers`,預設 `true`): 識別碼錯誤或無法連線時呼叫會失敗並指出是哪篇論文,回應中附有 `verification` 報告。 `library` 指定用來保存識別碼檢查結果的文獻庫,先前呼叫已通過檢查的識別碼就不會再檢查一次。 |
 | `pptx_inspect` | 讀取既有投影片的 slide / shape 結構。 |
 | `pptx_review` | 一次呼叫審核一份投影片 —— 溢位 + 顏色契約 + `paper_rule` 章節完整度。自動偵測投影片語言;也是 CLI `python -m thesisagents review <deck.pptx>`。 |
 | `pptx_update_slide` | 替換 `title` / `body` / `meta`(依 shape 名稱)或依索引替換任意 shape。 |
@@ -409,8 +417,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (14 tools)
+│   ├── mcp/                         # FastMCP server (17 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

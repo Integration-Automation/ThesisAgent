@@ -50,7 +50,7 @@ Fluxo MCP de 6 passos
    5. (você lê cada PDF e produz dict summary estruturado)
    6. export(papers=[{...paper, "summary": {...}}], language="pt", ...)
 
-As 14 ferramentas MCP completas: :doc:`/mcp`.
+As 17 ferramentas MCP completas: :doc:`/mcp`.
 
 **Para identificar resultados fora do tema, comece pelo conselho da
 própria ferramenta.** ``--diagnostics`` (CLI) ou ``diagnostics=true`` na
@@ -79,6 +79,15 @@ palavras-chave perde porque os autores usaram outros termos. A expansão
 caminho que o alcançou, e todos são pontuados em relação às suas
 palavras-chave, de modo que um artigo não é mantido só por ser muito
 citado.
+
+**Guarde o que encontrar.** ``--library thesis.db --library-add`` (CLI)
+ou a ferramenta ``library_add`` guarda os artigos de uma execução em uma
+biblioteca de literatura, um único arquivo SQLite que sobrevive à
+sessão. Adicionar a mesma busca de novo não duplica nada: um artigo é
+reconhecido por seu DOI, seu ID do arXiv ou seu título, e a nova
+observação é mesclada ao registro guardado. Depois ``library_search``
+encontra os artigos guardados sem tocar na rede, e os DOIs e URLs já
+verificados não são verificados de novo por 30 dias.
 
 Obrigatório: verificação URL / DOI antes da entrega
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -187,7 +196,7 @@ Onde procurar mais
 ------------------
 
 * Flags CLI e variáveis de ambiente: :doc:`/cli`
-* 14 ferramentas do servidor MCP: :doc:`/mcp`
+* 17 ferramentas do servidor MCP: :doc:`/mcp`
 * Toolkit de edição PPTX: :doc:`/pptx_editing`
 * O arquivo ``readmes/README.pt.md`` na raiz do repo tem a lista completa de
   funcionalidades.

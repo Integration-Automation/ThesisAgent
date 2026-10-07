@@ -60,7 +60,7 @@ DOAJ, HAL, CORE, Google Scholar 에서 결과를 가져와 하나의 레코드
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-열네 개의 MCP 도구 전체(`list_sources`, `list_exports`,
+열일곱 개의 MCP 도구 전체(`list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / 등 포함)는 [`docs/mcp.md`](../docs/mcp.md)에
 문서화되어 있습니다.
@@ -229,8 +229,8 @@ for key in irrelevant_keys:
   add_slide)는 내보내기가 만들어 낸 어떤 덱에도 작동하며, 여기에
   더해 동등한 `pptx_*` MCP 도구가 있어 LLM 에이전트가 생성된 덱을
   반복 개선할 수 있습니다.
-- **MCP 서버**: 14개 도구 — `list_sources` + `list_exports`
-  (탐색), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
+- **MCP 서버**: 17개 도구 — `list_sources` + `list_exports`
+  (탐색), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export`, 그리고 여섯 개의 `pptx_*` 덱 도구
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). MCP 를 인식하는 어떤 LLM
@@ -277,6 +277,13 @@ for key in irrelevant_keys:
   (기본 깊이 1, 시드당 편수, 전체 편수), 여러 경로로 도달한 같은 논문은 한 편으로 처리되며, 발견된 논문마다 도달
   경로가 기록됩니다. 인용 정보는 OpenAlex, Semantic Scholar, Crossref 에서 가져오고, 발견된
   논문도 같은 랭커로 채점하므로 많이 인용되었다고 해서 주제에 맞는 것으로 보지 않습니다.
+- **문헌 라이브러리**: `--library thesis.db` 는 실행에서 찾은 내용을 하나의 SQLite 파일에
+  보관합니다. 검색 결과가 프로세스 종료와 함께 사라지지 않습니다. 보관되는 것은 논문, 각 논문을 찾은 실행과 소스, 점수,
+  `--snowball` 이 찾은 인용 관계, DOI / URL 확인 결과입니다. `--library-add` 는 실행 결과를
+  병합하고 (이미 있는 논문은 갱신될 뿐 중복되지 않습니다), `--library-search` 는 네트워크 없이 보관된 논문을
+  찾으며, `--library-export` 는 그것들을 어떤 내보내기 형식으로든 보냅니다. 이전 실행에서 확인된 DOI 나
+  URL 은 30일 동안 다시 확인하지 않습니다. MCP 도구 `library_add`, `library_search`,
+  `library_stats` 로도 사용할 수 있습니다.
 - **기본값이 안전**: HTTPS 전용 HTTP 전송, 소스별 속도 제한(토큰
   버킷), 모든 XML 페이로드에 `defusedxml`, 경로 순회에 안전한
   내보내기 경로, 사용자 입력에 대한 `eval` / `exec` / `pickle` 없음.
@@ -361,6 +368,10 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--diagnostics` | `--query` 검색의 순위를 설명합니다. 각 논문의 점수 (관련성 + 최신성 + 인용 수) 와 조언용 `keep` / `review` / `prune` 권고를 출력하고, 전체 내역을 `--out` 의 `diagnostics.json` 에 기록합니다. 논문은 제거되지 않습니다. |
 | `--snowball` | 내보내기 전에 결과를 인용 관계를 따라 확장합니다: `references` (상위 결과가 인용한 문헌), `cited_by` (그것들을 인용한 문헌) 또는 `both`. 새 논문은 결과 뒤에 추가되어 같은 다운로드와 내보내기를 거칩니다. 기본은 꺼짐. |
 | `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` 의 상한: 확장할 상위 결과 수 (기본 5), 따라갈 단계 (1, 최대 3), 시드와 방향마다의 편수 (20), 새 논문 전체 수 (20), 유지할 최소 관련성 (0..1, 기본은 사용 안 함). |
+| `--library PATH` | 문헌 라이브러리: 실행 사이에 논문, 인용 관계, 식별자 확인 결과를 보관하는 SQLite 파일. 없으면 만들어집니다. 일반 실행에서는 식별자 캐시로 쓰여, 이전에 확인된 DOI 나 URL 은 다시 확인하지 않습니다. |
+| `--library-add` | 이번 실행의 논문을 `--library` 에 병합합니다. 쿼리, 각 논문의 점수, `--snowball` 이 찾은 인용 관계도 함께 보관됩니다. 이미 라이브러리에 있는 논문은 병합될 뿐 중복되지 않습니다. |
+| `--library-search QUERY` | `--library` 에서 QUERY 와 일치하는 논문을 관련도 순으로 나열하고 종료합니다. 아무것도 가져오지 않습니다. `--max` 로 개수를 제한하며, `""` 를 주면 최근에 본 논문을 나열합니다. |
+| `--library-export [QUERY]` | `--library` 의 논문을 `--export` 로 내보냅니다. 전부 또는 QUERY 와 일치하는 것만입니다. 기본 형식은 `xlsx,bib`. `--export` 에 `pdf` 가 없으면 PDF 는 다운로드하지 않습니다. |
 | `--quiet` | 논문별 출력을 억제. |
 
 ### 환경 변수
@@ -427,10 +438,13 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `list_exports` | 모든 내보내기 형식을 한 줄 설명과 함께, 그리고 그것이 하나의 집계 파일을 쓰는지 논문당 하나의 파일을 쓰는지 열거. |
 | `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. `diagnostics=true` 는 논문별 점수 내역과 조언용 `keep` / `review` / `prune` 권고를 추가합니다 (`papers` 에서는 아무것도 제거되지 않습니다). 항상 `source_stats` 를 반환합니다: 소스별 `requested`, `returned`, `after_dedup`, `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` 를 주면 상위 결과를 인용 관계를 따라 확장하고 `snowball` 블록을 추가합니다 (`papers` 는 그대로입니다). |
 | `snowball` | 시드 논문 → 그 논문들이 인용한 문헌 (`references`), 그 논문들을 인용한 문헌 (`cited_by`) 또는 `both` 를 고정된 상한 (`depth`, `max_per_seed`, `max_total`) 안에서 가져옵니다. 발견된 논문마다 도달 경로가 붙습니다. 선택 항목 `keywords` 로 채점하고 정렬하며, `min_relevance` 로 주제에서 벗어난 논문을 걸러냅니다. |
+| `library_add` | 논문 → 문헌 라이브러리 (`library` 가 가리키는 SQLite 파일) 에 보관해 이후 세션에서 쓸 수 있게 합니다. 추가는 곧 병합입니다. 이미 있는 논문은 갱신될 뿐 중복되지 않습니다. `relations` 에는 `snowball` 이 반환한 인용 관계를 보관할 수 있습니다. |
+| `library_search` | 쿼리 → 라이브러리에 이미 있는 논문을 검색과 같은 방식으로 채점해 반환합니다. 네트워크를 쓰지 않습니다. 논문마다 이력이 붙습니다. 처음과 마지막으로 본 시각, 그리고 어떤 소스가 반환했는지입니다. |
+| `library_stats` | 라이브러리 → 보관 중인 논문, 실행, 인용 관계의 수, 소스별 논문 수, 최근 가져오기 내역. |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 식별자 → 단일 논문. |
 | `fetch_pdf_text` | 하나의 PDF 를 다운로드하여 추출한 본문 텍스트를 반환. **"내가 논문을 읽었다"에 이르는 MCP 경로.** |
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 로 일괄 다운로드. BibTeX 키로 키가 지정된 논문별 결과를 반환. |
-| `export` | 논문 목록 + 형식 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 을 작성. 리치 논문 스타일 스키마를 위한 논문당 `summary` 필드, `max_slides_per_paper`(기본 25), `dark_mode`(기본 `false` — 프로젝트 기본은 라이트 네이비 밴드 덱, 어두운 OLED / 저조도 후처리에는 `true`)를 받음. 쓰기 전에 모든 DOI / URL 을 검증합니다 (`verify_identifiers`, 기본값 `true`). 잘못되었거나 연결할 수 없는 식별자가 있으면 호출이 실패하고 해당 논문을 알려 주며, 응답에 `verification` 보고서가 포함됩니다. |
+| `export` | 논문 목록 + 형식 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 을 작성. 리치 논문 스타일 스키마를 위한 논문당 `summary` 필드, `max_slides_per_paper`(기본 25), `dark_mode`(기본 `false` — 프로젝트 기본은 라이트 네이비 밴드 덱, 어두운 OLED / 저조도 후처리에는 `true`)를 받음. 쓰기 전에 모든 DOI / URL 을 검증합니다 (`verify_identifiers`, 기본값 `true`). 잘못되었거나 연결할 수 없는 식별자가 있으면 호출이 실패하고 해당 논문을 알려 주며, 응답에 `verification` 보고서가 포함됩니다. `library` 에는 식별자 확인 결과를 보관할 문헌 라이브러리를 지정합니다. 이전 호출에서 확인된 식별자는 다시 확인하지 않습니다. |
 | `pptx_inspect` | 기존 덱의 슬라이드 / 셰이프 구조를 읽음. |
 | `pptx_review` | 한 번의 호출로 덱을 감사 — 오버플로 + 색상 계약 + `paper_rule` 섹션 완전성. 덱 언어를 자동 감지; CLI `python -m thesisagents review <deck.pptx>` 이기도 함. |
 | `pptx_update_slide` | `title` / `body` / `meta`(셰이프 이름으로) 또는 인덱스로 임의의 셰이프를 교체. |
@@ -461,8 +475,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (14 tools)
+│   ├── mcp/                         # FastMCP server (17 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

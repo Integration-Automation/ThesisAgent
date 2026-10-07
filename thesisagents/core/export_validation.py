@@ -126,6 +126,11 @@ class Verdict:
     resolved_url: str | None = None
     detail: str = ""
 
+    @property
+    def blocking(self) -> bool:
+        """True when this verdict stops a strict export (invalid, unreachable, timeout)."""
+        return self.status in _BLOCKING
+
 
 @dataclass(frozen=True, slots=True)
 class IdentifierCheck:

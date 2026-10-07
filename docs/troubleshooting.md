@@ -203,6 +203,39 @@ exists and the path is absolute or relative to your current
 directory. The `--pdf` flag accepts either one `.pdf` or a
 directory of them.
 
+### `error: no library at <path>`
+
+`--library-search` and `--library-export` (and the MCP `library_search`
+/ `library_stats` tools) read a library, and the path does not exist. A
+read never creates the file, so a mistyped path is an error and not an
+empty result. Check the path. A library is created the first time
+papers are added to it, with `--library PATH --library-add` or the
+`library_add` tool.
+
+### `error: <path> is not an SQLite database` / `is not a ThesisAgents library`
+
+The `--library` path exists and is something else: a text file, a
+directory, or another application's database. The file is left
+untouched. Point `--library` at another path. A new library is created
+when the path does not exist yet.
+
+### `error: <path> has library schema version N, and this ThesisAgents understands up to version M`
+
+The library was written by a newer ThesisAgents than the one running.
+It is not opened, because the newer layout could be misread. Upgrade
+ThesisAgents (`pip install -U thesisagents`), or point `--library` at
+another file. The opposite case needs nothing: an older library is
+upgraded in place when it is opened.
+
+### An export keeps checking the same DOIs and URLs
+
+Without `--library`, the identifier check starts from nothing on every
+run. Name a library (`--library thesis.db`, or `library=` on the MCP
+`export` tool) and a DOI or URL that verified is not checked again for
+30 days. Identifiers reported as *not checkable* are remembered the
+same way. A failed check is made again on every run by design, so an
+export that failed while the network was down succeeds once it is back.
+
 ### `error: --pdf file is empty / not a PDF / encrypted`
 
 The pre-flight check rejected the file. Encrypted PDFs need

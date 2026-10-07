@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-14 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` など)はすべて [`docs/mcp.md`](../docs/mcp.md) に記載されています。
+17 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` など)はすべて [`docs/mcp.md`](../docs/mcp.md) に記載されています。
 
 ### 必須: 納品前に URL / DOI を検証
 
@@ -111,7 +111,7 @@ for key in irrelevant_keys:
   - `.csv` — スプレッドシート / 手早い grep トリアージ用の 1 論文 1 行のフラットな表(RFC-4180 クオート、タイトル内のカンマが列をずらしません)。
   - `.csl.json` — Pandoc / citeproc 用の CSL-JSON。任意の CSL スタイル(APA、IEEE、Nature、…)で文献目録をレンダリング。`.csl.json` 拡張子でプレーンな `.json` ダンプと区別されます。
 - **PPT 編集ツールキット**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)はエクスポータが生成する任意のデッキに対して動作し、加えて同等の `pptx_*` MCP ツールにより LLM エージェントが生成済みデッキ上で反復できます。
-- **MCP サーバー**: 14 ツール — `list_sources` + `list_exports`(発見)、`search`、`snowball`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 6 個の `pptx_*` デッキツール(`inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。MCP 対応の任意の LLM(Claude Code、Claude Desktop、Cursor、…)がワークフロー全体を駆動できます。
+- **MCP サーバー**: 17 ツール — `list_sources` + `list_exports`(発見)、`search`、`snowball`、`library_add`、`library_search`、`library_stats`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 6 個の `pptx_*` デッキツール(`inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。MCP 対応の任意の LLM(Claude Code、Claude Desktop、Cursor、…)がワークフロー全体を駆動できます。
 - **2 つのエンリッチパス**(要約を超えて真の論文発表級デッキに至るため):
   - **LLM-as-agent(API キー不要)** — 呼び出し側 LLM が `fetch_pdf_text` で PDF 本文を読み、構造化サマリをコンテキスト内で書き、`export` に渡します。
   - **Python パイプライン(`--enrich`)** — CLI が Anthropic の API を自身で呼びます。デフォルトモデルは `claude-opus-4-7`。
@@ -122,6 +122,7 @@ for key in irrelevant_keys:
 - **説明可能なランキングと絞り込みの提案**: 検索のたびに、各論文がその順位になった理由 (関連性・新しさ・被引用数の内訳、一致した検索語、寄与ごとに 1 文) を記録し、各結果に `keep`、`review`、`prune` のいずれかを、発動したルールとともに提案します。被引用数が少ないことだけでは提案は発動しません。 `--diagnostics`、MCP `search` ツールの `diagnostics=true`、または GUI の「提案」列で確認できます。助言のみで、論文は削除されません。
 - **ソース別の検索統計**: 検索のたびに、各ソースが返したレコード数、重複排除後にそのソースに帰属する論文数、失敗・レート制限・無効のいずれであったかを報告します。エラーになったソースは検索を止めずにスキップされるため、「もともと論文の少ないテーマ」と「ソースの半分を失った検索」を見分けられるのはこの数字です。CLI は `--query` 検索のたびに表示し、MCP `search` ツールは `source_stats` として返し、GUI はステータス行に表示します。
 - **引用スノーボール検索**: `--snowball references|cited_by|both` (または MCP の `snowball` ツール) は、上位の結果を引用関係に沿って広げます。後方にはそれらが引用する文献、前方にはそれらを引用する文献をたどり、著者の用語が違うためにキーワード検索では見つからない研究を拾います。すべての次元に上限があり (既定の深さは 1、シードあたりの件数、合計件数)、複数の経路でたどり着いた同じ論文は 1 件として扱われ、見つかった論文ごとに到達経路が記録されます。引用情報は OpenAlex、Semantic Scholar、Crossref から取得し、見つかった論文も同じランカーで採点するため、被引用数が多いだけでは主題に合うとは見なされません。
+- **文献ライブラリ**: `--library thesis.db` は、実行で見つかった内容を 1 つの SQLite ファイルに保存します。検索結果はプロセスの終了とともに消えなくなります。保存されるのは、論文、各論文を見つけた実行とソース、スコア、`--snowball` が見つけた引用関係、DOI / URL の確認結果です。`--library-add` は実行結果を取り込み (既にある論文は更新され、重複しません)、`--library-search` はネットワークを使わずに保存済みの論文を探し、`--library-export` はそれらを任意のエクスポート形式に出力します。以前の実行で確認できた DOI や URL は、30 日間は再確認されません。MCP ツール `library_add`、`library_search`、`library_stats` としても使えます。
 - **デフォルトで安全**: HTTPS-only な HTTP トランスポート、ソースごとのレート制限(トークンバケット)、任意の XML ペイロードには `defusedxml`、パストラバーサル対策済みのエクスポートパス、ユーザー入力に対する `eval` / `exec` / `pickle` の不使用。
 - **zh-tw / zh-cn 語彙ガード**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` にある約 244 個の正規表現パターンが、繁体字で書かれた簡体字由来の借用語(例: `內存` → `記憶體`、`魯棒性` → `穩健性`、`軟件` → `軟體`、`緩存` → `快取`)を捕捉します。同じガードが zh-cn ロケール文字列に対して逆方向にも走ります。完全なルールと正規表現カタログは `.claude/agents/rules/language-vocabulary-check.md` にあります。
 
@@ -196,6 +197,10 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--diagnostics` | `--query` 検索のランキングを説明します。各論文のスコア (関連性 + 新しさ + 被引用数) と、助言としての `keep` / `review` / `prune` の提案を表示し、詳細の全体を `--out` の `diagnostics.json` に書き出します。論文は削除されません。 |
 | `--snowball` | エクスポート前に結果を引用関係に沿って広げます。`references` (上位の結果が引用する文献)、`cited_by` (それらを引用する文献)、または `both`。新しい論文は結果の後ろに追加され、同じダウンロードとエクスポートを通ります。既定は無効。 |
 | `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` の上限: 広げる上位結果の数 (既定 5)、たどる段数 (1、最大 3)、シードと方向ごとの件数 (20)、新しい論文の合計 (20)、残す最低関連性 (0..1、既定は無効)。 |
+| `--library PATH` | 文献ライブラリ: 実行をまたいで論文、引用関係、識別子の確認結果を保存する SQLite ファイル。存在しなければ作成されます。通常の実行では識別子のキャッシュとして働き、以前に確認できた DOI や URL は再確認されません。 |
+| `--library-add` | この実行の論文を `--library` に取り込みます。クエリ、各論文のスコア、`--snowball` が見つけた引用関係も一緒に保存されます。既にライブラリにある論文は統合され、重複しません。 |
+| `--library-search QUERY` | `--library` の中で QUERY に一致する論文を関連の高い順に一覧して終了します。何も取得しません。`--max` で件数を制限でき、 `""` を渡すと最近見つかった論文を一覧します。 |
+| `--library-export [QUERY]` | `--library` の論文を `--export` で出力します。すべて、または QUERY に一致するものだけです。既定の形式は `xlsx,bib`。`--export` に `pdf` を含めない限り PDF はダウンロードされません。 |
 | `--quiet` | 論文ごとの出力を抑制。 |
 
 ### 環境変数
@@ -255,10 +260,13 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `list_exports` | すべてのエクスポート形式を、その 1 行説明と、集約ファイルを 1 つ書くか論文ごとに 1 ファイルを書くかとともに列挙。 |
 | `search` | キーワード → 論文リスト。`top_tier_only`、`min_citations` を受理。デフォルトは API キー不要のソース全体。 `diagnostics=true` で、論文ごとのスコア内訳と助言としての `keep` / `review` / `prune` の提案が加わります (`papers` からは何も削除されません)。 常に `source_stats` を返します。ソースごとの `requested`、`returned`、`after_dedup`、`status` (`ok` / `failed` / `rate_limited` / `disabled`) です。 `snowball="both"` を付けると上位の結果を引用関係に沿って広げ、`snowball` ブロックを追加します (`papers` は変わりません)。 |
 | `snowball` | シード論文 → それらが引用する文献 (`references`)、それらを引用する文献 (`cited_by`)、または `both` を、固定の上限 (`depth`、`max_per_seed`、`max_total`) の範囲で取得。見つかった各論文には到達経路が付きます。任意の `keywords` で採点して並べ替え、`min_relevance` で主題から外れた論文を除きます。 |
+| `library_add` | 論文 → 文献ライブラリ (`library` が指す SQLite ファイル) に保存し、後のセッションで使えるようにします。追加は統合です。既にある論文は更新され、重複しません。`relations` には `snowball` が返す引用関係を保存できます。 |
+| `library_search` | クエリ → ライブラリに既にある論文を、検索と同じ方法で採点して返します。ネットワークは使いません。各論文には履歴が付きます。最初と最後に見つかった日時、そしてどのソースが返したかです。 |
+| `library_stats` | ライブラリ → 保存している論文、実行、引用関係の件数、ソースごとの論文数、最近の取り込み。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別子 → 単一論文。 |
 | `fetch_pdf_text` | 単一 PDF をダウンロードし、抽出した本文を返す。**MCP 経由で「論文を読んだ」に至る入口。** |
 | `download_pdfs` | 論文リストの PDF を `{out_dir}/pdfs/` に一括ダウンロード。BibTeX キーをキーとする論文ごとの結果を返す。 |
-| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出す。リッチな論文発表級スキーマ用の論文ごとの `summary` フィールド、`max_slides_per_paper`(デフォルト 25)、`dark_mode`(デフォルト `false` — プロジェクトのデフォルトはライトの navy バンドデッキ、ダークの OLED / 暗所向け post-pass には `true` を渡す)を受理。 書き出す前にすべての DOI / URL を検証します (`verify_identifiers`、既定 `true`)。誤った識別子や到達できない識別子があると呼び出しは失敗して該当論文を示し、レスポンスには `verification` レポートが含まれます。 |
+| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出す。リッチな論文発表級スキーマ用の論文ごとの `summary` フィールド、`max_slides_per_paper`(デフォルト 25)、`dark_mode`(デフォルト `false` — プロジェクトのデフォルトはライトの navy バンドデッキ、ダークの OLED / 暗所向け post-pass には `true` を渡す)を受理。 書き出す前にすべての DOI / URL を検証します (`verify_identifiers`、既定 `true`)。誤った識別子や到達できない識別子があると呼び出しは失敗して該当論文を示し、レスポンスには `verification` レポートが含まれます。 `library` には識別子の確認結果を保存する文献ライブラリを指定します。以前の呼び出しで確認できた識別子は再確認されません。 |
 | `pptx_inspect` | 既存デッキのスライド / シェイプ構造を読む。 |
 | `pptx_review` | 1 回の呼び出しでデッキを監査 — overflow + 色コントラクト + `paper_rule` セクション網羅性。デッキ言語を自動検出。CLI 版は `python -m thesisagents review <deck.pptx>` でも。 |
 | `pptx_update_slide` | `title` / `body` / `meta`(シェイプ名経由)または任意のシェイプ(インデックス経由)を置換。 |
@@ -289,8 +297,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (14 tools)
+│   ├── mcp/                         # FastMCP server (17 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

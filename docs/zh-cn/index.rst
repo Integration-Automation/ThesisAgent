@@ -45,13 +45,15 @@ MCP 6 步流程
    5. (你逐篇读 PDF,自己产 structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-cn", ...)
 
-共 14 个 MCP 工具,完整参考见 :doc:`/mcp`。
+共 17 个 MCP 工具,完整参考见 :doc:`/mcp`。
 
 **要找出离题的结果,先参考工具自己的建议。** CLI 的 ``--diagnostics`` 或 MCP ``search`` 工具的 ``diagnostics=true`` 会解释排名: 每篇论文的分数拆成相关性、新近度与引用数三部分,列出命中的查询词,并给出 ``keep`` / ``review`` / ``prune`` 建议与触发它的阈值。CLI 还会把完整明细写到输出目录的 ``diagnostics.json``。这些只是建议,工具不会替你移除任何论文,所以删除前请先读过 ``review`` 与 ``prune`` 论文的摘要。
 
 **确认有哪些来源响应了。** 每个 ``search`` 响应都带有 ``source_stats``: 每个来源返回了几条记录、去重后有几篇论文归属于它,以及值为 ``ok``、``failed``、``rate_limited`` 或 ``disabled`` 的 ``status``。出错的来源会被跳过而不中断搜索,所以在断定某个主题论文很少之前,请先看这些数字。CLI 在每次 ``--query`` 搜索后也会打印同一张表。
 
 **顺着引用关系找。** CLI 的 ``--snowball both`` 或 ``snowball`` 工具会沿着引用关系扩充排名最前面的结果: ``references`` 加入它们引用的文献, ``cited_by`` 加入引用它们的文献。这能补上关键词搜索因作者用词不同而漏掉的研究。扩充有上限 (默认只走一步),每篇新找到的论文都会记下找到它的路径,而且都会依你的关键词评分,所以不会只因为被引用得多就被留下。
+
+**把找到的留下来。** CLI 的 ``--library thesis.db --library-add`` 或 ``library_add`` 工具会把一次运行的论文存进文献库,也就是一个在会话结束后仍然存在的 SQLite 文件。同一个搜索再加入一次不会产生任何重复: 论文靠 DOI、arXiv ID 或标题辨认,新的一次记录会合并进已保存的那一条。之后 ``library_search`` 不需要网络就能找出已保存的论文,而已经通过检查的 DOI 与网址在 30 天内不会再检查一次。
 
 必做:交付前验证 URL / DOI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -317,8 +319,9 @@ PPTX 布局
 MCP server
 ----------
 
-ThesisAgents 附带一个暴露 **14 个工具** 的 MCP server:发现
-(``list_sources``、``list_exports``)、搜索、引用滚雪球搜索(``snowball``)、单篇抓取、单个 PDF 正文提取
+ThesisAgents 附带一个暴露 **17 个工具** 的 MCP server:发现
+(``list_sources``、``list_exports``)、搜索、引用滚雪球搜索(``snowball``)、文献库(``library_add``、
+``library_search``、``library_stats``)、单篇抓取、单个 PDF 正文提取
 (``fetch_pdf_text``)、批量 PDF 下载(``download_pdfs``)、导出,
 以及 6 个 PPTX deck 操作(``pptx_inspect``、``pptx_review``、
 ``pptx_update_slide``、``pptx_delete_slide``、``pptx_reorder_slides``、
@@ -364,6 +367,17 @@ Claude Desktop、Cursor …)都能驱动整套流程。
        (``cited_by``)或 ``both``,皆在固定上限内(``depth``、
        ``max_per_seed``、``max_total``)。每篇新找到的论文都带有找到它的
        路径。 ``keywords`` 会评分并排序, ``min_relevance`` 会滤掉离题的论文。
+   * - ``library_add``
+     - 论文 → 文献库(``library`` 指向的 SQLite 文件),保留给之后的
+       会话使用。加入就是合并:已经存在的论文会被更新,不会重复。
+       ``relations`` 可存入 ``snowball`` 返回的引用关系。
+   * - ``library_search``
+     - 查询 → 文献库里已有的论文,评分方式与搜索相同,不需要网络。
+       每篇都附上它的记录:第一次与最近一次看到的时间,以及哪些来源
+       返回过它。
+   * - ``library_stats``
+     - 文献库 → 它保存了多少论文、运行记录与引用关系,各来源的论文数,
+       以及最近几次导入。
    * - ``fetch_paper``
      - arXiv / DOI / PMID / IEEE 标识符 → 单篇论文。
    * - ``fetch_pdf_text``
@@ -449,8 +463,9 @@ Python 模块)让你在不重跑搜索的情况下继续对它做迭代:
    │   ├── exporters/                # pptx(thesis-style + lightweight)、xlsx、
    │   │                             #   bibtex、markdown、json + pptx_edit + i18n
    │   ├── intelligence/             # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
+   │   ├── library/                  # SQLite literature library kept across runs
    │   ├── evaluation/               # 离线搜索质量评测(docs/search-quality.md)
-   │   ├── mcp/                      # 注册 14 个工具的 FastMCP server
+   │   ├── mcp/                      # 注册 17 个工具的 FastMCP server
    │   ├── sources/<name>/           # 各来源 plugin(arxiv、semantic_scholar、
    │   │                             #   openalex、pubmed、acm、ieee、scholar、
    │   │                             #   dblp、crossref、openaire、springer、

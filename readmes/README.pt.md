@@ -62,7 +62,7 @@ emissão leve é um artefato intermediário — o seu trabalho é aprimorá-la.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Todas as catorze ferramentas MCP (incluindo `list_sources`, `list_exports`,
+Todas as dezessete ferramentas MCP (incluindo `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) estão documentadas em [`docs/mcp.md`](../docs/mcp.md).
 
@@ -241,8 +241,8 @@ tupla `PaperCollection`.
   funciona contra qualquer slide que o exportador produz, mais as ferramentas
   MCP `pptx_*` equivalentes, para que um agente LLM possa iterar sobre um slide
   gerado.
-- **Servidor MCP**: 14 ferramentas — `list_sources` + `list_exports`
-  (descoberta), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`,
+- **Servidor MCP**: 17 ferramentas — `list_sources` + `list_exports`
+  (descoberta), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`,
   `export` e as seis ferramentas de slide `pptx_*` (`inspect`, `review`,
   `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`). Permite que
   qualquer LLM compatível com MCP (Claude Code, Claude Desktop, Cursor, …)
@@ -305,6 +305,18 @@ tupla `PaperCollection`.
   Crossref, e os artigos descobertos são pontuados pelo mesmo
   classificador, de modo que ser muito citado não conta como estar no
   tema.
+- **Biblioteca de literatura**: `--library thesis.db` guarda o que suas
+  execuções encontram em um único arquivo SQLite, de modo que uma busca
+  não desaparece mais quando o processo termina. Ela contém os artigos,
+  qual execução e qual fonte encontrou cada um, suas pontuações, os
+  vínculos de citação do `--snowball` e as verificações de DOI / URL.
+  `--library-add` incorpora uma execução (um artigo que já está lá é
+  atualizado, nunca duplicado), `--library-search` encontra artigos
+  guardados sem acesso à rede, e `--library-export` os envia para
+  qualquer formato de exportação. Um DOI ou URL verificado em uma
+  execução anterior não é verificado de novo por 30 dias. Também
+  disponível como as ferramentas MCP `library_add`, `library_search` e
+  `library_stats`.
 - **Segurança por padrão**: transporte HTTP somente HTTPS, limite de taxa por
   fonte (token bucket), `defusedxml` para qualquer payload XML, caminhos de
   exportação seguros contra travessia de diretório, nenhum `eval` / `exec` /
@@ -390,6 +402,10 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--diagnostics` | Explica a classificação de uma busca `--query`: imprime a pontuação de cada artigo (relevância + atualidade + citações) e uma recomendação orientativa `keep` / `review` / `prune`, e grava o detalhamento completo em `diagnostics.json` dentro de `--out`. Nenhum artigo é removido. |
 | `--snowball` | Expande os resultados seguindo os vínculos de citação antes de exportar: `references` (o que os primeiros resultados citam), `cited_by` (o que os cita) ou `both`. Os novos artigos são acrescentados ao final e passam pelo mesmo download e exportação. Desativado por padrão. |
 | `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Limites de `--snowball`: primeiros resultados a expandir (padrão 5), passos a seguir (1, no máximo 3), artigos por semente e direção (20), novos artigos no total (20) e a relevância mínima mantida (0..1, desativada por padrão). |
+| `--library PATH` | Uma biblioteca de literatura: um arquivo SQLite que guarda artigos, vínculos de citação e verificações de identificadores entre execuções. É criado se não existir. Em uma execução normal ele é o cache de identificadores, de modo que um DOI ou URL já verificado não é verificado de novo. |
+| `--library-add` | Incorpora os artigos desta execução a `--library`, com a consulta, a pontuação de cada artigo e os vínculos de citação do `--snowball`. Um artigo que já está na biblioteca é mesclado, não duplicado. |
+| `--library-search QUERY` | Lista os artigos de `--library` que correspondem a QUERY, os melhores primeiro, e encerra. Nada é baixado. `--max` limita a lista, e `""` lista os artigos vistos mais recentemente. |
+| `--library-export [QUERY]` | Exporta os artigos de `--library` por meio de `--export`, todos ou os que correspondem a QUERY. Formatos padrão: `xlsx,bib`. Nenhum PDF é baixado a menos que `--export` inclua `pdf`. |
 | `--quiet` | Suprime a impressão por artigo. |
 
 ### Variáveis de ambiente
@@ -457,10 +473,13 @@ Ferramentas:
 | `list_exports` | Enumera cada formato de exportação com a sua descrição de uma linha e se ele escreve um arquivo agregado ou um arquivo por artigo. |
 | `search` | Palavras-chave → lista de artigos. Aceita `top_tier_only`, `min_citations`; usa por padrão o mix completo de fontes sem chave de API. `diagnostics=true` acrescenta o detalhamento da pontuação por artigo e uma recomendação orientativa `keep` / `review` / `prune` (nada é removido de `papers`). Sempre retorna `source_stats`: por fonte, `requested`, `returned`, `after_dedup` e `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` também expande os primeiros resultados pelos vínculos de citação e acrescenta um bloco `snowball` (`papers` não muda). |
 | `snowball` | Artigos semente → artigos que eles citam (`references`), artigos que os citam (`cited_by`) ou `both`, dentro de limites fixos (`depth`, `max_per_seed`, `max_total`). Cada artigo descoberto traz o caminho que o alcançou. As `keywords` opcionais os pontuam e ordenam, e `min_relevance` descarta os que estão fora do tema. |
+| `library_add` | Artigos → uma biblioteca de literatura (o arquivo SQLite em `library`), guardada para sessões posteriores. Adicionar é mesclar: um artigo que já está lá é atualizado, não duplicado. `relations` guarda os vínculos de citação que `snowball` retorna. |
+| `library_search` | Consulta → artigos que já estão na biblioteca, pontuados como em uma busca, sem acesso à rede. Cada um vem com seu histórico: quando foi visto pela primeira e pela última vez, e quais fontes o retornaram. |
+| `library_stats` | Biblioteca → quantos artigos, execuções e vínculos de citação ela contém, os artigos por fonte e as últimas importações. |
 | `fetch_paper` | Identificador arXiv / DOI / PMID / IEEE → artigo único. |
 | `fetch_pdf_text` | Baixa um PDF, retorna o texto do corpo extraído. **O caminho MCP para "eu li o artigo".** |
 | `download_pdfs` | Baixa em lote os PDFs de uma lista de artigos em `{out_dir}/pdfs/`. Retorna resultados por artigo indexados pela chave BibTeX. |
-| `export` | Lista de artigos + formatos → escreve `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Aceita um campo `summary` por artigo para o esquema rico no estilo de tese, `max_slides_per_paper` (padrão 25) e `dark_mode` (padrão `false` — o padrão do projeto é o slide claro com faixa azul-marinho, passe `true` para a pós-passagem escura OLED / de pouca luz). Verifica cada DOI / URL antes de gravar (`verify_identifiers`, padrão `true`): um identificador errado ou inalcançável faz a chamada falhar e indica o artigo, e a resposta traz um relatório `verification`. |
+| `export` | Lista de artigos + formatos → escreve `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Aceita um campo `summary` por artigo para o esquema rico no estilo de tese, `max_slides_per_paper` (padrão 25) e `dark_mode` (padrão `false` — o padrão do projeto é o slide claro com faixa azul-marinho, passe `true` para a pós-passagem escura OLED / de pouca luz). Verifica cada DOI / URL antes de gravar (`verify_identifiers`, padrão `true`): um identificador errado ou inalcançável faz a chamada falhar e indica o artigo, e a resposta traz um relatório `verification`. `library` indica uma biblioteca de literatura onde guardar as verificações de identificadores, de modo que um identificador verificado em uma chamada anterior não é verificado de novo. |
 | `pptx_inspect` | Lê a estrutura de slide / forma de um slide existente. |
 | `pptx_review` | Audita um slide numa chamada — overflow + contratos de cor + completude de seções do `paper_rule`. Detecta automaticamente o idioma do slide; também o CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Substitui `title` / `body` / `meta` (por nome de forma) ou formas arbitrárias por índice. |
@@ -492,8 +511,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (14 tools)
+│   ├── mcp/                         # FastMCP server (17 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

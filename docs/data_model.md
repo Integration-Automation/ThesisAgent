@@ -419,6 +419,103 @@ source-neutral interface behind it, with `references(paper, limit)` and
 of `dedupe`: `add(paper)` returns `(slot, is_new)`, so a caller that
 meets papers one at a time can ask "have I seen this one?".
 
+## Literature library
+
+`thesisagents.library.Library` keeps papers across runs in one SQLite
+file. A `PaperCollection` lives for one process, a library is what the
+processes leave behind.
+
+```python
+from thesisagents.library import Library
+
+with Library("thesis.db") as library:
+    report = library.add_collection(collection)     # AddReport
+    hits = library.search("graph neural network", limit=10)
+    for entry in hits:                              # LibraryEntry
+        print(entry.paper.title, entry.times_seen, entry.sources, entry.score.total)
+    export_collection(
+        library.collection("graph neural network"),
+        options,
+        verification_cache=library.verification_cache(),
+    )
+```
+
+| Call | Returns | Purpose |
+|---|---|---|
+| `add_collection(collection, kind="search")` | `AddReport` | Merge a search result in, with its query, source statistics, scores and citation links. |
+| `add_papers(papers, keywords="", relations=())` | `AddReport` | Merge papers that did not come from `run_search`. |
+| `search(query="", limit=50, year_from, year_to)` | `list[LibraryEntry]` | Stored papers matching `query`, scored by `rank_with_scores`. An empty query lists the most recently seen. |
+| `collection(query="", limit=None)` | `PaperCollection` | The same papers in the shape the exporters take, with scores, pruning advice and the links between them in `diagnostics`. |
+| `relations()` | `tuple[PaperRelation, ...]` | Every stored citation link. |
+| `runs()` | `list[LibraryRun]` | Every import, newest first. |
+| `stats()` | `LibraryStats` | Counts for a summary. |
+| `verification_cache()` | `LibraryVerificationCache` | A `VerificationCache` for `export_collection`. |
+
+`Library(path, create=False)` refuses a path that does not exist, which
+is what a read wants: a mistyped path is an error and not an empty
+library.
+
+```python
+@dataclass(frozen=True)
+class AddReport:
+    run_id: int
+    added: int               # papers the library did not hold
+    merged: int              # papers that matched one already held
+    relations_added: int
+    relations_skipped: int   # links whose other paper is not in the library
+    total: int               # papers held after the import
+
+@dataclass(frozen=True)
+class LibraryEntry:
+    paper: Paper
+    first_seen: str          # ISO 8601, UTC
+    last_seen: str
+    times_seen: int          # imports that saw the paper
+    sources: tuple[str, ...] # every source that returned it, across imports
+    score: RelevanceScore | None   # set by search() when a query was given
+```
+
+**Identity.** An import is a merge. A paper is matched on every key of
+`Paper.identity_keys()` (DOI, arXiv ID, title hash) with the rules of
+`core/dedup.py`: `fuzzy_link_allowed` keeps two papers with the same
+title and different DOIs apart, and `merge_papers` fills the stored
+record's empty fields from the new one, recording each in
+`Paper.provenance`. A paper that carries the DOI of one stored paper and
+the arXiv ID of another joins the two into one. The stored record keeps
+its `source`, `source_id`, `url` and `title`. One field departs from
+"first value wins": a later, higher `citation_count` replaces the
+stored one.
+
+**Tables** (schema version 1, in `thesisagents/library/schema.py`):
+
+| Table | Holds |
+|---|---|
+| `papers` | One row per distinct paper: its `Paper.to_dict()` record as JSON, and when it was first and last seen. |
+| `identity_keys` | Every key a paper is known by, pointing at its row. |
+| `runs` | One row per import: when, what kind, the query, what each source returned. |
+| `observations` | Which run saw which paper, through which source, at what rank, with what score and pruning recommendation. |
+| `relations` | Citation links between two stored papers, with provider and depth. |
+| `verifications` | The export preflight's latest verdict per DOI / URL and when it was reached. |
+
+**Schema version.** The version is SQLite's `PRAGMA user_version`, and
+`PRAGMA application_id` marks the file as a ThesisAgents library.
+Opening a library runs the migrations it has not seen yet, each in one
+transaction with its version bump. A library with a higher version than
+this build knows raises `LibraryError` naming both versions, and so
+does a file that is not a library. To change the schema, append one
+function to `schema.MIGRATIONS` and raise `SCHEMA_VERSION`.
+
+**Verdict reuse.** `LibraryVerificationCache` reuses a stored verdict
+only when it lets an export through (`ok`, `skipped`) and is younger
+than `VERIFIED_FOR` (30 days). A failure (`invalid`, `unreachable`,
+`timeout`) is stored for the record and always checked again, so a
+timeout from last week cannot keep failing an export.
+
+**Concurrency.** The file is in WAL mode: readers in other processes do
+not block a writer, and a writer does not block them. Every write that
+touches more than one row runs in one transaction. One `Library` object
+owns one connection, guarded by a lock.
+
 ## Identifier verification report
 
 `thesisagents.core.export_validation` holds the export preflight.
@@ -511,6 +608,7 @@ ThesisAgentsError                     # base — surfaces as exit code 2
 │   ├── CitationNotAvailableError        # a citation provider has no answer for this paper (expected, not a failure)
 │   └── SourceUnavailableError           # 5xx that retries can't recover
 ├── CacheError                           # disk-cache I/O failure
+├── LibraryError                         # the --library path is not a usable library (not SQLite, another app's file, newer schema)
 └── ExportError                          # exporter failed to write
     └── IdentifierVerificationError      # preflight found a wrong / unreachable DOI or URL
 ```

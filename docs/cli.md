@@ -12,7 +12,8 @@ exclusive modes:
 ## Usage
 
 ```
-thesisagents (--query KEYWORDS | --paper IDENTIFIER)
+thesisagents (--query KEYWORDS | --paper IDENTIFIER | --pdf PATH |
+              --library-search QUERY | --library-export [QUERY])
                 [--source SOURCES] [--exclude-source SOURCES]
                 [--max N]
                 [--year-from YEAR] [--year-to YEAR] [--min-citations N]
@@ -31,6 +32,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
                 [--snowball-seeds N] [--snowball-depth N]
                 [--snowball-max-per-seed N] [--snowball-max-total N]
                 [--snowball-min-relevance FLOAT]
+                [--library PATH] [--library-add]
                 [--quiet]
 ```
 
@@ -68,6 +70,10 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
 | `--snowball-max-per-seed` | `20` | Papers taken per seed and direction, 1 to 100. |
 | `--snowball-max-total` | `20` | New papers in all, 1 to 1000. Kept low by default because every new paper is also downloaded and exported. |
 | `--snowball-min-relevance` | off | Drop papers found by the snowball whose relevance to the `--query` keywords is below this fraction (0 to 1) of the best possible. Needs `--query`. |
+| `--library PATH` | none | A literature library: an SQLite file that keeps papers, citation links and identifier checks between runs. Created when it does not exist. With a normal run it is the identifier cache, so a DOI or URL verified in an earlier run is not checked again. See "Literature library" below. |
+| `--library-add` | off | Merge this run's papers into `--library`, with the query, what each source returned, each paper's score and the citation links from `--snowball`. A paper the library already holds is merged, not duplicated. |
+| `--library-search QUERY` | none | A mode of its own, in place of `--query`: list the papers in `--library` that match QUERY, best first, and exit. Nothing is fetched. `--max` caps the list, `--year-from` / `--year-to` narrow it, and `""` lists the most recently seen papers. |
+| `--library-export [QUERY]` | none | A mode of its own: export the papers in `--library` through `--export`, all of them or those matching QUERY. Default formats `xlsx,bib`. No PDF is downloaded unless `--export` includes `pdf`, and nothing is enriched unless `--enrich` is given. |
 | `--quiet` | off | Suppress the per-paper one-line printout to stdout. |
 
 ## Examples
@@ -300,6 +306,96 @@ list from one paper. Those runs have no keywords, so the discovered
 papers are listed in the order they were found and
 `--snowball-min-relevance` cannot be used.
 
+## Literature library
+
+A search result is gone when the process ends. `--library PATH` names an
+SQLite file that keeps what your runs find, so a thesis that takes
+months does not start from an empty list each time.
+
+```bash
+# 1. Search, and keep the result.
+thesisagents --query "hyperparameter optimization framework" \
+    --source openalex,crossref --max 3 --snowball both --snowball-seeds 1 \
+    --no-pdf --export bib --out ./exports/hpo/ \
+    --library ./thesis.db --library-add
+
+# 2. Later, with no network: what do I already have on this?
+thesisagents --library ./thesis.db --library-search "evolutionary hyperparameter"
+
+# 3. Export the whole library, or a part of it.
+thesisagents --library ./thesis.db --library-export --out ./exports/all/
+thesisagents --library ./thesis.db --library-export "evolutionary" --export bib
+```
+
+Step 1, run on 2026-10-08, ended with (path shortened):
+
+```
+Identifiers: 5 verified, 5 not checkable, 0 failed.
+
+Library thesis.db: 5 added, 0 already there, 2 citation link(s) stored. 5 paper(s) in all.
+```
+
+and step 2 printed:
+
+```
+Library thesis.db: 3 of 5 paper(s) match "evolutionary hyperparameter".
+  [  1]   5.02  (2023) Amala Mary Vincent: An improved hyperparameter optimization framework for AutoML systems using evolutionary algorithms
+         doi:10.1038/s41598-023-32027-3 | seen 2 time(s), last 2026-10-08 | openalex
+  [  2]   4.22  (2023) Amala Mary Vincent: Flood susceptibility mapping using AutoML and a deep learning framework with evolutionary algorithms for hyperparameter optimization
+         doi:10.1016/j.asoc.2023.110846 | seen 1 time(s), last 2026-10-08 | openalex
+  [  3]   3.23  (2025) Li Bohang: Image steganalysis using active learning and hyperparameter optimization
+         doi:10.1038/s41598-025-92082-w | seen 1 time(s), last 2026-10-08 | openalex
+```
+
+Each match shows its score for the query, the key the library knows it
+by, how many runs saw it, when it was last seen and which sources
+returned it.
+
+**What is kept.**
+
+| Kept | Detail |
+|---|---|
+| Papers | The full record: bibliographic fields, which source supplied each backfilled field, and the summary when there is one. |
+| Runs | One entry per `--library-add`: when, the query, and what each source returned. |
+| Sightings | Which run saw which paper, through which source, at what rank, with what score and pruning recommendation. |
+| Citation links | The links `--snowball` found, with the provider and the depth. |
+| Identifier checks | The export preflight's verdict on each DOI and URL, and when it was reached. |
+
+**Adding is a merge.** A paper is recognised by its DOI, its arXiv ID,
+or its title with first author and year, the same matching the search
+uses to de-duplicate. Adding the same search twice reports
+`0 added, 3 already there` the second time, and the library holds each
+paper once. A record that arrives later fills in what the stored one
+lacked (a DOI, a venue, a PDF link), and the stored record keeps its
+source and URL. The citation count is the exception: a later, higher
+count replaces the stored one, so the number does not stay at what the
+first run saw.
+
+**Identifier checks are remembered.** With `--library`, a DOI or URL
+that verified is not checked again for 30 days, in any run that names
+the same library, whether or not it uses `--library-add`. A failed
+check is never reused: it is checked again on the next run, so an
+export that failed because the network was down succeeds once the
+network is back.
+
+**Searching and exporting need no search source.**
+`--library-search` and `--library-export` take the place of `--query`.
+A library export goes through the same identifier preflight and the
+same exporters as a search. Its defaults differ where a whole library
+makes the usual ones costly: the formats are `xlsx,bib`, no PDF is
+downloaded unless `--export` includes `pdf`, and no paper is sent to
+the summariser unless `--enrich` is given. With a QUERY, `--diagnostics`
+scores the exported papers against it.
+
+**The file.** One SQLite file, plus `-wal` and `-shm` files next to it
+while it is open. Several processes can read it while one writes. The
+schema has a version: a library written by a newer ThesisAgents is
+refused with a message saying so, and an older one is upgraded in
+place when it is opened. A path that is not a library (a directory,
+another application's database, a text file) is refused and left
+untouched. `--library-search` and `--library-export` on a path that
+does not exist are an error, not an empty result.
+
 ## Source statistics
 
 After every `--query` search the CLI prints what each source contributed.
@@ -451,8 +547,8 @@ fetch specific papers with no query to be relevant to, and say so.
 | Code | Meaning |
 |---|---|
 | `0` | Success — every requested export was written. |
-| `1` | Search returned zero results, or the single paper had no metadata. |
-| `2` | Validation error (unknown source, malformed identifier, bad year range, missing API key when `--enrich`, …). Also returned when the identifier preflight stops the run because a DOI or URL is wrong or unreachable. |
+| `1` | Search returned zero results, or the single paper had no metadata. Also when `--library-search` or `--library-export` matched nothing. |
+| `2` | Validation error (unknown source, malformed identifier, bad year range, missing API key when `--enrich`, a `--library` path that is not a library, …). Also returned when the identifier preflight stops the run because a DOI or URL is wrong or unreachable. |
 
 ## Output structure
 

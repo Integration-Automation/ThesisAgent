@@ -132,7 +132,7 @@ def _source_stats(
     """Count, per source, what it returned and what it is credited with.
 
     A de-duplicated paper keeps the ``source`` / ``source_id`` of its first
-    occurrence (see ``dedup._merge``), so it is credited to the first source
+    occurrence (see ``dedup.merge_papers``), so it is credited to the first source
     whose results contain that pair. Every unique paper is credited exactly
     once, which makes the ``after_dedup`` values add up to ``len(unique)``.
 

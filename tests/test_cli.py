@@ -1419,7 +1419,7 @@ def test_cli_snowball_bounds_are_ignored_when_snowball_is_off(tmp_path, patched_
 
 
 def test_cli_snowball_min_relevance_needs_a_query(tmp_path, monkeypatch, sample_papers):
-    with pytest.raises(SystemExit, match="cannot be used with --paper or --pdf"):
+    with pytest.raises(SystemExit, match="cannot be used with --paper, --pdf or --library-export"):
         cli_module.main(
             ["--paper", "2401.08741", "--out", str(tmp_path), "--snowball", "both",
              "--snowball-min-relevance", "0.3"]

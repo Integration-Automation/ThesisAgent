@@ -51,8 +51,8 @@ Flujo MCP de 6 pasos
    5. (lee cada PDF y produce dict summary estructurado)
    6. export(papers=[{...paper, "summary": {...}}], language="es", ...)
 
-14 herramientas MCP en total: descubrimiento (``list_sources``,
-``list_exports``), ``search``, ``snowball``, ``fetch_paper``, ``fetch_pdf_text``,
+17 herramientas MCP en total: descubrimiento (``list_sources``,
+``list_exports``), ``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``,
 ``download_pdfs``, ``export`` y seis operaciones de deck ``pptx_*``
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
@@ -85,6 +85,15 @@ porque los autores usaron otros términos. La ampliación está acotada (un
 paso por defecto), cada artículo descubierto conserva el camino que lo
 alcanzó, y todos se puntúan frente a sus palabras clave, de modo que un
 artículo no se conserva solo por ser muy citado.
+
+**Conserve lo que encuentra.** ``--library thesis.db --library-add``
+(CLI) o la herramienta ``library_add`` guarda los artículos de una
+ejecución en una biblioteca de literatura, un único archivo SQLite que
+sobrevive a la sesión. Añadir de nuevo la misma búsqueda no duplica
+nada: un artículo se reconoce por su DOI, su ID de arXiv o su título, y
+la nueva observación se fusiona con el registro guardado. Después
+``library_search`` encuentra los artículos guardados sin tocar la red, y
+los DOI y URL ya verificados no se vuelven a comprobar durante 30 días.
 
 Obligatorio: verificación URL / DOI antes de entregar
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -195,7 +204,7 @@ Dónde buscar más
 ----------------
 
 * Flags CLI y variables de entorno: :doc:`/cli`
-* 14 herramientas del servidor MCP: :doc:`/mcp`
+* 17 herramientas del servidor MCP: :doc:`/mcp`
 * Kit de edición PPTX: :doc:`/pptx_editing`
 * El archivo ``readmes/README.es.md`` en la raíz del repo tiene la lista
   completa de funcionalidades del proyecto.

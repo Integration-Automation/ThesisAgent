@@ -44,6 +44,31 @@ def ensure_export_dir(out_dir: str | Path) -> Path:
     return path
 
 
+def resolve_library_path(path: str | Path) -> Path:
+    """Absolute path of a literature-library file, refusing a directory.
+
+    The boundary this guards: the ``--library`` flag and the ``library``
+    argument of the MCP tools, both of which name a file the process will
+    open for writing. The failure it prevents is SQLite's own answer to a
+    directory, "unable to open database file", which does not say what is
+    wrong with the path.
+
+    Unlike :func:`resolve_safe` there is no root to stay inside: like
+    ``--out``, the location is the user's choice.
+
+    Example: ``resolve_library_path("~/thesis.db")`` returns the absolute
+    path. ``resolve_library_path("./exports/")`` raises ``ValueError``.
+    """
+    if not str(path).strip():
+        raise ValueError("the library path is empty")
+    resolved = Path(path).expanduser().resolve()
+    if resolved.is_dir():
+        raise ValueError(
+            f"the library path is a directory, it must be a file: {resolved}"
+        )
+    return resolved
+
+
 def safe_filename(stem: str) -> str:
     """Slugify a string so it is safe as a filename component."""
     allowed = []

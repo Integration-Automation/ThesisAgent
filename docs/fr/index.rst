@@ -51,8 +51,8 @@ Workflow MCP en 6 étapes
    5. (vous lisez chaque PDF et produisez un dict de résumé structuré)
    6. export(papers=[{...paper, "summary": {...}}], language="fr", ...)
 
-14 outils MCP au total : découverte (``list_sources``,
-``list_exports``), ``search``, ``snowball``, ``fetch_paper``, ``fetch_pdf_text``,
+17 outils MCP au total : découverte (``list_sources``,
+``list_exports``), ``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``,
 ``download_pdfs``, ``export`` et six opérations de deck ``pptx_*``
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
@@ -87,6 +87,16 @@ est bornée (une étape par défaut), chaque article découvert garde le
 chemin qui l'a atteint, et tous sont notés par rapport à vos mots-clés,
 si bien qu'un article n'est pas conservé au seul motif qu'il est souvent
 cité.
+
+**Conservez ce que vous trouvez.** ``--library thesis.db --library-add``
+(CLI) ou l'outil ``library_add`` enregistre les articles d'une exécution
+dans une bibliothèque de littérature, un seul fichier SQLite qui survit
+à la session. Ajouter de nouveau la même recherche ne duplique rien : un
+article est reconnu par son DOI, son identifiant arXiv ou son titre, et
+la nouvelle observation est fusionnée dans l'enregistrement conservé.
+Ensuite ``library_search`` retrouve les articles conservés sans toucher
+au réseau, et les DOI et URL déjà vérifiés ne sont pas revérifiés
+pendant 30 jours.
 
 Obligatoire : vérification URL / DOI avant livraison
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -198,7 +208,7 @@ Où chercher plus loin
 ---------------------
 
 * Flags CLI + variables d'environnement : :doc:`/cli`
-* 14 outils du serveur MCP : :doc:`/mcp`
+* 17 outils du serveur MCP : :doc:`/mcp`
 * Boîte à outils d'édition PPTX : :doc:`/pptx_editing`
 * Le fichier ``readmes/README.fr.md`` à la racine du repo donne la liste
   complète des fonctionnalités.

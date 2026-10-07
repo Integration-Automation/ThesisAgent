@@ -54,8 +54,9 @@ ThesisAgents/
 │   ├── fetchers/                   # HTTPS-only http client + Fetcher base
 │   ├── exporters/                  # pptx / xlsx / bib / md / json / ris / csv / csl + pptx_edit + i18n
 │   ├── intelligence/               # PDF + Anthropic summariser ([intelligence] extra)
+│   ├── library/                    # SQLite literature library kept across runs
 │   ├── evaluation/                 # offline search-quality benchmark (see docs/search-quality.md)
-│   ├── mcp/                        # FastMCP server registering 14 tools ([mcp] extra)
+│   ├── mcp/                        # FastMCP server registering 17 tools ([mcp] extra)
 │   ├── gui/                        # PySide6 desktop UI ([gui] extra)
 │   ├── utils/                      # logging, path safety, async helpers
 │   ├── cli.py                      # argparse CLI
@@ -144,6 +145,9 @@ came back.
           PaperCollection      + diagnostics: score per paper and
                   │              advisory keep / review / prune
                   ▼
+        (optional) library     merge into the SQLite library, which
+                  │            also remembers the preflight verdicts
+                  ▼
           ┌───────────────┐
           │ preflight     │  every DOI at doi.org, every URL once;
           └───────────────┘  a wrong / unreachable one stops the export
@@ -197,6 +201,54 @@ Four properties keep an unbounded graph in check:
 The relationship lives in `PaperRelation`, outside `Paper`, because one
 paper can be reached along many paths and a list of them does not
 belong in a bibliographic record.
+
+### Literature library
+
+`thesisagents/library/` keeps what the runs find in one SQLite file.
+It is a layer of its own beside the exporters: it reads and writes the
+core models and nothing in `core/` imports it.
+
+```
+run_search / snowball ──► PaperCollection ──► Library.add_collection
+                                                   │  merge on identity keys
+                                                   ▼
+                                   papers · runs · observations
+                                   relations · verifications
+                                                   │
+        Library.search / .collection ◄─────────────┤
+                    │                              │
+                    ▼                              ▼
+              exporters              LibraryVerificationCache
+                                     (the export preflight's memory)
+```
+
+Three decisions shape it:
+
+- **One identity model.** A stored paper is matched with the same keys
+  and the same two functions search de-duplication uses
+  (`Paper.identity_keys`, `dedup.fuzzy_link_allowed`,
+  `dedup.merge_papers`). An import therefore merges exactly the records
+  `dedupe` would have merged had they arrived in one search, and adding
+  a search twice changes no paper count.
+- **The relationship model is the snowball's.** Citation links are
+  stored as the `PaperRelation` records snowballing produces, between
+  rows instead of keys. That is why the citation providers were built
+  first: the library persists a model that already existed.
+- **Only passing verdicts are reused.** The preflight's verdicts are
+  stored with a timestamp. One that lets an export through is reused
+  for 30 days, a failure never, because a reused failure would block
+  exports with no request made that could clear it.
+
+The schema carries an explicit version (`PRAGMA user_version`) and an
+application id. `schema.prepare` brings an older file up to date one
+migration at a time, each in a transaction, and refuses a newer one or
+a file that is not a library. WAL mode lets other processes read while
+one writes.
+
+Search inside the library is not SQL text matching. `Library.search`
+scores the stored papers with `rank_with_scores`, so a library lookup
+understands a query the way a search does (stemming, phrases, acronym
+expansion, CJK tokenisation) and returns the same score breakdown.
 
 ### Export preflight
 
@@ -410,10 +462,12 @@ library APIs return coroutines.
 
 ### MCP server (`thesisagents.mcp`)
 
-FastMCP registers fourteen tools. The agent calls them in sequence
+FastMCP registers seventeen tools. The agent calls them in sequence
 (`list_sources` → `search` → optionally `snowball` → `fetch_pdf_text`
-per paper → `export`); the server is stateless across tool calls so the
-agent's context is the only place state lives. See [MCP doc](mcp.md).
+per paper → `export`). The server is stateless across tool calls, so
+state lives in the agent's context, or, when it should outlast the
+session, in a literature library the agent names in `library_add` /
+`library_search`. See [MCP doc](mcp.md).
 
 ### Desktop GUI (`thesisagents.gui`)
 

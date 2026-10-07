@@ -51,6 +51,20 @@ class CacheError(ThesisAgentsError):
     """Local cache could not be read or written."""
 
 
+class LibraryError(ThesisAgentsError):
+    """The literature library file cannot be used as it is.
+
+    Raised when the path is not an SQLite database, is a database that is not
+    a ThesisAgents library, or is a library written by a newer version whose
+    schema this version does not understand. The message says which, and what
+    to do, because the only fixes are the user's: point ``--library`` at
+    another file, or upgrade.
+
+    Example: opening a library with schema version 3 from a build that knows
+    version 1 raises this instead of reading tables it would misinterpret.
+    """
+
+
 class ExportError(ThesisAgentsError):
     """An exporter could not produce its artefact."""
 

@@ -50,7 +50,7 @@ Quy trình MCP 6 bước
    5. (bạn đọc mỗi PDF và tạo dict tóm tắt có cấu trúc)
    6. export(papers=[{...paper, "summary": {...}}], language="vi", ...)
 
-14 công cụ MCP đầy đủ: :doc:`/mcp`.
+17 công cụ MCP đầy đủ: :doc:`/mcp`.
 
 **Để tìm các kết quả lạc đề, hãy bắt đầu từ gợi ý của chính công cụ.**
 ``--diagnostics`` (CLI) hoặc ``diagnostics=true`` trên công cụ MCP
@@ -78,6 +78,15 @@ khóa bỏ sót vì tác giả dùng thuật ngữ khác. Việc mở rộng có
 (mặc định một bước), mỗi bài tìm được giữ lại đường đã dẫn tới nó, và
 tất cả đều được chấm điểm theo từ khóa của bạn, nên một bài không được
 giữ chỉ vì được trích dẫn nhiều.
+
+**Hãy giữ lại những gì bạn tìm được.** ``--library thesis.db
+--library-add`` (CLI) hoặc công cụ ``library_add`` lưu các bài báo của
+một lần chạy vào thư viện tài liệu, một tệp SQLite duy nhất còn lại sau
+khi phiên kết thúc. Thêm lại cùng một lần tìm kiếm không tạo ra bản
+trùng nào: bài báo được nhận ra qua DOI, arXiv ID hoặc tiêu đề, và lần
+ghi nhận mới được gộp vào bản ghi đã lưu. Sau đó ``library_search`` tìm
+các bài đã lưu mà không cần mạng, còn các DOI và URL đã xác minh sẽ
+không bị kiểm tra lại trong 30 ngày.
 
 Bắt buộc: xác minh URL / DOI trước khi giao
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -185,7 +194,7 @@ Tìm hiểu thêm
 -------------
 
 * Cờ CLI và biến môi trường: :doc:`/cli`
-* 14 công cụ máy chủ MCP: :doc:`/mcp`
+* 17 công cụ máy chủ MCP: :doc:`/mcp`
 * Toolkit chỉnh sửa PPTX: :doc:`/pptx_editing`
 * Tệp ``readmes/README.vi.md`` ở gốc repo có danh sách đầy đủ tính năng.
 * Tham chiếu kỹ thuật sâu (kiến trúc plugin, chính sách bảo mật,

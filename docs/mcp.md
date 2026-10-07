@@ -87,9 +87,9 @@ venv-resolved binary directly:
 
 ## Tools
 
-The server exposes fourteen tools, grouped into six concerns:
-discovery, search, citation snowballing, PDF retrieval, export and deck
-editing.
+The server exposes seventeen tools, grouped into seven concerns:
+discovery, search, citation snowballing, the literature library, PDF
+retrieval, export and deck editing.
 
 ### `list_sources`
 
@@ -377,6 +377,132 @@ Semantic Scholar and Crossref, asked in that order until one returns
 papers. A bound outside its range fails the call with a message such as
 `depth must be in [1, 3]`.
 
+### `library_add`
+
+Keep papers in a literature library, so a later session can reuse them
+instead of searching again. The library is one SQLite file. The server
+keeps no state between calls, so every library tool names the file.
+
+```json
+{
+  "library": "./thesis.db",
+  "papers": [{"source": "openalex", "source_id": "W4360619614",
+              "title": "An improved hyperparameter optimization framework for AutoML systems using evolutionary algorithms",
+              "url": "https://doi.org/10.1038/s41598-023-32027-3",
+              "doi": "10.1038/s41598-023-32027-3", "...": "..."}],
+  "keywords": "hyperparameter optimization framework",
+  "relations": []
+}
+```
+
+| Argument | Meaning |
+|---|---|
+| `library` | Path of the library file. Created when it does not exist. |
+| `papers` | Paper dicts from `search`, `snowball` or `fetch_paper`, with their `summary` when you have authored one. |
+| `keywords` | What the papers were found for. Recorded with the import. |
+| `relations` | The `relations` list `snowball` returns, passed as it is. A link is stored when both of its papers are in the library after this call. |
+
+Returns:
+
+```json
+{"library": "/abs/path/thesis.db", "run_id": 3, "added": 1, "merged": 0,
+ "relations_added": 0, "relations_skipped": 0, "total": 6}
+```
+
+Adding is a merge. A paper the library already holds (same DOI, same
+arXiv ID, or same title with first author and year) is updated, not
+duplicated: fields it lacked are filled in and the new sighting is
+recorded. `added` counts new papers, `merged` the ones already held,
+and `total` the papers in the library after the call.
+`relations_skipped` counts links whose other paper is not in the
+library.
+
+### `library_search`
+
+Find papers already in a library. No network access. Call it before a
+new `search`: papers found and verified in an earlier session are here,
+with any summary authored for them.
+
+```json
+{"library": "./thesis.db", "query": "evolutionary hyperparameter", "limit": 1}
+```
+
+Returns (from a library filled on 2026-10-08, abridged):
+
+```json
+{
+  "library": "/abs/path/thesis.db",
+  "query": "evolutionary hyperparameter",
+  "total": 5,
+  "count": 1,
+  "papers": [{"source": "openalex", "source_id": "W4360619614",
+              "title": "An improved hyperparameter optimization framework for AutoML systems using evolutionary algorithms",
+              "doi": "10.1038/s41598-023-32027-3", "...": "..."}],
+  "entries": [
+    {"paper_key": "doi:10.1038/s41598-023-32027-3",
+     "bibtex_key": "vincent2023improved",
+     "first_seen": "2026-10-07T20:43:06+00:00",
+     "last_seen": "2026-10-07T20:43:13+00:00",
+     "times_seen": 2,
+     "sources": ["openalex"],
+     "score": {"total": 5.0249, "relevance": 3.6, "relevance_ratio": 0.7826,
+               "matched_terms": ["evolutionary", "hyperparameter"], "...": "..."}}
+  ]
+}
+```
+
+- `papers` are plain paper dicts, ready for `export` or `download_pdfs`.
+- `entries` has one item per paper, in the same order, with its history:
+  when it was first and last seen (UTC), how many imports saw it, and
+  every source that returned it. `score` is the search ranker's score
+  for `query`.
+- `query` is scored like a search (stemming, phrases, acronyms), and
+  only papers matching at least one query term are returned. An empty
+  `query` lists the most recently seen papers, with `score: null`.
+- `limit` is 1 to 200 (default 20). `year_from` / `year_to` narrow the
+  result. `total` is the number of papers in the library.
+
+A `library` path that does not exist fails the call. It is not created
+by a read.
+
+### `library_stats`
+
+Summarise a library.
+
+```json
+{"library": "./thesis.db"}
+```
+
+Returns (the same library):
+
+```json
+{
+  "path": "/abs/path/thesis.db",
+  "schema_version": 1,
+  "papers": 5,
+  "runs": 2,
+  "relations": 2,
+  "year_min": 2019,
+  "year_max": 2025,
+  "first_run": "2026-10-07T20:43:06+00:00",
+  "last_run": "2026-10-07T20:43:13+00:00",
+  "sources": {"openalex": 5},
+  "verifications": {"ok": 5, "skipped": 5},
+  "recent_runs": [
+    {"run_id": 2, "started_at": "2026-10-07T20:43:13+00:00", "kind": "search",
+     "keywords": "hyperparameter optimization framework", "papers": 3},
+    {"run_id": 1, "started_at": "2026-10-07T20:43:06+00:00", "kind": "search",
+     "keywords": "hyperparameter optimization framework", "papers": 5}
+  ]
+}
+```
+
+`sources` counts the papers each source has returned (a paper returned
+by two sources counts once for each). `verifications` counts the stored
+DOI / URL verdicts by status. `recent_runs` lists the ten latest
+imports, and `kind` says where one came from: `search`, `paper` or `pdf`
+for a CLI run, `mcp` for `library_add`.
+
 ### `fetch_paper`
 
 Fetch exactly one paper by identifier. Accepts the same forms as the
@@ -491,9 +617,16 @@ for the format catalogue.
   "language": "zh-tw",
   "max_slides_per_paper": 25,
   "dark_mode": true,
-  "verify_identifiers": true
+  "verify_identifiers": true,
+  "library": null
 }
 ```
+
+`library` (optional) is the path of a literature library, see
+`library_add`. When given, the identifier verdicts are kept there: a
+DOI or URL that verified in an earlier call is not checked again for 30
+days. A failed check is always made again. The papers themselves are
+not stored by `export`, that is what `library_add` is for.
 
 `max_slides_per_paper` (default 25) caps the per-paper slide count
 after the priority-based trim — cover / references / contributions are

@@ -51,8 +51,8 @@ MCP-Workflow in 6 Schritten
    5. (Sie lesen jedes PDF und erzeugen strukturierten Summary-Dict)
    6. export(papers=[{...paper, "summary": {...}}], language="de", ...)
 
-Insgesamt 14 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
-``search``, ``snowball``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+Insgesamt 17 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
+``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
 ``export`` und sechs ``pptx_*``-Deck-Operationen (``pptx_inspect``,
 ``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
 ``pptx_reorder_slides``, ``pptx_add_slide``). Vollständige Referenz:
@@ -87,6 +87,16 @@ haben. Die Erweiterung ist begrenzt (standardmäßig ein Schritt), jedes
 gefundene Paper behält den Weg, der zu ihm führte, und alle werden gegen
 Ihre Stichwörter bewertet, sodass ein Paper nicht allein deshalb bleibt,
 weil es häufig zitiert wird.
+
+**Bewahren Sie auf, was Sie finden.** ``--library thesis.db
+--library-add`` (CLI) oder das Tool ``library_add`` speichert die Papers
+eines Laufs in einer Literaturbibliothek, einer einzigen SQLite-Datei,
+die die Sitzung überdauert. Dieselbe Suche erneut hinzuzufügen
+dupliziert nichts: Ein Paper wird an seiner DOI, seiner arXiv-ID oder
+seinem Titel erkannt, und die neue Sichtung wird in den gespeicherten
+Datensatz zusammengeführt. Danach findet ``library_search`` gespeicherte
+Papers ohne Netzwerkzugriff, und bereits bestätigte DOIs und URLs werden
+30 Tage lang nicht erneut geprüft.
 
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -200,7 +210,7 @@ Weiterführende Quellen
 ----------------------
 
 * CLI-Flags und Umgebungsvariablen: :doc:`/cli`
-* 14 MCP-Server-Tools: :doc:`/mcp`
+* 17 MCP-Server-Tools: :doc:`/mcp`
 * PPTX-Edit-Toolkit: :doc:`/pptx_editing`
 * Die Datei ``readmes/README.de.md`` im Repo-Root enthält die vollständige
   Feature-Liste.

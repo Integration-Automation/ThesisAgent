@@ -64,7 +64,7 @@ nâng cấp nó.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Cả mười bốn công cụ MCP (gồm `list_sources`, `list_exports`,
+Cả mười bảy công cụ MCP (gồm `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / v.v.) đều được
 tài liệu hóa trong [`docs/mcp.md`](../docs/mcp.md).
@@ -244,8 +244,8 @@ cho mỗi bài trong tuple `PaperCollection`.
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   làm việc với bất kỳ deck nào exporter sinh ra, cộng với các công cụ MCP
   `pptx_*` tương đương để một LLM agent có thể lặp trên một deck đã sinh.
-- **Server MCP**: 14 công cụ — `list_sources` + `list_exports`
-  (khám phá), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
+- **Server MCP**: 17 công cụ — `list_sources` + `list_exports`
+  (khám phá), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export`, và sáu công cụ deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Cho phép
@@ -306,6 +306,17 @@ cho mỗi bài trong tuple `PaperCollection`.
   OpenAlex, Semantic Scholar và Crossref, và các bài tìm được cũng do
   cùng bộ xếp hạng chấm điểm, nên được trích dẫn nhiều không có nghĩa là
   đúng chủ đề.
+- **Thư viện tài liệu**: `--library thesis.db` lưu những gì các lần chạy
+  tìm được vào một tệp SQLite duy nhất, nên kết quả tìm kiếm không còn
+  mất đi khi tiến trình kết thúc. Thư viện chứa các bài báo, lần chạy và
+  nguồn nào đã tìm thấy từng bài, điểm số của chúng, các liên kết trích
+  dẫn từ `--snowball` và kết quả kiểm tra DOI / URL. `--library-add` gộp
+  một lần chạy vào (bài đã có sẽ được cập nhật, không bao giờ bị trùng
+  lặp), `--library-search` tìm các bài đã lưu mà không cần mạng, và
+  `--library-export` đưa chúng ra bất kỳ định dạng xuất nào. DOI hoặc
+  URL đã được xác minh ở một lần chạy trước sẽ không bị kiểm tra lại
+  trong 30 ngày. Cũng có sẵn dưới dạng các công cụ MCP `library_add`,
+  `library_search` và `library_stats`.
 - **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit theo
   từng nguồn (token bucket), `defusedxml` cho mọi payload XML,
   các đường xuất an-toàn-với-path-traversal, không `eval` / `exec` / `pickle` trên
@@ -390,6 +401,10 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--diagnostics` | Giải thích thứ hạng của một lần tìm `--query`: in điểm của từng bài báo (độ liên quan + độ mới + trích dẫn) cùng khuyến nghị tham khảo `keep` / `review` / `prune`, và ghi bảng phân tích đầy đủ vào `diagnostics.json` trong `--out`. Không bài báo nào bị xóa. |
 | `--snowball` | Mở rộng kết quả theo liên kết trích dẫn trước khi xuất: `references` (những gì các kết quả đứng đầu trích dẫn), `cited_by` (những gì trích dẫn chúng) hoặc `both`. Các bài mới được nối vào cuối và đi qua cùng bước tải xuống và xuất. Mặc định tắt. |
 | `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Giới hạn cho `--snowball`: số kết quả đứng đầu cần mở rộng (mặc định 5), số bước đi theo (1, tối đa 3), số bài mỗi hạt giống và mỗi chiều (20), tổng số bài mới (20) và độ liên quan thấp nhất được giữ (0..1, mặc định tắt). |
+| `--library PATH` | Thư viện tài liệu: một tệp SQLite lưu bài báo, liên kết trích dẫn và kết quả kiểm tra định danh giữa các lần chạy. Được tạo nếu chưa có. Với một lần chạy thông thường, nó là bộ nhớ đệm định danh, nên DOI hoặc URL đã xác minh trước đó không bị kiểm tra lại. |
+| `--library-add` | Gộp các bài báo của lần chạy này vào `--library`, kèm truy vấn, điểm của từng bài và các liên kết trích dẫn từ `--snowball`. Bài đã có trong thư viện sẽ được gộp, không bị trùng lặp. |
+| `--library-search QUERY` | Liệt kê các bài báo trong `--library` khớp với QUERY, bài phù hợp nhất trước, rồi thoát. Không tải gì cả. `--max` giới hạn danh sách, còn `""` liệt kê các bài được thấy gần đây nhất. |
+| `--library-export [QUERY]` | Xuất các bài báo trong `--library` qua `--export`, toàn bộ hoặc chỉ những bài khớp với QUERY. Định dạng mặc định: `xlsx,bib`. Không tải PDF nào trừ khi `--export` có `pdf`. |
 | `--quiet` | Tắt in ấn theo từng bài. |
 
 ### Biến môi trường
@@ -455,10 +470,13 @@ Công cụ:
 | `list_exports` | Liệt kê mọi định dạng xuất với mô tả một dòng và việc nó ghi một file tổng hợp hay một file mỗi bài. |
 | `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. `diagnostics=true` thêm bảng phân tích điểm theo từng bài và khuyến nghị tham khảo `keep` / `review` / `prune` (không có gì bị xóa khỏi `papers`). Luôn trả về `source_stats`: với mỗi nguồn, `requested`, `returned`, `after_dedup` và `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` còn mở rộng các kết quả đứng đầu theo liên kết trích dẫn và thêm một khối `snowball` (`papers` không đổi). |
 | `snowball` | Bài hạt giống → các bài chúng trích dẫn (`references`), các bài trích dẫn chúng (`cited_by`) hoặc `both`, trong giới hạn cố định (`depth`, `max_per_seed`, `max_total`). Mỗi bài tìm được mang theo đường đã dẫn tới nó. `keywords` tùy chọn sẽ chấm điểm và sắp xếp, còn `min_relevance` loại các bài lạc đề. |
+| `library_add` | Bài báo → thư viện tài liệu (tệp SQLite tại `library`), giữ lại cho các phiên sau. Thêm tức là gộp: bài đã có sẽ được cập nhật, không bị trùng lặp. `relations` lưu các liên kết trích dẫn mà `snowball` trả về. |
+| `library_search` | Truy vấn → các bài báo đã có trong thư viện, được chấm điểm như một lần tìm kiếm, không cần mạng. Mỗi bài kèm lịch sử của nó: lần đầu và lần cuối được thấy, và những nguồn nào đã trả về nó. |
+| `library_stats` | Thư viện → số bài báo, số lần chạy và số liên kết trích dẫn mà nó đang giữ, số bài theo từng nguồn và các lần nhập gần nhất. |
 | `fetch_paper` | Định danh arXiv / DOI / PMID / IEEE → một bài đơn. |
 | `fetch_pdf_text` | Tải một PDF, trả về văn bản thân bài đã trích. **Cổng MCP tới "tôi đã đọc bài".** |
 | `download_pdfs` | Tải hàng loạt PDF của một danh sách bài vào `{out_dir}/pdfs/`. Trả về kết quả từng bài có khóa theo khóa BibTeX. |
-| `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận một trường `summary` mỗi bài cho schema phong cách luận văn đầy đủ, `max_slides_per_paper` (mặc định 25), và `dark_mode` (mặc định `false` — mặc định dự án là deck sáng dải navy, truyền `true` cho post-pass tối OLED / thiếu sáng). Xác minh mọi DOI / URL trước khi ghi (`verify_identifiers`, mặc định `true`): mã định danh sai hoặc không thể kết nối làm lệnh gọi thất bại và nêu rõ bài báo, và phản hồi kèm báo cáo `verification`. |
+| `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận một trường `summary` mỗi bài cho schema phong cách luận văn đầy đủ, `max_slides_per_paper` (mặc định 25), và `dark_mode` (mặc định `false` — mặc định dự án là deck sáng dải navy, truyền `true` cho post-pass tối OLED / thiếu sáng). Xác minh mọi DOI / URL trước khi ghi (`verify_identifiers`, mặc định `true`): mã định danh sai hoặc không thể kết nối làm lệnh gọi thất bại và nêu rõ bài báo, và phản hồi kèm báo cáo `verification`. `library` chỉ định thư viện tài liệu dùng để lưu kết quả kiểm tra định danh, nên định danh đã được xác minh ở một lần gọi trước sẽ không bị kiểm tra lại. |
 | `pptx_inspect` | Đọc cấu trúc slide / shape của một deck hiện có. |
 | `pptx_review` | Kiểm toán một deck trong một lời gọi — overflow + hợp đồng màu + độ đầy đủ mục `paper_rule`. Tự phát hiện ngôn ngữ deck; cũng là CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Thay `title` / `body` / `meta` (theo tên shape) hoặc các shape tùy ý theo index. |
@@ -489,8 +507,9 @@ ThesisAgents/
 │   ├── fetchers/                    # client async chỉ-HTTPS, rate limit token bucket
 │   ├── exporters/                   # pptx (phong cách luận văn) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # tải PDF + bộ tóm tắt Anthropic  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # benchmark chất lượng tìm kiếm offline (docs/search-quality.md)
-│   ├── mcp/                         # server FastMCP (14 công cụ)
+│   ├── mcp/                         # server FastMCP (17 công cụ)
 │   ├── sources/<name>/              # thư mục plugin: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

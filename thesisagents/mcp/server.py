@@ -32,13 +32,23 @@ Tools:
   Batch-download a list of papers' PDFs into ``{out_dir}/pdfs/`` so an
   LLM agent can drive the PDF retrieval step before authoring rich
   summaries.
+- library_add(library, papers, keywords, relations) -> {added, merged, total, ...}
+  Keep papers in a literature library (an SQLite file) between sessions.
+  Adding is a merge: a paper the library already holds is updated, not
+  duplicated.
+- library_search(library, query, limit, year_from, year_to)
+         -> {papers: [...], entries: [...], total}
+  Find stored papers without any network access, scored like a search.
+- library_stats(library) -> {papers, runs, relations, sources, ...}
 - export(papers, keywords, formats, out_dir, filename_stem, include_abstract,
-         language, max_slides_per_paper, dark_mode, verify_identifiers)
+         language, max_slides_per_paper, dark_mode, verify_identifiers, library)
          -> {written: {fmt: path}, verification: {...}}
   formats may be any of: pptx, xlsx, md, bib, json, ris, csv, csl
   Every DOI / URL is verified before anything is written (strict by default):
   a wrong or unreachable identifier fails the call and names the paper. Pass
-  verify_identifiers=False only when working offline.
+  verify_identifiers=False only when working offline. library names a
+  literature library to remember the verdicts in, so an identifier verified
+  by an earlier call is not checked again.
   papers[*].summary may include rich fields (pain_points, research_question,
   headline_metrics, technique_table, literature_table, method_sections,
   research_questions, rq_results, …) — when present, the PPT switches to
@@ -92,6 +102,7 @@ from thesisagents.core.exceptions import ThesisAgentsError
 from thesisagents.core.export_validation import (
     IdentifierVerificationError,
     MemoryVerificationCache,
+    VerificationCache,
     verify_collection_blocking,
 )
 from thesisagents.core.identifiers import parse_identifier
@@ -103,6 +114,8 @@ from thesisagents.core.snowball import SnowballResult
 from thesisagents.core.snowball import snowball as run_snowball
 from thesisagents.exporters import export_collection, pptx_edit, review
 from thesisagents.fetchers.http import shutdown_clients
+from thesisagents.library import Library
+from thesisagents.mcp.library_tools import register_library_tools
 from thesisagents.utils.logging import get_logger
 
 _LOG = get_logger(__name__)
@@ -173,6 +186,7 @@ def build_server() -> FastMCP:
     _register_discovery_tools(server)
     _register_search_tools(server)
     _register_snowball_tool(server)
+    register_library_tools(_tool(server))
     _register_export_tool(server)
     _register_pdf_tool(server)
     _register_pdf_download_tool(server)
@@ -525,6 +539,7 @@ def _register_export_tool(server: FastMCP) -> None:
         max_slides_per_paper: int | None = 25,
         dark_mode: bool = False,
         verify_identifiers: bool = True,
+        library: str | None = None,
     ) -> dict[str, Any]:
         """Export a list of papers (from search / fetch_paper) to disk.
 
@@ -537,6 +552,11 @@ def _register_export_tool(server: FastMCP) -> None:
         what was checked, including identifiers that could not be checked
         (``status: "skipped"``, for example a publisher page that needs a real
         browser).
+
+        ``library`` is the path of a literature library (see ``library_add``).
+        When given, the verdicts are kept there: a DOI or URL that verified in
+        an earlier call is not checked again for 30 days. A failure is always
+        checked again.
 
         Each paper dict may carry a ``summary`` field — when populated with
         the rich-tier shape (pain_points, research_question, headline_metrics,
@@ -592,16 +612,23 @@ def _register_export_tool(server: FastMCP) -> None:
             dark_mode=dark_mode,
             verify_identifiers=verify_identifiers,
         )
-        # Verify here, with a cache handed on to export_collection, so the
-        # report can go into the response without checking anything twice.
-        cache = MemoryVerificationCache()
-        verification: dict[str, Any] = {"enabled": verify_identifiers}
-        if verify_identifiers:
-            report = verify_collection_blocking(collection, cache=cache)
-            if not report.ok:
-                raise IdentifierVerificationError(report)
-            verification.update(report.to_dict())
-        written = export_collection(collection, options, verification_cache=cache)
+        store = Library(library) if library else None
+        try:
+            # Verify here, with a cache handed on to export_collection, so the
+            # report can go into the response without checking anything twice.
+            cache: VerificationCache = (
+                store.verification_cache() if store is not None else MemoryVerificationCache()
+            )
+            verification: dict[str, Any] = {"enabled": verify_identifiers}
+            if verify_identifiers:
+                report = verify_collection_blocking(collection, cache=cache)
+                if not report.ok:
+                    raise IdentifierVerificationError(report)
+                verification.update(report.to_dict())
+            written = export_collection(collection, options, verification_cache=cache)
+        finally:
+            if store is not None:
+                store.close()
         return {
             "written": {fmt: str(path) for fmt, path in written.items()},
             "pptx_path": str(written[EXPORT_PPTX]) if EXPORT_PPTX in written else None,

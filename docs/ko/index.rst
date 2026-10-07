@@ -48,7 +48,7 @@ MCP 6 단계 워크플로
    5. (각 PDF 읽고 구조화된 summary dict 생성)
    6. export(papers=[{...paper, "summary": {...}}], language="ko", ...)
 
-14 개 MCP 도구의 완전한 참조: :doc:`/mcp`.
+17 개 MCP 도구의 완전한 참조: :doc:`/mcp`.
 
 **주제에서 벗어난 결과를 찾으려면 먼저 도구가 내놓는 권고를 참고하세요.** CLI 의 ``--diagnostics`` 또는
 MCP ``search`` 도구의 ``diagnostics=true`` 는 순위의 근거를 설명합니다. 각 논문의 점수를 관련성,
@@ -67,6 +67,12 @@ MCP ``search`` 도구의 ``diagnostics=true`` 는 순위의 근거를 설명합�
 관계를 따라 확장합니다. ``references`` 는 그 논문들이 인용한 문헌을, ``cited_by`` 는 그 논문들을 인용한
 문헌을 추가합니다. 저자가 다른 용어를 써서 키워드 검색이 놓치는 연구를 찾을 수 있습니다. 확장에는 상한이 있고 (기본은 한
 단계), 발견된 논문마다 도달 경로가 기록되며, 모두 키워드에 대해 채점되므로 많이 인용되었다는 이유만으로 남지는 않습니다.
+
+**찾은 것을 남겨 두세요.** CLI 의 ``--library thesis.db --library-add`` 또는
+``library_add`` 도구는 실행에서 얻은 논문을 문헌 라이브러리에 보관합니다. 세션이 끝나도 남는 하나의 SQLite
+파일입니다. 같은 검색을 다시 추가해도 중복은 생기지 않습니다. 논문은 DOI, arXiv ID 또는 제목으로 식별되고, 새
+기록은 보관된 레코드에 병합됩니다. 이후 ``library_search`` 는 네트워크 없이 보관된 논문을 찾으며, 이미 확인된
+DOI 와 URL 은 30일 동안 다시 확인하지 않습니다.
 
 필수: 인도 전 URL / DOI 검증
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -171,7 +177,7 @@ CLI 플래그 전체 표: :doc:`/cli`.
 ---------
 
 * CLI 플래그 + 환경 변수: :doc:`/cli`
-* 14 개 MCP 서버 도구: :doc:`/mcp`
+* 17 개 MCP 서버 도구: :doc:`/mcp`
 * PPTX 편집 툴킷: :doc:`/pptx_editing`
 * repo 루트의 ``readmes/README.ko.md`` 에 기능 전체 목록이 있습니다.
 * 깊이 있는 기술 참조 (플러그인 아키텍처, 보안 정책, Definition of

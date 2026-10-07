@@ -13,14 +13,26 @@ import contextlib
 import dataclasses
 import sys
 from pathlib import Path
-from typing import Final
 
 from thesisagents import __version__
+from thesisagents.cli_library import (
+    add_library_arguments,
+    add_to_library,
+    library_collection,
+    opened_library,
+    run_library_search,
+    validate_library_args,
+)
+from thesisagents.cli_local_pdf import build_from_local_pdf
 from thesisagents.cli_output import (
     DIAGNOSTICS_FILENAME,
-    print_snowball,
     print_source_stats,
     report_diagnostics,
+)
+from thesisagents.cli_snowball import (
+    add_snowball_arguments,
+    maybe_snowball,
+    validate_snowball_args,
 )
 from thesisagents.core.constants import (
     AGGREGATE_EXPORTS,
@@ -34,11 +46,6 @@ from thesisagents.core.constants import (
     EXPORT_PPTX,
     EXPORT_XLSX,
     MAX_RESULTS_PER_SOURCE,
-    SNOWBALL_DEFAULT_DEPTH,
-    SNOWBALL_DEFAULT_MAX_PER_SEED,
-    SNOWBALL_MAX_DEPTH,
-    SNOWBALL_MAX_PER_SEED,
-    SNOWBALL_MAX_TOTAL,
 )
 from thesisagents.core.exceptions import ConfigError, ThesisAgentsError
 from thesisagents.core.export_validation import (
@@ -57,22 +64,20 @@ from thesisagents.core.pipeline import (
     run_single_paper,
 )
 from thesisagents.core.query import normalize_query
-from thesisagents.core.snowball import Direction, expand_collection, snowball
 from thesisagents.exporters import export_collection
 from thesisagents.exporters.i18n import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from thesisagents.fetchers.http import shutdown_clients
+from thesisagents.library import Library
 from thesisagents.utils.logging import get_logger
-from thesisagents.utils.path_safety import ensure_export_dir, safe_filename
+from thesisagents.utils.path_safety import safe_filename
 
 _LOG = get_logger(__name__)
 _DEFAULT_OUT_DIR = "./exports"
 _DEFAULT_EXPORTS_SEARCH = (EXPORT_PPTX, EXPORT_XLSX, EXPORT_BIBTEX)
 _DEFAULT_EXPORTS_SINGLE = (EXPORT_PPTX, EXPORT_BIBTEX)
-#: --snowball defaults that are the CLI's own. Five seeds and twenty new
-#: papers keep a first expansion to a size a person can read through, and
-#: every new paper also costs a PDF download and a deck.
-DEFAULT_SNOWBALL_SEEDS = 5
-DEFAULT_SNOWBALL_MAX_TOTAL = 20
+#: A library holds many papers and no single topic, so its default export is
+#: the reading list and the bibliography, not a deck.
+_DEFAULT_EXPORTS_LIBRARY = (EXPORT_XLSX, EXPORT_BIBTEX)
 DEFAULT_PAYWALL_THRESHOLD = 0.30
 
 
@@ -227,7 +232,8 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             f"Comma-separated export formats. Available: {', '.join(ALL_EXPORTS)}. "
             f"Default with --query: {','.join(_DEFAULT_EXPORTS_SEARCH)}. "
-            f"Default with --paper: {','.join(_DEFAULT_EXPORTS_SINGLE)}."
+            f"Default with --paper: {','.join(_DEFAULT_EXPORTS_SINGLE)}. "
+            f"Default with --library-export: {','.join(_DEFAULT_EXPORTS_LIBRARY)}."
         ),
     )
     parser.add_argument(
@@ -347,67 +353,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.set_defaults(resolve_oa=True)
-    parser.add_argument(
-        "--snowball",
-        choices=tuple(direction.value for direction in Direction),
-        default=None,
-        help=(
-            "Expand the result along citation links before exporting. "
-            "'references' adds papers the top results cite, 'cited_by' adds "
-            "papers that cite them, 'both' does both. The new papers are "
-            "appended to the results and go through the same PDF download "
-            "and export. Off by default. Links come from OpenAlex, Semantic "
-            "Scholar and Crossref."
-        ),
-    )
-    parser.add_argument(
-        "--snowball-seeds",
-        type=int,
-        default=DEFAULT_SNOWBALL_SEEDS,
-        help=(
-            "How many of the top-ranked results to expand (used with "
-            f"--snowball). Default: {DEFAULT_SNOWBALL_SEEDS}."
-        ),
-    )
-    parser.add_argument(
-        "--snowball-depth",
-        type=int,
-        default=SNOWBALL_DEFAULT_DEPTH,
-        help=(
-            "Steps to follow from a seed (used with --snowball). 2 also "
-            "expands the papers found at step 1. "
-            f"1..{SNOWBALL_MAX_DEPTH}. Default: {SNOWBALL_DEFAULT_DEPTH}."
-        ),
-    )
-    parser.add_argument(
-        "--snowball-max-per-seed",
-        type=int,
-        default=SNOWBALL_DEFAULT_MAX_PER_SEED,
-        help=(
-            "Papers taken per seed and direction (used with --snowball). "
-            f"1..{SNOWBALL_MAX_PER_SEED}. Default: {SNOWBALL_DEFAULT_MAX_PER_SEED}."
-        ),
-    )
-    parser.add_argument(
-        "--snowball-max-total",
-        type=int,
-        default=DEFAULT_SNOWBALL_MAX_TOTAL,
-        help=(
-            "Stop after this many new papers in all (used with --snowball). "
-            f"1..{SNOWBALL_MAX_TOTAL}. Default: {DEFAULT_SNOWBALL_MAX_TOTAL}, "
-            "kept low because every new paper is also downloaded and exported."
-        ),
-    )
-    parser.add_argument(
-        "--snowball-min-relevance",
-        type=float,
-        default=None,
-        help=(
-            "Drop papers found by --snowball whose relevance to the --query "
-            "keywords is below this fraction (0..1) of the best possible. "
-            "Needs --query. Omit to keep every paper found."
-        ),
-    )
+    add_snowball_arguments(parser)
     parser.add_argument(
         "--diagnostics",
         action="store_true",
@@ -458,6 +404,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Suppress per-paper printout in stdout.",
     )
+    add_library_arguments(parser, mode)
     return parser
 
 
@@ -474,6 +421,8 @@ def _resolve_formats(args: argparse.Namespace) -> tuple[str, ...]:
     """
     if args.export is not None:
         return _parse_csv(args.export)
+    if args.library_export is not None:
+        return _DEFAULT_EXPORTS_LIBRARY
     if args.paper or args.pdf:
         return _DEFAULT_EXPORTS_SINGLE
     return _DEFAULT_EXPORTS_SEARCH
@@ -536,9 +485,29 @@ def _print_results(collection, quiet: bool) -> None:
 
 
 async def _run(args: argparse.Namespace) -> int:
+    """Validate the flags, then run the mode they select.
+
+    The library, when one is named, is opened before the search and closed
+    after the export: a path that cannot be used fails here, not after a
+    multi-source search, and one connection serves the identifier cache, the
+    import and the export.
+    """
+    validate_library_args(args)
+    if args.library_search is not None:
+        return run_library_search(args)
+    if args.library_export is not None:
+        # Exporting stored records is not a reason to fetch every PDF of the
+        # library. ``--export pdf`` still asks for that explicitly (it turns
+        # the download back on in _run_stages).
+        args.download_pdf = False
+    with opened_library(args) as library:
+        return await _run_stages(args, library)
+
+
+async def _run_stages(args: argparse.Namespace, library: Library | None) -> int:
     formats = _resolve_formats(args)
     _validate_exports(formats)
-    _validate_snowball_args(args)
+    validate_snowball_args(args)
     # ``pdf`` is advertised by --list-exports but has no exporter class: it
     # means "save the papers' PDFs", which is the --no-pdf download stage, not
     # a rendered artefact. Left in the list it reached export_collection and
@@ -553,7 +522,7 @@ async def _run(args: argparse.Namespace) -> int:
         # short-circuits before one is built rather than trading the old
         # "no exporter registered" error for an equally confusing
         # "at least one export format must be specified".
-        return await _run_download_only(args)
+        return await _run_download_only(args, library)
     options = ExportOptions(
         formats=formats,
         out_dir=args.out,
@@ -566,8 +535,12 @@ async def _run(args: argparse.Namespace) -> int:
     )
     # One cache for the whole run: the identifiers are checked once, right
     # after the search, and every export_collection call below reuses the
-    # verdicts instead of asking doi.org again for each per-paper deck.
-    verification_cache = MemoryVerificationCache()
+    # verdicts instead of asking doi.org again for each per-paper deck. With
+    # --library the cache is the library's, so identifiers that verified in
+    # an earlier run are not asked about at all.
+    verification_cache: VerificationCache = (
+        library.verification_cache() if library is not None else MemoryVerificationCache()
+    )
     needs_pptx = EXPORT_PPTX in formats
     # ``--pdf`` already supplies the PDF — the paywall gate is irrelevant
     # and download_pdfs would try to fetch a file:// URL through the
@@ -575,12 +548,13 @@ async def _run(args: argparse.Namespace) -> int:
     gate_pptx = needs_pptx and args.download_pdf and not args.pdf
     pdf_results = []
     try:
-        collection = await _collect(args)
+        collection = await _collect(args, library)
         print_source_stats(collection, args.quiet)
-        collection = await _maybe_snowball(collection, args)
+        collection = await maybe_snowball(collection, args)
         await _verify_identifiers_early(collection, args, verification_cache)
         report_diagnostics(collection, args)
         collection = await _maybe_enrich(collection, args)
+        add_to_library(library, collection, args)
         if gate_pptx and collection.papers and not _confirm_paywall(
             collection, threshold=args.paywall_threshold, auto_yes=args.yes
         ):
@@ -595,7 +569,7 @@ async def _run(args: argparse.Namespace) -> int:
     # ``--pdf`` batch mode (more than one PDF) routes through the per-paper
     # emit path so each PDF gets its own deck named after its bibtex_key.
     # We synthesise a saved PdfDownloadResult per paper because the PDF
-    # was copied into ``{out}/pdfs/`` by ``_build_from_local_pdf`` already.
+    # was copied into ``{out}/pdfs/`` by ``build_from_local_pdf`` already.
     if needs_pptx and args.pdf and len(collection.papers) > 1:
         pdf_results = _synthetic_pdf_results(collection, args.out)
         return _emit_per_paper(
@@ -657,71 +631,9 @@ async def _verify_identifiers_early(
         )
 
 
-def _validate_snowball_args(args: argparse.Namespace) -> None:
-    """Reject a ``--snowball-*`` value outside its range before any search runs.
-
-    The boundary this guards: ``snowball()`` checks the same ranges, but only
-    when it is called, which is after the search. A typo in a flag should not
-    cost the user a multi-source search first.
-
-    Example: ``--snowball both --snowball-depth 9`` exits at once with
-    ``--snowball-depth must be in 1..3``.
-    """
-    if args.snowball is None:
-        return
-    bounds = (
-        ("--snowball-seeds", args.snowball_seeds, MAX_RESULTS_PER_SOURCE),
-        ("--snowball-depth", args.snowball_depth, SNOWBALL_MAX_DEPTH),
-        ("--snowball-max-per-seed", args.snowball_max_per_seed, SNOWBALL_MAX_PER_SEED),
-        ("--snowball-max-total", args.snowball_max_total, SNOWBALL_MAX_TOTAL),
-    )
-    for flag, value, upper in bounds:
-        if not 1 <= value <= upper:
-            raise SystemExit(f"{flag} must be in 1..{upper}")
-    floor = args.snowball_min_relevance
-    if floor is None:
-        return
-    if not 0.0 <= floor <= 1.0:
-        raise SystemExit("--snowball-min-relevance must be in 0..1")
-    if not args.query:
-        raise SystemExit(
-            "--snowball-min-relevance scores papers against the --query "
-            "keywords, so it cannot be used with --paper or --pdf"
-        )
-
-
-async def _maybe_snowball(
-    collection: PaperCollection, args: argparse.Namespace
-) -> PaperCollection:
-    """Expand ``collection`` along citation links when ``--snowball`` is set.
-
-    The top ``--snowball-seeds`` papers are the seeds. The rest of the
-    collection is passed as ``known`` so a paper the search already returned
-    is not reported as new. Discovered papers are appended, which sends them
-    through the identifier preflight, the PDF download and the export like
-    any search result.
-
-    Only a ``--query`` run scores what it finds: its keywords are what the
-    papers are scored against. ``--paper`` and ``--pdf`` have no keywords, so
-    their discoveries are kept in the order they were found.
-    """
-    if args.snowball is None or not collection.papers:
-        return collection
-    result = await snowball(
-        collection.papers[: args.snowball_seeds],
-        known=collection.papers,
-        direction=args.snowball,
-        depth=args.snowball_depth,
-        max_per_seed=args.snowball_max_per_seed,
-        max_total=args.snowball_max_total,
-        keywords=collection.query.keywords if args.query else None,
-        min_relevance=args.snowball_min_relevance,
-    )
-    print_snowball(collection, result, args)
-    return expand_collection(collection, result)
-
-
-async def _run_download_only(args: argparse.Namespace) -> int:
+async def _run_download_only(
+    args: argparse.Namespace, library: Library | None = None
+) -> int:
     """Search (or resolve a single paper) and save the PDFs — render nothing.
 
     Reached only via ``--export pdf`` with no other format. Returns 1 when the
@@ -729,8 +641,9 @@ async def _run_download_only(args: argparse.Namespace) -> int:
     can branch on the exit code.
     """
     try:
-        collection = await _collect(args)
+        collection = await _collect(args, library)
         print_source_stats(collection, args.quiet)
+        add_to_library(library, collection, args)
         pdf_results = (
             await download_pdfs(collection, args.out)
             if collection.papers and not args.pdf
@@ -801,7 +714,7 @@ def _synthetic_pdf_results(
     """Build a PdfDownloadResult per paper for the ``--pdf`` batch path.
 
     The PDFs are already in ``{out}/pdfs/`` (copied by
-    ``_build_from_local_pdf``) so we just need ``PdfDownloadResult``
+    ``build_from_local_pdf``) so we just need ``PdfDownloadResult``
     placeholders pointing at them so ``_emit_per_paper`` treats every
     paper as accessible.
     """
@@ -896,9 +809,11 @@ def _print_pdf_summary(pdf_results, quiet: bool) -> None:
         print(f"  - {r.paper_key}: skipped ({r.skipped_reason})")
 
 
-async def _collect(args: argparse.Namespace):
+async def _collect(args: argparse.Namespace, library: Library | None = None):
+    if args.library_export is not None and library is not None:
+        return library_collection(library, args)
     if args.pdf:
-        return _build_from_local_pdf(args)
+        return build_from_local_pdf(args)
     if args.paper:
         identifier = parse_identifier(args.paper)
         _LOG.info(
@@ -944,7 +859,14 @@ def _resolve_enrich_mode(args: argparse.Namespace) -> str:
 async def _maybe_enrich(
     collection: PaperCollection, args: argparse.Namespace
 ) -> PaperCollection:
-    """Resolve enrichment mode, print user-visible notices, dispatch."""
+    """Resolve enrichment mode, print user-visible notices, dispatch.
+
+    A ``--library-export`` run is enriched only on an explicit ``--enrich``:
+    stored papers keep the summaries they were stored with, and an API key in
+    the environment is not a request to summarise a whole library again.
+    """
+    if args.library_export is not None and not args.enrich:
+        return collection
     enrich_mode = _resolve_enrich_mode(args)
     if enrich_mode == "skip-no-key" and not args.quiet:
         print(
@@ -1036,167 +958,6 @@ async def _enrich_local_pdf_collection(
         else:
             enriched.append(dataclasses.replace(paper, summary=summary))
     return dataclasses.replace(collection, papers=tuple(enriched))
-
-
-def _build_from_local_pdf(args: argparse.Namespace) -> PaperCollection:
-    """Build a single-paper PaperCollection from a local PDF (or directory).
-
-    ``args.pdf`` may point at one ``.pdf`` file or a directory of them.
-    Each file is:
-
-    1. validated (existence + ``%PDF`` magic) — encrypted / empty / huge
-       files surface as a friendly :class:`ThesisAgentsError` instead of
-       a pypdf stack trace;
-    2. read once, with text extracted via ``intelligence.pdf._extract_text``
-       (pypdf). The text feeds both the auto-extracted metadata heuristic
-       and the ``--enrich`` summariser;
-    3. parsed with :func:`extract_metadata` so missing CLI overrides
-       (``--title`` / ``--authors`` / ``--year`` / ``--doi`` / ``--arxiv-id``)
-       fall back to values pulled directly from the PDF's front matter and
-       the abstract anchors on an explicit ``Abstract`` / ``ABSTRACT`` /
-       ``摘要`` header instead of an arbitrary first-1500-chars prefix;
-    4. copied into ``{out}/pdfs/`` (skipped when the source path is already
-       inside that directory).
-
-    Returns a ``PaperCollection`` with one ``Paper`` per PDF.
-    """
-    pdf_paths = _resolve_pdf_inputs(args.pdf)
-    if not pdf_paths:
-        raise ThesisAgentsError(f"--pdf found no PDFs at {args.pdf!r}")
-    out_root = ensure_export_dir(args.out)
-    pdf_dir = ensure_export_dir(out_root / "pdfs")
-    overrides_apply_to_all = len(pdf_paths) == 1
-    papers = tuple(
-        _build_one_local_paper(path, args, pdf_dir, overrides_apply_to_all)
-        for path in pdf_paths
-    )
-    keywords = papers[0].title if len(papers) == 1 else f"{len(papers)} local PDFs"
-    query = Query(
-        keywords=keywords,
-        sources=("local",),
-        max_results=Query.clamp_max_results(len(papers)),
-    )
-    return PaperCollection(query=query, papers=papers)
-
-
-def _resolve_pdf_inputs(raw: str) -> list[Path]:
-    """Expand ``--pdf`` to a sorted list of ``.pdf`` files.
-
-    A directory is walked one level deep; a file is returned as-is.
-    """
-    root = Path(raw).expanduser().resolve()
-    if root.is_dir():
-        return sorted(p for p in root.glob("*.pdf") if p.is_file())
-    if root.is_file():
-        return [root]
-    raise ThesisAgentsError(f"--pdf path does not exist: {root}")
-
-
-_MAX_LOCAL_PDF_BYTES: Final[int] = 100 * 1024 * 1024  # 100 MB safety bound
-
-
-def _build_one_local_paper(
-    pdf_path: Path,
-    args: argparse.Namespace,
-    pdf_dir: Path,
-    overrides_apply: bool,
-) -> Paper:
-    """Read, parse, and stage one local PDF; return the resulting Paper.
-
-    ``overrides_apply`` is True only when exactly one PDF was passed —
-    in batch mode the per-PDF flag set would shadow real per-file
-    metadata, so we ignore the overrides and rely on the extractor.
-    """
-    import hashlib
-    import shutil
-
-    body = _read_pdf_safely(pdf_path)
-    from thesisagents.intelligence.pdf import _extract_text
-    from thesisagents.intelligence.pdf_metadata import extract_metadata
-
-    extracted, page_count = _extract_text(body, source="local")
-    metadata = extract_metadata(extracted)
-    title = _pick(
-        args.title if overrides_apply else None,
-        metadata.title,
-        pdf_path.stem.replace("_", " ").replace("-", " ").strip(),
-    )
-    authors = _resolve_authors(
-        args.authors if overrides_apply else None,
-        metadata.authors,
-    )
-    year = _pick(args.year if overrides_apply else None, metadata.year, None)
-    venue = _pick(args.venue if overrides_apply else None, None, None)
-    doi = _pick(args.doi if overrides_apply else None, metadata.doi, None)
-    arxiv_id = _pick(
-        args.arxiv_id if overrides_apply else None, metadata.arxiv_id, None
-    )
-    abstract = metadata.abstract or " ".join(extracted.split())[:1500]
-    digest = hashlib.sha256(body, usedforsecurity=False).hexdigest()[:16]
-    target = pdf_dir / f"{safe_filename(title) or digest}.pdf"
-    if pdf_path.resolve() != target.resolve():
-        shutil.copyfile(pdf_path, target)
-    _LOG.info(
-        "Local PDF: %s (%d bytes, %d chars, %d pages) -> %s",
-        pdf_path.name, len(body), len(extracted), page_count, target,
-    )
-    return Paper(
-        source="local",
-        source_id=digest,
-        title=title,
-        authors=authors,
-        year=year,
-        venue=venue,
-        abstract=abstract,
-        url=f"file:///{pdf_path.as_posix().lstrip('/')}",
-        doi=doi,
-        arxiv_id=arxiv_id,
-        pdf_url=None,
-        raw={"extracted_text": extracted, "page_count": page_count},
-    )
-
-
-def _read_pdf_safely(pdf_path: Path) -> bytes:
-    """Read a PDF off disk with size cap + magic check, raising friendly errors."""
-    try:
-        size = pdf_path.stat().st_size
-    except OSError as err:
-        raise ThesisAgentsError(
-            f"--pdf could not stat {pdf_path}: {err}"
-        ) from err
-    if size == 0:
-        raise ThesisAgentsError(f"--pdf file is empty: {pdf_path}")
-    if size > _MAX_LOCAL_PDF_BYTES:
-        raise ThesisAgentsError(
-            f"--pdf file exceeds {_MAX_LOCAL_PDF_BYTES // (1024 * 1024)} MB safety cap: "
-            f"{pdf_path} ({size} bytes)"
-        )
-    body = pdf_path.read_bytes()
-    if not body.startswith(b"%PDF"):
-        raise ThesisAgentsError(
-            f"--pdf is not a PDF file (no %PDF magic): {pdf_path}"
-        )
-    if b"/Encrypt" in body[:4096]:
-        raise ThesisAgentsError(
-            f"--pdf is encrypted; decrypt it first (qpdf / pdftk): {pdf_path}"
-        )
-    return body
-
-
-def _pick(*candidates):
-    """Return the first non-empty candidate (or None)."""
-    for c in candidates:
-        if c not in (None, "", ()):
-            return c
-    return None
-
-
-def _resolve_authors(
-    override: str | None, extracted: tuple[str, ...]
-) -> tuple[str, ...]:
-    if override:
-        return tuple(a.strip() for a in override.split(",") if a.strip())
-    return extracted
 
 
 def _configure_stdio_for_unicode() -> None:

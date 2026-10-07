@@ -51,7 +51,7 @@ Decision tree
    5. (you read each PDF and produce a structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-tw", ...)
 
-Fourteen MCP tools total; full reference at :doc:`/mcp`.
+Seventeen MCP tools total; full reference at :doc:`/mcp`.
 
 **To spot off-topic results, start from the tool's own advice.**
 ``--diagnostics`` (CLI) or ``diagnostics=true`` on the MCP ``search``
@@ -78,6 +78,15 @@ keyword search misses because the authors used other words. The
 expansion is bounded (one step by default), each discovered paper keeps
 the path that reached it, and every one is scored against your keywords,
 so a paper is not kept just because it is cited often.
+
+**Keep what you find.** ``--library thesis.db --library-add`` (CLI) or
+the ``library_add`` tool stores a run's papers in a literature library,
+one SQLite file that outlives the session. Adding the same search again
+duplicates nothing: a paper is recognised by its DOI, arXiv ID or title,
+and the new sighting is merged into the stored record.
+``library_search`` then finds stored papers without touching the
+network, and DOIs and URLs that already verified are not checked again
+for 30 days.
 
 Mandatory: URL / DOI verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -425,8 +434,9 @@ reverse for zh-cn strings. Full rule + the regex catalogue live in
 MCP server
 ----------
 
-ThesisAgents ships an MCP server exposing **fourteen tools** — discovery
-(``list_sources``, ``list_exports``), search, citation snowballing (``snowball``), single-paper fetch,
+ThesisAgents ships an MCP server exposing **seventeen tools** — discovery
+(``list_sources``, ``list_exports``), search, citation snowballing (``snowball``), a literature library
+(``library_add``, ``library_search``, ``library_stats``), single-paper fetch,
 single-PDF text extraction (``fetch_pdf_text``), batch PDF download
 (``download_pdfs``), export, and six PPTX deck operations
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
@@ -476,6 +486,18 @@ Tools at a glance:
        (``depth``, ``max_per_seed``, ``max_total``). Each discovered
        paper carries the path that reached it. ``keywords`` score and
        order the results, ``min_relevance`` drops the off-topic ones.
+   * - ``library_add``
+     - Papers → a literature library (the SQLite file at ``library``),
+       kept for later sessions. Adding is a merge: a paper already there
+       is updated, not duplicated. ``relations`` stores the citation
+       links ``snowball`` returns.
+   * - ``library_search``
+     - Query → papers already in the library, scored like a search, with
+       no network access. Each comes with its history: first and last
+       seen, and which sources returned it.
+   * - ``library_stats``
+     - Library → how many papers, runs and citation links it holds, the
+       papers per source, and the latest imports.
    * - ``fetch_paper``
      - arXiv / DOI / PMID / IEEE identifier → single paper.
    * - ``fetch_pdf_text``
@@ -584,7 +606,8 @@ Architecture
    │   ├── exporters/                # pptx (thesis-style + lightweight), xlsx,
    │   │                             #   bibtex, markdown, json + pptx_edit + i18n
    │   ├── intelligence/             # PDF fetch + Anthropic summariser ([intelligence] extra)
-   │   ├── mcp/                      # FastMCP server registering 14 tools
+   │   ├── library/                  # SQLite literature library kept across runs
+   │   ├── mcp/                      # FastMCP server registering 17 tools
    │   ├── utils/                    # logging, path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`

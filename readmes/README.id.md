@@ -64,7 +64,7 @@ meningkatkannya.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Keempat belas tool MCP (termasuk `list_sources`, `list_exports`,
+Ketujuh belas tool MCP (termasuk `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / dll.)
 didokumentasikan di [`docs/mcp.md`](../docs/mcp.md).
@@ -247,8 +247,8 @@ mengikuti bentuk yang sama, dengan satu entri
   bekerja terhadap deck apa pun yang dihasilkan eksportir, plus tool MCP
   `pptx_*` setara sehingga agen LLM dapat beriterasi di atas deck yang
   telah dibuat.
-- **Server MCP**: 14 tool — `list_sources` + `list_exports`
-  (discovery), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
+- **Server MCP**: 17 tool — `list_sources` + `list_exports`
+  (discovery), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export`, dan enam tool deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Memungkinkan
@@ -314,6 +314,18 @@ mengikuti bentuk yang sama, dengan satu entri
   Semantic Scholar, dan Crossref, dan makalah yang ditemukan dinilai
   oleh pemeringkat yang sama, sehingga sering disitasi tidak dianggap
   berarti sesuai topik.
+- **Pustaka literatur**: `--library thesis.db` menyimpan apa yang
+  ditemukan proses Anda dalam satu file SQLite, sehingga hasil pencarian
+  tidak lagi hilang ketika proses selesai. Isinya makalah, proses dan
+  sumber mana yang menemukan masing-masing, skornya, tautan sitasi dari
+  `--snowball`, dan hasil pemeriksaan DOI / URL. `--library-add`
+  menggabungkan satu proses ke dalamnya (makalah yang sudah ada
+  diperbarui, tidak pernah diduplikasi), `--library-search` menemukan
+  makalah tersimpan tanpa akses jaringan, dan `--library-export`
+  mengirimkannya ke format ekspor apa pun. DOI atau URL yang sudah
+  terverifikasi pada proses sebelumnya tidak diperiksa lagi selama 30
+  hari. Tersedia juga sebagai tool MCP `library_add`, `library_search`,
+  dan `library_stats`.
 - **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per
   sumber (token bucket), `defusedxml` untuk payload XML apa pun,
   jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle`
@@ -398,6 +410,10 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--diagnostics` | Menjelaskan peringkat pencarian `--query`: mencetak skor setiap makalah (relevansi + kebaruan + sitasi) dan rekomendasi yang bersifat saran `keep` / `review` / `prune`, serta menulis rincian lengkap ke `diagnostics.json` di `--out`. Tidak ada makalah yang dihapus. |
 | `--snowball` | Memperluas hasil mengikuti tautan sitasi sebelum mengekspor: `references` (yang disitasi hasil teratas), `cited_by` (yang menyitasi mereka), atau `both`. Makalah baru ditambahkan di akhir dan melewati unduhan serta ekspor yang sama. Mati secara default. |
 | `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Batas untuk `--snowball`: hasil teratas yang diperluas (default 5), langkah yang diikuti (1, paling banyak 3), makalah per benih dan arah (20), makalah baru secara keseluruhan (20), dan relevansi terendah yang dipertahankan (0..1, mati secara default). |
+| `--library PATH` | Pustaka literatur: file SQLite yang menyimpan makalah, tautan sitasi, dan hasil pemeriksaan pengenal di antara proses. Dibuat bila belum ada. Pada proses biasa file ini menjadi cache pengenal, sehingga DOI atau URL yang sudah terverifikasi tidak diperiksa lagi. |
+| `--library-add` | Menggabungkan makalah proses ini ke `--library`, beserta kueri, skor tiap makalah, dan tautan sitasi dari `--snowball`. Makalah yang sudah ada di pustaka digabung, tidak diduplikasi. |
+| `--library-search QUERY` | Menampilkan makalah di `--library` yang cocok dengan QUERY, yang terbaik lebih dulu, lalu keluar. Tidak ada yang diambil. `--max` membatasi daftar, dan `""` menampilkan makalah yang paling baru terlihat. |
+| `--library-export [QUERY]` | Mengekspor makalah di `--library` melalui `--export`, semuanya atau yang cocok dengan QUERY. Format default: `xlsx,bib`. Tidak ada PDF yang diunduh kecuali `--export` memuat `pdf`. |
 | `--quiet` | Tekan cetakan per-makalah. |
 
 ### Variabel lingkungan
@@ -465,10 +481,13 @@ Tool:
 | `list_exports` | Mendaftar setiap format ekspor dengan deskripsi satu-barisnya dan apakah ia menulis satu berkas agregat atau satu berkas per makalah. |
 | `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. `diagnostics=true` menambahkan rincian skor per makalah dan rekomendasi yang bersifat saran `keep` / `review` / `prune` (tidak ada yang dihapus dari `papers`). Selalu mengembalikan `source_stats`: per sumber, `requested`, `returned`, `after_dedup`, dan `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` juga memperluas hasil teratas mengikuti tautan sitasi dan menambahkan blok `snowball` (`papers` tidak berubah). |
 | `snowball` | Makalah benih → makalah yang mereka sitasi (`references`), makalah yang menyitasi mereka (`cited_by`), atau `both`, dalam batas tetap (`depth`, `max_per_seed`, `max_total`). Setiap makalah yang ditemukan membawa jalur yang mencapainya. `keywords` opsional menilai dan mengurutkannya, dan `min_relevance` membuang yang melenceng dari topik. |
+| `library_add` | Makalah → pustaka literatur (file SQLite di `library`), disimpan untuk sesi berikutnya. Menambahkan berarti menggabungkan: makalah yang sudah ada diperbarui, tidak diduplikasi. `relations` menyimpan tautan sitasi yang dikembalikan `snowball`. |
+| `library_search` | Kueri → makalah yang sudah ada di pustaka, dinilai seperti pencarian, tanpa akses jaringan. Masing-masing disertai riwayatnya: kapan pertama dan terakhir terlihat, serta sumber mana yang mengembalikannya. |
+| `library_stats` | Pustaka → berapa makalah, proses, dan tautan sitasi yang disimpannya, jumlah makalah per sumber, dan impor terbaru. |
 | `fetch_paper` | Identifier arXiv / DOI / PMID / IEEE → satu makalah. |
 | `fetch_pdf_text` | Unduh satu PDF, kembalikan teks tubuh hasil ekstraksi. **Jalur MCP menuju "saya membaca makalahnya".** |
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per-makalah berindeks kunci BibTeX. |
-| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah untuk skema gaya-tesis yang kaya, `max_slides_per_paper` (default 25), dan `dark_mode` (default `false` — default proyek adalah deck terang band-navy, berikan `true` untuk post-pass gelap OLED / minim-cahaya). Memverifikasi setiap DOI / URL sebelum menulis (`verify_identifiers`, default `true`): pengenal yang salah atau tidak dapat dijangkau menggagalkan pemanggilan dan menyebutkan makalahnya, dan respons memuat laporan `verification`. |
+| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah untuk skema gaya-tesis yang kaya, `max_slides_per_paper` (default 25), dan `dark_mode` (default `false` — default proyek adalah deck terang band-navy, berikan `true` untuk post-pass gelap OLED / minim-cahaya). Memverifikasi setiap DOI / URL sebelum menulis (`verify_identifiers`, default `true`): pengenal yang salah atau tidak dapat dijangkau menggagalkan pemanggilan dan menyebutkan makalahnya, dan respons memuat laporan `verification`. `library` menunjuk pustaka literatur tempat hasil pemeriksaan pengenal disimpan, sehingga pengenal yang sudah terverifikasi pada pemanggilan sebelumnya tidak diperiksa lagi. |
 | `pptx_inspect` | Membaca struktur slide / shape dari deck yang ada. |
 | `pptx_review` | Audit deck dalam satu panggilan — overflow + kontrak warna + kelengkapan bagian `paper_rule`. Mendeteksi bahasa deck secara otomatis; juga CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Mengganti `title` / `body` / `meta` (berdasarkan nama shape) atau shape sembarang berdasarkan indeks. |
@@ -499,8 +518,9 @@ ThesisAgents/
 │   ├── fetchers/                    # client async HTTPS-only, rate limit token-bucket
 │   ├── exporters/                   # pptx (gaya tesis) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # unduh PDF + summarizer Anthropic  (extra [intelligence])
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # benchmark kualitas-pencarian offline (docs/search-quality.md)
-│   ├── mcp/                         # server FastMCP (14 tool)
+│   ├── mcp/                         # server FastMCP (17 tool)
 │   ├── sources/<name>/              # folder plugin: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

@@ -43,7 +43,7 @@ from thesisagents.core.models import FieldProvenance, Paper, _canon_title
 
 #: Prefix of the fuzzy (title + author + year) identity key. Links made on it
 #: are the ones the conflict guard polices — DOI / arXiv keys are exact.
-_FUZZY_PREFIX = "hash:"
+FUZZY_KEY_PREFIX = "hash:"
 
 
 def dedupe(papers: Iterable[Paper]) -> list[Paper]:
@@ -107,13 +107,13 @@ class IdentityIndex:
         else:
             position = min(matches)
             for absorbed in sorted(matches - {position}):
-                self._slots[position] = _merge(
+                self._slots[position] = merge_papers(
                     self._slots[position], self._slots[absorbed]
                 )
                 self._slots[absorbed] = None
                 self._redirect[absorbed] = position
                 _repoint(self._keys, absorbed, position)
-            self._slots[position] = _merge(self._slots[position], paper)
+            self._slots[position] = merge_papers(self._slots[position], paper)
         # ``setdefault``: a key already claimed by a DIFFERENT slot was rejected
         # by the conflict guard, so it must stay with the slot that owns it.
         for key in keys:
@@ -166,13 +166,13 @@ def _matching_slots(
         occupant = slots[position]
         if occupant is None:
             continue
-        if key.startswith(_FUZZY_PREFIX) and not _fuzzy_link_allowed(occupant, paper):
+        if key.startswith(FUZZY_KEY_PREFIX) and not fuzzy_link_allowed(occupant, paper):
             continue
         matches.add(position)
     return matches
 
 
-def _fuzzy_link_allowed(existing: Paper, candidate: Paper) -> bool:
+def fuzzy_link_allowed(existing: Paper, candidate: Paper) -> bool:
     """Whether a title-hash match alone may merge these two records.
 
     Blocked in two cases:
@@ -224,7 +224,7 @@ def _is_missing(value: object) -> bool:
     return False
 
 
-def _merge(canonical: Paper, other: Paper) -> Paper:
+def merge_papers(canonical: Paper, other: Paper) -> Paper:
     """Return a copy of ``canonical`` with optional fields backfilled from ``other``.
 
     Only fills fields where ``canonical`` is missing data — never
