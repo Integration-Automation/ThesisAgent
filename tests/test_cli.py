@@ -883,3 +883,125 @@ def test_cli_export_pdf_alone_is_a_download_only_run(tmp_path, patched_pipeline)
     )
     assert code == 0
     assert list((tmp_path / "pdfs").glob("*.pdf"))
+
+
+# ---------------------------------------------------------------------------
+# Identifier preflight (--no-verify-identifiers)
+# ---------------------------------------------------------------------------
+
+
+def _collection_with_doi(doi: str) -> PaperCollection:
+    from thesisagents.core.models import Paper
+
+    paper = Paper(
+        source="arxiv", source_id="p1", title="Preflight Probe Paper",
+        authors=("Ada Author",), year=2024, venue=None, abstract="An abstract.",
+        url="https://example.org/p1", doi=doi,
+        pdf_url="https://example.org/p1.pdf",
+    )
+    query = Query(keywords="preflight", sources=("arxiv",), max_results=5)
+    return PaperCollection(query=query, papers=(paper,))
+
+
+@pytest.fixture()
+def pipeline_returning(monkeypatch):
+    """Make the CLI's search return a given collection, with no client shutdown."""
+
+    def _install(collection: PaperCollection) -> None:
+        async def fake_run_search(query, **_kwargs):  # NOSONAR async stub
+            return collection
+
+        async def fake_shutdown():  # NOSONAR async stub
+            return None
+
+        monkeypatch.setattr(cli_module, "run_search", fake_run_search)
+        monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
+
+    return _install
+
+
+def test_cli_reports_verified_identifiers(tmp_path, patched_pipeline, capsys):
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    # sample_papers: two URLs and one DOI, all answered "ok" by the offline stub.
+    assert "Identifiers: 3 verified, 0 not checkable, 0 failed." in capsys.readouterr().out
+
+
+def test_cli_stops_on_a_bad_identifier_before_downloading(
+    tmp_path, pipeline_returning, monkeypatch, capsys
+):
+    """A wrong DOI fails the run right after the search: exit 2, no PDF
+    download, no export file."""
+    pipeline_returning(_collection_with_doi("10.x/typed-from-memory"))
+    downloads: list[object] = []
+
+    async def recording_download(collection, out_dir):
+        downloads.append(collection)
+        return []
+
+    monkeypatch.setattr(cli_module, "download_pdfs", recording_download)
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--out", str(tmp_path), "--yes"]
+    )
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "identifier verification failed" in err
+    assert "10.x/typed-from-memory is invalid" in err
+    assert "--no-verify-identifiers" in err
+    assert downloads == []
+    assert [p for p in tmp_path.rglob("*") if p.is_file()] == []
+
+
+def test_cli_no_verify_identifiers_exports_and_says_so(
+    tmp_path, pipeline_returning, capsys
+):
+    pipeline_returning(_collection_with_doi("10.x/typed-from-memory"))
+    code = cli_module.main(
+        [
+            "--query", "x", "--source", "arxiv", "--export", "bib",
+            "--out", str(tmp_path), "--no-verify-identifiers", "--quiet",
+        ]
+    )
+    assert code == 0
+    captured = capsys.readouterr()
+    # Printed even under --quiet: skipping the check must be visible.
+    assert "Identifier verification is OFF (--no-verify-identifiers)" in captured.err
+    assert "Identifiers:" not in captured.out
+    assert len(list(tmp_path.glob("*.bib"))) == 1
+
+
+def test_cli_checks_each_identifier_once_across_per_paper_decks(
+    tmp_path, patched_pipeline, monkeypatch
+):
+    """The run-wide cache: the early check asks, the aggregate export and the
+    two per-paper deck exports reuse the answers."""
+    from thesisagents.core import export_validation
+
+    asked: list[list[tuple[str, str]]] = []
+
+    async def counting_resolver(targets):
+        asked.append(list(targets))
+        return {
+            target: export_validation.Verdict(export_validation.VerificationStatus.OK)
+            for target in targets
+        }
+
+    monkeypatch.setattr(export_validation, "_resolve_targets", counting_resolver)
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--out", str(tmp_path), "--yes"]
+    )
+    assert code == 0
+    assert len(list(tmp_path.glob("*.pptx"))) == 2  # one deck per paper
+    assert len(asked) == 1
+    assert len(asked[0]) == 3
+
+
+def test_cli_verify_identifiers_defaults_on():
+    parser = cli_module.build_parser()
+    assert parser.parse_args(["--query", "x"]).verify_identifiers is True
+    assert (
+        parser.parse_args(["--query", "x", "--no-verify-identifiers"]).verify_identifiers
+        is False
+    )

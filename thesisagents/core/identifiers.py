@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import Enum
+from urllib.parse import unquote
 
 from thesisagents.core.constants import (
     SOURCE_ARXIV,
@@ -60,8 +61,10 @@ _ARXIV_URL_RE = re.compile(
 _ARXIV_PREFIX_RE = re.compile(r"^arxiv\s*:\s*", re.IGNORECASE)
 
 _DOI_PREFIX_RE = re.compile(r"^doi\s*:\s*", re.IGNORECASE)
-_DOI_URL_RE = re.compile(r"^https?://(?:dx\.)?doi\.org/(.+)$", re.IGNORECASE)
-_DOI_PATTERN_RE = re.compile(r"^10\.\d{4,9}/\S+$")
+_DOI_URL_RE = re.compile(r"^https?://(?:dx\.|www\.)?doi\.org/(.+)$", re.IGNORECASE)
+# ``10.`` + a 4-9 digit registrant, optional dotted sub-registrants
+# (``10.1000.10/…`` is legal, if rare), a slash, then a non-empty suffix.
+_DOI_PATTERN_RE = re.compile(r"^10\.\d{4,9}(?:\.\d+)*/\S+$")
 
 _PMID_PREFIX_RE = re.compile(r"^pmid\s*:\s*", re.IGNORECASE)
 _PMID_URL_RE = re.compile(
@@ -125,12 +128,32 @@ def _try_parse_arxiv(candidate: str) -> str | None:
 def _try_parse_doi(candidate: str) -> str | None:
     url_match = _DOI_URL_RE.match(candidate)
     if url_match:
-        doi = url_match.group(1)
+        # A DOI inside a URL may be percent-encoded (``%28SICI%29`` for
+        # ``(SICI)``); the DOI itself is the decoded form.
+        doi = unquote(url_match.group(1))
         return doi if _DOI_PATTERN_RE.match(doi) else None
     bare = _DOI_PREFIX_RE.sub("", candidate)
     if _DOI_PATTERN_RE.match(bare):
         return bare
     return None
+
+
+def canonical_doi(raw: str | None) -> str | None:
+    """Return ``raw`` as a bare lower-case DOI, or ``None`` when it is not one.
+
+    The boundary this guards: DOIs reach the project in three spellings
+    (``10.1/x``, ``doi:10.1/x``, ``https://doi.org/10.1/x``) and in any case,
+    while a DOI is case-insensitive. Comparing or caching them as typed treats
+    one paper as several. Syntax only, no network: a well-formed DOI that was
+    never registered still passes here (the export preflight asks doi.org).
+
+    Example: ``canonical_doi("https://doi.org/10.1145/ABC.42")`` returns
+    ``"10.1145/abc.42"``; ``canonical_doi("10.x/y")`` returns ``None``.
+    """
+    if raw is None or not raw.strip():
+        return None
+    doi = _try_parse_doi(raw.strip())
+    return doi.lower() if doi else None
 
 
 def _try_parse_pmid(candidate: str) -> str | None:

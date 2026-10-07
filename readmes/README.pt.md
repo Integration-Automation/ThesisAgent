@@ -94,6 +94,16 @@ Duas fabricações capturadas assim em produção: volume errado da AAAI
 (`v39i23.34521` vs o real `v39i22.34537`) e caminho de slug de autor inventado
 (`view/fang2026` em vez de `v40i5.37389`).
 
+**A exportação verifica isso em tempo de execução.** Antes de gravar
+qualquer coisa, a CLI, a ferramenta MCP `export` e a aba Deck da GUI
+consultam o DOI de cada artigo em doi.org e solicitam cada URL uma vez.
+Um DOI não registrado, uma URL que responde 404 ou um host inalcançável
+interrompem a exportação e indicam o artigo e o identificador. A
+verificação prova que um identificador existe, não que pertence a este
+artigo, por isso a regra de copiar do xlsx e a auditoria acima continuam
+necessárias. Offline, passe `--no-verify-identifiers` (CLI) ou
+`verify_identifiers=false` (MCP).
+
 ### Obrigatório: remova downloads irrelevantes antes de entregar
 
 A correspondência de busca é baseada em palavras-chave, então artigos fora do
@@ -247,6 +257,15 @@ tupla `PaperCollection`.
   passa por Unpaywall → S2 `openAccessPdf` → busca por título no arXiv →
   CORE.ac.uk (quando as chaves estão definidas). Ganho típico em consultas com
   muito IEEE / ACM / Springer / Elsevier: 40 a 70 pontos percentuais.
+- **Verificação prévia à exportação (verificação de DOI / URL)**: antes
+  de gravar qualquer arquivo, cada DOI é consultado em doi.org e cada
+  URL é solicitada uma vez. Um identificador errado ou inalcançável
+  interrompe a exportação com a lista de artigos e identificadores que
+  falharam. Páginas de editoras que exigem um navegador real não são
+  solicitadas (a verificação do DOI as cobre), e um servidor que recusa
+  acesso automatizado é reportado como não verificável em vez de fazer a
+  execução falhar. Ativada por padrão, `--no-verify-identifiers` a
+  desativa para trabalho offline.
 - **Segurança por padrão**: transporte HTTP somente HTTPS, limite de taxa por
   fonte (token bucket), `defusedxml` para qualquer payload XML, caminhos de
   exportação seguros contra travessia de diretório, nenhum `eval` / `exec` /
@@ -328,6 +347,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Pula o prompt de paywall e prossegue. |
 | `--max-slides` | Limite de slides por artigo (padrão 25; passe 0 para ilimitado). |
 | `--dark-mode` | Renderiza o pptx com fundo escuro + texto quase branco. O padrão é o slide claro com faixa azul-marinho. |
+| `--no-verify-identifiers` | Exporta sem verificar os DOIs e as URLs dos artigos. Por padrão, um DOI / URL errado ou inalcançável interrompe a execução antes de gravar qualquer coisa. Para uso offline. |
 | `--quiet` | Suprime a impressão por artigo. |
 
 ### Variáveis de ambiente
@@ -397,7 +417,7 @@ Ferramentas:
 | `fetch_paper` | Identificador arXiv / DOI / PMID / IEEE → artigo único. |
 | `fetch_pdf_text` | Baixa um PDF, retorna o texto do corpo extraído. **O caminho MCP para "eu li o artigo".** |
 | `download_pdfs` | Baixa em lote os PDFs de uma lista de artigos em `{out_dir}/pdfs/`. Retorna resultados por artigo indexados pela chave BibTeX. |
-| `export` | Lista de artigos + formatos → escreve `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Aceita um campo `summary` por artigo para o esquema rico no estilo de tese, `max_slides_per_paper` (padrão 25) e `dark_mode` (padrão `false` — o padrão do projeto é o slide claro com faixa azul-marinho, passe `true` para a pós-passagem escura OLED / de pouca luz). |
+| `export` | Lista de artigos + formatos → escreve `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Aceita um campo `summary` por artigo para o esquema rico no estilo de tese, `max_slides_per_paper` (padrão 25) e `dark_mode` (padrão `false` — o padrão do projeto é o slide claro com faixa azul-marinho, passe `true` para a pós-passagem escura OLED / de pouca luz). Verifica cada DOI / URL antes de gravar (`verify_identifiers`, padrão `true`): um identificador errado ou inalcançável faz a chamada falhar e indica o artigo, e a resposta traz um relatório `verification`. |
 | `pptx_inspect` | Lê a estrutura de slide / forma de um slide existente. |
 | `pptx_review` | Audita um slide numa chamada — overflow + contratos de cor + completude de seções do `paper_rule`. Detecta automaticamente o idioma do slide; também o CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Substitui `title` / `body` / `meta` (por nome de forma) ou formas arbitrárias por índice. |

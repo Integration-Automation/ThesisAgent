@@ -83,6 +83,16 @@ columna 7 = DOI, columna 8 = URL. Audite su script regen al terminar:
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 
+**La exportación lo comprueba en tiempo de ejecución.** Antes de
+escribir nada, la CLI, la herramienta MCP ``export`` y la pestaña Deck
+de la GUI consultan el DOI de cada artículo en doi.org y solicitan cada
+URL una vez. Un DOI no registrado, una URL que responde 404 o un host
+inalcanzable detienen la exportación e indican el artículo y el
+identificador. La comprobación demuestra que un identificador existe, no
+que pertenezca a este artículo, por lo que la regla de copiar desde el
+xlsx y la auditoría anterior siguen siendo necesarias. Sin conexión, use
+``--no-verify-identifiers`` (CLI) o ``verify_identifiers=false`` (MCP).
+
 Prohibiciones
 ^^^^^^^^^^^^^
 

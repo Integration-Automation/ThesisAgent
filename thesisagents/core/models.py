@@ -575,6 +575,14 @@ class ExportOptions:
     #: post-build pass lightens the band / cover / table fills so the
     #: same chrome reads on the dark background.
     dark_mode: bool = False
+    #: When True (the default), ``export_collection`` checks every paper's DOI
+    #: and URL before any exporter runs and raises
+    #: ``IdentifierVerificationError`` when one is wrong or cannot be reached
+    #: (see ``thesisagents/core/export_validation.py``). Set False to export
+    #: without the check, for example on a machine with no network: the CLI
+    #: flag is ``--no-verify-identifiers``. The opt-out is logged, never
+    #: inferred, so an unverified bibliography is always a visible choice.
+    verify_identifiers: bool = True
 
     def __post_init__(self) -> None:
         if not self.formats:

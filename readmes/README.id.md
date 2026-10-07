@@ -98,6 +98,16 @@ Dua fabrikasi yang tertangkap dengan cara ini di produksi: volume AAAI
 salah (`v39i23.34521` vs sebenarnya `v39i22.34537`) dan jalur slug penulis
 yang direka (`view/fang2026` alih-alih `v40i5.37389`).
 
+**Ekspor memeriksa hal ini saat dijalankan.** Sebelum menulis apa pun,
+CLI, tool MCP `export`, dan tab Deck pada GUI mencari DOI setiap makalah
+di doi.org dan meminta setiap URL satu kali. DOI yang tidak terdaftar,
+URL yang menjawab 404, atau host yang tidak dapat dijangkau menghentikan
+ekspor dan menyebutkan makalah serta pengenalnya. Pemeriksaan ini
+membuktikan bahwa sebuah pengenal ada, bukan bahwa pengenal itu milik
+makalah ini, sehingga aturan menyalin dari xlsx dan audit di atas tetap
+berlaku. Saat bekerja luring, berikan `--no-verify-identifiers` (CLI)
+atau `verify_identifiers=false` (MCP).
+
 ### Wajib: pangkas unduhan tidak relevan sebelum penyerahan
 
 Pencocokan kata kunci pencarian bersifat berbasis kata kunci, jadi makalah
@@ -255,6 +265,15 @@ mengikuti bentuk yang sama, dengan satu entri
   melalui Unpaywall → S2 `openAccessPdf` → pencarian judul arXiv →
   CORE.ac.uk (bila key di-set). Peningkatan tipikal pada kueri yang padat
   IEEE / ACM / Springer / Elsevier: 40-70 poin persentase.
+- **Pemeriksaan pra-ekspor (verifikasi DOI / URL)**: sebelum berkas apa
+  pun ditulis, setiap DOI dicari di doi.org dan setiap URL diminta satu
+  kali. Pengenal yang salah atau tidak dapat dijangkau menghentikan
+  ekspor dengan daftar makalah dan pengenal yang gagal. Halaman penerbit
+  yang memerlukan peramban sungguhan tidak diminta (pemeriksaan DOI
+  sudah mencakupnya), dan server yang menolak akses otomatis dilaporkan
+  sebagai tidak dapat diperiksa alih-alih menggagalkan proses. Aktif
+  secara default, `--no-verify-identifiers` mematikannya untuk kerja
+  luring.
 - **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per
   sumber (token bucket), `defusedxml` untuk payload XML apa pun,
   jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle`
@@ -335,6 +354,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Lewati prompt paywall dan lanjutkan. |
 | `--max-slides` | Batas slide per-makalah (default 25; berikan 0 untuk tanpa batas). |
 | `--dark-mode` | Render pptx dengan latar gelap + teks hampir-putih. Default adalah deck terang band-navy. |
+| `--no-verify-identifiers` | Mengekspor tanpa memeriksa DOI dan URL makalah. Secara default, DOI / URL yang salah atau tidak dapat dijangkau menghentikan proses sebelum apa pun ditulis. Untuk penggunaan luring. |
 | `--quiet` | Tekan cetakan per-makalah. |
 
 ### Variabel lingkungan
@@ -404,7 +424,7 @@ Tool:
 | `fetch_paper` | Identifier arXiv / DOI / PMID / IEEE → satu makalah. |
 | `fetch_pdf_text` | Unduh satu PDF, kembalikan teks tubuh hasil ekstraksi. **Jalur MCP menuju "saya membaca makalahnya".** |
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per-makalah berindeks kunci BibTeX. |
-| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah untuk skema gaya-tesis yang kaya, `max_slides_per_paper` (default 25), dan `dark_mode` (default `false` — default proyek adalah deck terang band-navy, berikan `true` untuk post-pass gelap OLED / minim-cahaya). |
+| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah untuk skema gaya-tesis yang kaya, `max_slides_per_paper` (default 25), dan `dark_mode` (default `false` — default proyek adalah deck terang band-navy, berikan `true` untuk post-pass gelap OLED / minim-cahaya). Memverifikasi setiap DOI / URL sebelum menulis (`verify_identifiers`, default `true`): pengenal yang salah atau tidak dapat dijangkau menggagalkan pemanggilan dan menyebutkan makalahnya, dan respons memuat laporan `verification`. |
 | `pptx_inspect` | Membaca struktur slide / shape dari deck yang ada. |
 | `pptx_review` | Audit deck dalam satu panggilan — overflow + kontrak warna + kelengkapan bagian `paper_rule`. Mendeteksi bahasa deck secara otomatis; juga CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Mengganti `title` / `body` / `meta` (berdasarkan nama shape) atau shape sembarang berdasarkan indeks. |

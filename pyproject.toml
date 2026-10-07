@@ -134,6 +134,12 @@ max-complexity = 10
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    # tests/conftest.py stubs the export preflight's network step for every
+    # test; this marker opts a test out so it can drive the real resolver
+    # against its own mock transport.
+    "real_identifier_preflight: run the real DOI / URL resolver instead of the offline stub",
+]
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "build"]

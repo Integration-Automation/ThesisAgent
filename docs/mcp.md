@@ -304,7 +304,8 @@ for the format catalogue.
   "include_abstract": true,
   "language": "zh-tw",
   "max_slides_per_paper": 25,
-  "dark_mode": true
+  "dark_mode": true,
+  "verify_identifiers": true
 }
 ```
 
@@ -323,6 +324,17 @@ runs over the rendered tree, so the agent doesn't pick layouts up-front.
 The teal accent (`#0E7490` → `#2DD4BF` in dark) marks KPI values and RQ
 question callouts; red is banned for text in both modes.
 
+`verify_identifiers` (default `true`) runs the identifier preflight
+before anything is written: every paper's DOI is looked up at doi.org
+and every URL is requested once. A DOI or URL that is wrong or
+unreachable fails the call, and the error text names each paper and
+identifier, for example
+`smith2024attention: doi 10.1234/typo is invalid (doi.org has no such DOI registered)`.
+No file is written in that case. Copy `doi` and `url` from the `search`
+results instead of composing them, and pass `false` only when working
+offline. The five statuses and what each one means are listed in
+[`cli.md`](cli.md) "Identifier verification".
+
 Returns:
 
 ```json
@@ -332,12 +344,34 @@ Returns:
     "xlsx": "/abs/path/exports/attention.xlsx",
     "bib":  "/abs/path/exports/attention.bib"
   },
-  "pptx_path": "/abs/path/exports/attention.pptx"
+  "pptx_path": "/abs/path/exports/attention.pptx",
+  "verification": {
+    "enabled": true,
+    "ok": true,
+    "counts": {"ok": 2, "invalid": 0, "unreachable": 0, "timeout": 0, "skipped": 0},
+    "checks": [
+      {"paper_key": "vaswani2017attention", "title": "Attention Is All You Need",
+       "kind": "doi", "value": "10.48550/arXiv.1706.03762", "status": "ok",
+       "resolved_url": "https://arxiv.org/abs/1706.03762", "detail": ""},
+      {"paper_key": "vaswani2017attention", "title": "Attention Is All You Need",
+       "kind": "url", "value": "https://arxiv.org/abs/1706.03762",
+       "status": "ok", "resolved_url": null, "detail": ""}
+    ]
+  }
 }
 ```
 
 The `pptx_path` field is a convenience so an agent can pipe the
 result straight into the `pptx_*` editing tools.
+
+`verification.checks` holds one entry per identifier per paper.
+`value` is the identifier exactly as the paper carries it, and
+`resolved_url` is where it leads (a DOI's registered landing page, or a
+redirect target). The paper's own fields are never changed to match.
+An identifier that could not be checked comes back with
+`"status": "skipped"` and the reason in `detail`, for example a URL on a
+publisher host that needs a real browser. It does not fail the call.
+With `verify_identifiers: false` the block is `{"enabled": false}`.
 
 **`papers[*].summary`**: when populated with any rich-tier field, the
 PPT exporter switches to thesis-style layout (pain-point quadrants,

@@ -77,6 +77,17 @@ xlsx ditulis ke ``exports/<run>/<slug>-<timestamp>.xlsx`` dengan kolom
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 
+**Ekspor memeriksa hal ini saat dijalankan.** Sebelum menulis apa pun,
+CLI, tool MCP ``export``, dan tab Deck pada GUI mencari DOI setiap
+makalah di doi.org dan meminta setiap URL satu kali. DOI yang tidak
+terdaftar, URL yang menjawab 404, atau host yang tidak dapat dijangkau
+menghentikan ekspor dan menyebutkan makalah serta pengenalnya.
+Pemeriksaan ini membuktikan bahwa sebuah pengenal ada, bukan bahwa
+pengenal itu milik makalah ini, sehingga aturan menyalin dari xlsx dan
+audit di atas tetap berlaku. Saat bekerja luring, berikan
+``--no-verify-identifiers`` (CLI) atau ``verify_identifiers=false``
+(MCP).
+
 Larangan
 ^^^^^^^^
 

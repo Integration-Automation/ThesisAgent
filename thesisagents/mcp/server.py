@@ -18,8 +18,12 @@ Tools:
   LLM agent can drive the PDF retrieval step before authoring rich
   summaries.
 - export(papers, keywords, formats, out_dir, filename_stem, include_abstract,
-         language, max_slides_per_paper, dark_mode) -> {written: {fmt: path}}
+         language, max_slides_per_paper, dark_mode, verify_identifiers)
+         -> {written: {fmt: path}, verification: {...}}
   formats may be any of: pptx, xlsx, md, bib, json, ris, csv, csl
+  Every DOI / URL is verified before anything is written (strict by default):
+  a wrong or unreachable identifier fails the call and names the paper. Pass
+  verify_identifiers=False only when working offline.
   papers[*].summary may include rich fields (pain_points, research_question,
   headline_metrics, technique_table, literature_table, method_sections,
   research_questions, rq_results, …) — when present, the PPT switches to
@@ -69,6 +73,11 @@ from thesisagents.core.constants import (
     EXPORT_PPTX,
 )
 from thesisagents.core.exceptions import ThesisAgentsError
+from thesisagents.core.export_validation import (
+    IdentifierVerificationError,
+    MemoryVerificationCache,
+    verify_collection_blocking,
+)
 from thesisagents.core.identifiers import parse_identifier
 from thesisagents.core.models import ExportOptions, Paper, PaperCollection, Query
 from thesisagents.core.pdf_download import download_pdfs as core_download_pdfs
@@ -386,8 +395,19 @@ def _register_export_tool(server: FastMCP) -> None:
         language: str = "en",
         max_slides_per_paper: int | None = 25,
         dark_mode: bool = False,
+        verify_identifiers: bool = True,
     ) -> dict[str, Any]:
         """Export a list of papers (from search / fetch_paper) to disk.
+
+        ``verify_identifiers`` (default ``True``) checks every paper's DOI at
+        doi.org and requests every URL once before anything is written. A DOI
+        or URL that is wrong or unreachable fails the call with the list of
+        failed identifiers and writes no file, so copy ``doi`` / ``url`` from
+        the ``search`` results instead of composing them. Pass ``False`` only
+        when working offline. The response's ``verification`` block reports
+        what was checked, including identifiers that could not be checked
+        (``status: "skipped"``, for example a publisher page that needs a real
+        browser).
 
         Each paper dict may carry a ``summary`` field — when populated with
         the rich-tier shape (pain_points, research_question, headline_metrics,
@@ -441,11 +461,22 @@ def _register_export_tool(server: FastMCP) -> None:
             language=language,
             max_slides_per_paper=slide_cap,
             dark_mode=dark_mode,
+            verify_identifiers=verify_identifiers,
         )
-        written = export_collection(collection, options)
+        # Verify here, with a cache handed on to export_collection, so the
+        # report can go into the response without checking anything twice.
+        cache = MemoryVerificationCache()
+        verification: dict[str, Any] = {"enabled": verify_identifiers}
+        if verify_identifiers:
+            report = verify_collection_blocking(collection, cache=cache)
+            if not report.ok:
+                raise IdentifierVerificationError(report)
+            verification.update(report.to_dict())
+        written = export_collection(collection, options, verification_cache=cache)
         return {
             "written": {fmt: str(path) for fmt, path in written.items()},
             "pptx_path": str(written[EXPORT_PPTX]) if EXPORT_PPTX in written else None,
+            "verification": verification,
         }
 
 

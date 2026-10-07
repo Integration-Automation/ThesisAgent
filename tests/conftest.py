@@ -57,6 +57,38 @@ def _block_live_http(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _offline_identifier_preflight(request, monkeypatch):
+    """Answer every export-preflight probe with "ok" without any network.
+
+    The boundary this guards: ``export_collection`` verifies each paper's DOI
+    and URL by default, and well over a hundred tests export the sample papers
+    to check something else (slide geometry, BibTeX escaping, CLI wiring). With
+    live HTTP refused (``_block_live_http``) every one of them would fail as
+    "unreachable".
+
+    Only the network step is replaced. The local checks still run, so a test
+    that exports a malformed DOI still gets ``invalid``.
+
+    A test of the resolver itself opts out with
+    ``@pytest.mark.real_identifier_preflight`` and installs its own transport
+    (see ``tests/test_export_validation.py``).
+    """
+    if request.node.get_closest_marker("real_identifier_preflight"):
+        return
+    from thesisagents.core import export_validation
+
+    async def _all_ok(targets):
+        return {
+            target: export_validation.Verdict(
+                export_validation.VerificationStatus.OK, detail="stubbed in tests"
+            )
+            for target in targets
+        }
+
+    monkeypatch.setattr(export_validation, "_resolve_targets", _all_ok)
+
+
+@pytest.fixture(autouse=True)
 def _restore_environment():
     """Put ``os.environ`` back exactly as the test found it.
 

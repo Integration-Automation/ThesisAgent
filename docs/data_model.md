@@ -264,9 +264,12 @@ class ExportOptions:
     formats: tuple[str, ...]       # subset of ALL_EXPORTS
     out_dir: str                   # filesystem path
     filename_stem: str | None = None  # override autogen
+    pptx_template: str | None = None  # path to a .pptx to build on
     include_abstract: bool = True  # off → drops abstract + summary
     language: str = "en"           # slide-deck language code
     max_slides_per_paper: int = 25 # 0 = unlimited
+    dark_mode: bool = False        # dark post-build recolour pass
+    verify_identifiers: bool = True   # DOI / URL preflight before export
 ```
 
 | Field | Notes |
@@ -277,6 +280,61 @@ class ExportOptions:
 | `include_abstract` | False produces a deck that's title + authors + link slides only — useful when you want a one-sentence summary deck for hundreds of papers. |
 | `language` | Must be one of the 14 supported slide-deck languages. Unknown codes fall back to `en` via `normalise_language`. |
 | `max_slides_per_paper` | Caps each paper's slide count; the exporter drops lower-priority sections (figures, paper-tables, contribution-summary, pagination tails) until the count fits. Cover / overview / contributions / metrics / core observation / references are always kept. Pass `0` to disable the cap. |
+| `dark_mode` | `False` builds the light navy-band deck. `True` runs the dark post-build pass (slide background `#12151B`, body text `#E5E7EB`). |
+| `verify_identifiers` | `True` makes `export_collection` check every paper's DOI and URL first and raise `IdentifierVerificationError` when one is wrong or unreachable, before any file is written. `False` skips the check and logs a warning, for a machine with no network. See "Identifier verification report" below. |
+
+## Identifier verification report
+
+`thesisagents.core.export_validation` holds the export preflight.
+`export_collection` runs it first, and it can be called on its own:
+
+```python
+from thesisagents.core.export_validation import verify_collection
+
+report = await verify_collection(collection)
+for check in report.failures:
+    print(check.paper_key, check.kind, check.value, check.status, check.detail)
+```
+
+```python
+class VerificationStatus(StrEnum):
+    OK = "ok"                    # the identifier exists
+    INVALID = "invalid"          # malformed DOI, unknown DOI, URL 404 / 410
+    UNREACHABLE = "unreachable"  # DNS / connection failure, HTTP 5xx
+    TIMEOUT = "timeout"          # no answer in time
+    SKIPPED = "skipped"          # not checked, reason in `detail`
+
+@dataclass(frozen=True)
+class IdentifierCheck:
+    paper_key: str               # Paper.bibtex_key()
+    title: str
+    kind: str                    # "doi" | "url"
+    value: str                   # exactly as the paper carries it
+    status: VerificationStatus
+    resolved_url: str | None     # DOI landing page / redirect target
+    detail: str                  # why, for every status except a plain ok
+
+@dataclass(frozen=True)
+class VerificationReport:
+    checks: tuple[IdentifierCheck, ...]
+    # .failures -> checks that block a strict export
+    # .ok       -> True when nothing blocks
+    # .counts() -> {"ok": n, "invalid": n, ...}
+    # .to_dict() -> JSON-ready, the MCP `export` response's `verification`
+```
+
+`invalid`, `unreachable` and `timeout` block a strict export. `skipped`
+does not: a `file://` URL, a publisher page that needs a real browser,
+or a server that answers 401 / 403 / 429 could not be checked, which is
+not evidence the identifier is wrong.
+
+`value` is never replaced by `resolved_url`. A redirect target is where
+the link leads today, not what the bibliography should cite.
+
+`export_collection(collection, options, verification_cache=cache)`
+accepts a cache (`MemoryVerificationCache`, or anything with the same
+`get` / `put` methods) so that several exports of the same papers in one
+run check each identifier once.
 
 ## Identifier parsing
 
@@ -317,6 +375,7 @@ ThesisAgentsError                     # base — surfaces as exit code 2
 │   └── SourceUnavailableError           # 5xx that retries can't recover
 ├── CacheError                           # disk-cache I/O failure
 └── ExportError                          # exporter failed to write
+    └── IdentifierVerificationError      # preflight found a wrong / unreachable DOI or URL
 ```
 
 Every fetcher's top-level method wraps upstream exceptions into

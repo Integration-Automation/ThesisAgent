@@ -1538,6 +1538,24 @@ _LABELS: Final[dict[str, dict[str, str]]] = {
         "hi": "Dark mode (गहरी पृष्ठभूमि; डिफ़ॉल्ट light है)",
         "id": "Mode gelap (latar gelap; default terang)",
     },
+    # Export preflight toggle. Checked by default: an unchecked box exports
+    # DOIs / URLs unverified, which is only meant for working offline.
+    "deck.verify_identifiers_label": {
+        "en": "Verify DOIs and URLs before export (uncheck when offline)",
+        "zh-tw": "匯出前驗證 DOI 與網址(離線時請取消勾選)",
+        "zh-cn": "导出前验证 DOI 与网址(离线时请取消勾选)",
+        "ja": "エクスポート前に DOI と URL を検証(オフライン時は外す)",
+        "es": "Verificar DOI y URL antes de exportar (desmarcar sin conexión)",
+        "fr": "Vérifier les DOI et URL avant l'export (décocher hors ligne)",
+        "de": "DOIs und URLs vor dem Export prüfen (offline abwählen)",
+        "ko": "내보내기 전에 DOI 와 URL 검증 (오프라인이면 해제)",
+        "pt": "Verificar DOIs e URLs antes de exportar (desmarcar offline)",
+        "ru": "Проверять DOI и URL перед экспортом (снять без сети)",
+        "it": "Verifica DOI e URL prima dell'esportazione (deseleziona offline)",
+        "vi": "Kiểm tra DOI và URL trước khi xuất (bỏ chọn khi ngoại tuyến)",
+        "hi": "Export से पहले DOI और URL जाँचें (offline हों तो हटाएँ)",
+        "id": "Verifikasi DOI dan URL sebelum ekspor (hapus centang saat offline)",
+    },
     "deck.export_button": {
         "en": "Export",
         "zh-tw": "輸出",

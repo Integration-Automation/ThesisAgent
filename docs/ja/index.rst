@@ -74,6 +74,8 @@ xlsx は ``exports/<run>/<slug>-<timestamp>.xlsx``\ に出力され、列 7 = DO
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 
+**エクスポート時に実行時チェックが入ります。** ファイルを書き出す前に、CLI、MCP の ``export`` ツール、GUI の Deck タブが各論文の DOI を doi.org で照会し、各 URL に 1 回ずつリクエストを送ります。未登録の DOI、404 を返す URL、到達できないホストがあるとエクスポートは中止され、該当する論文と識別子が示されます。このチェックが示すのは識別子が存在することだけで、その論文のものであることまでは保証しません。したがって上記の「xlsx から逐語コピー」の規則と監査は引き続き必要です。オフラインで作業する場合は ``--no-verify-identifiers`` (CLI) または ``verify_identifiers=false`` (MCP) を指定してください。
+
 禁止事項
 ^^^^^^^^
 

@@ -105,3 +105,36 @@ def test_paper_identifier_is_frozen():
     with pytest.raises((AttributeError, TypeError, dataclasses.FrozenInstanceError)):
         parsed.value = "tampered"  # type: ignore[misc]
     assert isinstance(parsed, PaperIdentifier)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("10.1145/3292500.3330701", "10.1145/3292500.3330701"),
+        ("10.1145/ABC.Def", "10.1145/abc.def"),               # case-insensitive
+        ("doi:10.1234/foo", "10.1234/foo"),
+        ("DOI: 10.1234/foo", "10.1234/foo"),
+        ("https://doi.org/10.1234/Foo", "10.1234/foo"),
+        ("http://dx.doi.org/10.1234/foo", "10.1234/foo"),
+        ("https://www.doi.org/10.1234/foo", "10.1234/foo"),
+        ("  10.1234/foo  ", "10.1234/foo"),
+        ("https://doi.org/10.1002/%28SICI%291097", "10.1002/(sici)1097"),
+        ("10.1000.10/sub-registrant", "10.1000.10/sub-registrant"),
+        ("10.48550/arXiv.2401.08741", "10.48550/arxiv.2401.08741"),
+    ],
+)
+def test_canonical_doi_normalises_every_spelling(raw: str, expected: str):
+    from thesisagents.core.identifiers import canonical_doi
+
+    assert canonical_doi(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["", "   ", None, "10.x/y", "10.12/too-short-registrant", "11.1234/foo",
+     "10.1234/", "10.1234", "not a doi", "https://example.org/10.1234/foo"],
+)
+def test_canonical_doi_rejects_non_dois(raw):
+    from thesisagents.core.identifiers import canonical_doi
+
+    assert canonical_doi(raw) is None

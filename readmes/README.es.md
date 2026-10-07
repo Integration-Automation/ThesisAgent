@@ -97,6 +97,16 @@ Dos fabricaciones detectadas así en producción: volumen AAAI incorrecto
 (`v39i23.34521` vs. el real `v39i22.34537`) y ruta inventada con slug de autor
 (`view/fang2026` en lugar de `v40i5.37389`).
 
+**La exportación lo comprueba en tiempo de ejecución.** Antes de
+escribir nada, la CLI, la herramienta MCP `export` y la pestaña Deck de
+la GUI consultan el DOI de cada artículo en doi.org y solicitan cada URL
+una vez. Un DOI no registrado, una URL que responde 404 o un host
+inalcanzable detienen la exportación e indican el artículo y el
+identificador. La comprobación demuestra que un identificador existe, no
+que pertenezca a este artículo, por lo que la regla de copiar desde el
+xlsx y la auditoría anterior siguen siendo necesarias. Sin conexión, use
+`--no-verify-identifiers` (CLI) o `verify_identifiers=false` (MCP).
+
 ### Obligatorio: podar las descargas irrelevantes antes de entregar
 
 La coincidencia de la búsqueda se basa en palabras clave, así que artículos
@@ -254,6 +264,16 @@ multi-artículo sigue la misma forma con una entrada
   CORE.ac.uk (cuando las claves están configuradas). Ganancia típica en
   consultas con mucho IEEE / ACM / Springer / Elsevier: 40 a 70 puntos
   porcentuales.
+- **Comprobación previa a la exportación (verificación de DOI / URL)**:
+  antes de escribir ningún archivo, cada DOI se consulta en doi.org y
+  cada URL se solicita una vez. Un identificador incorrecto o
+  inalcanzable detiene la exportación con la lista de artículos e
+  identificadores que fallaron. Las páginas de editoriales que requieren
+  un navegador real no se solicitan (las cubre la comprobación del DOI),
+  y un servidor que rechaza el acceso automatizado se informa como no
+  comprobable en lugar de hacer fallar la ejecución. Activada por
+  defecto, `--no-verify-identifiers` la desactiva para trabajar sin
+  conexión.
 - **Seguridad por defecto**: transporte HTTP solo-HTTPS, límite de tasa por
   fuente (token bucket), `defusedxml` para cualquier payload XML, rutas de
   exportación seguras frente a path-traversal, sin `eval` / `exec` / `pickle`
@@ -336,6 +356,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Salta el prompt de paywall y continúa. |
 | `--max-slides` | Tope de diapositivas por artículo (default 25; pase 0 para ilimitado). |
 | `--dark-mode` | Renderiza el pptx con un fondo oscuro + texto casi blanco. El default es la presentación clara con banda azul marino. |
+| `--no-verify-identifiers` | Exporta sin comprobar los DOI y las URL de los artículos. Por defecto, un DOI / URL incorrecto o inalcanzable detiene la ejecución antes de escribir nada. Para uso sin conexión. |
 | `--quiet` | Suprime la impresión por artículo. |
 
 ### Variables de entorno
@@ -405,7 +426,7 @@ Herramientas:
 | `fetch_paper` | Identificador arXiv / DOI / PMID / IEEE → un solo artículo. |
 | `fetch_pdf_text` | Descarga un PDF, devuelve el texto del cuerpo extraído. **La ruta MCP hacia «leí el artículo».** |
 | `download_pdfs` | Descarga por lotes los PDFs de una lista de artículos en `{out_dir}/pdfs/`. Devuelve resultados por artículo indexados por clave BibTeX. |
-| `export` | Lista de artículos + formatos → escribe `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Acepta un campo `summary` por artículo para el schema enriquecido estilo tesis, `max_slides_per_paper` (default 25) y `dark_mode` (default `false` — el default del proyecto es la presentación clara con banda azul marino, pase `true` para el post-pass oscuro OLED / de poca luz). |
+| `export` | Lista de artículos + formatos → escribe `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Acepta un campo `summary` por artículo para el schema enriquecido estilo tesis, `max_slides_per_paper` (default 25) y `dark_mode` (default `false` — el default del proyecto es la presentación clara con banda azul marino, pase `true` para el post-pass oscuro OLED / de poca luz). Verifica cada DOI / URL antes de escribir (`verify_identifiers`, por defecto `true`): un identificador incorrecto o inalcanzable hace fallar la llamada e indica el artículo, y la respuesta incluye un informe `verification`. |
 | `pptx_inspect` | Lee la estructura de diapositivas / formas de una presentación existente. |
 | `pptx_review` | Audita una presentación en una sola llamada — overflow + contratos de color + completitud de secciones `paper_rule`. Detecta automáticamente el idioma de la presentación; también la CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Reemplaza `title` / `body` / `meta` (por nombre de forma) o formas arbitrarias por índice. |

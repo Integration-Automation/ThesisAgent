@@ -75,6 +75,13 @@ xlsx 는 ``exports/<run>/<slug>-<timestamp>.xlsx`` 에 작성되며 열 7 = DOI,
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 
+**내보내기 단계에서 실행 시점에 이를 검사합니다.** 파일을 쓰기 전에 CLI, MCP ``export`` 도구, GUI
+Deck 탭이 각 논문의 DOI 를 doi.org 에서 조회하고 각 URL 에 한 번씩 요청을 보냅니다. 등록되지 않은 DOI,
+404 를 반환하는 URL, 연결할 수 없는 호스트가 있으면 내보내기가 중단되고 해당 논문과 식별자가 표시됩니다. 이 검사는
+식별자가 존재한다는 것만 보여 줄 뿐 그 논문의 것임을 보장하지 않으므로, 위의 xlsx 에서 그대로 복사하는 규칙과 감사는
+여전히 필요합니다. 오프라인으로 작업할 때는 ``--no-verify-identifiers`` (CLI) 또는
+``verify_identifiers=false`` (MCP) 를 지정하세요.
+
 금지
 ^^^^
 

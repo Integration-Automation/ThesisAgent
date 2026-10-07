@@ -126,6 +126,12 @@ behind Qt widgets:
 - **Include abstract** checkbox — when off, the deck skips the
   abstract slide entirely (useful for an "executive overview only"
   variant).
+- **Verify DOIs and URLs before export** checkbox, ticked by default.
+  The export first looks up every paper's DOI at doi.org and requests
+  every URL once, and a wrong or unreachable identifier stops the
+  export with the failed papers listed in the status line. Untick it
+  only when working offline. Mirrors the CLI `--no-verify-identifiers`
+  flag. The Search tab's one-button Export always runs the check.
 
 The PPTX inspector / editor surface (drives `pptx_inspect` /
 `pptx_update_slide` / `pptx_reorder_slides` / `pptx_delete_slide` /

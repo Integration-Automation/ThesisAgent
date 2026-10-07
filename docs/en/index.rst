@@ -78,6 +78,16 @@ column 7 = DOI, column 8 = URL. Audit your regen script after running:
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 
+**The export checks this at run time.** Before anything is written, the
+CLI, the MCP ``export`` tool and the GUI Deck tab look up every paper's
+DOI at doi.org and request every URL once. A DOI that is not registered,
+a URL that answers 404, or a host that cannot be reached stops the
+export and names the paper and the identifier. The check proves that an
+identifier exists, not that it belongs to this paper, so the
+copy-from-the-xlsx rule and the audit above still apply. When working
+offline, pass ``--no-verify-identifiers`` (CLI) or
+``verify_identifiers=false`` (MCP).
+
 Don'ts
 ^^^^^^
 

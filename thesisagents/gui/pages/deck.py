@@ -8,6 +8,8 @@ tab's one-button Export by exposing every ExportOptions knob:
 * Deck language (independent of UI language)
 * Max-slides cap (per-paper)
 * Include-abstract toggle
+* Dark-mode toggle
+* Verify-identifiers toggle (the export preflight, on by default)
 
 The page accepts either the raw collection from SearchPage or the
 enriched one from EnrichPage. ``set_collection`` is the only entry
@@ -147,6 +149,13 @@ class DeckPage(QWidget):
         )
         self._dark_mode_check.setChecked(False)
         options_form.addRow(self._dark_mode_check)
+        # Export preflight: on by default. Unchecking it is the GUI form of
+        # the CLI's --no-verify-identifiers, for a machine with no network.
+        self._verify_identifiers_check = QCheckBox(
+            t("deck.verify_identifiers_label", self._ui_language), self,
+        )
+        self._verify_identifiers_check.setChecked(True)
+        options_form.addRow(self._verify_identifiers_check)
         outer.addWidget(options_box)
 
         # Action row
@@ -224,6 +233,9 @@ class DeckPage(QWidget):
     def format_checkbox(self, fmt: str) -> QCheckBox:
         return self._format_checks[fmt]
 
+    def verify_identifiers_checkbox(self) -> QCheckBox:
+        return self._verify_identifiers_check
+
     # --- internals ------------------------------------------------------
 
     def _on_browse_out_dir(self) -> None:
@@ -268,6 +280,7 @@ class DeckPage(QWidget):
             language=language,
             max_slides_per_paper=self._max_slides_spin.value(),
             dark_mode=self._dark_mode_check.isChecked(),
+            verify_identifiers=self._verify_identifiers_check.isChecked(),
         )
         collection = self._collection
         self._export_button.setEnabled(False)

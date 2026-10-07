@@ -112,3 +112,60 @@ def test_open_folder_disabled_until_first_export(qtbot):
     # Setting a collection enables Export but not Open folder.
     assert page._export_button.isEnabled() is True  # noqa: SLF001
     assert page._open_folder_button.isEnabled() is False  # noqa: SLF001
+
+
+def _capture_export_options(monkeypatch) -> dict[str, object]:
+    captured: dict[str, object] = {}
+
+    def fake_export(collection, options):
+        captured["options"] = options
+        return {"bib": Path(options.out_dir) / "fake.bib"}
+
+    monkeypatch.setattr("thesisagents.gui.pages.deck.export_collection", fake_export)
+    return captured
+
+
+def test_export_verifies_identifiers_by_default(qtbot, monkeypatch, tmp_path):
+    captured = _capture_export_options(monkeypatch)
+    page = DeckPage(ui_language="en")
+    qtbot.addWidget(page)
+    page._out_dir_input.setText(str(tmp_path))  # noqa: SLF001
+    page.set_collection(_collection(_paper(1)))
+    assert page.verify_identifiers_checkbox().isChecked() is True
+    page._on_export_clicked()  # noqa: SLF001
+
+    qtbot.waitUntil(lambda: "Wrote" in page.status_text(), timeout=3000)
+    assert captured["options"].verify_identifiers is True
+
+
+def test_unchecking_verify_identifiers_reaches_the_export(qtbot, monkeypatch, tmp_path):
+    captured = _capture_export_options(monkeypatch)
+    page = DeckPage(ui_language="en")
+    qtbot.addWidget(page)
+    page._out_dir_input.setText(str(tmp_path))  # noqa: SLF001
+    page.set_collection(_collection(_paper(1)))
+    page.verify_identifiers_checkbox().setChecked(False)
+    page._on_export_clicked()  # noqa: SLF001
+
+    qtbot.waitUntil(lambda: "Wrote" in page.status_text(), timeout=3000)
+    assert captured["options"].verify_identifiers is False
+
+
+def test_a_failed_preflight_is_shown_in_the_status_line(qtbot, tmp_path):
+    """No monkeypatch: the real export runs and the preflight rejects the DOI."""
+    import dataclasses
+
+    page = DeckPage(ui_language="en")
+    qtbot.addWidget(page)
+    page._out_dir_input.setText(str(tmp_path))  # noqa: SLF001
+    page.set_collection(
+        _collection(dataclasses.replace(_paper(1), doi="10.x/not-a-doi"))
+    )
+    page._on_export_clicked()  # noqa: SLF001
+
+    qtbot.waitUntil(
+        lambda: "identifier verification failed" in page.status_text(), timeout=5000
+    )
+    assert "10.x/not-a-doi" in page.status_text()
+    assert page._export_button.isEnabled() is True  # noqa: SLF001
+    assert list(tmp_path.iterdir()) == []

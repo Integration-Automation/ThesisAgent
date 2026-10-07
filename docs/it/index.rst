@@ -77,6 +77,16 @@ termine:
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 
+**L'esportazione lo verifica in fase di esecuzione.** Prima di scrivere
+qualsiasi cosa, la CLI, lo strumento MCP ``export`` e la scheda Deck
+della GUI cercano il DOI di ogni articolo su doi.org e richiedono ogni
+URL una volta. Un DOI non registrato, un URL che risponde 404 o un host
+irraggiungibile fermano l'esportazione e indicano l'articolo e
+l'identificatore. Il controllo dimostra che un identificatore esiste,
+non che appartiene a questo articolo, quindi la regola di copiare
+dall'xlsx e l'audit qui sopra restano necessari. Offline, passa
+``--no-verify-identifiers`` (CLI) o ``verify_identifiers=false`` (MCP).
+
 Divieti
 ^^^^^^^
 

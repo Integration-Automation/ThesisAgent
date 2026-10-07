@@ -98,6 +98,16 @@ Zwei auf diese Weise in der Produktion entdeckte Fabrikationen: falscher
 AAAI-Band (`v39i23.34521` statt echt `v39i22.34537`) und erfundener
 Autoren-Slug-Pfad (`view/fang2026` statt `v40i5.37389`).
 
+**Der Export prüft das zur Laufzeit.** Bevor etwas geschrieben wird,
+schlagen die CLI, das MCP-Tool `export` und der Deck-Tab der GUI die DOI
+jedes Papers bei doi.org nach und rufen jede URL einmal ab. Eine nicht
+registrierte DOI, eine URL, die 404 antwortet, oder ein nicht
+erreichbarer Host stoppen den Export und nennen das Paper und den
+Bezeichner. Die Prüfung belegt, dass ein Bezeichner existiert, nicht
+dass er zu diesem Paper gehört, daher gelten die Regel zum Kopieren aus
+der xlsx und das Audit oben weiterhin. Offline übergeben Sie
+`--no-verify-identifiers` (CLI) oder `verify_identifiers=false` (MCP).
+
 ### Pflicht: irrelevante Downloads vor der Auslieferung aussortieren
 
 Der Abgleich der Suchschlüsselwörter ist schlagwortbasiert, daher rutschen
@@ -254,6 +264,15 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   `pdf_url` Unpaywall → S2 `openAccessPdf` → arXiv-Titelsuche →
   CORE.ac.uk (wenn Schlüssel gesetzt sind). Typischer Zuwachs bei
   IEEE-/ACM-/Springer-/Elsevier-lastigen Suchen: 40–70 Prozentpunkte.
+- **Export-Vorabprüfung (DOI- / URL-Verifizierung)**: Bevor eine Datei
+  geschrieben wird, wird jede DOI bei doi.org nachgeschlagen und jede
+  URL einmal abgerufen. Ein falscher oder nicht erreichbarer Bezeichner
+  stoppt den Export mit einer Liste der fehlgeschlagenen Papers und
+  Bezeichner. Verlagsseiten, die einen echten Browser brauchen, werden
+  nicht abgerufen (die DOI-Prüfung deckt sie ab), und ein Server, der
+  automatisierten Zugriff ablehnt, wird als nicht prüfbar gemeldet,
+  statt den Lauf scheitern zu lassen. Standardmäßig aktiv,
+  `--no-verify-identifiers` schaltet sie für Offline-Arbeit ab.
 - **Standardmäßig sicher**: Nur-HTTPS-HTTP-Transport, quellenweise
   Ratenbegrenzung (Token-Bucket), `defusedxml` für jede XML-Nutzlast,
   pfadtraversierungssichere Exportpfade, kein `eval` / `exec` / `pickle` auf
@@ -336,6 +355,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Überspringt die Paywall-Abfrage und fährt fort. |
 | `--max-slides` | Folienobergrenze pro Paper (Standard 25; übergib 0 für unbegrenzt). |
 | `--dark-mode` | Rendert die pptx mit dunklem Hintergrund + fast weißem Text. Standard ist der helle Foliensatz mit marineblauem Band. |
+| `--no-verify-identifiers` | Exportiert, ohne die DOIs und URLs der Papers zu prüfen. Standardmäßig stoppt eine falsche oder nicht erreichbare DOI / URL den Lauf, bevor etwas geschrieben wird. Für den Offline-Einsatz. |
 | `--quiet` | Unterdrückt die Ausgabe pro Paper. |
 
 ### Umgebungsvariablen
@@ -405,7 +425,7 @@ Tools:
 | `fetch_paper` | arXiv / DOI / PMID / IEEE-Identifikator → einzelnes Paper. |
 | `fetch_pdf_text` | Lädt ein PDF herunter, gibt extrahierten Fließtext zurück. **Der MCP-Pfad zu „Ich habe das Paper gelesen".** |
 | `download_pdfs` | Lädt die PDFs einer Paper-Liste stapelweise nach `{out_dir}/pdfs/` herunter. Gibt Ergebnisse pro Paper zurück, indiziert nach BibTeX-Schlüssel. |
-| `export` | Paper-Liste + Formate → schreibt `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Akzeptiert ein `summary`-Feld pro Paper für das reichhaltige Thesis-Stil-Schema, `max_slides_per_paper` (Standard 25) und `dark_mode` (Standard `false` — der Projektstandard ist der helle Foliensatz mit marineblauem Band, übergib `true` für den dunklen OLED-/Schwachlicht-Nachlauf). |
+| `export` | Paper-Liste + Formate → schreibt `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Akzeptiert ein `summary`-Feld pro Paper für das reichhaltige Thesis-Stil-Schema, `max_slides_per_paper` (Standard 25) und `dark_mode` (Standard `false` — der Projektstandard ist der helle Foliensatz mit marineblauem Band, übergib `true` für den dunklen OLED-/Schwachlicht-Nachlauf). Verifiziert vor dem Schreiben jede DOI / URL (`verify_identifiers`, Standard `true`): Ein falscher oder nicht erreichbarer Bezeichner lässt den Aufruf scheitern und nennt das Paper, und die Antwort enthält einen `verification`-Bericht. |
 | `pptx_inspect` | Liest die Folien-/Shape-Struktur eines vorhandenen Foliensatzes. |
 | `pptx_review` | Prüft einen Foliensatz in einem Aufruf — Überlauf + Farbverträge + `paper_rule`-Abschnittsvollständigkeit. Erkennt die Foliensatzsprache automatisch; auch die CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Ersetzt `title` / `body` / `meta` (nach Shape-Name) oder beliebige Shapes nach Index. |

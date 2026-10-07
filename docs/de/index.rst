@@ -85,6 +85,17 @@ Regen-Script am Ende:
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 
+**Der Export prüft das zur Laufzeit.** Bevor etwas geschrieben wird,
+schlagen die CLI, das MCP-Tool ``export`` und der Deck-Tab der GUI die
+DOI jedes Papers bei doi.org nach und rufen jede URL einmal ab. Eine
+nicht registrierte DOI, eine URL, die 404 antwortet, oder ein nicht
+erreichbarer Host stoppen den Export und nennen das Paper und den
+Bezeichner. Die Prüfung belegt, dass ein Bezeichner existiert, nicht
+dass er zu diesem Paper gehört, daher gelten die Regel zum Kopieren aus
+der xlsx und das Audit oben weiterhin. Offline übergeben Sie
+``--no-verify-identifiers`` (CLI) oder ``verify_identifiers=false``
+(MCP).
+
 Verbote
 ^^^^^^^
 

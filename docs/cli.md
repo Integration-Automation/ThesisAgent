@@ -26,6 +26,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
                 [--top-tier-only]
                 [--paywall-threshold FLOAT] [--yes]
                 [--max-slides N] [--dark-mode]
+                [--no-verify-identifiers]
                 [--quiet]
 ```
 
@@ -55,6 +56,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
 | `--yes` | off | Auto-accept the paywall prompt. |
 | `--max-slides` | `25` | Per-paper slide cap. Pass `0` for unlimited. |
 | `--dark-mode` | off | Render the pptx in dark mode. **The light navy-band deck is the default** (white slides, full-width navy header band with a white title, navy cover panel). Pass this flag for the dark variant — a post-build pass swaps to a dark slide background (`#12151B`) + near-white text (`#E5E7EB`) and lightens the navy band / cover / table-row fills so the same chrome reads on OLED projectors and in low-light venues. |
+| `--no-verify-identifiers` | off | Export without the identifier preflight. By default every paper's DOI is looked up at doi.org and every URL is requested once, right after the search, and a wrong or unreachable DOI / URL stops the run before any PDF is downloaded or any file is written. Pass this flag when working offline. The notice that the check was skipped goes to stderr even under `--quiet`. See "Identifier verification" below. |
 | `--quiet` | off | Suppress the per-paper one-line printout to stdout. |
 
 ## Examples
@@ -149,13 +151,67 @@ CI. Section completeness only fails a *thesis-style* deck — a lightweight
 abstract-only deck is never failed for legitimately lacking sections.
 The same audit is the MCP `pptx_review` tool.
 
+## Identifier verification
+
+Every run checks the DOI and URL of every paper before it exports
+anything. The check exists because a hand-written `Paper` can carry a
+DOI typed from memory, and nothing else in the pipeline would notice
+before it reached a `.bib` file or a references slide.
+
+What is checked:
+
+- **DOI**: the syntax first, with no network (`10.<registrant>/<suffix>`),
+  then whether doi.org has it registered. The lookup goes to the doi.org
+  handle API, so it never touches the publisher's site.
+- **URL**: one request that reads only the response headers. Redirects
+  are followed one hop at a time, and a hop to plain `http` or to a
+  publisher page is not requested.
+- A URL on a publisher host that needs a real browser (IEEE Xplore, ACM
+  Digital Library, Springer, ScienceDirect, Wiley, …) is not requested.
+  The paper's DOI is checked in its place.
+
+Each identifier ends in one of five states:
+
+| Status | Meaning | Stops the run |
+|---|---|---|
+| `ok` | The identifier exists. | no |
+| `invalid` | Definitely wrong: a malformed DOI, a DOI doi.org does not know, a URL that answers 404 or 410. | yes |
+| `unreachable` | No definite answer: DNS or connection failure, HTTP 5xx. Retried once first. | yes |
+| `timeout` | No answer within 8 seconds. Retried once first. | yes |
+| `skipped` | Not checked: a `file://` URL, a browser-only publisher page, or a server that refuses automated access (HTTP 401 / 403 / 429). | no |
+
+`skipped` never stops a run, because "could not check" is not evidence
+that the identifier is wrong.
+
+A passing check shows that the identifier exists. It does not show that
+the identifier belongs to this paper, so identifiers still have to be
+copied from the search results and never composed by hand.
+
+On success the CLI prints one line:
+
+```
+Identifiers: 41 verified, 6 not checkable, 0 failed.
+```
+
+On failure it exits with code `2` and names each identifier:
+
+```
+error: [preflight] identifier verification failed for 1 identifier(s) in 1 paper(s):
+  - smith2024attention: doi 10.1234/typo is invalid (doi.org has no such DOI registered)
+Copy each DOI / URL from the search results instead of typing it. To export without this check (for example offline), pass --no-verify-identifiers on the CLI, or verify_identifiers=False to the MCP export tool / ExportOptions.
+```
+
+The paper's own `doi` and `url` are never rewritten. Where a link leads
+after its redirects is reported separately and is not written into the
+bibliography.
+
 ## Exit codes
 
 | Code | Meaning |
 |---|---|
 | `0` | Success — every requested export was written. |
 | `1` | Search returned zero results, or the single paper had no metadata. |
-| `2` | Validation error (unknown source, malformed identifier, bad year range, missing API key when `--enrich`, …). |
+| `2` | Validation error (unknown source, malformed identifier, bad year range, missing API key when `--enrich`, …). Also returned when the identifier preflight stops the run because a DOI or URL is wrong or unreachable. |
 
 ## Output structure
 

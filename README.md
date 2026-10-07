@@ -98,6 +98,16 @@ Two fabrications caught this way in production: wrong AAAI volume
 (`v39i23.34521` vs real `v39i22.34537`) and invented author-slug path
 (`view/fang2026` instead of `v40i5.37389`).
 
+**The export checks this at run time.** Before anything is written, the
+CLI, the MCP `export` tool and the GUI Deck tab look up every paper's
+DOI at doi.org and request every URL once. A DOI that is not registered,
+a URL that answers 404, or a host that cannot be reached stops the
+export and names the paper and the identifier. The check proves that an
+identifier exists, not that it belongs to this paper, so the
+copy-from-the-xlsx rule and the audit above still apply. When working
+offline, pass `--no-verify-identifiers` (CLI) or
+`verify_identifiers=false` (MCP).
+
 ### Mandatory: prune irrelevant downloads before shipping
 
 Search keyword matching is keyword-based, so off-topic papers will
@@ -250,6 +260,14 @@ entry per paper in the `PaperCollection` tuple.
   goes through Unpaywall → S2 `openAccessPdf` → arXiv title search →
   CORE.ac.uk (when keys are set). Typical lift on IEEE / ACM / Springer
   / Elsevier-heavy queries: 40-70 percentage points.
+- **Export preflight (DOI / URL verification)**: before any file is
+  written, every DOI is looked up at doi.org and every URL is requested
+  once. A wrong or unreachable identifier stops the export with a list
+  of the papers and identifiers that failed. Publisher pages that need a
+  real browser are not requested (the DOI check covers them), and a
+  server that refuses automated access is reported as not checkable
+  instead of failing the run. On by default, `--no-verify-identifiers`
+  turns it off for offline work.
 - **Safety by default**: HTTPS-only HTTP transport, per-source rate
   limit (token bucket), `defusedxml` for any XML payload,
   path-traversal-safe export paths, no `eval` / `exec` / `pickle` on
@@ -330,6 +348,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Skip the paywall prompt and proceed. |
 | `--max-slides` | Per-paper slide cap (default 25; pass 0 for unlimited). |
 | `--dark-mode` | Render the pptx with a dark background + near-white text. The default is the light navy-band deck. |
+| `--no-verify-identifiers` | Export without checking the papers' DOIs and URLs. By default a wrong or unreachable DOI / URL stops the run before anything is written. For offline use. |
 | `--quiet` | Suppress per-paper printout. |
 
 ### Environment variables
@@ -397,7 +416,7 @@ Tools:
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |
-| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `false` — the project default is the light navy-band deck, pass `true` for the dark OLED / low-light post-pass). |
+| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `false` — the project default is the light navy-band deck, pass `true` for the dark OLED / low-light post-pass). Verifies every DOI / URL before writing (`verify_identifiers`, default `true`): a wrong or unreachable identifier fails the call and names the paper, and the response carries a `verification` report. |
 | `pptx_inspect` | Read slide / shape structure of an existing deck. |
 | `pptx_review` | Audit a deck in one call — overflow + colour contracts + `paper_rule` section completeness. Auto-detects the deck language; also the CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Replace `title` / `body` / `meta` (by shape name) or arbitrary shapes by index. |

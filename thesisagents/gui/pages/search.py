@@ -34,7 +34,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from thesisagents.core.constants import DEFAULT_PAGE_SIZE, MAX_RESULTS_PER_SOURCE
+from thesisagents.core.constants import (
+    DEFAULT_PAGE_SIZE,
+    EXPORT_BIBTEX,
+    EXPORT_PPTX,
+    EXPORT_XLSX,
+    MAX_RESULTS_PER_SOURCE,
+)
 from thesisagents.core.models import ExportOptions, PaperCollection, Query
 from thesisagents.core.pipeline import run_search
 from thesisagents.core.query import normalize_query
@@ -48,6 +54,11 @@ from thesisagents.gui.workers import AsyncWorker, BlockingWorker
 
 _MIN_YEAR = 1900
 _MAX_YEAR = 2100
+#: Formats the one-button Export writes. Built from the format constants, not
+#: typed out: the literal ``"bibtex"`` used here before is not a registered
+#: format (the name is ``"bib"``), so the button reported
+#: "no exporter registered for this format" on every click.
+QUICK_EXPORT_FORMATS: tuple[str, ...] = (EXPORT_PPTX, EXPORT_XLSX, EXPORT_BIBTEX)
 
 
 class SearchPage(QWidget):
@@ -233,7 +244,7 @@ class SearchPage(QWidget):
             return
         language = self._language_combo.currentData() or "en"
         options = ExportOptions(
-            formats=("pptx", "xlsx", "bibtex"),
+            formats=QUICK_EXPORT_FORMATS,
             out_dir=directory,
             language=language,
         )

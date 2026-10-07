@@ -98,6 +98,16 @@ Hai vụ ngụy tạo bị bắt theo cách này trong môi trường sản xu�
 AAAI (`v39i23.34521` so với thực tế `v39i22.34537`) và đường dẫn slug tác
 giả tự bịa (`view/fang2026` thay vì `v40i5.37389`).
 
+**Bước xuất kiểm tra điều này khi chạy.** Trước khi ghi bất cứ thứ gì,
+CLI, công cụ MCP `export` và tab Deck của GUI tra cứu DOI của từng bài
+báo tại doi.org và gửi một yêu cầu tới từng URL. Một DOI chưa đăng ký,
+một URL trả về 404 hoặc một máy chủ không thể kết nối sẽ dừng việc xuất
+và nêu rõ bài báo cùng mã định danh. Phép kiểm tra chứng minh rằng mã
+định danh tồn tại, không chứng minh nó thuộc về bài báo này, nên quy tắc
+chép từ xlsx và bước kiểm toán ở trên vẫn cần thực hiện. Khi làm việc
+ngoại tuyến, hãy truyền `--no-verify-identifiers` (CLI) hoặc
+`verify_identifiers=false` (MCP).
+
 ### Bắt buộc: loại bỏ các tải xuống không liên quan trước khi giao
 
 Việc so khớp từ khóa tìm kiếm dựa trên từ khóa, nên các bài lạc đề sẽ
@@ -251,6 +261,14 @@ cho mỗi bài trong tuple `PaperCollection`.
   đi qua Unpaywall → S2 `openAccessPdf` → tìm kiếm tiêu đề trên arXiv →
   CORE.ac.uk (khi các key được đặt). Mức nâng điển hình cho các truy vấn
   nặng IEEE / ACM / Springer / Elsevier: 40-70 điểm phần trăm.
+- **Kiểm tra trước khi xuất (xác minh DOI / URL)**: trước khi ghi bất kỳ
+  tệp nào, mỗi DOI được tra cứu tại doi.org và mỗi URL được yêu cầu một
+  lần. Mã định danh sai hoặc không thể kết nối sẽ dừng việc xuất kèm
+  danh sách bài báo và mã định danh bị lỗi. Các trang của nhà xuất bản
+  cần trình duyệt thật sẽ không được yêu cầu (bước kiểm tra DOI đã bao
+  phủ), còn máy chủ từ chối truy cập tự động được báo là không thể kiểm
+  tra thay vì làm hỏng lần chạy. Bật theo mặc định,
+  `--no-verify-identifiers` tắt nó khi làm việc ngoại tuyến.
 - **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit theo
   từng nguồn (token bucket), `defusedxml` cho mọi payload XML,
   các đường xuất an-toàn-với-path-traversal, không `eval` / `exec` / `pickle` trên
@@ -331,6 +349,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Bỏ qua prompt paywall và tiếp tục. |
 | `--max-slides` | Giới hạn slide mỗi bài (mặc định 25; truyền 0 cho không giới hạn). |
 | `--dark-mode` | Render pptx với nền tối + chữ gần trắng. Mặc định là deck sáng dải navy. |
+| `--no-verify-identifiers` | Xuất mà không kiểm tra DOI và URL của các bài báo. Theo mặc định, DOI / URL sai hoặc không thể kết nối sẽ dừng lần chạy trước khi ghi bất cứ thứ gì. Dùng khi ngoại tuyến. |
 | `--quiet` | Tắt in ấn theo từng bài. |
 
 ### Biến môi trường
@@ -398,7 +417,7 @@ Công cụ:
 | `fetch_paper` | Định danh arXiv / DOI / PMID / IEEE → một bài đơn. |
 | `fetch_pdf_text` | Tải một PDF, trả về văn bản thân bài đã trích. **Cổng MCP tới "tôi đã đọc bài".** |
 | `download_pdfs` | Tải hàng loạt PDF của một danh sách bài vào `{out_dir}/pdfs/`. Trả về kết quả từng bài có khóa theo khóa BibTeX. |
-| `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận một trường `summary` mỗi bài cho schema phong cách luận văn đầy đủ, `max_slides_per_paper` (mặc định 25), và `dark_mode` (mặc định `false` — mặc định dự án là deck sáng dải navy, truyền `true` cho post-pass tối OLED / thiếu sáng). |
+| `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận một trường `summary` mỗi bài cho schema phong cách luận văn đầy đủ, `max_slides_per_paper` (mặc định 25), và `dark_mode` (mặc định `false` — mặc định dự án là deck sáng dải navy, truyền `true` cho post-pass tối OLED / thiếu sáng). Xác minh mọi DOI / URL trước khi ghi (`verify_identifiers`, mặc định `true`): mã định danh sai hoặc không thể kết nối làm lệnh gọi thất bại và nêu rõ bài báo, và phản hồi kèm báo cáo `verification`. |
 | `pptx_inspect` | Đọc cấu trúc slide / shape của một deck hiện có. |
 | `pptx_review` | Kiểm toán một deck trong một lời gọi — overflow + hợp đồng màu + độ đầy đủ mục `paper_rule`. Tự phát hiện ngôn ngữ deck; cũng là CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Thay `title` / `body` / `meta` (theo tên shape) hoặc các shape tùy ý theo index. |

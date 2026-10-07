@@ -166,6 +166,24 @@ to the user. An early batch regen script (since removed) had to be
 rebuilt this way after two papers (Wen, Fang) were caught with
 fabricated AAAI URLs that pointed nowhere.
 
+**The export also checks at run time.** `export_collection`, the CLI,
+the MCP `export` tool and the GUI Deck tab look up every DOI at doi.org
+and request every URL once before writing anything. A DOI that is not
+registered, a URL that answers 404, or an unreachable host stops the
+export and names the paper and the identifier.
+
+* **Why**: the audit above is a manual step, and it was skipped often
+  enough that fabricated identifiers shipped.
+* **What it does not do**: it proves an identifier exists, not that it
+  belongs to this paper. A real DOI attached to the wrong paper passes.
+  So the copy-verbatim rule and the audit above still apply.
+* **Example**: `Paper(doi="10.1234/typo")` fails with
+  `doi 10.1234/typo is invalid (doi.org has no such DOI registered)`.
+* **Anti-pattern**: passing `--no-verify-identifiers` /
+  `verify_identifiers=False` to get past a failure. The opt-out is for a
+  machine with no network. A failed identifier is fixed by copying the
+  right value from the search xlsx.
+
 ### Pruning irrelevant downloads (mandatory)
 
 The search engine is keyword-based, so off-topic papers will slip in:

@@ -88,6 +88,8 @@ for p in ALL_PAPERS:
 (`v39i23.34521` vs 真實 `v39i22.34537`),以及發明出來的作者 slug 路徑
 (`view/fang2026` 而非 `v40i5.37389`)。
 
+**匯出時會在執行期檢查這一點。** 寫入任何檔案之前,CLI、MCP 的 `export` 工具與 GUI 的 Deck 分頁會到 doi.org 查詢每篇論文的 DOI,並對每個網址送出一次請求。DOI 未註冊、網址回應 404,或主機無法連線時,匯出會停止並指出是哪一篇論文的哪一個識別碼。這項檢查只能證明識別碼存在,無法證明它屬於這篇論文,所以上面「逐字從 xlsx 抄」的規則與稽核仍然要做。離線作業時,請加上 `--no-verify-identifiers` (CLI) 或 `verify_identifiers=false` (MCP)。
+
 ### 必辦:出貨前先剔除不相關的下載
 
 搜尋是以關鍵字比對的,所以離題論文一定會混進來:一次「Claude code」
@@ -220,6 +222,7 @@ for key in irrelevant_keys:
   Unpaywall → S2 `openAccessPdf` → arXiv 標題搜尋 → CORE.ac.uk(在有設
   金鑰時)。在 IEEE / ACM / Springer / Elsevier 為主的查詢上典型的
   提升:40-70 個百分點。
+- **匯出前檢查 (DOI / URL 驗證)**: 寫入任何檔案之前,會到 doi.org 查詢每個 DOI,並對每個網址送出一次請求。識別碼錯誤或無法連線時,匯出會停止並列出失敗的論文與識別碼。需要真實瀏覽器才能開啟的出版商頁面不會被請求 (由 DOI 檢查涵蓋),拒絕自動化存取的伺服器會回報為「無法檢查」而不會讓整次執行失敗。預設開啟,離線時用 `--no-verify-identifiers` 關閉。
 - **預設就安全**:僅 HTTPS 的 HTTP 傳輸、每來源速率限制(token bucket)、
   對任何 XML payload 用 `defusedxml`、防路徑穿越的匯出路徑、不對
   使用者輸入用 `eval` / `exec` / `pickle`。
@@ -298,6 +301,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | 跳過付費牆提示直接進行。 |
 | `--max-slides` | 每篇論文的投影片上限(預設 25;傳 0 表示無上限)。 |
 | `--dark-mode` | 以深色背景 + 近白文字渲染 pptx。預設是淺色深藍帶投影片。 |
+| `--no-verify-identifiers` | 匯出時不檢查論文的 DOI 與網址。預設情況下,DOI / 網址錯誤或無法連線會在寫入任何檔案之前停止執行。供離線使用。 |
 | `--quiet` | 抑制每篇論文的列印輸出。 |
 
 ### 環境變數
@@ -365,7 +369,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別碼 → 單篇論文。 |
 | `fetch_pdf_text` | 下載一份 PDF,回傳擷取出的本文文字。**這是「我讀了論文」的 MCP 路徑。** |
 | `download_pdfs` | 批次把一份論文清單的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX 鍵為索引的每篇論文結果。 |
-| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 |
+| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 寫入前會驗證每個 DOI / 網址 (`verify_identifiers`,預設 `true`): 識別碼錯誤或無法連線時呼叫會失敗並指出是哪篇論文,回應中附有 `verification` 報告。 |
 | `pptx_inspect` | 讀取既有投影片的 slide / shape 結構。 |
 | `pptx_review` | 一次呼叫審核一份投影片 —— 溢位 + 顏色契約 + `paper_rule` 章節完整度。自動偵測投影片語言;也是 CLI `python -m thesisagents review <deck.pptx>`。 |
 | `pptx_update_slide` | 替換 `title` / `body` / `meta`(依 shape 名稱)或依索引替換任意 shape。 |

@@ -93,6 +93,13 @@ for p in ALL_PAPERS:
 (`v39i23.34521` vs 실제 `v39i22.34537`)와 지어낸 저자 슬러그 경로
 (`view/fang2026` 대신 `v40i5.37389`).
 
+**내보내기 단계에서 실행 시점에 이를 검사합니다.** 파일을 쓰기 전에 CLI, MCP `export` 도구, GUI Deck
+탭이 각 논문의 DOI 를 doi.org 에서 조회하고 각 URL 에 한 번씩 요청을 보냅니다. 등록되지 않은 DOI, 404 를
+반환하는 URL, 연결할 수 없는 호스트가 있으면 내보내기가 중단되고 해당 논문과 식별자가 표시됩니다. 이 검사는 식별자가
+존재한다는 것만 보여 줄 뿐 그 논문의 것임을 보장하지 않으므로, 위의 xlsx 에서 그대로 복사하는 규칙과 감사는 여전히
+필요합니다. 오프라인으로 작업할 때는 `--no-verify-identifiers` (CLI) 또는
+`verify_identifiers=false` (MCP) 를 지정하세요.
+
 ### 필수: 배포 전 무관한 다운로드 정리
 
 검색 키워드 매칭은 키워드 기반이므로 주제에서 벗어난 논문이 섞여
@@ -244,6 +251,11 @@ for key in irrelevant_keys:
   Unpaywall → S2 `openAccessPdf` → arXiv 제목 검색 →
   CORE.ac.uk(키가 설정된 경우)를 거칩니다. IEEE / ACM / Springer /
   Elsevier 가 많은 쿼리에서의 전형적인 향상: 40-70 퍼센트 포인트.
+- **내보내기 사전 검사 (DOI / URL 검증)**: 파일을 쓰기 전에 모든 DOI 를 doi.org 에서 조회하고 모든
+  URL 에 한 번씩 요청을 보냅니다. 잘못되었거나 연결할 수 없는 식별자가 있으면 내보내기가 중단되고 실패한 논문과 식별자
+  목록이 표시됩니다. 실제 브라우저가 필요한 출판사 페이지에는 요청을 보내지 않으며 (DOI 검사가 대신합니다), 자동 접근을
+  거부하는 서버는 실행을 실패시키지 않고 확인 불가로 보고됩니다. 기본적으로 켜져 있으며, 오프라인 작업 시
+  `--no-verify-identifiers` 로 끕니다.
 - **기본값이 안전**: HTTPS 전용 HTTP 전송, 소스별 속도 제한(토큰
   버킷), 모든 XML 페이로드에 `defusedxml`, 경로 순회에 안전한
   내보내기 경로, 사용자 입력에 대한 `eval` / `exec` / `pickle` 없음.
@@ -324,6 +336,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | 페이월 프롬프트를 건너뛰고 진행. |
 | `--max-slides` | 논문당 슬라이드 상한(기본 25; 무제한은 0 을 넘김). |
 | `--dark-mode` | pptx 를 어두운 배경 + 거의 흰 텍스트로 렌더링. 기본은 라이트 네이비 밴드 덱. |
+| `--no-verify-identifiers` | 논문의 DOI 와 URL 을 확인하지 않고 내보냅니다. 기본적으로는 잘못되었거나 연결할 수 없는 DOI / URL 이 있으면 아무것도 쓰기 전에 실행이 중단됩니다. 오프라인용. |
 | `--quiet` | 논문별 출력을 억제. |
 
 ### 환경 변수
@@ -392,7 +405,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 식별자 → 단일 논문. |
 | `fetch_pdf_text` | 하나의 PDF 를 다운로드하여 추출한 본문 텍스트를 반환. **"내가 논문을 읽었다"에 이르는 MCP 경로.** |
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 로 일괄 다운로드. BibTeX 키로 키가 지정된 논문별 결과를 반환. |
-| `export` | 논문 목록 + 형식 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 을 작성. 리치 논문 스타일 스키마를 위한 논문당 `summary` 필드, `max_slides_per_paper`(기본 25), `dark_mode`(기본 `false` — 프로젝트 기본은 라이트 네이비 밴드 덱, 어두운 OLED / 저조도 후처리에는 `true`)를 받음. |
+| `export` | 논문 목록 + 형식 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 을 작성. 리치 논문 스타일 스키마를 위한 논문당 `summary` 필드, `max_slides_per_paper`(기본 25), `dark_mode`(기본 `false` — 프로젝트 기본은 라이트 네이비 밴드 덱, 어두운 OLED / 저조도 후처리에는 `true`)를 받음. 쓰기 전에 모든 DOI / URL 을 검증합니다 (`verify_identifiers`, 기본값 `true`). 잘못되었거나 연결할 수 없는 식별자가 있으면 호출이 실패하고 해당 논문을 알려 주며, 응답에 `verification` 보고서가 포함됩니다. |
 | `pptx_inspect` | 기존 덱의 슬라이드 / 셰이프 구조를 읽음. |
 | `pptx_review` | 한 번의 호출로 덱을 감사 — 오버플로 + 색상 계약 + `paper_rule` 섹션 완전성. 덱 언어를 자동 감지; CLI `python -m thesisagents review <deck.pptx>` 이기도 함. |
 | `pptx_update_slide` | `title` / `body` / `meta`(셰이프 이름으로) 또는 인덱스로 임의의 셰이프를 교체. |

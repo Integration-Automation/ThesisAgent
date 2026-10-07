@@ -60,6 +60,15 @@ for p in ALL_PAPERS:
 
 प्रोडक्शन में इसी तरीके से पकड़े गए दो कूट: गलत AAAI खंड (`v39i23.34521` बनाम वास्तविक `v39i22.34537`) और मनगढ़ंत लेखक-स्लग पथ (`v40i5.37389` के बजाय `view/fang2026`)।
 
+**Export इसे run time पर जाँचता है।** कुछ भी लिखने से पहले CLI, MCP
+`export` tool और GUI का Deck tab हर paper का DOI doi.org पर देखते हैं और
+हर URL को एक बार request करते हैं। जो DOI registered नहीं है, जो URL 404
+लौटाता है, या जिस host तक पहुँचा नहीं जा सकता, वह export को रोक देता है
+और paper तथा identifier का नाम बताता है। यह जाँच सिद्ध करती है कि
+identifier मौजूद है, यह नहीं कि वह इसी paper का है, इसलिए xlsx से copy
+करने का नियम और ऊपर का audit अब भी ज़रूरी हैं। Offline काम करते समय
+`--no-verify-identifiers` (CLI) या `verify_identifiers=false` (MCP) दें।
+
 ### अनिवार्य: डिलीवरी से पहले अप्रासंगिक डाउनलोड हटाएँ
 
 खोज कीवर्ड मिलान कीवर्ड-आधारित है, इसलिए विषय से बाहर के पेपर घुस आएँगे: एक "Claude code" क्वेरी ने एक Viterbi-decoder पेपर लौटाया क्योंकि दोनों में "code" है; "LLM code review" एक object-detection साहित्य समीक्षा से मेल खा गया। एक बार जब आप सार पढ़ लें और किसी पेपर को उपयोगकर्ता के वास्तविक इरादे के लिए विषय से बाहर वर्गीकृत करें, तो run निर्देशिका से उसे हटाएँ:
@@ -114,6 +123,14 @@ for key in irrelevant_keys:
 - **दृश्यमान-Chrome प्रकाशक प्रवाह**: Scholar SERP, IEEE `/rest/search`, और हर paywalled-PDF डाउनलोड (ieeexplore / dl.acm / link.springer / sciencedirect / wiley / oup / nature / science / …) `selenium` के माध्यम से एक वास्तविक दृश्यमान Chrome सत्र के भीतर चलते हैं। उपयोगकर्ता लाइव विंडो में एक बार captcha हल करता है / SSO पूरा करता है; `THESISAGENTS_CHROME_PROFILE_DIR` कुकीज़ को रनों के बीच बनाए रखता है।
 - **LLM-as-agent प्रवाह**: MCP उपकरण खोज, PDF डाउनलोड और पाठ निष्कर्षण प्रदान करते हैं। `scripts/regen_*.py` में प्रति शोध-पत्र एक समृद्ध `PaperSummary` हाथ से लिखने के पुनरुत्पाद्य उदाहरण हैं।
 - **OA PDF resolver**: dedup के बाद, `pdf_url` रहित हर शोध-पत्र Unpaywall → S2 `openAccessPdf` → arXiv शीर्षक खोज → CORE.ac.uk (जब keys सेट हों) से गुज़रता है। IEEE / ACM / Springer / Elsevier-भारी क्वेरियों पर विशिष्ट वृद्धि: 40-70 प्रतिशत-अंक।
+- **Export preflight (DOI / URL सत्यापन)**: कोई भी file लिखने से पहले हर
+  DOI doi.org पर देखा जाता है और हर URL को एक बार request किया जाता है।
+  ग़लत या पहुँच से बाहर identifier export को रोक देता है और विफल papers
+  तथा identifiers की सूची देता है। जिन publisher pages को असली browser
+  चाहिए उन्हें request नहीं किया जाता (DOI जाँच उन्हें cover करती है),
+  और जो server automated access से इनकार करता है उसे run विफल करने के
+  बजाय जाँच-योग्य नहीं के रूप में report किया जाता है। Default रूप से
+  चालू, offline काम के लिए `--no-verify-identifiers` इसे बंद करता है।
 - **डिफ़ॉल्ट रूप से सुरक्षित**: HTTPS-only HTTP परिवहन, प्रति-स्रोत दर सीमा (token bucket), किसी भी XML payload के लिए `defusedxml`, path-traversal-सुरक्षित निर्यात पथ, उपयोगकर्ता इनपुट पर कोई `eval` / `exec` / `pickle` नहीं।
 - **zh-tw / zh-cn शब्दावली रक्षक**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` में ~244 regex पैटर्न पारंपरिक हांज़ी में रेंडर किए गए सरलीकृत-चीनी उधार शब्द पकड़ते हैं (जैसे `內存` → `記憶體`, `魯棒性` → `穩健性`, `軟件` → `軟體`, `緩存` → `快取`)। वही रक्षक zh-cn locale स्ट्रिंग्स के लिए उलटा चलता है। पूर्ण नियम + regex कैटलॉग `.claude/agents/rules/language-vocabulary-check.md` में हैं।
 
@@ -184,6 +201,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | paywall प्रॉम्प्ट छोड़ें और आगे बढ़ें। |
 | `--max-slides` | प्रति-शोध-पत्र स्लाइड सीमा (डिफ़ॉल्ट 25; असीमित के लिए 0 पास करें)। |
 | `--dark-mode` | pptx को गहरे पृष्ठभूमि + लगभग-सफ़ेद टेक्स्ट के साथ render करें। डिफ़ॉल्ट हल्का navy-band डेक है। |
+| `--no-verify-identifiers` | Papers के DOI और URL जाँचे बिना export करता है। Default रूप से ग़लत या पहुँच से बाहर DOI / URL कुछ भी लिखने से पहले run रोक देता है। Offline उपयोग के लिए। |
 | `--quiet` | प्रति-शोध-पत्र प्रिंटआउट दबाएँ। |
 
 ### पर्यावरण चर
@@ -245,7 +263,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE पहचानकर्ता → एकल शोध-पत्र। |
 | `fetch_pdf_text` | एक PDF डाउनलोड करें, निकाला गया मुख्य पाठ लौटाएँ। **"मैंने शोध-पत्र पढ़ा" तक का MCP पथ।** |
 | `download_pdfs` | एक शोध-पत्र सूची की PDFs को `{out_dir}/pdfs/` में बैच-डाउनलोड करें। BibTeX कुंजी द्वारा अनुक्रमित प्रति-शोध-पत्र परिणाम लौटाता है। |
-| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। rich थीसिस-शैली schema के लिए प्रति-शोध-पत्र `summary` फ़ील्ड, `max_slides_per_paper` (डिफ़ॉल्ट 25), और `dark_mode` (डिफ़ॉल्ट `false` — परियोजना डिफ़ॉल्ट हल्का navy-band डेक है, dark OLED / low-light post-pass के लिए `true` पास करें) स्वीकार करता है। |
+| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। rich थीसिस-शैली schema के लिए प्रति-शोध-पत्र `summary` फ़ील्ड, `max_slides_per_paper` (डिफ़ॉल्ट 25), और `dark_mode` (डिफ़ॉल्ट `false` — परियोजना डिफ़ॉल्ट हल्का navy-band डेक है, dark OLED / low-light post-pass के लिए `true` पास करें) स्वीकार करता है। लिखने से पहले हर DOI / URL verify करता है (`verify_identifiers`, default `true`): ग़लत या पहुँच से बाहर identifier call को विफल करता है और paper का नाम बताता है, और response में `verification` report होती है। |
 | `pptx_inspect` | मौजूदा डेक की स्लाइड / शेप संरचना पढ़ें। |
 | `pptx_review` | एक ही कॉल में डेक ऑडिट करें — overflow + रंग अनुबंध + `paper_rule` अनुभाग पूर्णता। डेक भाषा स्वतः पहचानता है; CLI `python -m thesisagents review <deck.pptx>` भी। |
 | `pptx_update_slide` | `title` / `body` / `meta` (शेप नाम से) या मनमाने शेप (अनुक्रमणिका से) प्रतिस्थापित करें। |

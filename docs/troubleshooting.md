@@ -232,6 +232,36 @@ with bad metadata. Workarounds:
 
 ## PPTX / export errors
 
+### `error: [preflight] identifier verification failed for N identifier(s)`
+
+The export checks every paper's DOI and URL before it writes anything
+(see [`cli.md`](cli.md) "Identifier verification"). Each line under the
+error names one paper, one identifier, and why it failed:
+
+| Reason shown | Cause | Fix |
+|---|---|---|
+| `is invalid (not a DOI: expected the form 10.<registrant>/<suffix>)` | The `doi` field is not a DOI, for example a URL fragment or a truncated value. | Copy the DOI from the search `.xlsx` (column 7). |
+| `is invalid (doi.org has no such DOI registered)` | The DOI is well-formed but does not exist. Usually it was typed or composed, not copied. | Copy it from the search results. |
+| `is invalid (HTTP 404: the page does not exist)` | The URL is dead or was guessed. Publisher URL paths cannot be derived from a title. | Copy the URL from the search `.xlsx` (column 8). |
+| `is unreachable (ConnectError: …)` | The host does not resolve or refuses connections. A made-up domain fails this way, and so does every identifier when the machine is offline. | Check the URL. When offline, pass `--no-verify-identifiers`. |
+| `is timeout (no answer within 8 s)` | The host did not answer, after one retry. | Run again, or pass `--no-verify-identifiers` if the host stays slow. |
+
+Nothing is written when this error appears, so there is no partial
+export to clean up.
+
+An identifier reported as `skipped` is not an error. It means the check
+could not be made: the URL is on a publisher host that only answers a
+real browser, or the server refuses automated access (HTTP 401 / 403 /
+429). The run continues.
+
+### Export passes but a DOI points at the wrong paper
+
+The preflight proves that an identifier exists. It cannot tell that the
+DOI belongs to a different paper than the one it is attached to. Copy
+`doi` / `url` / `arxiv_id` from the search results that produced the
+run, and run the audit in `AGENTS.md` "URL / DOI verification" on any
+hand-authored `scripts/regen_*.py`.
+
 ### `Slide overflowed the footer guard at 7.05"`
 
 A text box rendered taller than the 7.05" cap. Causes:

@@ -95,6 +95,16 @@ Due fabbricazioni colte così in produzione: volume AAAI errato
 (`v39i23.34521` invece del reale `v39i22.34537`) e percorso con slug d'autore
 inventato (`view/fang2026` invece di `v40i5.37389`).
 
+**L'esportazione lo verifica in fase di esecuzione.** Prima di scrivere
+qualsiasi cosa, la CLI, lo strumento MCP `export` e la scheda Deck della
+GUI cercano il DOI di ogni articolo su doi.org e richiedono ogni URL una
+volta. Un DOI non registrato, un URL che risponde 404 o un host
+irraggiungibile fermano l'esportazione e indicano l'articolo e
+l'identificatore. Il controllo dimostra che un identificatore esiste,
+non che appartiene a questo articolo, quindi la regola di copiare
+dall'xlsx e l'audit qui sopra restano necessari. Offline, passa
+`--no-verify-identifiers` (CLI) o `verify_identifiers=false` (MCP).
+
 ### Obbligatorio: rimuovi i download non pertinenti prima della consegna
 
 La corrispondenza della ricerca è basata su parole chiave, quindi articoli
@@ -252,6 +262,16 @@ articolo nella tupla `PaperCollection`.
   arXiv → CORE.ac.uk (quando le chiavi sono impostate). Guadagno tipico su query
   a forte densità IEEE / ACM / Springer / Elsevier: da 40 a 70 punti
   percentuali.
+- **Controllo prima dell'esportazione (verifica di DOI / URL)**: prima
+  di scrivere qualsiasi file, ogni DOI viene cercato su doi.org e ogni
+  URL viene richiesto una volta. Un identificatore errato o
+  irraggiungibile ferma l'esportazione con l'elenco degli articoli e
+  degli identificatori falliti. Le pagine degli editori che richiedono
+  un browser reale non vengono richieste (le copre il controllo del
+  DOI), e un server che rifiuta l'accesso automatizzato viene segnalato
+  come non verificabile invece di far fallire l'esecuzione. Attivo per
+  impostazione predefinita, `--no-verify-identifiers` lo disattiva per
+  il lavoro offline.
 - **Sicuro per default**: trasporto HTTP solo-HTTPS, rate limit per sorgente
   (token bucket), `defusedxml` per ogni payload XML, percorsi di esportazione
   sicuri contro path-traversal, niente `eval` / `exec` / `pickle` su input
@@ -333,6 +353,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Salta il prompt di paywall e prosegue. |
 | `--max-slides` | Tetto di slide per articolo (default 25; passa 0 per illimitato). |
 | `--dark-mode` | Renderizza il pptx con sfondo scuro + testo quasi bianco. Il default è il deck chiaro con banda navy. |
+| `--no-verify-identifiers` | Esporta senza verificare i DOI e gli URL degli articoli. Per impostazione predefinita, un DOI / URL errato o irraggiungibile ferma l'esecuzione prima di scrivere qualsiasi cosa. Per l'uso offline. |
 | `--quiet` | Sopprime la stampa per articolo. |
 
 ### Variabili d'ambiente
@@ -401,7 +422,7 @@ Strumenti:
 | `fetch_paper` | Identificatore arXiv / DOI / PMID / IEEE → articolo singolo. |
 | `fetch_pdf_text` | Scarica un PDF, restituisce il testo del corpo estratto. **Il percorso MCP verso «ho letto l'articolo».** |
 | `download_pdfs` | Scarica in lotto i PDF di una lista di articoli in `{out_dir}/pdfs/`. Restituisce risultati per articolo indicizzati per chiave BibTeX. |
-| `export` | Lista di articoli + formati → scrive `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accetta un campo `summary` per articolo per lo schema rich stile tesi, `max_slides_per_paper` (default 25) e `dark_mode` (default `false` — il default del progetto è il deck chiaro con banda navy, passa `true` per il post-pass scuro OLED / a bassa luminosità). |
+| `export` | Lista di articoli + formati → scrive `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accetta un campo `summary` per articolo per lo schema rich stile tesi, `max_slides_per_paper` (default 25) e `dark_mode` (default `false` — il default del progetto è il deck chiaro con banda navy, passa `true` per il post-pass scuro OLED / a bassa luminosità). Verifica ogni DOI / URL prima di scrivere (`verify_identifiers`, predefinito `true`): un identificatore errato o irraggiungibile fa fallire la chiamata e indica l'articolo, e la risposta contiene un rapporto `verification`. |
 | `pptx_inspect` | Legge la struttura di slide / shape di un deck esistente. |
 | `pptx_review` | Verifica un deck in una sola chiamata — overflow + contratti colore + completezza delle sezioni `paper_rule`. Rileva automaticamente la lingua del deck; anche la CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Sostituisce `title` / `body` / `meta` (per nome di shape) o shape arbitrari per indice. |

@@ -71,6 +71,8 @@ xlsx 写在 ``exports/<run>/<slug>-<timestamp>.xlsx``\ ,第 7 列是 DOI、
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
 
+**导出时会在运行期检查这一点。** 写入任何文件之前,CLI、MCP 的 ``export`` 工具与 GUI 的 Deck 标签页会到 doi.org 查询每篇论文的 DOI,并对每个网址发送一次请求。DOI 未注册、网址返回 404,或主机无法连接时,导出会停止并指出是哪一篇论文的哪一个标识符。这项检查只能证明标识符存在,无法证明它属于这篇论文,所以上面“逐字从 xlsx 抄”的规则与审计仍然要做。离线工作时,请加上 ``--no-verify-identifiers`` (CLI) 或 ``verify_identifiers=false`` (MCP)。
+
 禁忌
 ^^^^
 

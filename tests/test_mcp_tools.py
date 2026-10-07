@@ -524,3 +524,59 @@ def test_as_tool_error_passes_results_and_other_errors_through():
     assert asyncio.run(_as_tool_error(ok)(3)) == {"value": 3}
     with pytest.raises(KeyError):
         _as_tool_error(broken)()
+
+
+# ---------------------------------------------------------------------------
+# export: identifier preflight
+# ---------------------------------------------------------------------------
+
+
+def test_export_reports_the_verification_it_ran(server, sample_papers, tmp_path):
+    papers = [p.to_dict() for p in sample_papers]
+    payload = asyncio.run(
+        _call(
+            server, "export", papers=papers, keywords="attention",
+            formats=["bib"], out_dir=str(tmp_path), filename_stem="verified",
+        )
+    )
+    verification = payload["verification"]
+    assert verification["enabled"] is True
+    assert verification["ok"] is True
+    assert verification["counts"]["ok"] == 3  # two URLs + one DOI
+    assert {check["kind"] for check in verification["checks"]} == {"doi", "url"}
+    assert verification["checks"][0]["paper_key"] == sample_papers[0].bibtex_key()
+
+
+def test_export_fails_on_a_bad_identifier_and_writes_nothing(
+    server, sample_papers, tmp_path
+):
+    """The error text must name the paper and the identifier, since an MCP
+    client only ever sees the message."""
+    papers = [p.to_dict() for p in sample_papers]
+    papers[1]["doi"] = "10.x/composed-by-hand"
+    with pytest.raises(ToolError) as raised:
+        asyncio.run(
+            _call(
+                server, "export", papers=papers, keywords="attention",
+                formats=["bib", "json"], out_dir=str(tmp_path),
+            )
+        )
+    message = str(raised.value)
+    assert "identifier verification failed" in message
+    assert "10.x/composed-by-hand is invalid" in message
+    assert sample_papers[1].bibtex_key() in message
+    assert "verify_identifiers=False" in message
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_export_can_skip_verification(server, sample_papers, tmp_path):
+    papers = [p.to_dict() for p in sample_papers]
+    papers[1]["doi"] = "10.x/composed-by-hand"
+    payload = asyncio.run(
+        _call(
+            server, "export", papers=papers, keywords="attention",
+            formats=["bib"], out_dir=str(tmp_path), verify_identifiers=False,
+        )
+    )
+    assert payload["verification"] == {"enabled": False}
+    assert Path(payload["written"]["bib"]).exists()

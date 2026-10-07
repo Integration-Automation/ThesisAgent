@@ -142,9 +142,46 @@ came back.
                   │
                   ▼
           ┌───────────────┐
+          │ preflight     │  every DOI at doi.org, every URL once;
+          └───────────────┘  a wrong / unreachable one stops the export
+                  │
+                  ▼
+          ┌───────────────┐
           │ Exporter      │  pptx, xlsx, bibtex, md, json, ris, csv, csl
           └───────────────┘
 ```
+
+### Export preflight
+
+`export_collection` runs `core/export_validation.py` before any
+exporter. Each paper's DOI is checked for syntax and then looked up at
+the doi.org handle API, and each URL gets one request that reads only
+the response headers. A wrong or unreachable identifier raises
+`IdentifierVerificationError` (an `ExportError`) carrying the full
+report, and no file is written. `ExportOptions(verify_identifiers=False)`
+skips the check and logs a warning.
+
+Three choices keep a default-on gate from blocking honest exports:
+
+- **Publisher pages are not requested.** A URL on a host that needs a
+  real browser (the list in `fetchers/webrunner_pdf.py`) would answer a
+  plain client with 403. The DOI lookup stands in for it, and the DOI
+  registry is not behind a bot wall.
+- **"Could not check" does not block.** HTTP 401 / 403 / 429, a
+  `file://` URL and a browser-only host end as `skipped`. Only a
+  definite failure (`invalid`) or no answer at all (`unreachable`,
+  `timeout`, each after one retry) stops the export.
+- **Verdicts are cached.** The CLI checks once, right after the search,
+  and hands the same `MemoryVerificationCache` to every later
+  `export_collection` call, so the per-paper deck exports ask nothing
+  twice.
+
+The preflight opens its own client through `fetchers.http.scoped_client`
+instead of the shared registry. `export_collection` is synchronous and
+may be called from inside a running event loop (the CLI's `_run`), in
+which case `utils.async_helpers.run_blocking` runs the probes on a
+private loop in a worker thread. A registry client would stay bound to
+that loop after it closed.
 
 ### OA PDF resolution
 
@@ -295,12 +332,19 @@ async def main():
     collection = await run_search(q)
     written = export_collection(
         collection,
-        ExportOptions(formats=("pptx", "bibtex"), out_dir="./exports"),
+        ExportOptions(formats=("pptx", "bib"), out_dir="./exports"),
     )
     print(written)
 
 asyncio.run(main())
 ```
+
+`export_collection` verifies every paper's DOI and URL first and raises
+`IdentifierVerificationError` when one is wrong or unreachable (see
+"Export preflight" above). Catch it to read the structured report from
+its `report` attribute, or pass
+`ExportOptions(..., verify_identifiers=False)` to export without the
+check.
 
 ## Infrastructure
 

@@ -60,6 +60,8 @@ for p in ALL_PAPERS:
 
 この方法で本番で検出された 2 件の偽造: AAAI 巻号の誤り(`v39i23.34521` 対 実際の `v39i22.34537`)と、捏造された著者 slug パス(`v40i5.37389` の代わりに `view/fang2026`)。
 
+**エクスポート時に実行時チェックが入ります。** ファイルを書き出す前に、CLI、MCP の `export` ツール、GUI の Deck タブが各論文の DOI を doi.org で照会し、各 URL に 1 回ずつリクエストを送ります。未登録の DOI、404 を返す URL、到達できないホストがあるとエクスポートは中止され、該当する論文と識別子が示されます。このチェックが示すのは識別子が存在することだけで、その論文のものであることまでは保証しません。したがって上記の「xlsx から逐語コピー」の規則と監査は引き続き必要です。オフラインで作業する場合は `--no-verify-identifiers` (CLI) または `verify_identifiers=false` (MCP) を指定してください。
+
 ### 必須: 納品前に無関係なダウンロードを整理
 
 検索のキーワードマッチはキーワードベースなので、話題外の論文が紛れ込みます: 「Claude code」クエリはどちらにも「code」を含むため Viterbi デコーダ論文を返し、「LLM code review」は物体検出のレビュー論文にマッチしました。要旨を読んでユーザーの実際の意図に対して話題外だと分類したら、実行ディレクトリを整理します:
@@ -114,6 +116,7 @@ for key in irrelevant_keys:
 - **可視 Chrome の出版社フロー**: Scholar の SERP、IEEE の `/rest/search`、およびすべての paywalled-PDF ダウンロード(ieeexplore / dl.acm / link.springer / sciencedirect / wiley / oup / nature / science / …)は、`selenium` 経由で本物の可視 Chrome セッション内で実行されます。ユーザーはライブウィンドウで captcha を解いたり SSO を完了したりを一度だけ行い、`THESISAGENTS_CHROME_PROFILE_DIR` が実行間で cookie を永続化します。
 - **LLM-as-agent フロー**: MCP ツールが検索、PDF ダウンロード、テキスト抽出を提供します。`scripts/regen_*.py` には、論文ごとにリッチな `PaperSummary` を手書きする再現可能な例が含まれています。
 - **OA PDF リゾルバ**: 重複排除後、`pdf_url` の無い各論文は Unpaywall → S2 `openAccessPdf` → arXiv タイトル検索 → CORE.ac.uk(キー設定時)を通過します。IEEE / ACM / Springer / Elsevier 中心のクエリでの典型的な向上: 40〜70 パーセントポイント。
+- **エクスポート前チェック (DOI / URL 検証)**: ファイルを書き出す前に、すべての DOI を doi.org で照会し、すべての URL に 1 回ずつリクエストを送ります。誤った識別子や到達できない識別子があるとエクスポートは中止され、失敗した論文と識別子の一覧が表示されます。実ブラウザが必要な出版社ページにはリクエストを送らず (DOI チェックが代わりになります)、自動アクセスを拒否するサーバーは実行を失敗させずに「確認不可」として報告されます。既定で有効で、オフライン作業時は `--no-verify-identifiers` で無効にできます。
 - **デフォルトで安全**: HTTPS-only な HTTP トランスポート、ソースごとのレート制限(トークンバケット)、任意の XML ペイロードには `defusedxml`、パストラバーサル対策済みのエクスポートパス、ユーザー入力に対する `eval` / `exec` / `pickle` の不使用。
 - **zh-tw / zh-cn 語彙ガード**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` にある約 244 個の正規表現パターンが、繁体字で書かれた簡体字由来の借用語(例: `內存` → `記憶體`、`魯棒性` → `穩健性`、`軟件` → `軟體`、`緩存` → `快取`)を捕捉します。同じガードが zh-cn ロケール文字列に対して逆方向にも走ります。完全なルールと正規表現カタログは `.claude/agents/rules/language-vocabulary-check.md` にあります。
 
@@ -184,6 +187,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | paywall プロンプトをスキップして続行。 |
 | `--max-slides` | 論文ごとのスライド上限(デフォルト 25、0 で無制限)。 |
 | `--dark-mode` | pptx をダーク背景 + ほぼ白のテキストでレンダリング。デフォルトはライトの navy バンドデッキ。 |
+| `--no-verify-identifiers` | 論文の DOI と URL を確認せずにエクスポートします。既定では、誤った DOI / URL や到達できない DOI / URL があると、何も書き出す前に実行が止まります。オフライン用。 |
 | `--quiet` | 論文ごとの出力を抑制。 |
 
 ### 環境変数
@@ -245,7 +249,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別子 → 単一論文。 |
 | `fetch_pdf_text` | 単一 PDF をダウンロードし、抽出した本文を返す。**MCP 経由で「論文を読んだ」に至る入口。** |
 | `download_pdfs` | 論文リストの PDF を `{out_dir}/pdfs/` に一括ダウンロード。BibTeX キーをキーとする論文ごとの結果を返す。 |
-| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出す。リッチな論文発表級スキーマ用の論文ごとの `summary` フィールド、`max_slides_per_paper`(デフォルト 25)、`dark_mode`(デフォルト `false` — プロジェクトのデフォルトはライトの navy バンドデッキ、ダークの OLED / 暗所向け post-pass には `true` を渡す)を受理。 |
+| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出す。リッチな論文発表級スキーマ用の論文ごとの `summary` フィールド、`max_slides_per_paper`(デフォルト 25)、`dark_mode`(デフォルト `false` — プロジェクトのデフォルトはライトの navy バンドデッキ、ダークの OLED / 暗所向け post-pass には `true` を渡す)を受理。 書き出す前にすべての DOI / URL を検証します (`verify_identifiers`、既定 `true`)。誤った識別子や到達できない識別子があると呼び出しは失敗して該当論文を示し、レスポンスには `verification` レポートが含まれます。 |
 | `pptx_inspect` | 既存デッキのスライド / シェイプ構造を読む。 |
 | `pptx_review` | 1 回の呼び出しでデッキを監査 — overflow + 色コントラクト + `paper_rule` セクション網羅性。デッキ言語を自動検出。CLI 版は `python -m thesisagents review <deck.pptx>` でも。 |
 | `pptx_update_slide` | `title` / `body` / `meta`(シェイプ名経由)または任意のシェイプ(インデックス経由)を置換。 |

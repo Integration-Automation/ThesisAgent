@@ -30,6 +30,13 @@ from thesisagents.core.constants import (
     MAX_RESULTS_PER_SOURCE,
 )
 from thesisagents.core.exceptions import ConfigError, ThesisAgentsError
+from thesisagents.core.export_validation import (
+    IdentifierVerificationError,
+    MemoryVerificationCache,
+    VerificationCache,
+    VerificationStatus,
+    verify_collection,
+)
 from thesisagents.core.identifiers import parse_identifier
 from thesisagents.core.models import ExportOptions, Paper, PaperCollection, Query
 from thesisagents.core.pdf_download import download_pdfs
@@ -324,6 +331,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.set_defaults(resolve_oa=True)
     parser.add_argument(
+        "--no-verify-identifiers",
+        dest="verify_identifiers",
+        action="store_false",
+        help=(
+            "Export without checking the papers' DOIs and URLs. By default "
+            "every DOI is looked up at doi.org and every URL is requested "
+            "once before anything is written, and a DOI or URL that is wrong "
+            "or unreachable stops the run with a list of the failed "
+            "identifiers. Use this flag when working offline."
+        ),
+    )
+    parser.set_defaults(verify_identifiers=True)
+    parser.add_argument(
         "--paywall-threshold",
         type=float,
         default=DEFAULT_PAYWALL_THRESHOLD,
@@ -451,7 +471,12 @@ async def _run(args: argparse.Namespace) -> int:
         language=args.lang,
         max_slides_per_paper=args.max_slides,
         dark_mode=args.dark_mode,
+        verify_identifiers=args.verify_identifiers,
     )
+    # One cache for the whole run: the identifiers are checked once, right
+    # after the search, and every export_collection call below reuses the
+    # verdicts instead of asking doi.org again for each per-paper deck.
+    verification_cache = MemoryVerificationCache()
     needs_pptx = EXPORT_PPTX in formats
     # ``--pdf`` already supplies the PDF — the paywall gate is irrelevant
     # and download_pdfs would try to fetch a file:// URL through the
@@ -460,6 +485,7 @@ async def _run(args: argparse.Namespace) -> int:
     pdf_results = []
     try:
         collection = await _collect(args)
+        await _verify_identifiers_early(collection, args, verification_cache)
         collection = await _maybe_enrich(collection, args)
         if gate_pptx and collection.papers and not _confirm_paywall(
             collection, threshold=args.paywall_threshold, auto_yes=args.yes
@@ -478,10 +504,16 @@ async def _run(args: argparse.Namespace) -> int:
     # was copied into ``{out}/pdfs/`` by ``_build_from_local_pdf`` already.
     if needs_pptx and args.pdf and len(collection.papers) > 1:
         pdf_results = _synthetic_pdf_results(collection, args.out)
-        return _emit_per_paper(collection, options, pdf_results, args)
+        return _emit_per_paper(
+            collection, options, pdf_results, args, verification_cache
+        )
     if gate_pptx:
-        return _emit_per_paper(collection, options, pdf_results, args)
-    written = export_collection(collection, options)
+        return _emit_per_paper(
+            collection, options, pdf_results, args, verification_cache
+        )
+    written = export_collection(
+        collection, options, verification_cache=verification_cache
+    )
     _print_results(collection, args.quiet)
     print("\nWrote:")
     for fmt, path in written.items():
@@ -489,6 +521,46 @@ async def _run(args: argparse.Namespace) -> int:
     if args.download_pdf:
         _print_pdf_summary(pdf_results, args.quiet)
     return 0
+
+
+async def _verify_identifiers_early(
+    collection: PaperCollection,
+    args: argparse.Namespace,
+    cache: VerificationCache,
+) -> None:
+    """Check the collection's DOIs and URLs as soon as the search returns.
+
+    The boundary this guards: ``export_collection`` runs the same check, but
+    only at the very end of a run. Failing there would come after the PDF
+    downloads and the enrichment, minutes of work the user then has to repeat.
+    Checking here fails first, and the verdicts land in ``cache`` so the later
+    export calls ask nothing twice.
+
+    Raises ``IdentifierVerificationError`` (exit code 2 through ``main``) when
+    an identifier is wrong or unreachable. With ``--no-verify-identifiers``
+    nothing is checked and a notice goes to stderr even under ``--quiet``,
+    because an unverified bibliography must be a visible choice.
+
+    Example output: ``Identifiers: 41 verified, 6 not checkable, 0 failed.``
+    """
+    if not args.verify_identifiers:
+        print(
+            "Identifier verification is OFF (--no-verify-identifiers): "
+            "DOIs and URLs are exported unchecked.",
+            file=sys.stderr,
+        )
+        return
+    if not collection.papers:
+        return
+    report = await verify_collection(collection, cache=cache)
+    if not report.ok:
+        raise IdentifierVerificationError(report)
+    if not args.quiet:
+        counts = report.counts()
+        print(
+            f"Identifiers: {counts[VerificationStatus.OK.value]} verified, "
+            f"{counts[VerificationStatus.SKIPPED.value]} not checkable, 0 failed."
+        )
 
 
 async def _run_download_only(args: argparse.Namespace) -> int:
@@ -592,6 +664,7 @@ def _emit_per_paper(
     options: ExportOptions,
     pdf_results: list,
     args: argparse.Namespace,
+    verification_cache: VerificationCache | None = None,
 ) -> int:
     """Generate one PPT per paper that has a successfully downloaded PDF.
 
@@ -620,7 +693,10 @@ def _emit_per_paper(
     written_aggregate: dict[str, Path] = {}
     if aggregate_formats:
         agg_options = dataclasses.replace(options, formats=aggregate_formats)
-        written_aggregate = export_collection(accessible_collection, agg_options)
+        written_aggregate = export_collection(
+            accessible_collection, agg_options,
+            verification_cache=verification_cache,
+        )
 
     per_paper_written: list[tuple[Paper, Path]] = []
     for paper in accessible_papers:
@@ -630,7 +706,9 @@ def _emit_per_paper(
             formats=(EXPORT_PPTX,),
             filename_stem=paper.bibtex_key(),
         )
-        emitted = export_collection(single, per_options)
+        emitted = export_collection(
+            single, per_options, verification_cache=verification_cache
+        )
         per_paper_written.append((paper, emitted[EXPORT_PPTX]))
 
     _print_results(accessible_collection, args.quiet)

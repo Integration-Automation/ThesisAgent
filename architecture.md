@@ -7,9 +7,8 @@
 > an MCP server, a PySide6 GUI or the Python library. The detailed design (pipeline diagram, dedup
 > and ranking rules, OA-PDF resolution, rendering tiers, design rationale) is in
 > [`docs/architecture.md`](docs/architecture.md); this file does not repeat it.
-> Last verified: 2026-09-22 against `ba74127` on `dev` plus the work that was uncommitted then (for
-> example `thesisagents/evaluation/`, `docs/search-quality.md`, `scripts/regen_chen2026_*.py`),
-> which has since been committed on `dev`.
+> Last verified: 2026-10-08 on `dev`, with the export identifier preflight
+> (`thesisagents/core/export_validation.py`).
 
 ## 1. Purpose
 
@@ -26,15 +25,15 @@
 | Path | Responsibility |
 |---|---|
 | `thesisagents/cli.py`, `__main__.py` | argparse CLI; bare invocation or `gui` launches the GUI, `review` audits a deck |
-| `thesisagents/core/` | Frozen models (`models.py`: `Query`, `Paper`, `PaperSummary`, `PaperCollection`, `ExportOptions`), `pipeline.run_search`, `dedup.py`, `ranking.py`, `top_venues.py`, `oa_resolver.py`, `pdf_download.py`, `constants.py` (source and export names) |
-| `thesisagents/fetchers/` | `Fetcher` base and `load_fetcher()`, HTTPS-only per-source `httpx` client (`http.get_client`), token-bucket `rate_limit.py`, visible-Chrome helpers (`webrunner_browser.py`, `webrunner_pdf.py`) |
+| `thesisagents/core/` | Frozen models (`models.py`: `Query`, `Paper`, `PaperSummary`, `PaperCollection`, `ExportOptions`), `pipeline.run_search`, `dedup.py`, `ranking.py`, `top_venues.py`, `oa_resolver.py`, `pdf_download.py`, `export_validation.py` (the DOI / URL preflight every export runs first), `constants.py` (source and export names) |
+| `thesisagents/fetchers/` | `Fetcher` base and `load_fetcher()`, HTTPS-only per-source `httpx` client (`http.get_client`, plus `http.scoped_client` for code that runs on a private event loop), token-bucket `rate_limit.py`, visible-Chrome helpers (`webrunner_browser.py`, `webrunner_pdf.py`) |
 | `thesisagents/sources/<name>/` | One plugin per source: `__init__.py` exposes `fetcher_class`, `fetcher.py`, `parser.py`; browser-backed sources (`ieee`, `scholar`) add `webrunner_backend.py` |
 | `thesisagents/exporters/` | `Exporter` strategies (`pptx`, `xlsx`, `bibtex`, `markdown`, `json`, `ris`, `csv`, `csl`) and the `_REGISTRY` in `__init__.py`; `pptx_edit.py`, `review.py` / `audit.py` / `overflow.py` (deck audits), `i18n.py` (deck strings) |
 | `thesisagents/intelligence/` | PDF text / asset / metadata extraction and the API summariser (`summarise.py`), `[intelligence]` extra |
 | `thesisagents/mcp/` | FastMCP server (`server.build_server()`), `[mcp]` extra (held below mcp 2.0, which renamed FastMCP) |
 | `thesisagents/gui/` | PySide6 desktop app (`app.py`, `main_window.py`, `pages/`, `workers.py` on `QThreadPool`, `i18n.py`), `[gui]` extra |
 | `thesisagents/evaluation/` | Offline search-quality benchmark (`search_quality.py`; see `docs/search-quality.md`) |
-| `thesisagents/utils/` | Logging and path safety |
+| `thesisagents/utils/` | Logging, path safety, and `async_helpers.run_blocking` (finish a coroutine from synchronous code, inside or outside a running loop) |
 | `tests/` | pytest suite with recorded fixtures under `tests/fixtures/<source>/`; no live HTTP |
 | `scripts/` | Reproducible `regen_*.py` deck builds (hand-authored summaries) and one-off deck maintenance scripts |
 | `docs/`, `readmes/` | Sphinx docs with per-language index stubs; translated READMEs |
@@ -51,7 +50,8 @@ An exporter never imports a fetcher; it only consumes a `PaperCollection`.
   overrides). Source and output control: `--source/-s`, `--exclude-source/-x`, `--max/-n`,
   `--year-from`, `--year-to`, `--min-citations`, `--top-tier-only`, `--export/-e`, `--out/-o`,
   `--filename-stem`, `--lang/-l`, `--enrich`, `--llm-model`, `--lightweight`, `--max-slides`,
-  `--dark-mode`, `--no-pdf`, `--no-oa-resolve`, `--paywall-threshold`, `--yes/-y`, `--quiet`.
+  `--dark-mode`, `--no-pdf`, `--no-oa-resolve`, `--no-verify-identifiers`, `--paywall-threshold`,
+  `--yes/-y`, `--quiet`.
   Discovery: `--list-sources`, `--list-exports`. Subcommands: `review <deck.pptx>`
   (`exporters/review.py`), `gui`. Reference: `docs/cli.md`.
 - **MCP**: `thesisagents-mcp` (`thesisagents/mcp/__main__.py`). Tools cover discovery (`list_sources`,
@@ -60,7 +60,9 @@ An exporter never imports a fetcher; it only consumes a `PaperCollection`.
   `pptx_reorder_slides`, `pptx_add_slide`. Stateless across calls. Reference: `docs/mcp.md`.
 - **GUI**: `thesisagents-gui` (`thesisagents.gui.app:main`), or `thesisagents` with no arguments.
 - **Library**: `thesisagents.core.pipeline.run_search(query)` and
-  `thesisagents.exporters.export_collection(collection, ExportOptions(...))`.
+  `thesisagents.exporters.export_collection(collection, ExportOptions(...))`. The export verifies
+  every DOI / URL first and raises `IdentifierVerificationError` on a wrong or unreachable one,
+  unless `ExportOptions(verify_identifiers=False)`.
 - **Configuration** (env vars): `ANTHROPIC_API_KEY`, `THESISAGENTS_CONTACT_EMAIL`,
   `THESISAGENTS_SPRINGER_API_KEY`, `THESISAGENTS_CORE_API_KEY`, `THESISAGENTS_IEEE_API_KEY`,
   `THESISAGENTS_DISABLE_IEEE_SCRAPING`, `THESISAGENTS_DISABLE_SCHOLAR_SCRAPING`,
@@ -87,10 +89,14 @@ Query (CLI flags / MCP search / GUI / library)
                                                             ieee / scholar via visible Chrome)
   → parser → list[Paper] → core.dedup → core.ranking → optional top-venue filter
   → core.oa_resolver (fills pdf_url) → optional PDF download → optional enrichment → PaperCollection
-  → exporters.export_collection → _REGISTRY[format] → files under --out
+  → exporters.export_collection
+      → core.export_validation (identifier preflight: DOI at doi.org, URL once; a failure stops here)
+      → _REGISTRY[format] → files under --out
 ```
 
-A failing source returns nothing and never breaks the others. When the paywalled share of a result
+A failing source returns nothing and never breaks the others. The CLI runs the identifier preflight
+right after the search, before PDF download and enrichment, and reuses its verdicts for every
+export call of the run. When the paywalled share of a result
 set exceeds `--paywall-threshold`, the CLI asks before building per-paper decks (`--yes` skips).
 
 **Enrichment**
@@ -157,7 +163,8 @@ Summarised from `CLAUDE.md` and `AGENTS.md`; each bullet names the section with 
 - When a model drives the session the rich deck is the deliverable; never invent numbers, URLs, DOIs
   or arXiv IDs (copy them from the search's `.xlsx`); prune off-topic downloads (`AGENTS.md`
   "LLM-as-agent default path").
-- No live network in tests; all HTTP through `get_client(source)` (HTTPS-only); slide geometry guards
+- No live network in tests (`tests/conftest.py` refuses it); all HTTP through `get_client(source)` or
+  `scoped_client(source)` (both HTTPS-only); slide geometry guards
   (`AGENTS.md` "Other rules you will trip on").
 - Core versus source-plugin split is about dependency surface and failure isolation
   (`docs/architecture.md` "Core vs source plugins").

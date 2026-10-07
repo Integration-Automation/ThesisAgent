@@ -88,6 +88,8 @@ for p in ALL_PAPERS:
 (`v39i23.34521` vs 真实 `v39i22.34537`),以及发明出来的作者 slug 路径
 (`view/fang2026` 而非 `v40i5.37389`)。
 
+**导出时会在运行期检查这一点。** 写入任何文件之前,CLI、MCP 的 `export` 工具与 GUI 的 Deck 标签页会到 doi.org 查询每篇论文的 DOI,并对每个网址发送一次请求。DOI 未注册、网址返回 404,或主机无法连接时,导出会停止并指出是哪一篇论文的哪一个标识符。这项检查只能证明标识符存在,无法证明它属于这篇论文,所以上面“逐字从 xlsx 抄”的规则与审计仍然要做。离线工作时,请加上 `--no-verify-identifiers` (CLI) 或 `verify_identifiers=false` (MCP)。
+
 ### 必办:发货前先剔除不相关的下载
 
 搜索是以关键字匹配的,所以离题论文一定会混进来:一次「Claude code」
@@ -220,6 +222,7 @@ for key in irrelevant_keys:
   Unpaywall → S2 `openAccessPdf` → arXiv 标题搜索 → CORE.ac.uk(在有设
   密钥时)。在 IEEE / ACM / Springer / Elsevier 为主的查询上典型的
   提升:40-70 个百分点。
+- **导出前检查 (DOI / URL 验证)**: 写入任何文件之前,会到 doi.org 查询每个 DOI,并对每个网址发送一次请求。标识符错误或无法连接时,导出会停止并列出失败的论文与标识符。需要真实浏览器才能打开的出版商页面不会被请求 (由 DOI 检查覆盖),拒绝自动化访问的服务器会报告为“无法检查”而不会让整次运行失败。默认开启,离线时用 `--no-verify-identifiers` 关闭。
 - **默认就安全**:仅 HTTPS 的 HTTP 传输、每来源速率限制(token bucket)、
   对任何 XML payload 用 `defusedxml`、防路径穿越的导出路径、不对
   用户输入用 `eval` / `exec` / `pickle`。
@@ -298,6 +301,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | 跳过付费墙提示直接进行。 |
 | `--max-slides` | 每篇论文的幻灯片上限(默认 25;传 0 表示无上限)。 |
 | `--dark-mode` | 以深色背景 + 近白文本渲染 pptx。默认是浅色深蓝带幻灯片。 |
+| `--no-verify-identifiers` | 导出时不检查论文的 DOI 与网址。默认情况下,DOI / 网址错误或无法连接会在写入任何文件之前停止运行。供离线使用。 |
 | `--quiet` | 抑制每篇论文的打印输出。 |
 
 ### 环境变量
@@ -365,7 +369,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 标识符 → 单篇论文。 |
 | `fetch_pdf_text` | 下载一份 PDF,返回提取出的正文文本。**这是「我读了论文」的 MCP 路径。** |
 | `download_pdfs` | 批量把一份论文清单的 PDF 下载到 `{out_dir}/pdfs/`。返回以 BibTeX 键为索引的每篇论文结果。 |
-| `export` | 论文清单 + 格式 → 写出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇论文可接受一个 `summary` 字段,用于丰富论文答辩级 schema、`max_slides_per_paper`(默认 25)与 `dark_mode`(默认 `false` —— 项目默认是浅色深蓝带幻灯片,传 `true` 走深色 OLED / 低光后处理)。 |
+| `export` | 论文清单 + 格式 → 写出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇论文可接受一个 `summary` 字段,用于丰富论文答辩级 schema、`max_slides_per_paper`(默认 25)与 `dark_mode`(默认 `false` —— 项目默认是浅色深蓝带幻灯片,传 `true` 走深色 OLED / 低光后处理)。 写入前会验证每个 DOI / 网址 (`verify_identifiers`,默认 `true`): 标识符错误或无法连接时调用会失败并指出是哪篇论文,响应中附有 `verification` 报告。 |
 | `pptx_inspect` | 读取既有幻灯片的 slide / shape 结构。 |
 | `pptx_review` | 一次调用审核一份幻灯片 —— 溢出 + 颜色契约 + `paper_rule` 章节完整度。自动检测幻灯片语言;也是 CLI `python -m thesisagents review <deck.pptx>`。 |
 | `pptx_update_slide` | 替换 `title` / `body` / `meta`(按 shape 名称)或按索引替换任意 shape。 |
