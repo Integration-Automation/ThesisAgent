@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 ```
 
-सभी सत्रह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / आदि सहित) [`docs/mcp.md`](../docs/mcp.md) में प्रलेखित हैं।
+सभी अठारह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / आदि सहित) [`docs/mcp.md`](../docs/mcp.md) में प्रलेखित हैं।
 
 ### अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 
@@ -125,7 +125,7 @@ output directory में `diagnostics.json` में भी लिखता �
   - `.csv` — spreadsheets / त्वरित grep छँटाई के लिए flat एक-पंक्ति-प्रति-शोध-पत्र तालिका (RFC-4180 quoting, इसलिए शीर्षकों में अल्पविराम कभी कॉलम नहीं खिसकाते)।
   - `.csl.json` — Pandoc / citeproc के लिए CSL-JSON; किसी भी CSL शैली (APA, IEEE, Nature, …) में bibliography रेंडर करें। `.csl.json` एक्सटेंशन इसे सादे `.json` dump से अलग रखता है।
 - **PPT संपादन टूलकिट**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) एक्सपोर्टर द्वारा उत्पन्न किसी भी डेक पर काम करता है, साथ ही समकक्ष `pptx_*` MCP उपकरण ताकि एक LLM एजेंट उत्पन्न डेक पर पुनरावृत्ति कर सके।
-- **MCP सर्वर**: 17 उपकरण — `list_sources` + `list_exports` (खोज/सूची), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, और छह `pptx_*` डेक उपकरण (`inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`)। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
+- **MCP सर्वर**: 18 उपकरण — `list_sources` + `list_exports` (खोज/सूची), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `pptx_validate_template`, `export`, और छह `pptx_*` डेक उपकरण (`inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`)। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
 - **दो समृद्धि पथ** सार से आगे एक वास्तविक थीसिस-शैली डेक तक जाने के लिए:
   - **LLM-as-agent (कोई API key नहीं)** — कॉलिंग LLM `fetch_pdf_text` के माध्यम से PDF मुख्य पाठ पढ़ता है, संदर्भ में एक संरचित सारांश लिखता है, और उसे `export` को पास करता है।
   - **Python pipeline (`--enrich`)** — CLI स्वयं Anthropic का API कॉल करती है; डिफ़ॉल्ट मॉडल `claude-opus-4-7`।
@@ -176,6 +176,17 @@ output directory में `diagnostics.json` में भी लिखता �
   में भेजता है। किसी पिछले run में verify हो चुका DOI या URL 30 दिनों तक
   दोबारा नहीं जाँचा जाता। MCP tools `library_add`, `library_search` और
   `library_stats` के रूप में भी उपलब्ध है।
+- **Deck templates**: `--pptx-template thesis.pptx` आपके अपने PowerPoint
+  template पर slides बनाता है, इसलिए built-in navy-band रूप की जगह
+  template का background, logo और layouts ही deck को आकार देते हैं। हर
+  तरह की slide (cover, section, content, table, references, Q&A) वही
+  layout इस्तेमाल करती है जो आप उसके लिए तय करते हैं, और एक वैकल्पिक
+  TOML / JSON config (`--pptx-template-config`) fonts, palette के रंग और
+  header band तथा cover panel बनाए जाएँ या नहीं, यह तय करता है। Search
+  शुरू होने से पहले template की जाँच होती है, और `thesisagents
+  validate-template thesis.pptx` बताता है कि हर तरह की slide कौन-सा
+  layout इस्तेमाल करेगी और क्या ठीक करना है। Template के बिना built-in
+  deck जस का तस रहता है।
 - **डिफ़ॉल्ट रूप से सुरक्षित**: HTTPS-only HTTP परिवहन, प्रति-स्रोत दर सीमा (token bucket), किसी भी XML payload के लिए `defusedxml`, path-traversal-सुरक्षित निर्यात पथ, उपयोगकर्ता इनपुट पर कोई `eval` / `exec` / `pickle` नहीं।
 - **zh-tw / zh-cn शब्दावली रक्षक**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` में ~244 regex पैटर्न पारंपरिक हांज़ी में रेंडर किए गए सरलीकृत-चीनी उधार शब्द पकड़ते हैं (जैसे `內存` → `記憶體`, `魯棒性` → `穩健性`, `軟件` → `軟體`, `緩存` → `快取`)। वही रक्षक zh-cn locale स्ट्रिंग्स के लिए उलटा चलता है। पूर्ण नियम + regex कैटलॉग `.claude/agents/rules/language-vocabulary-check.md` में हैं।
 
@@ -246,6 +257,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | paywall प्रॉम्प्ट छोड़ें और आगे बढ़ें। |
 | `--max-slides` | प्रति-शोध-पत्र स्लाइड सीमा (डिफ़ॉल्ट 25; असीमित के लिए 0 पास करें)। |
 | `--dark-mode` | pptx को गहरे पृष्ठभूमि + लगभग-सफ़ेद टेक्स्ट के साथ render करें। डिफ़ॉल्ट हल्का navy-band डेक है। |
+| `--pptx-template FILE` | Built-in navy-band deck की जगह PowerPoint template (.pptx / .potx) पर slides बनाता है। Search शुरू होने से पहले जाँचा जाता है: इसमें 16:9 slides और content के लिए एक layout होना चाहिए। `thesisagents validate-template FILE` दिखाता है कि export क्या इस्तेमाल करेगा। |
+| `--pptx-template-config FILE` | `--pptx-template` के लिए overrides वाली TOML / JSON file: हर तरह की slide का layout, fonts, palette के रंग, और header band तथा cover panel बनाए जाएँ या नहीं। |
 | `--no-verify-identifiers` | Papers के DOI और URL जाँचे बिना export करता है। Default रूप से ग़लत या पहुँच से बाहर DOI / URL कुछ भी लिखने से पहले run रोक देता है। Offline उपयोग के लिए। |
 | `--diagnostics` | `--query` search की ranking समझाता है: हर paper का score (relevance + recency + citations) और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश print करता है, और पूरा breakdown `--out` में `diagnostics.json` में लिखता है। कोई paper हटाया नहीं जाता। |
 | `--snowball` | Export से पहले परिणामों को citation links के सहारे फैलाता है: `references` (शीर्ष परिणाम जिन्हें cite करते हैं), `cited_by` (जो उन्हें cite करते हैं) या `both`। नए papers अंत में जोड़े जाते हैं और उसी download तथा export से गुज़रते हैं। Default रूप से बंद। |
@@ -319,7 +332,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE पहचानकर्ता → एकल शोध-पत्र। |
 | `fetch_pdf_text` | एक PDF डाउनलोड करें, निकाला गया मुख्य पाठ लौटाएँ। **"मैंने शोध-पत्र पढ़ा" तक का MCP पथ।** |
 | `download_pdfs` | एक शोध-पत्र सूची की PDFs को `{out_dir}/pdfs/` में बैच-डाउनलोड करें। BibTeX कुंजी द्वारा अनुक्रमित प्रति-शोध-पत्र परिणाम लौटाता है। |
-| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। rich थीसिस-शैली schema के लिए प्रति-शोध-पत्र `summary` फ़ील्ड, `max_slides_per_paper` (डिफ़ॉल्ट 25), और `dark_mode` (डिफ़ॉल्ट `false` — परियोजना डिफ़ॉल्ट हल्का navy-band डेक है, dark OLED / low-light post-pass के लिए `true` पास करें) स्वीकार करता है। लिखने से पहले हर DOI / URL verify करता है (`verify_identifiers`, default `true`): ग़लत या पहुँच से बाहर identifier call को विफल करता है और paper का नाम बताता है, और response में `verification` report होती है। `library` उस literature library का नाम देता है जिसमें identifiers की जाँच के नतीजे रखे जाते हैं, इसलिए किसी पिछले call में verify हो चुका identifier दोबारा नहीं जाँचा जाता। |
+| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। rich थीसिस-शैली schema के लिए प्रति-शोध-पत्र `summary` फ़ील्ड, `max_slides_per_paper` (डिफ़ॉल्ट 25), और `dark_mode` (डिफ़ॉल्ट `false` — परियोजना डिफ़ॉल्ट हल्का navy-band डेक है, dark OLED / low-light post-pass के लिए `true` पास करें) स्वीकार करता है। लिखने से पहले हर DOI / URL verify करता है (`verify_identifiers`, default `true`): ग़लत या पहुँच से बाहर identifier call को विफल करता है और paper का नाम बताता है, और response में `verification` report होती है। `library` उस literature library का नाम देता है जिसमें identifiers की जाँच के नतीजे रखे जाते हैं, इसलिए किसी पिछले call में verify हो चुका identifier दोबारा नहीं जाँचा जाता। `pptx_template` (वैकल्पिक `pptx_template_config` के साथ) deck को आपके अपने PowerPoint template पर बनाता है। |
+| `pptx_validate_template` | Template → क्या उसे `export(pptx_template=...)` के लिए इस्तेमाल किया जा सकता है: हर तरह की slide कौन-सा layout लेगी, साथ में errors और warnings जो बताते हैं कि क्या बदलना है। कुछ भी render नहीं होता। |
 | `pptx_inspect` | मौजूदा डेक की स्लाइड / शेप संरचना पढ़ें। |
 | `pptx_review` | एक ही कॉल में डेक ऑडिट करें — overflow + रंग अनुबंध + `paper_rule` अनुभाग पूर्णता। डेक भाषा स्वतः पहचानता है; CLI `python -m thesisagents review <deck.pptx>` भी। |
 | `pptx_update_slide` | `title` / `body` / `meta` (शेप नाम से) या मनमाने शेप (अनुक्रमणिका से) प्रतिस्थापित करें। |
@@ -352,7 +366,7 @@ ThesisAgents/
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # ऑफ़लाइन search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP सर्वर (17 उपकरण)
+│   ├── mcp/                         # FastMCP सर्वर (18 उपकरण)
 │   ├── sources/<name>/              # plugin फ़ोल्डर: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

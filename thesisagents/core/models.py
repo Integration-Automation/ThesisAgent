@@ -565,7 +565,18 @@ class ExportOptions:
     formats: tuple[str, ...]
     out_dir: str
     filename_stem: str | None = None
+    #: A PowerPoint file (.pptx / .potx) whose layouts, master artwork and
+    #: theme the deck is built on. ``None`` is the built-in navy-band deck.
+    #: The file is checked against the template contract before any slide is
+    #: rendered (``thesisagents/exporters/template.py``: 16:9 slides, a layout
+    #: for every slide role), and a template that does not meet it stops the
+    #: export with every problem listed.
     pptx_template: str | None = None
+    #: A TOML or JSON file of overrides for ``pptx_template``: which layout
+    #: each slide role uses, font families, the four palette colours, and
+    #: whether the exporter draws its own header band and cover panel. Only
+    #: read together with ``pptx_template``.
+    pptx_template_config: str | None = None
     include_abstract: bool = True
     language: str = "en"
     #: Hard cap on slides per paper for the pptx exporter. Defaults to
@@ -597,3 +608,8 @@ class ExportOptions:
     def __post_init__(self) -> None:
         if not self.formats:
             raise ValueError("at least one export format must be specified")
+        if self.pptx_template_config and not self.pptx_template:
+            raise ValueError(
+                "pptx_template_config is a set of overrides for a template, "
+                "so it needs pptx_template as well"
+            )

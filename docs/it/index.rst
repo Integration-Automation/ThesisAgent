@@ -49,7 +49,7 @@ Flusso MCP in 6 passi
    5. (leggi ogni PDF e produci dict di riassunto strutturato)
    6. export(papers=[{...paper, "summary": {...}}], language="it", ...)
 
-I 17 strumenti MCP completi: :doc:`/mcp`.
+I 18 strumenti MCP completi: :doc:`/mcp`.
 
 **Per individuare i risultati fuori tema, parti dai consigli dello
 strumento stesso.** ``--diagnostics`` (CLI) o ``diagnostics=true`` sullo
@@ -90,6 +90,15 @@ titolo, e la nuova osservazione viene unita al record conservato. Poi
 ``library_search`` trova gli articoli conservati senza toccare la rete,
 e i DOI e gli URL già verificati non vengono ricontrollati per 30
 giorni.
+
+**Usa il tuo modello.** ``--pptx-template thesis.pptx`` (CLI) o
+``pptx_template`` sullo strumento ``export`` costruisce la presentazione
+su un modello PowerPoint, così lo sfondo, il logo e i layout sono i
+tuoi. Esegui prima ``thesisagents validate-template thesis.pptx`` (o lo
+strumento ``pptx_validate_template``): elenca quale layout userebbe ogni
+tipo di diapositiva e ti dice che cosa correggere. Un modello ha bisogno
+di diapositive 16:9 e di un layout per il contenuto, e un piccolo file
+di configurazione può assegnare layout, caratteri e colori.
 
 Obbligatorio: verifica URL / DOI prima della consegna
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -199,7 +208,7 @@ Dove cercare oltre
 ------------------
 
 * Flag CLI e variabili d'ambiente: :doc:`/cli`
-* 17 strumenti del server MCP: :doc:`/mcp`
+* 18 strumenti del server MCP: :doc:`/mcp`
 * Toolkit di editing PPTX: :doc:`/pptx_editing`
 * Il file ``readmes/README.it.md`` nella radice del repo contiene l'elenco
   completo delle funzionalità.

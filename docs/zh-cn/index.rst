@@ -45,7 +45,7 @@ MCP 6 步流程
    5. (你逐篇读 PDF,自己产 structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-cn", ...)
 
-共 17 个 MCP 工具,完整参考见 :doc:`/mcp`。
+共 18 个 MCP 工具,完整参考见 :doc:`/mcp`。
 
 **要找出离题的结果,先参考工具自己的建议。** CLI 的 ``--diagnostics`` 或 MCP ``search`` 工具的 ``diagnostics=true`` 会解释排名: 每篇论文的分数拆成相关性、新近度与引用数三部分,列出命中的查询词,并给出 ``keep`` / ``review`` / ``prune`` 建议与触发它的阈值。CLI 还会把完整明细写到输出目录的 ``diagnostics.json``。这些只是建议,工具不会替你移除任何论文,所以删除前请先读过 ``review`` 与 ``prune`` 论文的摘要。
 
@@ -54,6 +54,8 @@ MCP 6 步流程
 **顺着引用关系找。** CLI 的 ``--snowball both`` 或 ``snowball`` 工具会沿着引用关系扩充排名最前面的结果: ``references`` 加入它们引用的文献, ``cited_by`` 加入引用它们的文献。这能补上关键词搜索因作者用词不同而漏掉的研究。扩充有上限 (默认只走一步),每篇新找到的论文都会记下找到它的路径,而且都会依你的关键词评分,所以不会只因为被引用得多就被留下。
 
 **把找到的留下来。** CLI 的 ``--library thesis.db --library-add`` 或 ``library_add`` 工具会把一次运行的论文存进文献库,也就是一个在会话结束后仍然存在的 SQLite 文件。同一个搜索再加入一次不会产生任何重复: 论文靠 DOI、arXiv ID 或标题辨认,新的一次记录会合并进已保存的那一条。之后 ``library_search`` 不需要网络就能找出已保存的论文,而已经通过检查的 DOI 与网址在 30 天内不会再检查一次。
+
+**使用你自己的模板。** CLI 的 ``--pptx-template thesis.pptx`` 或 ``export`` 工具的 ``pptx_template`` 会在 PowerPoint 模板上生成幻灯片,背景、标志与版式都是你自己的。请先运行 ``thesisagents validate-template thesis.pptx`` (或使用 ``pptx_validate_template`` 工具): 它会列出每一种幻灯片将使用哪个版式,并告诉你需要修正什么。模板需要 16:9 的幻灯片与一个放内容的版式,另外可用一个小小的配置文件指定版式、字体与配色。
 
 必做:交付前验证 URL / DOI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -319,11 +321,11 @@ PPTX 布局
 MCP server
 ----------
 
-ThesisAgents 附带一个暴露 **17 个工具** 的 MCP server:发现
+ThesisAgents 附带一个暴露 **18 个工具** 的 MCP server:发现
 (``list_sources``、``list_exports``)、搜索、引用滚雪球搜索(``snowball``)、文献库(``library_add``、
 ``library_search``、``library_stats``)、单篇抓取、单个 PDF 正文提取
-(``fetch_pdf_text``)、批量 PDF 下载(``download_pdfs``)、导出,
-以及 6 个 PPTX deck 操作(``pptx_inspect``、``pptx_review``、
+(``fetch_pdf_text``)、批量 PDF 下载(``download_pdfs``)、
+模板检查(``pptx_validate_template``)、导出,以及 6 个 PPTX deck 操作(``pptx_inspect``、``pptx_review``、
 ``pptx_update_slide``、``pptx_delete_slide``、``pptx_reorder_slides``、
 ``pptx_add_slide``)。任何支持 MCP 的 LLM client(Claude Code、
 Claude Desktop、Cursor …)都能驱动整套流程。
@@ -390,6 +392,10 @@ Claude Desktop、Cursor …)都能驱动整套流程。
        论文可附 ``summary``\ 字段走 thesis-style;支持 ``language``\
        走 i18n,以及 ``max_slides_per_paper``\ (默认 25;传 ``0``\
        代表不限)。
+   * - ``pptx_validate_template``
+     - 模板 → 它能否用于 ``export(pptx_template=...)``:每一种幻灯片
+       将使用的版式,以及说明该改什么的错误与警告。不会生成任何
+       幻灯片。详见 :doc:`/pptx_templates`。
    * - ``pptx_inspect``
      - 读已有幻灯片文件的 slide / shape 结构。
    * - ``pptx_review``
@@ -465,7 +471,7 @@ Python 模块)让你在不重跑搜索的情况下继续对它做迭代:
    │   ├── intelligence/             # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
    │   ├── library/                  # SQLite literature library kept across runs
    │   ├── evaluation/               # 离线搜索质量评测(docs/search-quality.md)
-   │   ├── mcp/                      # 注册 17 个工具的 FastMCP server
+   │   ├── mcp/                      # 注册 18 个工具的 FastMCP server
    │   ├── sources/<name>/           # 各来源 plugin(arxiv、semantic_scholar、
    │   │                             #   openalex、pubmed、acm、ieee、scholar、
    │   │                             #   dblp、crossref、openaire、springer、

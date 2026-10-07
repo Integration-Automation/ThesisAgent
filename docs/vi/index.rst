@@ -50,7 +50,7 @@ Quy trình MCP 6 bước
    5. (bạn đọc mỗi PDF và tạo dict tóm tắt có cấu trúc)
    6. export(papers=[{...paper, "summary": {...}}], language="vi", ...)
 
-17 công cụ MCP đầy đủ: :doc:`/mcp`.
+18 công cụ MCP đầy đủ: :doc:`/mcp`.
 
 **Để tìm các kết quả lạc đề, hãy bắt đầu từ gợi ý của chính công cụ.**
 ``--diagnostics`` (CLI) hoặc ``diagnostics=true`` trên công cụ MCP
@@ -87,6 +87,15 @@ trùng nào: bài báo được nhận ra qua DOI, arXiv ID hoặc tiêu đề, 
 ghi nhận mới được gộp vào bản ghi đã lưu. Sau đó ``library_search`` tìm
 các bài đã lưu mà không cần mạng, còn các DOI và URL đã xác minh sẽ
 không bị kiểm tra lại trong 30 ngày.
+
+**Hãy dùng mẫu của riêng bạn.** ``--pptx-template thesis.pptx`` (CLI)
+hoặc ``pptx_template`` trên công cụ ``export`` dựng bộ trang chiếu trên
+một mẫu PowerPoint, nên nền, logo và bố cục là của bạn. Hãy chạy
+``thesisagents validate-template thesis.pptx`` (hoặc công cụ
+``pptx_validate_template``) trước: nó liệt kê bố cục mà mỗi loại trang
+chiếu sẽ dùng và cho bạn biết cần sửa gì. Một mẫu cần trang chiếu 16:9
+và một bố cục cho nội dung, và một tệp cấu hình nhỏ có thể chỉ định bố
+cục, phông chữ và màu sắc.
 
 Bắt buộc: xác minh URL / DOI trước khi giao
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -194,7 +203,7 @@ Tìm hiểu thêm
 -------------
 
 * Cờ CLI và biến môi trường: :doc:`/cli`
-* 17 công cụ máy chủ MCP: :doc:`/mcp`
+* 18 công cụ máy chủ MCP: :doc:`/mcp`
 * Toolkit chỉnh sửa PPTX: :doc:`/pptx_editing`
 * Tệp ``readmes/README.vi.md`` ở gốc repo có danh sách đầy đủ tính năng.
 * Tham chiếu kỹ thuật sâu (kiến trúc plugin, chính sách bảo mật,

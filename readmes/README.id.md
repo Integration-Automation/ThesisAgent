@@ -64,7 +64,7 @@ meningkatkannya.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Ketujuh belas tool MCP (termasuk `list_sources`, `list_exports`,
+Kedelapan belas tool MCP (termasuk `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / dll.)
 didokumentasikan di [`docs/mcp.md`](../docs/mcp.md).
@@ -247,9 +247,9 @@ mengikuti bentuk yang sama, dengan satu entri
   bekerja terhadap deck apa pun yang dihasilkan eksportir, plus tool MCP
   `pptx_*` setara sehingga agen LLM dapat beriterasi di atas deck yang
   telah dibuat.
-- **Server MCP**: 17 tool — `list_sources` + `list_exports`
+- **Server MCP**: 18 tool — `list_sources` + `list_exports`
   (discovery), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, dan enam tool deck `pptx_*`
+  `download_pdfs`, `pptx_validate_template`, `export`, dan enam tool deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Memungkinkan
   LLM apa pun yang sadar-MCP
@@ -326,6 +326,17 @@ mengikuti bentuk yang sama, dengan satu entri
   terverifikasi pada proses sebelumnya tidak diperiksa lagi selama 30
   hari. Tersedia juga sebagai tool MCP `library_add`, `library_search`,
   dan `library_stats`.
+- **Templat slide**: `--pptx-template thesis.pptx` menyusun slide di
+  atas templat PowerPoint Anda sendiri, sehingga latar, logo, dan tata
+  letak templat yang membentuk deck, bukan tampilan bawaan dengan pita
+  biru navy. Setiap jenis slide (sampul, bagian, isi, tabel, referensi,
+  tanya jawab) memakai tata letak yang Anda tetapkan untuknya, dan file
+  konfigurasi TOML / JSON opsional (`--pptx-template-config`) mengatur
+  font, warna palet, serta apakah pita kepala dan panel sampul digambar.
+  Templat diperiksa sebelum pencarian dimulai, dan `thesisagents
+  validate-template thesis.pptx` menunjukkan tata letak mana yang akan
+  dipakai tiap jenis slide dan apa yang perlu diperbaiki. Tanpa templat,
+  deck bawaan tidak berubah.
 - **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per
   sumber (token bucket), `defusedxml` untuk payload XML apa pun,
   jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle`
@@ -406,6 +417,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Lewati prompt paywall dan lanjutkan. |
 | `--max-slides` | Batas slide per-makalah (default 25; berikan 0 untuk tanpa batas). |
 | `--dark-mode` | Render pptx dengan latar gelap + teks hampir-putih. Default adalah deck terang band-navy. |
+| `--pptx-template FILE` | Menyusun slide di atas templat PowerPoint (.pptx / .potx) sebagai ganti deck bawaan dengan pita biru navy. Diperiksa sebelum pencarian dimulai: perlu slide 16:9 dan tata letak untuk isi slide. `thesisagents validate-template FILE` menunjukkan apa yang akan dipakai sebuah ekspor. |
+| `--pptx-template-config FILE` | File TOML / JSON berisi penggantian untuk `--pptx-template`: tata letak tiap jenis slide, font, warna palet, serta apakah pita kepala dan panel sampul digambar. |
 | `--no-verify-identifiers` | Mengekspor tanpa memeriksa DOI dan URL makalah. Secara default, DOI / URL yang salah atau tidak dapat dijangkau menghentikan proses sebelum apa pun ditulis. Untuk penggunaan luring. |
 | `--diagnostics` | Menjelaskan peringkat pencarian `--query`: mencetak skor setiap makalah (relevansi + kebaruan + sitasi) dan rekomendasi yang bersifat saran `keep` / `review` / `prune`, serta menulis rincian lengkap ke `diagnostics.json` di `--out`. Tidak ada makalah yang dihapus. |
 | `--snowball` | Memperluas hasil mengikuti tautan sitasi sebelum mengekspor: `references` (yang disitasi hasil teratas), `cited_by` (yang menyitasi mereka), atau `both`. Makalah baru ditambahkan di akhir dan melewati unduhan serta ekspor yang sama. Mati secara default. |
@@ -487,7 +500,8 @@ Tool:
 | `fetch_paper` | Identifier arXiv / DOI / PMID / IEEE → satu makalah. |
 | `fetch_pdf_text` | Unduh satu PDF, kembalikan teks tubuh hasil ekstraksi. **Jalur MCP menuju "saya membaca makalahnya".** |
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per-makalah berindeks kunci BibTeX. |
-| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah untuk skema gaya-tesis yang kaya, `max_slides_per_paper` (default 25), dan `dark_mode` (default `false` — default proyek adalah deck terang band-navy, berikan `true` untuk post-pass gelap OLED / minim-cahaya). Memverifikasi setiap DOI / URL sebelum menulis (`verify_identifiers`, default `true`): pengenal yang salah atau tidak dapat dijangkau menggagalkan pemanggilan dan menyebutkan makalahnya, dan respons memuat laporan `verification`. `library` menunjuk pustaka literatur tempat hasil pemeriksaan pengenal disimpan, sehingga pengenal yang sudah terverifikasi pada pemanggilan sebelumnya tidak diperiksa lagi. |
+| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah untuk skema gaya-tesis yang kaya, `max_slides_per_paper` (default 25), dan `dark_mode` (default `false` — default proyek adalah deck terang band-navy, berikan `true` untuk post-pass gelap OLED / minim-cahaya). Memverifikasi setiap DOI / URL sebelum menulis (`verify_identifiers`, default `true`): pengenal yang salah atau tidak dapat dijangkau menggagalkan pemanggilan dan menyebutkan makalahnya, dan respons memuat laporan `verification`. `library` menunjuk pustaka literatur tempat hasil pemeriksaan pengenal disimpan, sehingga pengenal yang sudah terverifikasi pada pemanggilan sebelumnya tidak diperiksa lagi. `pptx_template` (dengan `pptx_template_config` opsional) menyusun deck di atas templat PowerPoint Anda sendiri. |
+| `pptx_validate_template` | Templat → apakah dapat dipakai untuk `export(pptx_template=...)`: tata letak yang akan dipakai tiap jenis slide, beserta galat dan peringatan yang menyebutkan apa yang harus diubah. Tidak ada yang dirender. |
 | `pptx_inspect` | Membaca struktur slide / shape dari deck yang ada. |
 | `pptx_review` | Audit deck dalam satu panggilan — overflow + kontrak warna + kelengkapan bagian `paper_rule`. Mendeteksi bahasa deck secara otomatis; juga CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Mengganti `title` / `body` / `meta` (berdasarkan nama shape) atau shape sembarang berdasarkan indeks. |
@@ -520,7 +534,7 @@ ThesisAgents/
 │   ├── intelligence/                # unduh PDF + summarizer Anthropic  (extra [intelligence])
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # benchmark kualitas-pencarian offline (docs/search-quality.md)
-│   ├── mcp/                         # server FastMCP (17 tool)
+│   ├── mcp/                         # server FastMCP (18 tool)
 │   ├── sources/<name>/              # folder plugin: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

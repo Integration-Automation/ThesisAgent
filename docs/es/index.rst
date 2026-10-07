@@ -51,9 +51,9 @@ Flujo MCP de 6 pasos
    5. (lee cada PDF y produce dict summary estructurado)
    6. export(papers=[{...paper, "summary": {...}}], language="es", ...)
 
-17 herramientas MCP en total: descubrimiento (``list_sources``,
+18 herramientas MCP en total: descubrimiento (``list_sources``,
 ``list_exports``), ``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``,
-``download_pdfs``, ``export`` y seis operaciones de deck ``pptx_*``
+``download_pdfs``, ``pptx_validate_template``, ``export`` y seis operaciones de deck ``pptx_*``
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
 Referencia completa: :doc:`/mcp`.
@@ -94,6 +94,16 @@ nada: un artículo se reconoce por su DOI, su ID de arXiv o su título, y
 la nueva observación se fusiona con el registro guardado. Después
 ``library_search`` encuentra los artículos guardados sin tocar la red, y
 los DOI y URL ya verificados no se vuelven a comprobar durante 30 días.
+
+**Use su propia plantilla.** ``--pptx-template thesis.pptx`` (CLI) o
+``pptx_template`` en la herramienta ``export`` construye la presentación
+sobre una plantilla de PowerPoint, de modo que el fondo, el logotipo y
+los diseños son los suyos. Ejecute antes ``thesisagents
+validate-template thesis.pptx`` (o la herramienta
+``pptx_validate_template``): lista qué diseño usaría cada tipo de
+diapositiva y le dice qué corregir. Una plantilla necesita diapositivas
+16:9 y un diseño para el contenido, y un pequeño archivo de
+configuración puede asignar diseños, fuentes y colores.
 
 Obligatorio: verificación URL / DOI antes de entregar
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -204,7 +214,7 @@ Dónde buscar más
 ----------------
 
 * Flags CLI y variables de entorno: :doc:`/cli`
-* 17 herramientas del servidor MCP: :doc:`/mcp`
+* 18 herramientas del servidor MCP: :doc:`/mcp`
 * Kit de edición PPTX: :doc:`/pptx_editing`
 * El archivo ``readmes/README.es.md`` en la raíz del repo tiene la lista
   completa de funcionalidades del proyecto.

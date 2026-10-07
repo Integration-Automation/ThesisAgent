@@ -11,7 +11,8 @@
 > (`thesisagents/core/export_validation.py`) and the search diagnostics
 > (`thesisagents/core/diagnostics.py`, `pruning.py`, per-source statistics in `pipeline.py`), and
 > citation snowballing (`thesisagents/core/snowball.py`, `thesisagents/fetchers/citations.py`), and
-> the literature library (`thesisagents/library/`).
+> the literature library (`thesisagents/library/`), and the deck template contract
+> (`thesisagents/exporters/template.py`).
 
 ## 1. Purpose
 
@@ -27,11 +28,11 @@
 
 | Path | Responsibility |
 |---|---|
-| `thesisagents/cli.py`, `__main__.py` | argparse CLI; bare invocation or `gui` launches the GUI, `review` audits a deck. `cli.py` holds the flags and the order of the stages, with one module per group of flags beside it: `cli_output.py` (what a run prints), `cli_snowball.py` (`--snowball*`), `cli_library.py` (`--library*`), `cli_local_pdf.py` (`--pdf` mode) |
+| `thesisagents/cli.py`, `__main__.py` | argparse CLI; bare invocation or `gui` launches the GUI, `review` audits a deck. `cli.py` holds the flags and the order of the stages, with one module per group of flags beside it: `cli_output.py` (what a run prints), `cli_snowball.py` (`--snowball*`), `cli_library.py` (`--library*`), `cli_template.py` (`--pptx-template*`), `cli_local_pdf.py` (`--pdf` mode) |
 | `thesisagents/core/` | Frozen models (`models.py`: `Query`, `Paper`, `PaperSummary`, `PaperCollection`, `ExportOptions`), `pipeline.run_search`, `dedup.py`, `ranking.py` (`rank` and the explained `rank_with_scores`), `pruning.py` (advisory keep / review / prune), `diagnostics.py` (the records both produce), `top_venues.py`, `oa_resolver.py`, `pdf_download.py`, `snowball.py` (bounded citation snowballing over `CitationProvider`s), `export_validation.py` (the DOI / URL preflight every export runs first), `constants.py` (source and export names) |
 | `thesisagents/fetchers/` | `Fetcher` base and `load_fetcher()`, HTTPS-only per-source `httpx` client (`http.get_client`, plus `http.scoped_client` for code that runs on a private event loop), token-bucket `rate_limit.py`, `citations.py` (`CitationProvider` base, `load_citation_provider()`, the shared `get_json`), visible-Chrome helpers (`webrunner_browser.py`, `webrunner_pdf.py`) |
 | `thesisagents/sources/<name>/` | One plugin per source: `__init__.py` exposes `fetcher_class`, `fetcher.py`, `parser.py`; browser-backed sources (`ieee`, `scholar`) add `webrunner_backend.py`, and sources with citation data (`openalex`, `semantic_scholar`, `crossref`) add `citations.py` exposing `citation_provider_class` |
-| `thesisagents/exporters/` | `Exporter` strategies (`pptx`, `xlsx`, `bibtex`, `markdown`, `json`, `ris`, `csv`, `csl`) and the `_REGISTRY` in `__init__.py`; `pptx_edit.py`, `review.py` / `audit.py` / `overflow.py` (deck audits), `i18n.py` (deck strings) |
+| `thesisagents/exporters/` | `Exporter` strategies (`pptx`, `xlsx`, `bibtex`, `markdown`, `json`, `ris`, `csv`, `csl`) and the `_REGISTRY` in `__init__.py`; `pptx_edit.py`, `review.py` / `audit.py` / `overflow.py` (deck audits), `i18n.py` (deck strings), `template.py` (the deck template contract: layout per slide role, `TemplateConfig`, `validate_template`) |
 | `thesisagents/library/` | Literature library kept across runs in one SQLite file: `store.py` (`Library`: merge an import on the identity keys of `core/dedup.py`, search with `rank_with_scores`, `LibraryVerificationCache` for the export preflight), `schema.py` (tables, `SCHEMA_VERSION`, migrations). Reads and writes the core models, and nothing in `core/` imports it |
 | `thesisagents/intelligence/` | PDF text / asset / metadata extraction and the API summariser (`summarise.py`), `[intelligence]` extra |
 | `thesisagents/mcp/` | FastMCP server (`server.build_server()`, with the library tools in `library_tools.py`), `[mcp]` extra (held below mcp 2.0, which renamed FastMCP) |
@@ -58,13 +59,15 @@ An exporter never imports a fetcher; it only consumes a `PaperCollection`.
   `--dark-mode`, `--no-pdf`, `--no-oa-resolve`, `--no-verify-identifiers`, `--diagnostics`,
   `--snowball` (with `--snowball-seeds`, `--snowball-depth`, `--snowball-max-per-seed`,
   `--snowball-max-total`, `--snowball-min-relevance`), `--library PATH` (the library file, also the
-  run's identifier cache) with `--library-add`, `--paywall-threshold`,
+  run's identifier cache) with `--library-add`, `--pptx-template FILE` with
+  `--pptx-template-config FILE`, `--paywall-threshold`,
   `--yes/-y`, `--quiet`.
   Discovery: `--list-sources`, `--list-exports`. Subcommands: `review <deck.pptx>`
-  (`exporters/review.py`), `gui`. Reference: `docs/cli.md`.
+  (`exporters/review.py`), `validate-template <template.pptx>` (`exporters/template.py`), `gui`.
+  Reference: `docs/cli.md`.
 - **MCP**: `thesisagents-mcp` (`thesisagents/mcp/__main__.py`). Tools cover discovery (`list_sources`,
   `list_exports`), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`,
-  `fetch_pdf_text`, `download_pdfs`, `export`, and deck
+  `fetch_pdf_text`, `download_pdfs`, `pptx_validate_template`, `export`, and deck
   tools `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
   `pptx_reorder_slides`, `pptx_add_slide`. Stateless across calls: what should outlast a session goes
   into a library file the caller names. Reference: `docs/mcp.md`.
@@ -106,6 +109,8 @@ Query (CLI flags / MCP search / GUI / library)
   → exporters.export_collection
       → core.export_validation (identifier preflight: DOI at doi.org, URL once; a failure stops here)
       → _REGISTRY[format] → files under --out
+          pptx with a template: exporters.template.open_template validates it first, then every
+          slide takes the layout of its role (cover / section / content / table / references / qa)
 ```
 
 A failing source returns nothing and never breaks the others, and the search records what each
@@ -149,6 +154,11 @@ no key, no model → lightweight, abstract-based deck
   shipped, libraries in the field have already run it. `tests/test_library.py` shows the pattern.
 - **New exporter**: subclass `Exporter` (`thesisagents/exporters/base.py`), add an `EXPORT_*` name in
   `thesisagents/core/constants.py`, and register it in `_REGISTRY` in `thesisagents/exporters/__init__.py`.
+- **New deck template setting**: add it to `TemplateConfig` and its parser in
+  `thesisagents/exporters/template.py`, apply it as a post-build pass in
+  `thesisagents/exporters/pptx.py` (the way `_apply_template_palette` does), and document it in
+  [`docs/pptx_templates.md`](docs/pptx_templates.md). A new slide role is a new entry in `ROLES`
+  plus the `role=` argument at the builder that makes those slides.
 - **New MCP tool**: add it in one of the `_register_*` functions called by
   `thesisagents/mcp/server.py::build_server()`, or in a module of its own registered from there
   (`thesisagents/mcp/library_tools.py` is the example).

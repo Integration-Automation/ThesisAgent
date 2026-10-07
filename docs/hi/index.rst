@@ -49,8 +49,8 @@ MCP 6 चरण
    5. (आप प्रत्येक PDF पढ़ें और संरचित summary dict तैयार करें)
    6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 
-कुल 17 MCP उपकरण: डिस्कवरी (``list_sources``, ``list_exports``),
-``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+कुल 18 MCP उपकरण: डिस्कवरी (``list_sources``, ``list_exports``),
+``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``, ``pptx_validate_template``,
 ``export`` और छह ``pptx_*`` डेक ऑपरेशन (``pptx_inspect``,
 ``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
 ``pptx_reorder_slides``, ``pptx_add_slide``)। पूर्ण संदर्भ: :doc:`/mcp`।
@@ -91,6 +91,15 @@ arXiv ID या title से पहचाना जाता है, और न�
 merge हो जाती है। इसके बाद ``library_search`` बिना network के सहेजे हुए
 papers खोजता है, और verify हो चुके DOI तथा URL 30 दिनों तक दोबारा नहीं
 जाँचे जाते।
+
+**अपना template इस्तेमाल करें।** ``--pptx-template thesis.pptx`` (CLI)
+या ``export`` tool पर ``pptx_template`` deck को PowerPoint template पर
+बनाता है, इसलिए background, logo और layouts आपके अपने होते हैं। पहले
+``thesisagents validate-template thesis.pptx`` (या
+``pptx_validate_template`` tool) चलाएँ: यह बताता है कि हर तरह की slide
+कौन-सा layout इस्तेमाल करेगी और क्या ठीक करना है। Template में 16:9
+slides और content के लिए एक layout होना चाहिए, और एक छोटी config file
+layouts, fonts और रंग तय कर सकती है।
 
 अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -198,7 +207,7 @@ CLI फ़्लैग की पूरी तालिका: :doc:`/cli`।
 --------------
 
 * CLI फ़्लैग और पर्यावरण चर: :doc:`/cli`
-* 17 MCP सर्वर उपकरण: :doc:`/mcp`
+* 18 MCP सर्वर उपकरण: :doc:`/mcp`
 * PPTX संपादन टूलकिट: :doc:`/pptx_editing`
 * repo जड़ में ``readmes/README.hi.md`` फ़ाइल में सुविधाओं की पूरी सूची है।
 * गहन तकनीकी संदर्भ (प्लगइन वास्तुकला, सुरक्षा नीतियाँ, Definition of

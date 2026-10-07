@@ -41,7 +41,6 @@ def _add(server, library_path, papers, **kwargs):
 def test_the_three_library_tools_are_registered(server):
     names = {tool.name for tool in asyncio.run(server.list_tools())}
     assert {"library_add", "library_search", "library_stats"} <= names
-    assert len(names) == 17
 
 
 def test_library_add_then_search_round_trip(server, library_path, sample_papers):

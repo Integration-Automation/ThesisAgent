@@ -60,7 +60,7 @@ DOAJ, HAL, CORE, Google Scholar 에서 결과를 가져와 하나의 레코드
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-열일곱 개의 MCP 도구 전체(`list_sources`, `list_exports`,
+열여덟 개의 MCP 도구 전체(`list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / 등 포함)는 [`docs/mcp.md`](../docs/mcp.md)에
 문서화되어 있습니다.
@@ -229,9 +229,9 @@ for key in irrelevant_keys:
   add_slide)는 내보내기가 만들어 낸 어떤 덱에도 작동하며, 여기에
   더해 동등한 `pptx_*` MCP 도구가 있어 LLM 에이전트가 생성된 덱을
   반복 개선할 수 있습니다.
-- **MCP 서버**: 17개 도구 — `list_sources` + `list_exports`
+- **MCP 서버**: 18개 도구 — `list_sources` + `list_exports`
   (탐색), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, 그리고 여섯 개의 `pptx_*` 덱 도구
+  `download_pdfs`, `pptx_validate_template`, `export`, 그리고 여섯 개의 `pptx_*` 덱 도구
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). MCP 를 인식하는 어떤 LLM
   (Claude Code, Claude Desktop, Cursor, …)이든 전체 워크플로를
@@ -284,6 +284,13 @@ for key in irrelevant_keys:
   찾으며, `--library-export` 는 그것들을 어떤 내보내기 형식으로든 보냅니다. 이전 실행에서 확인된 DOI 나
   URL 은 30일 동안 다시 확인하지 않습니다. MCP 도구 `library_add`, `library_search`,
   `library_stats` 로도 사용할 수 있습니다.
+- **슬라이드 템플릿**: `--pptx-template thesis.pptx` 는 사용자의 PowerPoint 템플릿 위에
+  슬라이드를 만듭니다. 기본 제공되는 네이비 띠 디자인 대신 템플릿의 배경, 로고, 레이아웃이 그대로 쓰입니다. 슬라이드 종류
+  (표지, 섹션, 내용, 표, 참고문헌, Q&A) 마다 지정한 레이아웃이 사용되며, 선택 사항인 TOML / JSON 설정 파일
+  (`--pptx-template-config`) 로 글꼴, 색상, 헤더 띠와 표지 패널을 그릴지 여부를 정할 수 있습니다.
+  템플릿은 검색이 시작되기 전에 검사되고, `thesisagents validate-template thesis.pptx` 를
+  실행하면 각 종류의 슬라이드가 어떤 레이아웃을 쓰는지와 고쳐야 할 점을 보여 줍니다. 템플릿을 지정하지 않으면 기본 슬라이드는
+  그대로입니다.
 - **기본값이 안전**: HTTPS 전용 HTTP 전송, 소스별 속도 제한(토큰
   버킷), 모든 XML 페이로드에 `defusedxml`, 경로 순회에 안전한
   내보내기 경로, 사용자 입력에 대한 `eval` / `exec` / `pickle` 없음.
@@ -364,6 +371,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | 페이월 프롬프트를 건너뛰고 진행. |
 | `--max-slides` | 논문당 슬라이드 상한(기본 25; 무제한은 0 을 넘김). |
 | `--dark-mode` | pptx 를 어두운 배경 + 거의 흰 텍스트로 렌더링. 기본은 라이트 네이비 밴드 덱. |
+| `--pptx-template FILE` | 기본 네이비 띠 슬라이드 대신 PowerPoint 템플릿 (.pptx / .potx) 위에 슬라이드를 만듭니다. 검색이 시작되기 전에 검사됩니다. 16:9 슬라이드와 내용을 놓을 레이아웃이 필요합니다. `thesisagents validate-template FILE` 로 내보낼 때 무엇이 쓰이는지 확인할 수 있습니다. |
+| `--pptx-template-config FILE` | `--pptx-template` 에 대한 재정의를 담은 TOML / JSON 파일. 슬라이드 종류별 레이아웃, 글꼴, 색상, 헤더 띠와 표지 패널을 그릴지 여부를 정합니다. |
 | `--no-verify-identifiers` | 논문의 DOI 와 URL 을 확인하지 않고 내보냅니다. 기본적으로는 잘못되었거나 연결할 수 없는 DOI / URL 이 있으면 아무것도 쓰기 전에 실행이 중단됩니다. 오프라인용. |
 | `--diagnostics` | `--query` 검색의 순위를 설명합니다. 각 논문의 점수 (관련성 + 최신성 + 인용 수) 와 조언용 `keep` / `review` / `prune` 권고를 출력하고, 전체 내역을 `--out` 의 `diagnostics.json` 에 기록합니다. 논문은 제거되지 않습니다. |
 | `--snowball` | 내보내기 전에 결과를 인용 관계를 따라 확장합니다: `references` (상위 결과가 인용한 문헌), `cited_by` (그것들을 인용한 문헌) 또는 `both`. 새 논문은 결과 뒤에 추가되어 같은 다운로드와 내보내기를 거칩니다. 기본은 꺼짐. |
@@ -444,7 +453,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 식별자 → 단일 논문. |
 | `fetch_pdf_text` | 하나의 PDF 를 다운로드하여 추출한 본문 텍스트를 반환. **"내가 논문을 읽었다"에 이르는 MCP 경로.** |
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 로 일괄 다운로드. BibTeX 키로 키가 지정된 논문별 결과를 반환. |
-| `export` | 논문 목록 + 형식 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 을 작성. 리치 논문 스타일 스키마를 위한 논문당 `summary` 필드, `max_slides_per_paper`(기본 25), `dark_mode`(기본 `false` — 프로젝트 기본은 라이트 네이비 밴드 덱, 어두운 OLED / 저조도 후처리에는 `true`)를 받음. 쓰기 전에 모든 DOI / URL 을 검증합니다 (`verify_identifiers`, 기본값 `true`). 잘못되었거나 연결할 수 없는 식별자가 있으면 호출이 실패하고 해당 논문을 알려 주며, 응답에 `verification` 보고서가 포함됩니다. `library` 에는 식별자 확인 결과를 보관할 문헌 라이브러리를 지정합니다. 이전 호출에서 확인된 식별자는 다시 확인하지 않습니다. |
+| `export` | 논문 목록 + 형식 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 을 작성. 리치 논문 스타일 스키마를 위한 논문당 `summary` 필드, `max_slides_per_paper`(기본 25), `dark_mode`(기본 `false` — 프로젝트 기본은 라이트 네이비 밴드 덱, 어두운 OLED / 저조도 후처리에는 `true`)를 받음. 쓰기 전에 모든 DOI / URL 을 검증합니다 (`verify_identifiers`, 기본값 `true`). 잘못되었거나 연결할 수 없는 식별자가 있으면 호출이 실패하고 해당 논문을 알려 주며, 응답에 `verification` 보고서가 포함됩니다. `library` 에는 식별자 확인 결과를 보관할 문헌 라이브러리를 지정합니다. 이전 호출에서 확인된 식별자는 다시 확인하지 않습니다. `pptx_template` (선택적으로 `pptx_template_config`) 을 주면 사용자의 PowerPoint 템플릿 위에 슬라이드를 만듭니다. |
+| `pptx_validate_template` | 템플릿 → `export(pptx_template=...)` 에 쓸 수 있는지 여부. 슬라이드 종류별로 쓰일 레이아웃과, 무엇을 고쳐야 하는지 알려 주는 오류와 경고를 반환합니다. 슬라이드는 만들어지지 않습니다. |
 | `pptx_inspect` | 기존 덱의 슬라이드 / 셰이프 구조를 읽음. |
 | `pptx_review` | 한 번의 호출로 덱을 감사 — 오버플로 + 색상 계약 + `paper_rule` 섹션 완전성. 덱 언어를 자동 감지; CLI `python -m thesisagents review <deck.pptx>` 이기도 함. |
 | `pptx_update_slide` | `title` / `body` / `meta`(셰이프 이름으로) 또는 인덱스로 임의의 셰이프를 교체. |
@@ -477,7 +487,7 @@ ThesisAgents/
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (17 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

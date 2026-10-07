@@ -51,7 +51,7 @@ Decision tree
    5. (you read each PDF and produce a structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-tw", ...)
 
-Seventeen MCP tools total; full reference at :doc:`/mcp`.
+Eighteen MCP tools total; full reference at :doc:`/mcp`.
 
 **To spot off-topic results, start from the tool's own advice.**
 ``--diagnostics`` (CLI) or ``diagnostics=true`` on the MCP ``search``
@@ -87,6 +87,15 @@ and the new sighting is merged into the stored record.
 ``library_search`` then finds stored papers without touching the
 network, and DOIs and URLs that already verified are not checked again
 for 30 days.
+
+**Use your own template.** ``--pptx-template thesis.pptx`` (CLI) or
+``pptx_template`` on the ``export`` tool builds the deck on a PowerPoint
+template, so the background, logo and layouts are yours. Run
+``thesisagents validate-template thesis.pptx`` (or the
+``pptx_validate_template`` tool) first: it lists which layout each kind
+of slide would use and tells you what to fix. A template needs 16:9
+slides and a layout for slide content, and a small config file can map
+layouts, fonts and colours.
 
 Mandatory: URL / DOI verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -434,11 +443,12 @@ reverse for zh-cn strings. Full rule + the regex catalogue live in
 MCP server
 ----------
 
-ThesisAgents ships an MCP server exposing **seventeen tools** — discovery
+ThesisAgents ships an MCP server exposing **eighteen tools** — discovery
 (``list_sources``, ``list_exports``), search, citation snowballing (``snowball``), a literature library
 (``library_add``, ``library_search``, ``library_stats``), single-paper fetch,
 single-PDF text extraction (``fetch_pdf_text``), batch PDF download
-(``download_pdfs``), export, and six PPTX deck operations
+(``download_pdfs``), template validation (``pptx_validate_template``),
+export, and six PPTX deck operations
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``). Any
 MCP-aware LLM client (Claude Code, Claude Desktop, Cursor, …) can
@@ -513,6 +523,11 @@ Tools at a glance:
        ``max_slides_per_paper`` (default 25; pass ``0`` for unlimited),
        and ``dark_mode`` (default ``false`` — the light navy-band deck;
        pass ``true`` for the dark OLED / low-light variant).
+   * - ``pptx_validate_template``
+     - Template → whether it can be used for ``export(pptx_template=...)``:
+       the layout each kind of slide would use, plus errors and warnings
+       that say what to change. Nothing is rendered. See
+       :doc:`/pptx_templates`.
    * - ``pptx_inspect``
      - Read slide / shape structure of an existing deck.
    * - ``pptx_review``
@@ -607,7 +622,7 @@ Architecture
    │   │                             #   bibtex, markdown, json + pptx_edit + i18n
    │   ├── intelligence/             # PDF fetch + Anthropic summariser ([intelligence] extra)
    │   ├── library/                  # SQLite literature library kept across runs
-   │   ├── mcp/                      # FastMCP server registering 17 tools
+   │   ├── mcp/                      # FastMCP server registering 18 tools
    │   ├── utils/                    # logging, path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`

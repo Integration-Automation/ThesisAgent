@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-17 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` など)はすべて [`docs/mcp.md`](../docs/mcp.md) に記載されています。
+18 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` など)はすべて [`docs/mcp.md`](../docs/mcp.md) に記載されています。
 
 ### 必須: 納品前に URL / DOI を検証
 
@@ -111,7 +111,7 @@ for key in irrelevant_keys:
   - `.csv` — スプレッドシート / 手早い grep トリアージ用の 1 論文 1 行のフラットな表(RFC-4180 クオート、タイトル内のカンマが列をずらしません)。
   - `.csl.json` — Pandoc / citeproc 用の CSL-JSON。任意の CSL スタイル(APA、IEEE、Nature、…)で文献目録をレンダリング。`.csl.json` 拡張子でプレーンな `.json` ダンプと区別されます。
 - **PPT 編集ツールキット**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)はエクスポータが生成する任意のデッキに対して動作し、加えて同等の `pptx_*` MCP ツールにより LLM エージェントが生成済みデッキ上で反復できます。
-- **MCP サーバー**: 17 ツール — `list_sources` + `list_exports`(発見)、`search`、`snowball`、`library_add`、`library_search`、`library_stats`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 6 個の `pptx_*` デッキツール(`inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。MCP 対応の任意の LLM(Claude Code、Claude Desktop、Cursor、…)がワークフロー全体を駆動できます。
+- **MCP サーバー**: 18 ツール — `list_sources` + `list_exports`(発見)、`search`、`snowball`、`library_add`、`library_search`、`library_stats`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`pptx_validate_template`、`export`、および 6 個の `pptx_*` デッキツール(`inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。MCP 対応の任意の LLM(Claude Code、Claude Desktop、Cursor、…)がワークフロー全体を駆動できます。
 - **2 つのエンリッチパス**(要約を超えて真の論文発表級デッキに至るため):
   - **LLM-as-agent(API キー不要)** — 呼び出し側 LLM が `fetch_pdf_text` で PDF 本文を読み、構造化サマリをコンテキスト内で書き、`export` に渡します。
   - **Python パイプライン(`--enrich`)** — CLI が Anthropic の API を自身で呼びます。デフォルトモデルは `claude-opus-4-7`。
@@ -123,6 +123,7 @@ for key in irrelevant_keys:
 - **ソース別の検索統計**: 検索のたびに、各ソースが返したレコード数、重複排除後にそのソースに帰属する論文数、失敗・レート制限・無効のいずれであったかを報告します。エラーになったソースは検索を止めずにスキップされるため、「もともと論文の少ないテーマ」と「ソースの半分を失った検索」を見分けられるのはこの数字です。CLI は `--query` 検索のたびに表示し、MCP `search` ツールは `source_stats` として返し、GUI はステータス行に表示します。
 - **引用スノーボール検索**: `--snowball references|cited_by|both` (または MCP の `snowball` ツール) は、上位の結果を引用関係に沿って広げます。後方にはそれらが引用する文献、前方にはそれらを引用する文献をたどり、著者の用語が違うためにキーワード検索では見つからない研究を拾います。すべての次元に上限があり (既定の深さは 1、シードあたりの件数、合計件数)、複数の経路でたどり着いた同じ論文は 1 件として扱われ、見つかった論文ごとに到達経路が記録されます。引用情報は OpenAlex、Semantic Scholar、Crossref から取得し、見つかった論文も同じランカーで採点するため、被引用数が多いだけでは主題に合うとは見なされません。
 - **文献ライブラリ**: `--library thesis.db` は、実行で見つかった内容を 1 つの SQLite ファイルに保存します。検索結果はプロセスの終了とともに消えなくなります。保存されるのは、論文、各論文を見つけた実行とソース、スコア、`--snowball` が見つけた引用関係、DOI / URL の確認結果です。`--library-add` は実行結果を取り込み (既にある論文は更新され、重複しません)、`--library-search` はネットワークを使わずに保存済みの論文を探し、`--library-export` はそれらを任意のエクスポート形式に出力します。以前の実行で確認できた DOI や URL は、30 日間は再確認されません。MCP ツール `library_add`、`library_search`、`library_stats` としても使えます。
+- **スライドテンプレート**: `--pptx-template thesis.pptx` は、手持ちの PowerPoint テンプレートの上にスライドを作ります。組み込みのネイビー帯のデザインではなく、テンプレートの背景、ロゴ、レイアウトがそのまま使われます。スライドの種類 (表紙、セクション、内容、表、参考文献、Q&A) ごとに、指定したレイアウトが使われ、任意の TOML / JSON 設定ファイル (`--pptx-template-config`) でフォント、配色、ヘッダー帯と表紙パネルを描くかどうかを指定できます。テンプレートは検索が始まる前に確認され、 `thesisagents validate-template thesis.pptx` を実行すると、各種類のスライドがどのレイアウトを使うかと、直すべき点が表示されます。テンプレートを指定しない場合、組み込みのスライドは変わりません。
 - **デフォルトで安全**: HTTPS-only な HTTP トランスポート、ソースごとのレート制限(トークンバケット)、任意の XML ペイロードには `defusedxml`、パストラバーサル対策済みのエクスポートパス、ユーザー入力に対する `eval` / `exec` / `pickle` の不使用。
 - **zh-tw / zh-cn 語彙ガード**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` にある約 244 個の正規表現パターンが、繁体字で書かれた簡体字由来の借用語(例: `內存` → `記憶體`、`魯棒性` → `穩健性`、`軟件` → `軟體`、`緩存` → `快取`)を捕捉します。同じガードが zh-cn ロケール文字列に対して逆方向にも走ります。完全なルールと正規表現カタログは `.claude/agents/rules/language-vocabulary-check.md` にあります。
 
@@ -193,6 +194,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | paywall プロンプトをスキップして続行。 |
 | `--max-slides` | 論文ごとのスライド上限(デフォルト 25、0 で無制限)。 |
 | `--dark-mode` | pptx をダーク背景 + ほぼ白のテキストでレンダリング。デフォルトはライトの navy バンドデッキ。 |
+| `--pptx-template FILE` | 組み込みのネイビー帯スライドの代わりに、PowerPoint テンプレート (.pptx / .potx) の上にスライドを作ります。検索が始まる前に確認されます。16:9 のスライドと、内容を置くレイアウトが必要です。`thesisagents validate-template FILE` で、エクスポート時に何が使われるかを確認できます。 |
+| `--pptx-template-config FILE` | `--pptx-template` 用の上書き設定を書いた TOML / JSON ファイル。スライドの種類ごとのレイアウト、フォント、配色、ヘッダー帯と表紙パネルを描くかどうかを指定します。 |
 | `--no-verify-identifiers` | 論文の DOI と URL を確認せずにエクスポートします。既定では、誤った DOI / URL や到達できない DOI / URL があると、何も書き出す前に実行が止まります。オフライン用。 |
 | `--diagnostics` | `--query` 検索のランキングを説明します。各論文のスコア (関連性 + 新しさ + 被引用数) と、助言としての `keep` / `review` / `prune` の提案を表示し、詳細の全体を `--out` の `diagnostics.json` に書き出します。論文は削除されません。 |
 | `--snowball` | エクスポート前に結果を引用関係に沿って広げます。`references` (上位の結果が引用する文献)、`cited_by` (それらを引用する文献)、または `both`。新しい論文は結果の後ろに追加され、同じダウンロードとエクスポートを通ります。既定は無効。 |
@@ -266,7 +269,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別子 → 単一論文。 |
 | `fetch_pdf_text` | 単一 PDF をダウンロードし、抽出した本文を返す。**MCP 経由で「論文を読んだ」に至る入口。** |
 | `download_pdfs` | 論文リストの PDF を `{out_dir}/pdfs/` に一括ダウンロード。BibTeX キーをキーとする論文ごとの結果を返す。 |
-| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出す。リッチな論文発表級スキーマ用の論文ごとの `summary` フィールド、`max_slides_per_paper`(デフォルト 25)、`dark_mode`(デフォルト `false` — プロジェクトのデフォルトはライトの navy バンドデッキ、ダークの OLED / 暗所向け post-pass には `true` を渡す)を受理。 書き出す前にすべての DOI / URL を検証します (`verify_identifiers`、既定 `true`)。誤った識別子や到達できない識別子があると呼び出しは失敗して該当論文を示し、レスポンスには `verification` レポートが含まれます。 `library` には識別子の確認結果を保存する文献ライブラリを指定します。以前の呼び出しで確認できた識別子は再確認されません。 |
+| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出す。リッチな論文発表級スキーマ用の論文ごとの `summary` フィールド、`max_slides_per_paper`(デフォルト 25)、`dark_mode`(デフォルト `false` — プロジェクトのデフォルトはライトの navy バンドデッキ、ダークの OLED / 暗所向け post-pass には `true` を渡す)を受理。 書き出す前にすべての DOI / URL を検証します (`verify_identifiers`、既定 `true`)。誤った識別子や到達できない識別子があると呼び出しは失敗して該当論文を示し、レスポンスには `verification` レポートが含まれます。 `library` には識別子の確認結果を保存する文献ライブラリを指定します。以前の呼び出しで確認できた識別子は再確認されません。 `pptx_template` (任意で `pptx_template_config`) を渡すと、手持ちの PowerPoint テンプレートの上にスライドを作ります。 |
+| `pptx_validate_template` | テンプレート → `export(pptx_template=...)` に使えるかどうか。スライドの種類ごとに使われるレイアウトと、何を直すべきかを示すエラーと警告を返します。スライドは生成されません。 |
 | `pptx_inspect` | 既存デッキのスライド / シェイプ構造を読む。 |
 | `pptx_review` | 1 回の呼び出しでデッキを監査 — overflow + 色コントラクト + `paper_rule` セクション網羅性。デッキ言語を自動検出。CLI 版は `python -m thesisagents review <deck.pptx>` でも。 |
 | `pptx_update_slide` | `title` / `body` / `meta`(シェイプ名経由)または任意のシェイプ(インデックス経由)を置換。 |
@@ -299,7 +303,7 @@ ThesisAgents/
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (17 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

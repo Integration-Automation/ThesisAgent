@@ -45,7 +45,7 @@ MCP 6 步流程
    5. (你逐篇讀 PDF,自己產 structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-tw", ...)
 
-共 17 個 MCP 工具,完整參考見 :doc:`/mcp`。
+共 18 個 MCP 工具,完整參考見 :doc:`/mcp`。
 
 **要找出離題的結果,先參考工具自己的建議。** CLI 的 ``--diagnostics`` 或 MCP ``search`` 工具的 ``diagnostics=true`` 會解釋排名: 每篇論文的分數拆成相關性、新近度與引用數三部分,列出命中的查詢詞,並給出 ``keep`` / ``review`` / ``prune`` 建議與觸發它的門檻。CLI 還會把完整明細寫到輸出目錄的 ``diagnostics.json``。這些只是建議,工具不會替你移除任何論文,所以刪除前請先讀過 ``review`` 與 ``prune`` 論文的摘要。
 
@@ -54,6 +54,8 @@ MCP 6 步流程
 **順著引用關係找。** CLI 的 ``--snowball both`` 或 ``snowball`` 工具會沿著引用關係擴充排名最前面的結果: ``references`` 加入它們引用的文獻, ``cited_by`` 加入引用它們的文獻。這能補上關鍵字搜尋因作者用詞不同而漏掉的研究。擴充有上限 (預設只走一步),每篇新找到的論文都會記下找到它的路徑,而且都會依你的關鍵字評分,所以不會只因為被引用得多就被留下。
 
 **把找到的留下來。** CLI 的 ``--library thesis.db --library-add`` 或 ``library_add`` 工具會把一次執行的論文存進文獻庫,也就是一個在工作階段結束後仍然存在的 SQLite 檔案。同一個搜尋再加入一次不會產生任何重複: 論文靠 DOI、arXiv ID 或標題辨認,新的一次紀錄會合併進已保存的那一筆。之後 ``library_search`` 不需要網路就能找出已保存的論文,而已經通過檢查的 DOI 與網址在 30 天內不會再檢查一次。
+
+**使用你自己的範本。** CLI 的 ``--pptx-template thesis.pptx`` 或 ``export`` 工具的 ``pptx_template`` 會在 PowerPoint 範本上產生投影片,背景、標誌與版面配置都是你自己的。請先執行 ``thesisagents validate-template thesis.pptx`` (或使用 ``pptx_validate_template`` 工具): 它會列出每一種投影片將使用哪個版面配置,並告訴你需要修正什麼。範本需要 16:9 的投影片與一個放內容的版面配置,另外可用一個小小的設定檔指定版面配置、字型與配色。
 
 必做:交付前驗證 URL / DOI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -320,11 +322,11 @@ PPTX 配置
 MCP server
 ----------
 
-ThesisAgents 附帶一個暴露 **17 個工具** 的 MCP server:探索
+ThesisAgents 附帶一個暴露 **18 個工具** 的 MCP server:探索
 (``list_sources``、``list_exports``)、搜尋、引用滾雪球搜尋(``snowball``)、文獻庫(``library_add``、
 ``library_search``、``library_stats``)、單篇抓取、單一 PDF
 本文擷取(``fetch_pdf_text``)、批次 PDF 下載(``download_pdfs``)、
-匯出,以及 6 個 PPTX deck 操作(``pptx_inspect``、``pptx_review``、
+範本檢查(``pptx_validate_template``)、匯出,以及 6 個 PPTX deck 操作(``pptx_inspect``、``pptx_review``、
 ``pptx_update_slide``、``pptx_delete_slide``、``pptx_reorder_slides``、
 ``pptx_add_slide``)。任何支援 MCP 的 LLM client(Claude Code、
 Claude Desktop、Cursor …)都能驅動整套流程。
@@ -395,6 +397,10 @@ Claude Desktop、Cursor …)都能驅動整套流程。
        走 i18n,``max_slides_per_paper``\ (預設 25;傳 ``0``\
        代表不限),以及 ``dark_mode``\ (預設 ``false``\ ,即亮色
        navy 色帶 deck,傳 ``true``\ 得到暗色 OLED / 低光版本)。
+   * - ``pptx_validate_template``
+     - 範本 → 它能否用於 ``export(pptx_template=...)``:每一種投影片
+       將使用的版面配置,以及說明該改什麼的錯誤與警告。不會產生任何
+       投影片。詳見 :doc:`/pptx_templates`。
    * - ``pptx_inspect``
      - 讀既有投影片檔的 slide / shape 結構。
    * - ``pptx_review``
@@ -470,7 +476,7 @@ Python 模組)讓你在不重跑搜尋的情況下繼續對它做迭代:
    │   ├── intelligence/             # PDF 抓取 + Anthropic 摘要器([intelligence] extra)
    │   ├── library/                  # SQLite literature library kept across runs
    │   ├── evaluation/               # 離線搜尋品質評測(docs/search-quality.md)
-   │   ├── mcp/                      # 註冊 17 個工具的 FastMCP server
+   │   ├── mcp/                      # 註冊 18 個工具的 FastMCP server
    │   ├── sources/<name>/           # 各來源 plugin(arxiv、semantic_scholar、
    │   │                             #   openalex、pubmed、acm、ieee、scholar、
    │   │                             #   dblp、crossref、openaire、springer、

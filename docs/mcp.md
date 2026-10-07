@@ -87,7 +87,7 @@ venv-resolved binary directly:
 
 ## Tools
 
-The server exposes seventeen tools, grouped into seven concerns:
+The server exposes eighteen tools, grouped into seven concerns:
 discovery, search, citation snowballing, the literature library, PDF
 retrieval, export and deck editing.
 
@@ -618,9 +618,19 @@ for the format catalogue.
   "max_slides_per_paper": 25,
   "dark_mode": true,
   "verify_identifiers": true,
-  "library": null
+  "library": null,
+  "pptx_template": null,
+  "pptx_template_config": null
 }
 ```
+
+`pptx_template` (optional) is the path of a PowerPoint template
+(`.pptx` / `.potx`) to build the deck on instead of the built-in
+navy-band deck, and `pptx_template_config` a TOML / JSON file of
+overrides for it (layout per slide role, fonts, colours, chrome). A
+template that does not meet the template contract fails the call with
+every problem listed and writes nothing. Check one first with
+`pptx_validate_template`. Contract: [Deck templates](pptx_templates.md).
 
 `library` (optional) is the path of a literature library, see
 `library_add`. When given, the identifier verdicts are kept there: a
@@ -709,6 +719,49 @@ also drives the per-language typography pass (Inter for Latin, plus
 Microsoft JhengHei UI for zh-tw / YaHei UI for zh-cn / Yu Gothic UI
 for ja / Malgun Gothic for ko / Nirmala UI for hi) — replaces the
 PowerPoint Calibri default, which is the biggest "AI-generated" tell.
+
+### `pptx_validate_template`
+
+Check a PowerPoint template before using it as `export`'s
+`pptx_template`. Nothing is rendered or written.
+
+```json
+{"path": "./thesis.pptx", "config": "./thesis.toml", "dark_mode": false}
+```
+
+Returns:
+
+```json
+{
+  "template": "./thesis.pptx",
+  "config": "./thesis.toml",
+  "ok": true,
+  "slide_width_in": 13.333,
+  "slide_height_in": 7.5,
+  "available_layouts": ["Title Slide", "Title and Content", "Section Header", "Two Content",
+                        "Comparison", "Title Only", "Blank", "Content with Caption",
+                        "Picture with Caption", "Title and Vertical Text", "Vertical Title and Text"],
+  "layouts": {"cover": "Title Slide", "section": "Section Header", "content": "Title Only",
+              "table": "Title Only", "references": "Title Only", "qa": "Title Only"},
+  "errors": [],
+  "warnings": []
+}
+```
+
+- `layouts` is the layout each slide role would use. A role with no
+  layout of its own uses the `content` role's.
+- `available_layouts` is every layout name in the template, which is
+  what `[layouts]` in the config may refer to.
+- `errors` stop an export, `warnings` do not. Each has a stable `code`
+  (for example `layout-not-found`, `missing-title-placeholder`,
+  `slide-size-normalised`) and a `message` that says what to change.
+- `config` is optional. A config that cannot be read is reported as an
+  `invalid-config` error with every problem in it, not raised.
+- `dark_mode: true` adds the warnings that apply to a dark export
+  (`[colors]` is not applied in dark mode).
+
+The contract, the config format and every code are in
+[Deck templates](pptx_templates.md).
 
 ### `pptx_inspect`
 

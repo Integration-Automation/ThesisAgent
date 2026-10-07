@@ -56,7 +56,7 @@ ThesisAgents/
 │   ├── intelligence/               # PDF + Anthropic summariser ([intelligence] extra)
 │   ├── library/                    # SQLite literature library kept across runs
 │   ├── evaluation/                 # offline search-quality benchmark (see docs/search-quality.md)
-│   ├── mcp/                        # FastMCP server registering 17 tools ([mcp] extra)
+│   ├── mcp/                        # FastMCP server registering 18 tools ([mcp] extra)
 │   ├── gui/                        # PySide6 desktop UI ([gui] extra)
 │   ├── utils/                      # logging, path safety, async helpers
 │   ├── cli.py                      # argparse CLI
@@ -462,7 +462,7 @@ library APIs return coroutines.
 
 ### MCP server (`thesisagents.mcp`)
 
-FastMCP registers seventeen tools. The agent calls them in sequence
+FastMCP registers eighteen tools. The agent calls them in sequence
 (`list_sources` → `search` → optionally `snowball` → `fetch_pdf_text`
 per paper → `export`). The server is stateless across tool calls, so
 state lives in the agent's context, or, when it should outlast the
@@ -591,7 +591,7 @@ All three tiers share the same shape-naming convention so
 
 ### Post-build visual-identity passes
 
-After the chosen tier builds the deck on the light palette, three
+After the chosen tier builds the deck on the light palette,
 non-invasive walk-and-rewrite passes run before the file is saved:
 
 1. **Typography** (`_apply_typography(prs, language)`) — walks every
@@ -610,12 +610,60 @@ non-invasive walk-and-rewrite passes run before the file is saved:
    slide / shape / run / table cell and swaps light-palette RGBs to
    their dark equivalents via `_LIGHT_TO_DARK_TEXT` + `_LIGHT_TO_DARK_FILL`
    dicts. The slide background switches to `#12151B`; body text goes
-   to `#E5E7EB`; the teal accent (`#0E7490`) goes to a brighter
-   `#2DD4BF`. The pass is intentionally non-invasive: it doesn't
+   to `#E5E7EB`; the blue accent (`#2563EB`) goes to a brighter
+   `#60A5FA`. The pass is intentionally non-invasive: it doesn't
    refactor the 100+ direct `_BRAND_*` constant references in the
    builders, it just rewrites RGBs after the fact.
+4. **Template styling** (only with `ExportOptions.pptx_template`).
+   `_recolor_text_without_chrome` gives white-on-navy text a dark
+   colour where a template config switched the navy off, and
+   `_apply_template_palette` swaps the built-in palette for the
+   config's `[colors]` with the same lookup-and-swap as dark mode. It
+   runs in place of the dark-mode pass, never with it: dark mode
+   keeps its own palette.
 
-The three passes ship with regression tests in
+### Deck templates
+
+A user template replaces the blank layout the built-in deck sits on.
+`thesisagents/exporters/template.py` holds the contract:
+
+```
+ExportOptions.pptx_template (+ pptx_template_config)
+        │
+        ▼
+open_template ── validate ──► TemplateError (every problem, nothing rendered)
+        │
+        ▼
+LayoutSet: role → layout        TemplateConfig: fonts, colours, chrome
+        │                                   │
+        ▼                                   ▼
+builders call layout.add_slide(prs, role)   the post-build passes above
+```
+
+- **Roles, not indices.** Every slide has one of six roles (cover,
+  section, content, table, references, qa). A role's layout is the one
+  the config names, else a layout named after the role, else the
+  content layout, else (for content) the blank layout. The exporter
+  used to take `slide_layouts[6]`, which is blank only in
+  python-pptx's own template.
+- **The exporter still draws the slide.** A layout contributes its
+  artwork. Its placeholders are removed from each new slide, and the
+  exporter places its named text boxes as before, so geometry, the
+  content caps and the overflow check hold on any template. The one
+  opt-in exception is the slide title, which a config can send into
+  the layout's title placeholder for content, table and reference
+  slides.
+- **Validation is the first step of the export**, on the same
+  presentation object that is then filled, and the CLI runs it before
+  the search. `validate_template()` exposes the check on its own.
+- **Fixed on purpose**: font sizes and margins. The config parser
+  refuses them with the reason.
+
+The built-in path goes through the same `LayoutSet` with every role on
+the blank layout, so there is one code path and the built-in deck is
+unchanged. User-facing reference: [Deck templates](pptx_templates.md).
+
+The passes ship with regression tests in
 `tests/test_exporters.py`: `test_pptx_default_is_dark_mode`,
 `test_pptx_dark_mode_has_no_invisible_runs` (no run is `rgb=None` or
 black), `test_pptx_dark_mode_no_light_text_on_light_fill` (no

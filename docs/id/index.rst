@@ -50,7 +50,7 @@ Alur MCP 6 langkah
    5. (Anda membaca tiap PDF dan menghasilkan dict ringkasan terstruktur)
    6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 
-17 tool MCP lengkap: :doc:`/mcp`.
+18 tool MCP lengkap: :doc:`/mcp`.
 
 **Untuk menemukan hasil yang melenceng dari topik, mulailah dari saran
 alat itu sendiri.** ``--diagnostics`` (CLI) atau ``diagnostics=true``
@@ -89,6 +89,15 @@ pun: makalah dikenali dari DOI, arXiv ID, atau judulnya, dan temuan baru
 digabungkan ke catatan yang tersimpan. Setelah itu ``library_search``
 menemukan makalah tersimpan tanpa menyentuh jaringan, dan DOI serta URL
 yang sudah terverifikasi tidak diperiksa lagi selama 30 hari.
+
+**Pakai templat Anda sendiri.** ``--pptx-template thesis.pptx`` (CLI)
+atau ``pptx_template`` pada tool ``export`` menyusun deck di atas
+templat PowerPoint, sehingga latar, logo, dan tata letaknya milik Anda.
+Jalankan dulu ``thesisagents validate-template thesis.pptx`` (atau tool
+``pptx_validate_template``): perintah ini mendaftar tata letak yang akan
+dipakai tiap jenis slide dan memberi tahu apa yang perlu diperbaiki.
+Templat memerlukan slide 16:9 dan tata letak untuk isi slide, dan sebuah
+file konfigurasi kecil dapat menetapkan tata letak, font, dan warna.
 
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -198,7 +207,7 @@ Bacaan lebih lanjut
 -------------------
 
 * Flag CLI dan variabel lingkungan: :doc:`/cli`
-* 17 tool server MCP: :doc:`/mcp`
+* 18 tool server MCP: :doc:`/mcp`
 * Toolkit edit PPTX: :doc:`/pptx_editing`
 * Berkas ``readmes/README.id.md`` di akar repo berisi daftar fitur lengkap.
 * Referensi teknis mendalam (arsitektur plugin, kebijakan keamanan,

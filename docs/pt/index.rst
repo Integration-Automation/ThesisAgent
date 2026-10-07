@@ -50,7 +50,7 @@ Fluxo MCP de 6 passos
    5. (você lê cada PDF e produz dict summary estruturado)
    6. export(papers=[{...paper, "summary": {...}}], language="pt", ...)
 
-As 17 ferramentas MCP completas: :doc:`/mcp`.
+As 18 ferramentas MCP completas: :doc:`/mcp`.
 
 **Para identificar resultados fora do tema, comece pelo conselho da
 própria ferramenta.** ``--diagnostics`` (CLI) ou ``diagnostics=true`` na
@@ -88,6 +88,15 @@ reconhecido por seu DOI, seu ID do arXiv ou seu título, e a nova
 observação é mesclada ao registro guardado. Depois ``library_search``
 encontra os artigos guardados sem tocar na rede, e os DOIs e URLs já
 verificados não são verificados de novo por 30 dias.
+
+**Use o seu próprio modelo.** ``--pptx-template thesis.pptx`` (CLI) ou
+``pptx_template`` na ferramenta ``export`` constrói a apresentação sobre
+um modelo do PowerPoint, de modo que o fundo, o logotipo e os layouts
+são os seus. Execute antes ``thesisagents validate-template
+thesis.pptx`` (ou a ferramenta ``pptx_validate_template``): ele lista
+qual layout cada tipo de slide usaria e diz o que corrigir. Um modelo
+precisa de slides 16:9 e de um layout para o conteúdo, e um pequeno
+arquivo de configuração pode atribuir layouts, fontes e cores.
 
 Obrigatório: verificação URL / DOI antes da entrega
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -196,7 +205,7 @@ Onde procurar mais
 ------------------
 
 * Flags CLI e variáveis de ambiente: :doc:`/cli`
-* 17 ferramentas do servidor MCP: :doc:`/mcp`
+* 18 ferramentas do servidor MCP: :doc:`/mcp`
 * Toolkit de edição PPTX: :doc:`/pptx_editing`
 * O arquivo ``readmes/README.pt.md`` na raiz do repo tem a lista completa de
   funcionalidades.

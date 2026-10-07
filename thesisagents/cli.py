@@ -34,6 +34,7 @@ from thesisagents.cli_snowball import (
     maybe_snowball,
     validate_snowball_args,
 )
+from thesisagents.cli_template import add_template_arguments, validate_template_early
 from thesisagents.core.constants import (
     AGGREGATE_EXPORTS,
     ALL_EXPORTS,
@@ -315,6 +316,7 @@ def build_parser() -> argparse.ArgumentParser:
             "pass this flag for OLED projectors or low-light venues."
         ),
     )
+    add_template_arguments(parser)
     parser.add_argument(
         "--no-pdf",
         dest="download_pdf",
@@ -508,6 +510,7 @@ async def _run_stages(args: argparse.Namespace, library: Library | None) -> int:
     formats = _resolve_formats(args)
     _validate_exports(formats)
     validate_snowball_args(args)
+    validate_template_early(args)
     # ``pdf`` is advertised by --list-exports but has no exporter class: it
     # means "save the papers' PDFs", which is the --no-pdf download stage, not
     # a rendered artefact. Left in the list it reached export_collection and
@@ -532,6 +535,8 @@ async def _run_stages(args: argparse.Namespace, library: Library | None) -> int:
         max_slides_per_paper=args.max_slides,
         dark_mode=args.dark_mode,
         verify_identifiers=args.verify_identifiers,
+        pptx_template=args.pptx_template,
+        pptx_template_config=args.pptx_template_config,
     )
     # One cache for the whole run: the identifiers are checked once, right
     # after the search, and every export_collection call below reuses the
@@ -1032,6 +1037,11 @@ def main(argv: list[str] | None = None) -> int:
     if raw_argv[0] == "review":
         from thesisagents.exporters.review import main as review_main
         return review_main(raw_argv[1:])
+    # ``validate-template`` checks a PowerPoint template against the template
+    # contract. Like ``review`` it takes a file, not the search mode group.
+    if raw_argv[0] == "validate-template":
+        from thesisagents.exporters.template import main as template_main
+        return template_main(raw_argv[1:])
     # Discovery flags short-circuit before argparse: they answer "what can I
     # search / export?" and so must NOT trip the required query/paper/pdf mutex
     # group (same reasoning as the bare-invocation gui shim above).

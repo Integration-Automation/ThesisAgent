@@ -51,8 +51,8 @@ MCP-Workflow in 6 Schritten
    5. (Sie lesen jedes PDF und erzeugen strukturierten Summary-Dict)
    6. export(papers=[{...paper, "summary": {...}}], language="de", ...)
 
-Insgesamt 17 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
-``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+Insgesamt 18 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
+``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``, ``pptx_validate_template``,
 ``export`` und sechs ``pptx_*``-Deck-Operationen (``pptx_inspect``,
 ``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
 ``pptx_reorder_slides``, ``pptx_add_slide``). Vollständige Referenz:
@@ -97,6 +97,16 @@ seinem Titel erkannt, und die neue Sichtung wird in den gespeicherten
 Datensatz zusammengeführt. Danach findet ``library_search`` gespeicherte
 Papers ohne Netzwerkzugriff, und bereits bestätigte DOIs und URLs werden
 30 Tage lang nicht erneut geprüft.
+
+**Verwenden Sie Ihre eigene Vorlage.** ``--pptx-template thesis.pptx``
+(CLI) oder ``pptx_template`` beim Tool ``export`` baut das Deck auf
+einer PowerPoint-Vorlage auf, sodass Hintergrund, Logo und Layouts Ihre
+eigenen sind. Führen Sie zuerst ``thesisagents validate-template
+thesis.pptx`` aus (oder das Tool ``pptx_validate_template``): Es listet
+auf, welches Layout jede Folienart verwenden würde, und sagt, was zu
+korrigieren ist. Eine Vorlage braucht 16:9-Folien und ein Layout für den
+Folieninhalt, und eine kleine Konfigurationsdatei kann Layouts,
+Schriftarten und Farben zuordnen.
 
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -210,7 +220,7 @@ Weiterführende Quellen
 ----------------------
 
 * CLI-Flags und Umgebungsvariablen: :doc:`/cli`
-* 17 MCP-Server-Tools: :doc:`/mcp`
+* 18 MCP-Server-Tools: :doc:`/mcp`
 * PPTX-Edit-Toolkit: :doc:`/pptx_editing`
 * Die Datei ``readmes/README.de.md`` im Repo-Root enthält die vollständige
   Feature-Liste.

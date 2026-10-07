@@ -321,6 +321,35 @@ DOI belongs to a different paper than the one it is attached to. Copy
 run, and run the audit in `AGENTS.md` "URL / DOI verification" on any
 hand-authored `scripts/regen_*.py`.
 
+### `error: [pptx] template ... does not meet the template contract`
+
+The file passed as `--pptx-template` (or `pptx_template`) cannot be
+used as it is. The lines under the message each name one problem and
+the change that fixes it: slides that are not 16:9 with
+`slide_size = "reject"`, a layout name in `[layouts]` the template
+does not have (the message lists the ones it has), no layout for slide
+content, or a title placeholder that `[placeholders] title` asks for
+and the layout lacks. Run `thesisagents validate-template FILE
+--config CONFIG` to see the same report without starting a run. See
+[Deck templates](pptx_templates.md).
+
+### A template deck shows the template's artwork off-centre
+
+The template is 4:3 (or another size) and was resized to 16:9, which
+the run reports as `Template warning: the template's slides are ...`.
+Artwork keeps the position it had on the narrower slide. Save a 16:9
+version of the template in PowerPoint (Design > Slide Size) and use
+that.
+
+### Titles are invisible on a template deck
+
+Slide titles are white because they sit on the exporter's navy header
+band. If the template covers that band with its own artwork, switch
+the band off in the config (`[chrome] header_band = false`), which
+also sets the titles in the `primary` colour, or send the titles into
+the template's title placeholder (`[placeholders] title = ["content",
+"table", "references"]`).
+
 ### `Slide overflowed the footer guard at 7.05"`
 
 A text box rendered taller than the 7.05" cap. Causes:

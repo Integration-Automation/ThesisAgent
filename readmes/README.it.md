@@ -61,7 +61,7 @@ leggero è un artefatto intermedio — il tuo lavoro è elevarlo.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-I diciassette strumenti MCP (inclusi `list_sources`, `list_exports`,
+I diciotto strumenti MCP (inclusi `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / ecc.) sono
 documentati in [`docs/mcp.md`](../docs/mcp.md).
@@ -245,9 +245,9 @@ articolo nella tupla `PaperCollection`.
   funziona su qualsiasi deck prodotto dall'esportatore, più gli strumenti MCP
   `pptx_*` equivalenti così che un agente LLM possa iterare su un deck
   generato.
-- **Server MCP**: 17 strumenti — `list_sources` + `list_exports`
+- **Server MCP**: 18 strumenti — `list_sources` + `list_exports`
   (discovery), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export` e i sei strumenti deck `pptx_*`
+  `download_pdfs`, `pptx_validate_template`, `export` e i sei strumenti deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Permette a
   qualsiasi LLM MCP-compatibile
@@ -325,6 +325,18 @@ articolo nella tupla `PaperCollection`.
   in un'esecuzione precedente non viene ricontrollato per 30 giorni.
   Disponibile anche come strumenti MCP `library_add`, `library_search` e
   `library_stats`.
+- **Modelli di diapositive**: `--pptx-template thesis.pptx` costruisce
+  le diapositive sul tuo modello PowerPoint, così lo sfondo, il logo e i
+  layout del modello danno forma alla presentazione al posto
+  dell'aspetto integrato con fascia blu navy. Ogni tipo di diapositiva
+  (copertina, sezione, contenuto, tabella, riferimenti, domande) usa il
+  layout che gli assegni, e un file di configurazione TOML / JSON
+  facoltativo (`--pptx-template-config`) imposta i caratteri, i colori
+  della tavolozza e se disegnare la fascia di intestazione e il pannello
+  di copertina. Il modello viene controllato prima che la ricerca inizi,
+  e `thesisagents validate-template thesis.pptx` mostra quale layout
+  userebbe ogni tipo di diapositiva e che cosa correggere. Senza
+  modello, la presentazione integrata resta invariata.
 - **Sicuro per default**: trasporto HTTP solo-HTTPS, rate limit per sorgente
   (token bucket), `defusedxml` per ogni payload XML, percorsi di esportazione
   sicuri contro path-traversal, niente `eval` / `exec` / `pickle` su input
@@ -406,6 +418,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Salta il prompt di paywall e prosegue. |
 | `--max-slides` | Tetto di slide per articolo (default 25; passa 0 per illimitato). |
 | `--dark-mode` | Renderizza il pptx con sfondo scuro + testo quasi bianco. Il default è il deck chiaro con banda navy. |
+| `--pptx-template FILE` | Costruisce le diapositive su un modello PowerPoint (.pptx / .potx) invece della presentazione integrata con fascia blu navy. Controllato prima che la ricerca inizi: servono diapositive 16:9 e un layout per il contenuto. `thesisagents validate-template FILE` mostra che cosa userebbe un'esportazione. |
+| `--pptx-template-config FILE` | Un file TOML / JSON di impostazioni per `--pptx-template`: il layout di ogni tipo di diapositiva, i caratteri, i colori della tavolozza e se disegnare la fascia di intestazione e il pannello di copertina. |
 | `--no-verify-identifiers` | Esporta senza verificare i DOI e gli URL degli articoli. Per impostazione predefinita, un DOI / URL errato o irraggiungibile ferma l'esecuzione prima di scrivere qualsiasi cosa. Per l'uso offline. |
 | `--diagnostics` | Spiega la classifica di una ricerca `--query`: stampa il punteggio di ogni articolo (rilevanza + attualità + citazioni) e una raccomandazione indicativa `keep` / `review` / `prune`, e scrive il dettaglio completo in `diagnostics.json` dentro `--out`. Nessun articolo viene rimosso. |
 | `--snowball` | Estende i risultati seguendo i collegamenti di citazione prima dell'esportazione: `references` (ciò che citano i primi risultati), `cited_by` (ciò che li cita) o `both`. I nuovi articoli vengono aggiunti in coda e passano per lo stesso download ed esportazione. Disattivato per impostazione predefinita. |
@@ -486,7 +500,8 @@ Strumenti:
 | `fetch_paper` | Identificatore arXiv / DOI / PMID / IEEE → articolo singolo. |
 | `fetch_pdf_text` | Scarica un PDF, restituisce il testo del corpo estratto. **Il percorso MCP verso «ho letto l'articolo».** |
 | `download_pdfs` | Scarica in lotto i PDF di una lista di articoli in `{out_dir}/pdfs/`. Restituisce risultati per articolo indicizzati per chiave BibTeX. |
-| `export` | Lista di articoli + formati → scrive `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accetta un campo `summary` per articolo per lo schema rich stile tesi, `max_slides_per_paper` (default 25) e `dark_mode` (default `false` — il default del progetto è il deck chiaro con banda navy, passa `true` per il post-pass scuro OLED / a bassa luminosità). Verifica ogni DOI / URL prima di scrivere (`verify_identifiers`, predefinito `true`): un identificatore errato o irraggiungibile fa fallire la chiamata e indica l'articolo, e la risposta contiene un rapporto `verification`. `library` indica una biblioteca della letteratura in cui conservare le verifiche degli identificatori, quindi un identificatore verificato in una chiamata precedente non viene ricontrollato. |
+| `export` | Lista di articoli + formati → scrive `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accetta un campo `summary` per articolo per lo schema rich stile tesi, `max_slides_per_paper` (default 25) e `dark_mode` (default `false` — il default del progetto è il deck chiaro con banda navy, passa `true` per il post-pass scuro OLED / a bassa luminosità). Verifica ogni DOI / URL prima di scrivere (`verify_identifiers`, predefinito `true`): un identificatore errato o irraggiungibile fa fallire la chiamata e indica l'articolo, e la risposta contiene un rapporto `verification`. `library` indica una biblioteca della letteratura in cui conservare le verifiche degli identificatori, quindi un identificatore verificato in una chiamata precedente non viene ricontrollato. `pptx_template` (con `pptx_template_config` facoltativo) costruisce la presentazione sul tuo modello PowerPoint. |
+| `pptx_validate_template` | Modello → se può essere usato per `export(pptx_template=...)`: il layout che userebbe ogni tipo di diapositiva, più gli errori e gli avvisi che dicono che cosa cambiare. Non viene generato nulla. |
 | `pptx_inspect` | Legge la struttura di slide / shape di un deck esistente. |
 | `pptx_review` | Verifica un deck in una sola chiamata — overflow + contratti colore + completezza delle sezioni `paper_rule`. Rileva automaticamente la lingua del deck; anche la CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Sostituisce `title` / `body` / `meta` (per nome di shape) o shape arbitrari per indice. |
@@ -520,7 +535,7 @@ ThesisAgents/
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (17 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

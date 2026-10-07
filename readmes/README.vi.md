@@ -64,7 +64,7 @@ nâng cấp nó.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Cả mười bảy công cụ MCP (gồm `list_sources`, `list_exports`,
+Cả mười tám công cụ MCP (gồm `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / v.v.) đều được
 tài liệu hóa trong [`docs/mcp.md`](../docs/mcp.md).
@@ -244,9 +244,9 @@ cho mỗi bài trong tuple `PaperCollection`.
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   làm việc với bất kỳ deck nào exporter sinh ra, cộng với các công cụ MCP
   `pptx_*` tương đương để một LLM agent có thể lặp trên một deck đã sinh.
-- **Server MCP**: 17 công cụ — `list_sources` + `list_exports`
+- **Server MCP**: 18 công cụ — `list_sources` + `list_exports`
   (khám phá), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, và sáu công cụ deck `pptx_*`
+  `download_pdfs`, `pptx_validate_template`, `export`, và sáu công cụ deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Cho phép
   bất kỳ LLM tương thích MCP nào
@@ -317,6 +317,17 @@ cho mỗi bài trong tuple `PaperCollection`.
   URL đã được xác minh ở một lần chạy trước sẽ không bị kiểm tra lại
   trong 30 ngày. Cũng có sẵn dưới dạng các công cụ MCP `library_add`,
   `library_search` và `library_stats`.
+- **Mẫu trang chiếu**: `--pptx-template thesis.pptx` dựng các trang
+  chiếu trên mẫu PowerPoint của riêng bạn, nên nền, logo và bố cục của
+  mẫu tạo nên bộ trang chiếu thay cho giao diện dải xanh navy có sẵn.
+  Mỗi loại trang chiếu (bìa, phần, nội dung, bảng, tài liệu tham khảo,
+  hỏi đáp) dùng bố cục bạn chỉ định cho nó, và một tệp cấu hình TOML /
+  JSON tùy chọn (`--pptx-template-config`) đặt phông chữ, màu của bảng
+  màu và việc có vẽ dải tiêu đề cùng tấm nền trang bìa hay không. Mẫu
+  được kiểm tra trước khi việc tìm kiếm bắt đầu, và `thesisagents
+  validate-template thesis.pptx` cho biết mỗi loại trang chiếu sẽ dùng
+  bố cục nào và cần sửa gì. Khi không có mẫu, bộ trang chiếu có sẵn
+  không thay đổi.
 - **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit theo
   từng nguồn (token bucket), `defusedxml` cho mọi payload XML,
   các đường xuất an-toàn-với-path-traversal, không `eval` / `exec` / `pickle` trên
@@ -397,6 +408,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Bỏ qua prompt paywall và tiếp tục. |
 | `--max-slides` | Giới hạn slide mỗi bài (mặc định 25; truyền 0 cho không giới hạn). |
 | `--dark-mode` | Render pptx với nền tối + chữ gần trắng. Mặc định là deck sáng dải navy. |
+| `--pptx-template FILE` | Dựng trang chiếu trên một mẫu PowerPoint (.pptx / .potx) thay cho bộ trang chiếu dải xanh navy có sẵn. Được kiểm tra trước khi việc tìm kiếm bắt đầu: cần trang chiếu 16:9 và một bố cục cho nội dung. `thesisagents validate-template FILE` cho biết một lần xuất sẽ dùng gì. |
+| `--pptx-template-config FILE` | Một tệp TOML / JSON chứa các ghi đè cho `--pptx-template`: bố cục cho từng loại trang chiếu, phông chữ, màu của bảng màu, và việc có vẽ dải tiêu đề cùng tấm nền trang bìa hay không. |
 | `--no-verify-identifiers` | Xuất mà không kiểm tra DOI và URL của các bài báo. Theo mặc định, DOI / URL sai hoặc không thể kết nối sẽ dừng lần chạy trước khi ghi bất cứ thứ gì. Dùng khi ngoại tuyến. |
 | `--diagnostics` | Giải thích thứ hạng của một lần tìm `--query`: in điểm của từng bài báo (độ liên quan + độ mới + trích dẫn) cùng khuyến nghị tham khảo `keep` / `review` / `prune`, và ghi bảng phân tích đầy đủ vào `diagnostics.json` trong `--out`. Không bài báo nào bị xóa. |
 | `--snowball` | Mở rộng kết quả theo liên kết trích dẫn trước khi xuất: `references` (những gì các kết quả đứng đầu trích dẫn), `cited_by` (những gì trích dẫn chúng) hoặc `both`. Các bài mới được nối vào cuối và đi qua cùng bước tải xuống và xuất. Mặc định tắt. |
@@ -476,7 +489,8 @@ Công cụ:
 | `fetch_paper` | Định danh arXiv / DOI / PMID / IEEE → một bài đơn. |
 | `fetch_pdf_text` | Tải một PDF, trả về văn bản thân bài đã trích. **Cổng MCP tới "tôi đã đọc bài".** |
 | `download_pdfs` | Tải hàng loạt PDF của một danh sách bài vào `{out_dir}/pdfs/`. Trả về kết quả từng bài có khóa theo khóa BibTeX. |
-| `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận một trường `summary` mỗi bài cho schema phong cách luận văn đầy đủ, `max_slides_per_paper` (mặc định 25), và `dark_mode` (mặc định `false` — mặc định dự án là deck sáng dải navy, truyền `true` cho post-pass tối OLED / thiếu sáng). Xác minh mọi DOI / URL trước khi ghi (`verify_identifiers`, mặc định `true`): mã định danh sai hoặc không thể kết nối làm lệnh gọi thất bại và nêu rõ bài báo, và phản hồi kèm báo cáo `verification`. `library` chỉ định thư viện tài liệu dùng để lưu kết quả kiểm tra định danh, nên định danh đã được xác minh ở một lần gọi trước sẽ không bị kiểm tra lại. |
+| `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận một trường `summary` mỗi bài cho schema phong cách luận văn đầy đủ, `max_slides_per_paper` (mặc định 25), và `dark_mode` (mặc định `false` — mặc định dự án là deck sáng dải navy, truyền `true` cho post-pass tối OLED / thiếu sáng). Xác minh mọi DOI / URL trước khi ghi (`verify_identifiers`, mặc định `true`): mã định danh sai hoặc không thể kết nối làm lệnh gọi thất bại và nêu rõ bài báo, và phản hồi kèm báo cáo `verification`. `library` chỉ định thư viện tài liệu dùng để lưu kết quả kiểm tra định danh, nên định danh đã được xác minh ở một lần gọi trước sẽ không bị kiểm tra lại. `pptx_template` (kèm `pptx_template_config` tùy chọn) dựng bộ trang chiếu trên mẫu PowerPoint của riêng bạn. |
+| `pptx_validate_template` | Mẫu → nó có dùng được cho `export(pptx_template=...)` hay không: bố cục mà mỗi loại trang chiếu sẽ dùng, cùng các lỗi và cảnh báo cho biết cần sửa gì. Không có gì được tạo ra. |
 | `pptx_inspect` | Đọc cấu trúc slide / shape của một deck hiện có. |
 | `pptx_review` | Kiểm toán một deck trong một lời gọi — overflow + hợp đồng màu + độ đầy đủ mục `paper_rule`. Tự phát hiện ngôn ngữ deck; cũng là CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Thay `title` / `body` / `meta` (theo tên shape) hoặc các shape tùy ý theo index. |
@@ -509,7 +523,7 @@ ThesisAgents/
 │   ├── intelligence/                # tải PDF + bộ tóm tắt Anthropic  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # benchmark chất lượng tìm kiếm offline (docs/search-quality.md)
-│   ├── mcp/                         # server FastMCP (17 công cụ)
+│   ├── mcp/                         # server FastMCP (18 công cụ)
 │   ├── sources/<name>/              # thư mục plugin: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

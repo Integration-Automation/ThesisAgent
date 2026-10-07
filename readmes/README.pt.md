@@ -62,7 +62,7 @@ emissão leve é um artefato intermediário — o seu trabalho é aprimorá-la.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Todas as dezessete ferramentas MCP (incluindo `list_sources`, `list_exports`,
+Todas as dezoito ferramentas MCP (incluindo `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) estão documentadas em [`docs/mcp.md`](../docs/mcp.md).
 
@@ -241,8 +241,8 @@ tupla `PaperCollection`.
   funciona contra qualquer slide que o exportador produz, mais as ferramentas
   MCP `pptx_*` equivalentes, para que um agente LLM possa iterar sobre um slide
   gerado.
-- **Servidor MCP**: 17 ferramentas — `list_sources` + `list_exports`
-  (descoberta), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`,
+- **Servidor MCP**: 18 ferramentas — `list_sources` + `list_exports`
+  (descoberta), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `pptx_validate_template`,
   `export` e as seis ferramentas de slide `pptx_*` (`inspect`, `review`,
   `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`). Permite que
   qualquer LLM compatível com MCP (Claude Code, Claude Desktop, Cursor, …)
@@ -317,6 +317,17 @@ tupla `PaperCollection`.
   execução anterior não é verificado de novo por 30 dias. Também
   disponível como as ferramentas MCP `library_add`, `library_search` e
   `library_stats`.
+- **Modelos de slides**: `--pptx-template thesis.pptx` constrói os
+  slides sobre o seu próprio modelo do PowerPoint, de modo que o fundo,
+  o logotipo e os layouts do modelo dão forma à apresentação em vez do
+  visual embutido de faixa azul-marinho. Cada tipo de slide (capa,
+  seção, conteúdo, tabela, referências, perguntas) usa o layout que você
+  indicar para ele, e um arquivo de configuração TOML / JSON opcional
+  (`--pptx-template-config`) define as fontes, as cores da paleta e se a
+  faixa de cabeçalho e o painel da capa são desenhados. O modelo é
+  verificado antes de a busca começar, e `thesisagents validate-template
+  thesis.pptx` mostra qual layout cada tipo de slide usaria e o que
+  corrigir. Sem modelo, a apresentação embutida não muda.
 - **Segurança por padrão**: transporte HTTP somente HTTPS, limite de taxa por
   fonte (token bucket), `defusedxml` para qualquer payload XML, caminhos de
   exportação seguros contra travessia de diretório, nenhum `eval` / `exec` /
@@ -398,6 +409,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Pula o prompt de paywall e prossegue. |
 | `--max-slides` | Limite de slides por artigo (padrão 25; passe 0 para ilimitado). |
 | `--dark-mode` | Renderiza o pptx com fundo escuro + texto quase branco. O padrão é o slide claro com faixa azul-marinho. |
+| `--pptx-template FILE` | Constrói os slides sobre um modelo do PowerPoint (.pptx / .potx) em vez da apresentação embutida de faixa azul-marinho. Verificado antes de a busca começar: precisa de slides 16:9 e de um layout para o conteúdo. `thesisagents validate-template FILE` mostra o que uma exportação usaria. |
+| `--pptx-template-config FILE` | Um arquivo TOML / JSON de ajustes para `--pptx-template`: o layout de cada tipo de slide, as fontes, as cores da paleta e se a faixa de cabeçalho e o painel da capa são desenhados. |
 | `--no-verify-identifiers` | Exporta sem verificar os DOIs e as URLs dos artigos. Por padrão, um DOI / URL errado ou inalcançável interrompe a execução antes de gravar qualquer coisa. Para uso offline. |
 | `--diagnostics` | Explica a classificação de uma busca `--query`: imprime a pontuação de cada artigo (relevância + atualidade + citações) e uma recomendação orientativa `keep` / `review` / `prune`, e grava o detalhamento completo em `diagnostics.json` dentro de `--out`. Nenhum artigo é removido. |
 | `--snowball` | Expande os resultados seguindo os vínculos de citação antes de exportar: `references` (o que os primeiros resultados citam), `cited_by` (o que os cita) ou `both`. Os novos artigos são acrescentados ao final e passam pelo mesmo download e exportação. Desativado por padrão. |
@@ -479,7 +492,8 @@ Ferramentas:
 | `fetch_paper` | Identificador arXiv / DOI / PMID / IEEE → artigo único. |
 | `fetch_pdf_text` | Baixa um PDF, retorna o texto do corpo extraído. **O caminho MCP para "eu li o artigo".** |
 | `download_pdfs` | Baixa em lote os PDFs de uma lista de artigos em `{out_dir}/pdfs/`. Retorna resultados por artigo indexados pela chave BibTeX. |
-| `export` | Lista de artigos + formatos → escreve `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Aceita um campo `summary` por artigo para o esquema rico no estilo de tese, `max_slides_per_paper` (padrão 25) e `dark_mode` (padrão `false` — o padrão do projeto é o slide claro com faixa azul-marinho, passe `true` para a pós-passagem escura OLED / de pouca luz). Verifica cada DOI / URL antes de gravar (`verify_identifiers`, padrão `true`): um identificador errado ou inalcançável faz a chamada falhar e indica o artigo, e a resposta traz um relatório `verification`. `library` indica uma biblioteca de literatura onde guardar as verificações de identificadores, de modo que um identificador verificado em uma chamada anterior não é verificado de novo. |
+| `export` | Lista de artigos + formatos → escreve `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Aceita um campo `summary` por artigo para o esquema rico no estilo de tese, `max_slides_per_paper` (padrão 25) e `dark_mode` (padrão `false` — o padrão do projeto é o slide claro com faixa azul-marinho, passe `true` para a pós-passagem escura OLED / de pouca luz). Verifica cada DOI / URL antes de gravar (`verify_identifiers`, padrão `true`): um identificador errado ou inalcançável faz a chamada falhar e indica o artigo, e a resposta traz um relatório `verification`. `library` indica uma biblioteca de literatura onde guardar as verificações de identificadores, de modo que um identificador verificado em uma chamada anterior não é verificado de novo. `pptx_template` (com `pptx_template_config` opcional) constrói a apresentação sobre o seu próprio modelo do PowerPoint. |
+| `pptx_validate_template` | Modelo → se pode ser usado em `export(pptx_template=...)`: o layout que cada tipo de slide usaria, além de erros e avisos que dizem o que mudar. Nada é gerado. |
 | `pptx_inspect` | Lê a estrutura de slide / forma de um slide existente. |
 | `pptx_review` | Audita um slide numa chamada — overflow + contratos de cor + completude de seções do `paper_rule`. Detecta automaticamente o idioma do slide; também o CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Substitui `title` / `body` / `meta` (por nome de forma) ou formas arbitrárias por índice. |
@@ -513,7 +527,7 @@ ThesisAgents/
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (17 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

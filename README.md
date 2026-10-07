@@ -64,7 +64,7 @@ it.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-All seventeen MCP tools (including `list_sources`, `list_exports`,
+All eighteen MCP tools (including `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) are
 documented in [`docs/mcp.md`](docs/mcp.md).
@@ -242,9 +242,9 @@ entry per paper in the `PaperCollection` tuple.
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   works against any deck the exporter produces, plus the equivalent
   `pptx_*` MCP tools so an LLM agent can iterate on a generated deck.
-- **MCP server**: 17 tools — `list_sources` + `list_exports`
+- **MCP server**: 18 tools — `list_sources` + `list_exports`
   (discovery), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, and the six `pptx_*` deck tools
+  `download_pdfs`, `pptx_validate_template`, `export`, and the six `pptx_*` deck tools
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Lets
   any MCP-aware LLM
@@ -313,6 +313,16 @@ entry per paper in the `PaperCollection` tuple.
   export format. A DOI or URL that verified in an earlier run is not
   checked again for 30 days. Also available as the MCP tools
   `library_add`, `library_search` and `library_stats`.
+- **Deck templates**: `--pptx-template thesis.pptx` builds the decks on
+  your own PowerPoint template, so its background, logo and layouts
+  carry the deck instead of the built-in navy-band look. Each kind of
+  slide (cover, section, content, table, references, Q&A) uses the
+  layout you name for it, and an optional TOML / JSON config
+  (`--pptx-template-config`) sets the fonts, the palette colours and
+  whether the header band and cover panel are drawn. The template is
+  checked before the search starts, and `thesisagents validate-template
+  thesis.pptx` shows which layout each kind of slide would use and what
+  to fix. Without a template the built-in deck is unchanged.
 - **Safety by default**: HTTPS-only HTTP transport, per-source rate
   limit (token bucket), `defusedxml` for any XML payload,
   path-traversal-safe export paths, no `eval` / `exec` / `pickle` on
@@ -393,6 +403,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Skip the paywall prompt and proceed. |
 | `--max-slides` | Per-paper slide cap (default 25; pass 0 for unlimited). |
 | `--dark-mode` | Render the pptx with a dark background + near-white text. The default is the light navy-band deck. |
+| `--pptx-template FILE` | Build decks on a PowerPoint template (.pptx / .potx) instead of the built-in navy-band deck. Checked before the search starts: it needs 16:9 slides and a layout for slide content. `thesisagents validate-template FILE` shows what an export would use. |
+| `--pptx-template-config FILE` | A TOML / JSON file of overrides for `--pptx-template`: the layout for each kind of slide, font families, palette colours, and whether the header band and cover panel are drawn. |
 | `--no-verify-identifiers` | Export without checking the papers' DOIs and URLs. By default a wrong or unreachable DOI / URL stops the run before anything is written. For offline use. |
 | `--diagnostics` | Explain the ranking of a `--query` search: prints each paper's score (relevance + recency + citations) and an advisory `keep` / `review` / `prune` recommendation, and writes the full breakdown to `diagnostics.json` in `--out`. No paper is removed. |
 | `--snowball` | Expand the results along citation links before exporting: `references` (what the top results cite), `cited_by` (what cites them) or `both`. The new papers are appended and go through the same download and export. Off by default. |
@@ -472,7 +484,8 @@ Tools:
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |
-| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `false` — the project default is the light navy-band deck, pass `true` for the dark OLED / low-light post-pass). Verifies every DOI / URL before writing (`verify_identifiers`, default `true`): a wrong or unreachable identifier fails the call and names the paper, and the response carries a `verification` report. `library` names a literature library to keep the identifier checks in, so an identifier verified by an earlier call is not checked again. |
+| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `false` — the project default is the light navy-band deck, pass `true` for the dark OLED / low-light post-pass). Verifies every DOI / URL before writing (`verify_identifiers`, default `true`): a wrong or unreachable identifier fails the call and names the paper, and the response carries a `verification` report. `library` names a literature library to keep the identifier checks in, so an identifier verified by an earlier call is not checked again. `pptx_template` (with an optional `pptx_template_config`) builds the deck on your own PowerPoint template. |
+| `pptx_validate_template` | Template → whether it can be used for `export(pptx_template=...)`: the layout each kind of slide would use, plus errors and warnings that say what to change. Nothing is rendered. |
 | `pptx_inspect` | Read slide / shape structure of an existing deck. |
 | `pptx_review` | Audit a deck in one call — overflow + colour contracts + `paper_rule` section completeness. Auto-detects the deck language; also the CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Replace `title` / `body` / `meta` (by shape name) or arbitrary shapes by index. |
@@ -505,7 +518,7 @@ ThesisAgents/
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (17 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

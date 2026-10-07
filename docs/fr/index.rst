@@ -51,9 +51,9 @@ Workflow MCP en 6 étapes
    5. (vous lisez chaque PDF et produisez un dict de résumé structuré)
    6. export(papers=[{...paper, "summary": {...}}], language="fr", ...)
 
-17 outils MCP au total : découverte (``list_sources``,
+18 outils MCP au total : découverte (``list_sources``,
 ``list_exports``), ``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``,
-``download_pdfs``, ``export`` et six opérations de deck ``pptx_*``
+``download_pdfs``, ``pptx_validate_template``, ``export`` et six opérations de deck ``pptx_*``
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
 Référence complète : :doc:`/mcp`.
@@ -97,6 +97,16 @@ la nouvelle observation est fusionnée dans l'enregistrement conservé.
 Ensuite ``library_search`` retrouve les articles conservés sans toucher
 au réseau, et les DOI et URL déjà vérifiés ne sont pas revérifiés
 pendant 30 jours.
+
+**Utilisez votre propre modèle.** ``--pptx-template thesis.pptx`` (CLI)
+ou ``pptx_template`` sur l'outil ``export`` construit la présentation
+sur un modèle PowerPoint, si bien que l'arrière-plan, le logo et les
+dispositions sont les vôtres. Lancez d'abord ``thesisagents
+validate-template thesis.pptx`` (ou l'outil ``pptx_validate_template``)
+: il liste la disposition que chaque type de diapositive utiliserait et
+vous dit quoi corriger. Un modèle doit avoir des diapositives 16:9 et
+une disposition pour le contenu, et un petit fichier de configuration
+peut attribuer dispositions, polices et couleurs.
 
 Obligatoire : vérification URL / DOI avant livraison
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -208,7 +218,7 @@ Où chercher plus loin
 ---------------------
 
 * Flags CLI + variables d'environnement : :doc:`/cli`
-* 17 outils du serveur MCP : :doc:`/mcp`
+* 18 outils du serveur MCP : :doc:`/mcp`
 * Boîte à outils d'édition PPTX : :doc:`/pptx_editing`
 * Le fichier ``readmes/README.fr.md`` à la racine du repo donne la liste
   complète des fonctionnalités.

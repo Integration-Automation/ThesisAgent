@@ -48,7 +48,7 @@ MCP 6 단계 워크플로
    5. (각 PDF 읽고 구조화된 summary dict 생성)
    6. export(papers=[{...paper, "summary": {...}}], language="ko", ...)
 
-17 개 MCP 도구의 완전한 참조: :doc:`/mcp`.
+18 개 MCP 도구의 완전한 참조: :doc:`/mcp`.
 
 **주제에서 벗어난 결과를 찾으려면 먼저 도구가 내놓는 권고를 참고하세요.** CLI 의 ``--diagnostics`` 또는
 MCP ``search`` 도구의 ``diagnostics=true`` 는 순위의 근거를 설명합니다. 각 논문의 점수를 관련성,
@@ -73,6 +73,13 @@ MCP ``search`` 도구의 ``diagnostics=true`` 는 순위의 근거를 설명합�
 파일입니다. 같은 검색을 다시 추가해도 중복은 생기지 않습니다. 논문은 DOI, arXiv ID 또는 제목으로 식별되고, 새
 기록은 보관된 레코드에 병합됩니다. 이후 ``library_search`` 는 네트워크 없이 보관된 논문을 찾으며, 이미 확인된
 DOI 와 URL 은 30일 동안 다시 확인하지 않습니다.
+
+**자신의 템플릿을 사용하세요.** CLI 의 ``--pptx-template thesis.pptx`` 또는 ``export``
+도구의 ``pptx_template`` 은 PowerPoint 템플릿 위에 슬라이드를 만듭니다. 배경, 로고, 레이아웃이 모두
+사용자의 것이 됩니다. 먼저 ``thesisagents validate-template thesis.pptx`` (또는
+``pptx_validate_template`` 도구) 를 실행하세요. 각 종류의 슬라이드가 어떤 레이아웃을 쓰는지 나열하고
+고쳐야 할 점을 알려 줍니다. 템플릿에는 16:9 슬라이드와 내용을 놓을 레이아웃이 필요하며, 작은 설정 파일로 레이아웃, 글꼴,
+색상을 지정할 수 있습니다.
 
 필수: 인도 전 URL / DOI 검증
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -177,7 +184,7 @@ CLI 플래그 전체 표: :doc:`/cli`.
 ---------
 
 * CLI 플래그 + 환경 변수: :doc:`/cli`
-* 17 개 MCP 서버 도구: :doc:`/mcp`
+* 18 개 MCP 서버 도구: :doc:`/mcp`
 * PPTX 편집 툴킷: :doc:`/pptx_editing`
 * repo 루트의 ``readmes/README.ko.md`` 에 기능 전체 목록이 있습니다.
 * 깊이 있는 기술 참조 (플러그인 아키텍처, 보안 정책, Definition of

@@ -54,6 +54,9 @@ Tools:
   research_questions, rq_results, …) — when present, the PPT switches to
   thesis-style layout. ``dark_mode`` defaults to False (project default
   is the light navy-band deck); pass True for the dark OLED/low-light variant.
+- pptx_validate_template(path, config?, dark_mode?) -> {ok, layouts, errors, warnings}
+  Check a PowerPoint template against the template contract (16:9 slides, a
+  layout for every slide role) before passing it to export as pptx_template.
 - pptx_inspect(path) -> {slides: [...]}
 - pptx_review(path, language?) -> {overflow, contrast, missing_sections, ok}
   Audit an existing deck against the overflow, colour-contract, and
@@ -113,6 +116,7 @@ from thesisagents.core.query import normalize_query
 from thesisagents.core.snowball import SnowballResult
 from thesisagents.core.snowball import snowball as run_snowball
 from thesisagents.exporters import export_collection, pptx_edit, review
+from thesisagents.exporters.template import validate_template
 from thesisagents.fetchers.http import shutdown_clients
 from thesisagents.library import Library
 from thesisagents.mcp.library_tools import register_library_tools
@@ -540,6 +544,8 @@ def _register_export_tool(server: FastMCP) -> None:
         dark_mode: bool = False,
         verify_identifiers: bool = True,
         library: str | None = None,
+        pptx_template: str | None = None,
+        pptx_template_config: str | None = None,
     ) -> dict[str, Any]:
         """Export a list of papers (from search / fetch_paper) to disk.
 
@@ -557,6 +563,14 @@ def _register_export_tool(server: FastMCP) -> None:
         When given, the verdicts are kept there: a DOI or URL that verified in
         an earlier call is not checked again for 30 days. A failure is always
         checked again.
+
+        ``pptx_template`` builds the deck on a PowerPoint template (.pptx /
+        .potx) instead of the built-in navy-band deck, and
+        ``pptx_template_config`` is a TOML / JSON file of overrides for it
+        (layout per slide role, fonts, colours, chrome). A template that does
+        not meet the template contract fails the call with every problem
+        listed and writes nothing: check one first with
+        ``pptx_validate_template``.
 
         Each paper dict may carry a ``summary`` field — when populated with
         the rich-tier shape (pain_points, research_question, headline_metrics,
@@ -611,6 +625,8 @@ def _register_export_tool(server: FastMCP) -> None:
             max_slides_per_paper=slide_cap,
             dark_mode=dark_mode,
             verify_identifiers=verify_identifiers,
+            pptx_template=pptx_template,
+            pptx_template_config=pptx_template_config,
         )
         store = Library(library) if library else None
         try:
@@ -637,6 +653,26 @@ def _register_export_tool(server: FastMCP) -> None:
 
 
 def _register_pptx_tools(server: FastMCP) -> None:
+    @_tool(server)
+    def pptx_validate_template(
+        path: str, config: str | None = None, dark_mode: bool = False
+    ) -> dict[str, Any]:
+        """Check a PowerPoint template before using it as ``export(pptx_template=...)``.
+
+        ``path`` is the template (.pptx / .potx). ``config`` is the optional
+        TOML / JSON file of overrides that would be passed as
+        ``pptx_template_config``. ``dark_mode`` adds the warnings that apply
+        to a dark export.
+
+        Returns ``ok``, the slide size, ``available_layouts`` (every layout
+        name in the template), ``layouts`` (the layout each slide role, cover
+        / section / content / table / references / qa, would use), ``errors``
+        (each with a ``code`` and a ``message`` saying what to change) and
+        ``warnings``. Nothing is rendered or written. A template with errors
+        makes ``export`` fail, one with only warnings exports.
+        """
+        return validate_template(path, config, dark_mode=dark_mode).to_dict()
+
     @_tool(server)
     def pptx_inspect(path: str) -> dict[str, Any]:
         """Return slide-by-slide structure (index, title, every text frame)."""

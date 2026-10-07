@@ -47,9 +47,9 @@ Concretely, the assistant:
    Python pipeline (`ANTHROPIC_API_KEY` set — Anthropic API call).
 4. **Generates** `.pptx` (three rendering tiers — lightweight / enriched-flat /
    thesis-style), `.xlsx`, `.bib`, `.md`, `.json` outputs.
-5. **Exposes** every step as an MCP tool (17 in all: `list_sources`, `list_exports`,
+5. **Exposes** every step as an MCP tool (18 in all: `list_sources`, `list_exports`,
    `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`,
-   `fetch_pdf_text`, `download_pdfs`, `export`,
+   `fetch_pdf_text`, `download_pdfs`, `pptx_validate_template`, `export`,
    `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
    `pptx_reorder_slides`, `pptx_add_slide`). `pptx_review` audits an existing deck
    (overflow + colour contracts + `paper_rule` section completeness) in one call —
@@ -285,7 +285,13 @@ After the edit, audit the resulting deck against those subagents' contracts:
 5. **Navy header band (`accent_top`) + full-bleed navy cover (`accent_left`)
    geometry** present on ThesisAgents generated decks (hand-made decks are
    exempt from accent geometry but not from dark-mode / no-red / contrast
-   contracts).
+   contracts). A deck built on a user template (`--pptx-template`) is
+   exempt in the same way where its config switches the chrome off
+   (`[chrome] header_band = false` / `cover_panel = false`) or puts titles
+   in the template's title placeholder: the template supplies that
+   geometry. **Why:** auditing such a deck for `accent_top` reports a
+   missing band that was left out on purpose. The other four contracts
+   bind it unchanged. Contract: `docs/pptx_templates.md`.
 
 **For hand-made decks that don't follow the project's `_BRAND_*` constants**,
 run `_apply_dark_mode(prs)` from `thesisagents.exporters.pptx` as a

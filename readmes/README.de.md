@@ -65,7 +65,7 @@ Zwischenartefakt — deine Aufgabe ist es, ihn aufzuwerten.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Alle siebzehn MCP-Tools (einschließlich `list_sources`, `list_exports`,
+Alle achtzehn MCP-Tools (einschließlich `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) sind
 in [`docs/mcp.md`](../docs/mcp.md) dokumentiert.
@@ -248,9 +248,9 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   funktioniert mit jedem Foliensatz, den der Exporter erzeugt, plus den
   äquivalenten `pptx_*`-MCP-Tools, sodass ein LLM-Agent an einem erzeugten
   Foliensatz iterieren kann.
-- **MCP-Server**: 17 Tools — `list_sources` + `list_exports`
+- **MCP-Server**: 18 Tools — `list_sources` + `list_exports`
   (Discovery), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export` und die sechs `pptx_*`-Deck-Tools
+  `download_pdfs`, `pptx_validate_template`, `export` und die sechs `pptx_*`-Deck-Tools
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Lässt jedes
   MCP-fähige LLM
@@ -325,6 +325,17 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   oder URL, die in einem früheren Lauf bestätigt wurde, wird 30 Tage
   lang nicht erneut geprüft. Auch als MCP-Tools `library_add`,
   `library_search` und `library_stats` verfügbar.
+- **Folienvorlagen**: `--pptx-template thesis.pptx` baut die Folien auf
+  Ihrer eigenen PowerPoint-Vorlage auf, sodass deren Hintergrund, Logo
+  und Layouts das Deck tragen statt des eingebauten Designs mit
+  marineblauem Band. Jede Folienart (Titel, Abschnitt, Inhalt, Tabelle,
+  Literatur, Fragen) verwendet das Layout, das Sie ihr zuweisen, und
+  eine optionale TOML- / JSON-Konfiguration (`--pptx-template-config`)
+  legt die Schriftarten, die Palettenfarben und fest, ob das Kopfband
+  und die Titelfläche gezeichnet werden. Die Vorlage wird geprüft, bevor
+  die Suche beginnt, und `thesisagents validate-template thesis.pptx`
+  zeigt, welches Layout jede Folienart verwenden würde und was zu
+  korrigieren ist. Ohne Vorlage bleibt das eingebaute Deck unverändert.
 - **Standardmäßig sicher**: Nur-HTTPS-HTTP-Transport, quellenweise
   Ratenbegrenzung (Token-Bucket), `defusedxml` für jede XML-Nutzlast,
   pfadtraversierungssichere Exportpfade, kein `eval` / `exec` / `pickle` auf
@@ -407,6 +418,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Überspringt die Paywall-Abfrage und fährt fort. |
 | `--max-slides` | Folienobergrenze pro Paper (Standard 25; übergib 0 für unbegrenzt). |
 | `--dark-mode` | Rendert die pptx mit dunklem Hintergrund + fast weißem Text. Standard ist der helle Foliensatz mit marineblauem Band. |
+| `--pptx-template FILE` | Baut die Folien auf einer PowerPoint-Vorlage (.pptx / .potx) auf statt auf dem eingebauten Deck mit marineblauem Band. Wird geprüft, bevor die Suche beginnt: Nötig sind 16:9-Folien und ein Layout für den Folieninhalt. `thesisagents validate-template FILE` zeigt, was ein Export verwenden würde. |
+| `--pptx-template-config FILE` | Eine TOML- / JSON-Datei mit Überschreibungen für `--pptx-template`: das Layout je Folienart, Schriftarten, Palettenfarben und ob das Kopfband und die Titelfläche gezeichnet werden. |
 | `--no-verify-identifiers` | Exportiert, ohne die DOIs und URLs der Papers zu prüfen. Standardmäßig stoppt eine falsche oder nicht erreichbare DOI / URL den Lauf, bevor etwas geschrieben wird. Für den Offline-Einsatz. |
 | `--diagnostics` | Erklärt das Ranking einer `--query`-Suche: gibt die Punktzahl jedes Papers aus (Relevanz + Aktualität + Zitationen) sowie eine unverbindliche Empfehlung `keep` / `review` / `prune` und schreibt die vollständige Aufschlüsselung nach `diagnostics.json` in `--out`. Kein Paper wird entfernt. |
 | `--snowball` | Erweitert die Ergebnisse vor dem Export entlang der Zitationsverknüpfungen: `references` (was die obersten Ergebnisse zitieren), `cited_by` (was sie zitiert) oder `both`. Die neuen Papers werden angehängt und durchlaufen denselben Download und Export. Standardmäßig aus. |
@@ -488,7 +501,8 @@ Tools:
 | `fetch_paper` | arXiv / DOI / PMID / IEEE-Identifikator → einzelnes Paper. |
 | `fetch_pdf_text` | Lädt ein PDF herunter, gibt extrahierten Fließtext zurück. **Der MCP-Pfad zu „Ich habe das Paper gelesen".** |
 | `download_pdfs` | Lädt die PDFs einer Paper-Liste stapelweise nach `{out_dir}/pdfs/` herunter. Gibt Ergebnisse pro Paper zurück, indiziert nach BibTeX-Schlüssel. |
-| `export` | Paper-Liste + Formate → schreibt `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Akzeptiert ein `summary`-Feld pro Paper für das reichhaltige Thesis-Stil-Schema, `max_slides_per_paper` (Standard 25) und `dark_mode` (Standard `false` — der Projektstandard ist der helle Foliensatz mit marineblauem Band, übergib `true` für den dunklen OLED-/Schwachlicht-Nachlauf). Verifiziert vor dem Schreiben jede DOI / URL (`verify_identifiers`, Standard `true`): Ein falscher oder nicht erreichbarer Bezeichner lässt den Aufruf scheitern und nennt das Paper, und die Antwort enthält einen `verification`-Bericht. `library` nennt eine Literaturbibliothek, in der die Kennungsprüfungen aufbewahrt werden, sodass eine bei einem früheren Aufruf bestätigte Kennung nicht erneut geprüft wird. |
+| `export` | Paper-Liste + Formate → schreibt `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Akzeptiert ein `summary`-Feld pro Paper für das reichhaltige Thesis-Stil-Schema, `max_slides_per_paper` (Standard 25) und `dark_mode` (Standard `false` — der Projektstandard ist der helle Foliensatz mit marineblauem Band, übergib `true` für den dunklen OLED-/Schwachlicht-Nachlauf). Verifiziert vor dem Schreiben jede DOI / URL (`verify_identifiers`, Standard `true`): Ein falscher oder nicht erreichbarer Bezeichner lässt den Aufruf scheitern und nennt das Paper, und die Antwort enthält einen `verification`-Bericht. `library` nennt eine Literaturbibliothek, in der die Kennungsprüfungen aufbewahrt werden, sodass eine bei einem früheren Aufruf bestätigte Kennung nicht erneut geprüft wird. `pptx_template` (optional mit `pptx_template_config`) baut das Deck auf Ihrer eigenen PowerPoint-Vorlage auf. |
+| `pptx_validate_template` | Vorlage → ob sie für `export(pptx_template=...)` taugt: das Layout, das jede Folienart verwenden würde, dazu Fehler und Warnungen, die sagen, was zu ändern ist. Es wird nichts gerendert. |
 | `pptx_inspect` | Liest die Folien-/Shape-Struktur eines vorhandenen Foliensatzes. |
 | `pptx_review` | Prüft einen Foliensatz in einem Aufruf — Überlauf + Farbverträge + `paper_rule`-Abschnittsvollständigkeit. Erkennt die Foliensatzsprache automatisch; auch die CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Ersetzt `title` / `body` / `meta` (nach Shape-Name) oder beliebige Shapes nach Index. |
@@ -521,7 +535,7 @@ ThesisAgents/
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (17 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

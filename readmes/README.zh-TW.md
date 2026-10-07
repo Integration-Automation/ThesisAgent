@@ -57,7 +57,7 @@ README 想搞清楚要做什麼 —— 從這裡開始。** 底下的所有內�
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-全部十七個 MCP 工具(包含 `list_sources`、`list_exports`、
+全部十八個 MCP 工具(包含 `list_sources`、`list_exports`、
 `download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / 等等)都記載於 [`docs/mcp.md`](../docs/mcp.md)。
 
@@ -199,8 +199,8 @@ for key in irrelevant_keys:
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   可對匯出器產出的任何投影片運作,加上對應的 `pptx_*` MCP 工具,好讓
   一個 LLM agent 能在產出的投影片上反覆迭代。
-- **MCP 伺服器**:17 個工具 —— `list_sources` + `list_exports`
-  (探索)、`search`、`snowball`、`library_add`、`library_search`、`library_stats`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
+- **MCP 伺服器**:18 個工具 —— `list_sources` + `list_exports`
+  (探索)、`search`、`snowball`、`library_add`、`library_search`、`library_stats`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`pptx_validate_template`、
   `export`,以及六個 `pptx_*` 投影片工具(`inspect`、`review`、
   `update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。讓任何
   懂 MCP 的 LLM(Claude Code、Claude Desktop、Cursor …)驅動整個工作
@@ -229,6 +229,7 @@ for key in irrelevant_keys:
 - **各來源的搜尋統計**: 每次搜尋都會回報每個來源回傳了幾筆記錄、去重後有幾篇論文歸屬於它,以及它是否失敗、被限流或未啟用。出錯的來源會被跳過而不中斷搜尋,所以要分辨「主題本來就冷門」與「搜尋掉了一半來源」,靠的就是這些數字。CLI 在每次 `--query` 搜尋後印出,MCP `search` 工具以 `source_stats` 回傳,GUI 則顯示在狀態列。
 - **引用滾雪球搜尋**: `--snowball references|cited_by|both` (或 MCP 的 `snowball` 工具) 會沿著引用關係擴充排名最前面的結果,往回找它們引用的文獻、往前找引用它們的文獻,補上關鍵字搜尋因作者用詞不同而漏掉的研究。每個維度都有上限 (預設深度 1、每個種子的篇數、總篇數),經由多條路徑找到的同一篇論文只算一篇,每篇新找到的論文都會記下找到它的路徑。引用資料來自 OpenAlex、Semantic Scholar 與 Crossref,新找到的論文同樣由排名器評分,所以被引用得多不代表切題。
 - **文獻庫**: `--library thesis.db` 把每次執行找到的內容保存在一個 SQLite 檔案裡,搜尋結果不再隨著程序結束而消失。裡面有論文、每篇論文是哪一次執行與哪個來源找到的、它們的分數、`--snowball` 找到的引用關係,以及 DOI / 網址的檢查結果。`--library-add` 把一次執行合併進去 (已經存在的論文會被更新,絕不重複), `--library-search` 不需要網路就能找出已保存的論文, `--library-export` 則把它們送到任何匯出格式。先前執行中已通過檢查的 DOI 或網址,30 天內不會再檢查一次。也能透過 MCP 工具 `library_add`、`library_search` 與 `library_stats` 使用。
+- **投影片範本**: `--pptx-template thesis.pptx` 會在你自己的 PowerPoint 範本上產生投影片,由範本的背景、標誌與版面配置呈現整份簡報,而不是內建的海軍藍橫幅樣式。每一種投影片 (封面、章節、內容、表格、參考文獻、Q&A) 會使用你為它指定的版面配置,另外可用選擇性的 TOML / JSON 設定檔 (`--pptx-template-config`) 指定字型、配色,以及是否繪製標題橫幅與封面底板。範本會在搜尋開始前先檢查, `thesisagents validate-template thesis.pptx` 會列出每一種投影片將使用哪個版面配置,以及需要修正的地方。不指定範本時,內建的投影片樣式維持不變。
 - **預設就安全**:僅 HTTPS 的 HTTP 傳輸、每來源速率限制(token bucket)、
   對任何 XML payload 用 `defusedxml`、防路徑穿越的匯出路徑、不對
   使用者輸入用 `eval` / `exec` / `pickle`。
@@ -307,6 +308,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | 跳過付費牆提示直接進行。 |
 | `--max-slides` | 每篇論文的投影片上限(預設 25;傳 0 表示無上限)。 |
 | `--dark-mode` | 以深色背景 + 近白文字渲染 pptx。預設是淺色深藍帶投影片。 |
+| `--pptx-template FILE` | 在 PowerPoint 範本 (.pptx / .potx) 上產生投影片,取代內建的海軍藍橫幅樣式。搜尋開始前會先檢查: 範本需要 16:9 的投影片,以及一個放內容的版面配置。`thesisagents validate-template FILE` 會顯示匯出時將使用什麼。 |
+| `--pptx-template-config FILE` | 供 `--pptx-template` 使用的 TOML / JSON 覆寫設定檔: 每一種投影片使用的版面配置、字型、配色,以及是否繪製標題橫幅與封面底板。 |
 | `--no-verify-identifiers` | 匯出時不檢查論文的 DOI 與網址。預設情況下,DOI / 網址錯誤或無法連線會在寫入任何檔案之前停止執行。供離線使用。 |
 | `--diagnostics` | 解釋 `--query` 搜尋的排名: 印出每篇論文的分數 (相關性 + 新近度 + 引用數) 與僅供參考的 `keep` / `review` / `prune` 建議,並把完整明細寫到 `--out` 目錄的 `diagnostics.json`。不會移除任何論文。 |
 | `--snowball` | 匯出前沿著引用關係擴充結果: `references` (最前面的結果所引用的文獻)、`cited_by` (引用它們的文獻) 或 `both`。新論文會附加在結果後面,並走同樣的下載與匯出流程。預設關閉。 |
@@ -386,7 +389,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別碼 → 單篇論文。 |
 | `fetch_pdf_text` | 下載一份 PDF,回傳擷取出的本文文字。**這是「我讀了論文」的 MCP 路徑。** |
 | `download_pdfs` | 批次把一份論文清單的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX 鍵為索引的每篇論文結果。 |
-| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 寫入前會驗證每個 DOI / 網址 (`verify_identifiers`,預設 `true`): 識別碼錯誤或無法連線時呼叫會失敗並指出是哪篇論文,回應中附有 `verification` 報告。 `library` 指定用來保存識別碼檢查結果的文獻庫,先前呼叫已通過檢查的識別碼就不會再檢查一次。 |
+| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 寫入前會驗證每個 DOI / 網址 (`verify_identifiers`,預設 `true`): 識別碼錯誤或無法連線時呼叫會失敗並指出是哪篇論文,回應中附有 `verification` 報告。 `library` 指定用來保存識別碼檢查結果的文獻庫,先前呼叫已通過檢查的識別碼就不會再檢查一次。 `pptx_template` (可搭配選擇性的 `pptx_template_config`) 會在你自己的 PowerPoint 範本上產生投影片。 |
+| `pptx_validate_template` | 範本 → 它能否用於 `export(pptx_template=...)`: 每一種投影片將使用的版面配置,以及說明該改什麼的錯誤與警告。不會產生任何投影片。 |
 | `pptx_inspect` | 讀取既有投影片的 slide / shape 結構。 |
 | `pptx_review` | 一次呼叫審核一份投影片 —— 溢位 + 顏色契約 + `paper_rule` 章節完整度。自動偵測投影片語言;也是 CLI `python -m thesisagents review <deck.pptx>`。 |
 | `pptx_update_slide` | 替換 `title` / `body` / `meta`(依 shape 名稱)或依索引替換任意 shape。 |
@@ -419,7 +423,7 @@ ThesisAgents/
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (17 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

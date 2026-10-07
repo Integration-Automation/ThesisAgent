@@ -27,6 +27,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER | --pdf PATH |
                 [--top-tier-only]
                 [--paywall-threshold FLOAT] [--yes]
                 [--max-slides N] [--dark-mode]
+                [--pptx-template FILE] [--pptx-template-config FILE]
                 [--no-verify-identifiers] [--diagnostics]
                 [--snowball {references,cited_by,both}]
                 [--snowball-seeds N] [--snowball-depth N]
@@ -62,6 +63,8 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER | --pdf PATH |
 | `--yes` | off | Auto-accept the paywall prompt. |
 | `--max-slides` | `25` | Per-paper slide cap. Pass `0` for unlimited. |
 | `--dark-mode` | off | Render the pptx in dark mode. **The light navy-band deck is the default** (white slides, full-width navy header band with a white title, navy cover panel). Pass this flag for the dark variant — a post-build pass swaps to a dark slide background (`#12151B`) + near-white text (`#E5E7EB`) and lightens the navy band / cover / table-row fills so the same chrome reads on OLED projectors and in low-light venues. |
+| `--pptx-template FILE` | none | Build decks on a PowerPoint template (`.pptx` / `.potx`) instead of the built-in navy-band deck: its layouts, background and logo show through. Checked before the search starts. It needs 16:9 slides and a layout for slide content. See [Deck templates](pptx_templates.md). |
+| `--pptx-template-config FILE` | none | A TOML or JSON file of overrides for `--pptx-template`: the layout each slide role uses, roles whose title goes into the layout's title placeholder, font families, palette colours, and whether the header band and cover panel are drawn. |
 | `--no-verify-identifiers` | off | Export without the identifier preflight. By default every paper's DOI is looked up at doi.org and every URL is requested once, right after the search, and a wrong or unreachable DOI / URL stops the run before any PDF is downloaded or any file is written. Pass this flag when working offline. The notice that the check was skipped goes to stderr even under `--quiet`. See "Identifier verification" below. |
 | `--diagnostics` | off | Explain the ranking of a `--query` search. Prints each paper's score split into relevance, recency and citations with an advisory `keep` / `review` / `prune` recommendation, and writes the full breakdown to `diagnostics.json` in `--out`. Advice only: every paper stays in the results. See "Ranking diagnostics" below. |
 | `--snowball` | off | Expand the results along citation links before exporting: `references` (what the top results cite), `cited_by` (what cites them) or `both`. The new papers are appended to the results and go through the same identifier check, PDF download and export. See "Citation snowballing" below. |
@@ -167,6 +170,40 @@ with the number of decks that failed (`0` = all clean), so it drops into
 CI. Section completeness only fails a *thesis-style* deck — a lightweight
 abstract-only deck is never failed for legitimately lacking sections.
 The same audit is the MCP `pptx_review` tool.
+
+### Check a deck template
+
+```bash
+thesisagents validate-template thesis.pptx
+thesisagents validate-template thesis.pptx --config thesis.toml --dark-mode
+thesisagents validate-template thesis.pptx --json
+```
+
+The `validate-template` subcommand checks a PowerPoint template against
+the template contract without rendering anything. It prints the layout
+each slide role (cover, section, content, table, references, qa) would
+use, then every error and warning, each saying what to change:
+
+```
+Template thesis.pptx: OK
+  config: thesis.toml
+  slides: 13.33 x 7.50 in
+  cover      -> Title Slide
+  section    -> Section Header
+  content    -> Title Only
+  table      -> Title Only
+  references -> Title Only
+  qa         -> Title Only
+```
+
+Exit code `0` when the template can be used, `2` when it cannot.
+`--config` is the file that would be passed as
+`--pptx-template-config`, `--dark-mode` adds the warnings that apply to
+a dark export, and `--json` prints the report as an object. A run with
+`--pptx-template` makes the same check before the search starts. The
+contract, the config format and the error codes are in
+[Deck templates](pptx_templates.md). The same check is the MCP
+`pptx_validate_template` tool.
 
 ## Identifier verification
 

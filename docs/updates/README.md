@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-07 | 2026-10-08 | A template contract for decks, with validation before the export | #done #pptx #templates #cli #mcp | [2026-10](2026-10.md) |
 | U-20261008-06 | 2026-10-08 | A persistent SQLite literature library | #done #library #cli #mcp | [2026-10](2026-10.md) |
 | U-20261008-05 | 2026-10-08 | Citation providers and a bounded snowball search | #done #snowball #sources #cli #mcp | [2026-10](2026-10.md) |
 | U-20261008-04 | 2026-10-08 | Every search reports what each source returned | #done #search #cli #mcp #gui | [2026-10](2026-10.md) |
@@ -99,5 +100,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 11 |
+| [2026-10.md](2026-10.md) | 2026-10 | 12 |
 | [2026-09.md](2026-09.md) | 2026-09 | 25 |

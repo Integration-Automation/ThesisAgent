@@ -52,6 +52,19 @@ from thesisagents.core.models import (
 )
 from thesisagents.exporters.base import Exporter
 from thesisagents.exporters.i18n import strings_for, t
+from thesisagents.exporters.template import (
+    ROLE_CONTENT,
+    ROLE_COVER,
+    ROLE_QA,
+    ROLE_REFERENCES,
+    ROLE_SECTION,
+    ROLE_TABLE,
+    TITLE_AREA_BOTTOM,
+    LayoutSet,
+    TemplateConfig,
+    builtin_layouts,
+    open_template,
+)
 
 # ---------------------------------------------------------------------------
 # Layout constants (16:9 widescreen)
@@ -371,14 +384,7 @@ class PptxExporter(Exporter):
     def _build(
         self, collection: PaperCollection, options: ExportOptions
     ) -> Presentation:
-        prs = (
-            Presentation(options.pptx_template)
-            if options.pptx_template
-            else Presentation()
-        )
-        prs.slide_width = _SLIDE_WIDTH
-        prs.slide_height = _SLIDE_HEIGHT
-        blank = prs.slide_layouts[6]
+        prs, blank, template = _open_presentation(options)
         total = len(collection)
         ctx = _BuildContext(language=options.language, include_abstract=options.include_abstract)
         _add_cover_slide(prs, blank, collection, ctx)
@@ -404,11 +410,47 @@ class PptxExporter(Exporter):
         # Visual identity passes — applied last so they affect every shape
         # placed by every builder (including page numbers). See the
         # ``deck-design`` subagent doc for rationale.
-        _apply_typography(prs, ctx.language)
-        _decorate_with_accents(prs)
+        _apply_typography(
+            prs, ctx.language, latin=template.font_latin, east_asian=template.font_east_asian
+        )
+        _decorate_with_accents(
+            prs, header_band=template.header_band, cover_panel=template.cover_panel
+        )
+        _recolor_text_without_chrome(prs, template)
+        # Dark mode has its own palette, tuned for contrast on the dark
+        # slide, so a template's [colors] apply to the light deck only
+        # (validate_template reports that as a warning).
         if options.dark_mode:
             _apply_dark_mode(prs)
+        elif template.colors:
+            _apply_template_palette(prs, template.colors)
         return prs
+
+
+def _open_presentation(
+    options: ExportOptions,
+) -> tuple[Presentation, LayoutSet, TemplateConfig]:
+    """The presentation to fill, the layout of each slide role, the style overrides.
+
+    The boundary this guards: a user-supplied template. It is checked against
+    the template contract here, before any slide is built, and a template that
+    does not meet it raises ``TemplateError`` listing every problem (see
+    ``thesisagents/exporters/template.py``).
+
+    Without ``options.pptx_template`` this is the built-in deck: python-pptx's
+    own template, every role on its blank layout, no overrides.
+    """
+    if options.pptx_template:
+        opened = open_template(
+            options.pptx_template,
+            options.pptx_template_config,
+            dark_mode=options.dark_mode,
+        )
+        return opened.presentation, opened.layouts, opened.config
+    prs = Presentation()
+    prs.slide_width = _SLIDE_WIDTH
+    prs.slide_height = _SLIDE_HEIGHT
+    return prs, builtin_layouts(prs), TemplateConfig()
 
 
 # ---------------------------------------------------------------------------
@@ -620,7 +662,7 @@ def _add_abstract_split_slides(
 def _add_cover_slide(
     prs: Presentation, layout, collection: PaperCollection, ctx: _BuildContext
 ) -> None:
-    slide = prs.slides.add_slide(layout)
+    slide = layout.add_slide(prs, ROLE_COVER)
     title_text = _cover_title(collection, ctx)
     # Cover is a full-bleed navy panel (placed by _add_cover_left_band), so
     # the title is WHITE and the subtitle / meta are near-white — navy text
@@ -674,7 +716,7 @@ def _add_agenda_slide(
 def _add_section_divider(
     prs: Presentation, layout, index: int, total: int, paper: Paper, ctx: _BuildContext
 ) -> None:
-    slide = prs.slides.add_slide(layout)
+    slide = layout.add_slide(prs, ROLE_SECTION)
     _add_textbox(
         slide, name="title",
         text=t(ctx.language, "paper_n_of_m", n=index, m=total),
@@ -730,7 +772,9 @@ def _add_references_slide(
     cited = [p for p in collection.papers if not _is_own_thesis(p)]
     if not cited:
         return
-    slide = _new_section_slide(prs, layout, t(ctx.language, "references"))
+    slide = _new_section_slide(
+        prs, layout, t(ctx.language, "references"), role=ROLE_REFERENCES
+    )
     bullets = [_reference_line(i + 1, p, ctx) for i, p in enumerate(cited)]
     _add_bullet_box(
         slide, name="body", bullets=bullets,
@@ -742,7 +786,7 @@ def _add_references_slide(
 
 
 def _add_qa_slide(prs: Presentation, layout, paper: Paper, ctx: _BuildContext) -> None:
-    slide = prs.slides.add_slide(layout)
+    slide = layout.add_slide(prs, ROLE_QA)
     _add_textbox(
         slide, name="title", text=t(ctx.language, "section_qa"),
         left=_MARGIN_X, top=Inches(2.6),
@@ -981,7 +1025,7 @@ def _add_technique_table_slide(
     prs: Presentation, layout, paper: Paper, summary: PaperSummary, ctx: _BuildContext,
 ) -> None:
     title = t(ctx.language, "section_technique_overview")
-    slide = _new_section_slide(prs, layout, title)
+    slide = _new_section_slide(prs, layout, title, role=ROLE_TABLE)
     _add_paper_subtitle(slide, paper, ctx)
     rows = [(t(ctx.language, "label_technique") if False else "Technique",
              t(ctx.language, "label_role") if False else "Role")]
@@ -1006,7 +1050,7 @@ def _add_literature_table_slide(
     prs: Presentation, layout, paper: Paper, summary: PaperSummary, ctx: _BuildContext,
 ) -> None:
     title = t(ctx.language, "section_literature_positioning")
-    slide = _new_section_slide(prs, layout, title)
+    slide = _new_section_slide(prs, layout, title, role=ROLE_TABLE)
     _add_paper_subtitle(slide, paper, ctx)
     rows = summary.literature_table
     if not rows:
@@ -1222,7 +1266,7 @@ def _add_paper_table_slides(
             f"{base_title} {index}/{len(summary.paper_tables)}"
             if len(summary.paper_tables) > 1 else base_title
         )
-        slide = _new_section_slide(prs, layout, title)
+        slide = _new_section_slide(prs, layout, title, role=ROLE_TABLE)
         _add_paper_subtitle(slide, paper, ctx)
         _add_textbox(
             slide, name="subhead",
@@ -1273,7 +1317,7 @@ def _add_rq_result_slide(
     *, rq_lookup: dict[str, str] | None = None,
 ) -> None:
     title = f"{t(ctx.language, 'section_results_for')} {rq.rq_id}"
-    slide = _new_section_slide(prs, layout, title)
+    slide = _new_section_slide(prs, layout, title, role=ROLE_TABLE)
     _add_paper_subtitle(slide, paper, ctx)
     # Prefer the verbatim question from ``research_questions`` so the RQ
     # slide carries the paper's actual wording rather than a short label
@@ -1555,8 +1599,18 @@ def _clean(text: str) -> str:
 
 def _new_section_slide(
     prs: Presentation, layout, title: str, *, font_pt: int = _SECTION_TITLE_PT,
+    role: str = ROLE_CONTENT,
 ):
-    slide = prs.slides.add_slide(layout)
+    """Add a "title on top, content below" slide and return it.
+
+    ``layout`` is the deck's ``LayoutSet`` and ``role`` picks the layout: a
+    template can give table and reference slides a layout of their own.
+    """
+    slide = layout.add_slide(prs, role)
+    placeholder = layout.title_placeholder(slide, role)
+    if placeholder is not None:
+        _fill_title_placeholder(placeholder, _clean(title), font_pt=font_pt)
+        return slide
     # The title sits inside the navy header band (placed later by the accent
     # pass), so it is WHITE, not navy — navy-on-navy would be invisible.
     # ``shrink_to_fit`` lets a long title (e.g. a verbatim paper title) wrap
@@ -1574,6 +1628,34 @@ def _new_section_slide(
     return slide
 
 
+def _fill_title_placeholder(placeholder, text: str, *, font_pt: int) -> None:
+    """Write a slide title into the template's title placeholder.
+
+    The boundary this guards: a shape the template owns. Its position and
+    size are the template's, which is the point of the opt-in. Everything the
+    project's contracts need is still set here: the semantic name ``title``
+    (``pptx_edit`` and the audits find the title by name), an explicit run
+    colour (a run without one is invisible in dark mode), and the exporter's
+    title size with shrink-to-fit, so the overflow check reads a real size.
+
+    The colour is ``_BRAND_DARK``, not the white of a band title: with a
+    title placeholder the header band is not drawn on the slide.
+
+    Example: a layout "Title Only" whose placeholder sits 0.4 in from the
+    top keeps the title there, in navy, named ``title``.
+    """
+    placeholder.name = "title"
+    text_frame = placeholder.text_frame
+    text_frame.word_wrap = True
+    text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+    text_frame.text = text
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            run.font.size = Pt(font_pt)
+            run.font.bold = True
+            run.font.color.rgb = _BRAND_DARK
+
+
 def _add_paper_subtitle(slide, paper: Paper, ctx: _BuildContext) -> None:
     _ = ctx  # reserved for future per-language formatting
     # The right-hand element is the publication venue, NOT the fetcher.
@@ -1583,7 +1665,9 @@ def _add_paper_subtitle(slide, paper: Paper, ctx: _BuildContext) -> None:
     text = f"{_clean(paper.title)}  ·  {publication}"
     _add_textbox(
         slide, name="paper_subtitle", text=text,
-        left=_MARGIN_X, top=Inches(1.4),
+        # Shared with the template contract: a template's title placeholder
+        # must end above this line (template._check_title_placeholder).
+        left=_MARGIN_X, top=TITLE_AREA_BOTTOM,
         width=_BODY_WIDTH, height=Inches(0.28),
         font_pt=_BODY_PT - 5, colour=_BRAND_GREY,
         shrink_to_fit=True,
@@ -2383,7 +2467,13 @@ def _stamp_page_numbers(prs: Presentation, language: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _apply_typography(prs: Presentation, language: str) -> None:
+def _apply_typography(
+    prs: Presentation,
+    language: str,
+    *,
+    latin: str | None = None,
+    east_asian: str | None = None,
+) -> None:
     """Set Latin + East-Asian font on every run across every slide.
 
     Default Calibri is the biggest "AI-generated deck" tell. We walk
@@ -2391,8 +2481,14 @@ def _apply_typography(prs: Presentation, language: str) -> None:
     typeface XML on every run — leaving the east-asian slot at the
     PowerPoint default would make CJK chars render in a font that
     doesn't match the Latin choice.
+
+    ``latin`` / ``east_asian`` are a template config's ``[fonts]``. Each
+    replaces the per-language default for its own slot only, so a template
+    that names a Latin family keeps the language's East-Asian one.
     """
-    latin, east_asian = _FONT_FAMILIES.get(language, _DEFAULT_FONT_FAMILY)
+    default_latin, default_east_asian = _FONT_FAMILIES.get(language, _DEFAULT_FONT_FAMILY)
+    latin = latin or default_latin
+    east_asian = east_asian or default_east_asian
     for slide in prs.slides:
         for shape in slide.shapes:
             if not shape.has_text_frame:
@@ -2420,19 +2516,111 @@ def _set_east_asian_typeface(run, family: str) -> None:
     r_pr.append(ea)
 
 
-def _decorate_with_accents(prs: Presentation) -> None:
+def _decorate_with_accents(
+    prs: Presentation, *, header_band: bool = True, cover_panel: bool = True
+) -> None:
     """Place the accent shapes (cover left band, top bar on content slides).
 
     Idempotent: if the shapes already exist from a previous build pass
     (rare but possible in tests that re-run ``_build``), they're left in
     place — a name match suppresses re-add. The shapes are sent to the
     back of the slide's z-order so they sit BEHIND any text on the slide.
+
+    ``header_band`` / ``cover_panel`` are a template config's ``[chrome]``:
+    a template that brings its own header or cover artwork switches the
+    exporter's off. A slide whose title sits in the template's title
+    placeholder never gets the band, whatever the flag says, because the
+    band is drawn for the exporter's own title position.
     """
     for index, slide in enumerate(prs.slides):
         if index == 0:
-            _add_cover_left_band(slide)
-        else:
+            if cover_panel:
+                _add_cover_left_band(slide)
+        elif header_band and not _title_is_placeholder(slide):
             _add_top_accent_bar(slide)
+
+
+def _title_is_placeholder(slide) -> bool:
+    return any(shape.name == "title" and shape.is_placeholder for shape in slide.shapes)
+
+
+def _recolor_text_without_chrome(prs: Presentation, template: TemplateConfig) -> None:
+    """Give light-on-navy text a dark colour where the navy was not drawn.
+
+    The boundary this guards: titles are white because they sit on the navy
+    header band, and the cover's text is white / near-white because it sits
+    on the navy cover panel. With ``[chrome] header_band = false`` or
+    ``cover_panel = false`` that navy is gone, and the same runs would be
+    white on the template's light background, the light-on-light failure
+    the deck-design contract names.
+
+    Titles become ``_BRAND_DARK`` and the cover's secondary lines
+    ``_BRAND_GREY``, both palette colours the dark-mode and template-palette
+    passes know how to map.
+
+    Example: with ``header_band = false`` a content slide's title run goes
+    from ``#FFFFFF`` to ``#1F3A66``.
+    """
+    for index, slide in enumerate(prs.slides):
+        if index == 0:
+            if not template.cover_panel:
+                _swap_run_colours(slide, {
+                    _rgb_key(_HEADER_TITLE_FG): _BRAND_DARK,
+                    _rgb_key(_DARK_BODY_TEXT): _BRAND_GREY,
+                })
+        elif not template.header_band:
+            _swap_run_colours(
+                slide, {_rgb_key(_HEADER_TITLE_FG): _BRAND_DARK}, only_named="title"
+            )
+
+
+def _swap_run_colours(slide, mapping: dict, *, only_named: str | None = None) -> None:
+    for shape in slide.shapes:
+        if not shape.has_text_frame or (only_named and shape.name != only_named):
+            continue
+        for paragraph in shape.text_frame.paragraphs:
+            for run in paragraph.runs:
+                try:
+                    rgb = run.font.color.rgb
+                except (AttributeError, ValueError, TypeError):
+                    continue
+                new = mapping.get(_rgb_key(rgb)) if rgb is not None else None
+                if new is not None:
+                    run.font.color.rgb = new
+
+
+def _apply_template_palette(
+    prs: Presentation, colors: dict[str, tuple[int, int, int]]
+) -> None:
+    """Swap the built-in palette for a template config's ``[colors]``.
+
+    Same approach as the dark-mode pass, and for the same reason: the deck is
+    built with the built-in palette, then recoloured by looking each colour
+    up, so no builder has to know a template exists. ``primary`` replaces
+    navy as text and as fill (header band, cover panel, table header and its
+    rule), ``highlight`` the emphasis blue as text and as the accent rule,
+    ``muted`` and ``subtle`` the two greys.
+
+    Not applied in dark mode: see ``PptxExporter._build``.
+
+    Example: ``{"primary": (11, 61, 46)}`` turns every navy run, the header
+    band and the table header fill dark green, and leaves the blue alone.
+    """
+    originals = {
+        "primary": _BRAND_DARK,
+        "highlight": _BRAND_HIGHLIGHT,
+        "muted": _BRAND_GREY,
+        "subtle": _BRAND_LIGHT,
+    }
+    text_map = {_rgb_key(originals[key]): value for key, value in colors.items()}
+    fill_map = {
+        _rgb_key(originals[key]): value
+        for key, value in colors.items()
+        if key in ("primary", "highlight")
+    }
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            _recolor_shape(shape, text_map=text_map, fill_map=fill_map, promote=None)
 
 
 def _add_cover_left_band(slide) -> None:
@@ -2542,18 +2730,31 @@ def _set_slide_background(slide, colour: RGBColor) -> None:
     fill.fore_color.rgb = colour
 
 
-def _recolor_shape(shape) -> None:
+def _recolor_shape(
+    shape,
+    *,
+    text_map: dict | None = None,
+    fill_map: dict | None = None,
+    promote: RGBColor | None = _DARK_BODY_TEXT,
+) -> None:
     """Single shape: swap its fill, text-run colours, and (if table) its
-    per-cell fills + borders + cell-level runs."""
+    per-cell fills + borders + cell-level runs.
+
+    The maps default to the light-to-dark ones. ``_apply_template_palette``
+    passes its own, with ``promote=None`` so a run without a colour is left
+    alone (promoting it to near-white is right only on the dark slide).
+    """
+    text_map = _LIGHT_TO_DARK_TEXT if text_map is None else text_map
+    fill_map = _LIGHT_TO_DARK_FILL if fill_map is None else fill_map
     if shape.has_table:
         for cell in _iter_table_cells(shape.table):
-            _swap_fill(cell)
-            _swap_text_colors(cell)
-            _swap_cell_border_colors(cell)
+            _swap_fill(cell, fill_map)
+            _swap_text_colors(cell, text_map, promote)
+            _swap_cell_border_colors(cell, fill_map)
         return
-    _swap_fill(shape)
+    _swap_fill(shape, fill_map)
     if shape.has_text_frame:
-        _swap_text_colors(shape)
+        _swap_text_colors(shape, text_map, promote)
 
 
 def _iter_table_cells(table):
@@ -2568,7 +2769,8 @@ def _iter_table_cells(table):
         yield from row.cells
 
 
-def _swap_fill(shape_or_cell) -> None:
+def _swap_fill(shape_or_cell, fill_map: dict | None = None) -> None:
+    fill_map = _LIGHT_TO_DARK_FILL if fill_map is None else fill_map
     fill = getattr(shape_or_cell, "fill", None)
     if fill is None:
         return
@@ -2578,14 +2780,18 @@ def _swap_fill(shape_or_cell) -> None:
         return
     if rgb is None:
         return
-    new = _LIGHT_TO_DARK_FILL.get(_rgb_key(rgb))
+    new = fill_map.get(_rgb_key(rgb))
     if new is None:
         return
     fill.solid()
     fill.fore_color.rgb = RGBColor(*new)
 
 
-def _swap_text_colors(shape_or_cell) -> None:
+def _swap_text_colors(
+    shape_or_cell,
+    text_map: dict | None = None,
+    promote: RGBColor | None = _DARK_BODY_TEXT,
+) -> None:
     """Swap every run's text colour for the dark-mode equivalent.
 
     Safety net for runs that the builders forgot to colour explicitly:
@@ -2595,6 +2801,7 @@ def _swap_text_colors(shape_or_cell) -> None:
     would render as black-on-dark — invisible. See
     ``.claude/agents/rules/deck-design.md`` "Dark-mode contract".
     """
+    text_map = _LIGHT_TO_DARK_TEXT if text_map is None else text_map
     text_frame = getattr(shape_or_cell, "text_frame", None)
     if text_frame is None:
         return
@@ -2605,17 +2812,19 @@ def _swap_text_colors(shape_or_cell) -> None:
             except (AttributeError, ValueError, TypeError):
                 rgb = None
             if rgb is None or _rgb_key(rgb) == (0, 0, 0):
-                run.font.color.rgb = _DARK_BODY_TEXT
+                if promote is not None:
+                    run.font.color.rgb = promote
                 continue
-            new = _LIGHT_TO_DARK_TEXT.get(_rgb_key(rgb))
+            new = text_map.get(_rgb_key(rgb))
             if new is not None:
                 run.font.color.rgb = RGBColor(*new)
 
 
-def _swap_cell_border_colors(cell) -> None:
+def _swap_cell_border_colors(cell, fill_map: dict | None = None) -> None:
     """Walk the cell's ``<a:lnX>`` border elements and recolour any
     ``<a:srgbClr>`` whose value matches the light-palette divider /
     header-rule colours."""
+    fill_map = _LIGHT_TO_DARK_FILL if fill_map is None else fill_map
     tc_pr = cell._tc.find(qn("a:tcPr"))
     if tc_pr is None:
         return
@@ -2636,7 +2845,7 @@ def _swap_cell_border_colors(cell) -> None:
             key = (int(val[0:2], 16), int(val[2:4], 16), int(val[4:6], 16))
         except ValueError:
             continue
-        new = _LIGHT_TO_DARK_FILL.get(key)
+        new = fill_map.get(key)
         if new is None:
             continue
         clr.set("val", _rgb_hex(new))
