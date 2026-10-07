@@ -120,6 +120,7 @@ for key in irrelevant_keys:
 - **OA PDF リゾルバ**: 重複排除後、`pdf_url` の無い各論文は Unpaywall → S2 `openAccessPdf` → arXiv タイトル検索 → CORE.ac.uk(キー設定時)を通過します。IEEE / ACM / Springer / Elsevier 中心のクエリでの典型的な向上: 40〜70 パーセントポイント。
 - **エクスポート前チェック (DOI / URL 検証)**: ファイルを書き出す前に、すべての DOI を doi.org で照会し、すべての URL に 1 回ずつリクエストを送ります。誤った識別子や到達できない識別子があるとエクスポートは中止され、失敗した論文と識別子の一覧が表示されます。実ブラウザが必要な出版社ページにはリクエストを送らず (DOI チェックが代わりになります)、自動アクセスを拒否するサーバーは実行を失敗させずに「確認不可」として報告されます。既定で有効で、オフライン作業時は `--no-verify-identifiers` で無効にできます。
 - **説明可能なランキングと絞り込みの提案**: 検索のたびに、各論文がその順位になった理由 (関連性・新しさ・被引用数の内訳、一致した検索語、寄与ごとに 1 文) を記録し、各結果に `keep`、`review`、`prune` のいずれかを、発動したルールとともに提案します。被引用数が少ないことだけでは提案は発動しません。 `--diagnostics`、MCP `search` ツールの `diagnostics=true`、または GUI の「提案」列で確認できます。助言のみで、論文は削除されません。
+- **ソース別の検索統計**: 検索のたびに、各ソースが返したレコード数、重複排除後にそのソースに帰属する論文数、失敗・レート制限・無効のいずれであったかを報告します。エラーになったソースは検索を止めずにスキップされるため、「もともと論文の少ないテーマ」と「ソースの半分を失った検索」を見分けられるのはこの数字です。CLI は `--query` 検索のたびに表示し、MCP `search` ツールは `source_stats` として返し、GUI はステータス行に表示します。
 - **デフォルトで安全**: HTTPS-only な HTTP トランスポート、ソースごとのレート制限(トークンバケット)、任意の XML ペイロードには `defusedxml`、パストラバーサル対策済みのエクスポートパス、ユーザー入力に対する `eval` / `exec` / `pickle` の不使用。
 - **zh-tw / zh-cn 語彙ガード**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` にある約 244 個の正規表現パターンが、繁体字で書かれた簡体字由来の借用語(例: `內存` → `記憶體`、`魯棒性` → `穩健性`、`軟件` → `軟體`、`緩存` → `快取`)を捕捉します。同じガードが zh-cn ロケール文字列に対して逆方向にも走ります。完全なルールと正規表現カタログは `.claude/agents/rules/language-vocabulary-check.md` にあります。
 
@@ -249,7 +250,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | すべてのプラグインを列挙し、現在の env で各々が有効かを報告。`search` の前に一度呼ぶ。 |
 | `list_exports` | すべてのエクスポート形式を、その 1 行説明と、集約ファイルを 1 つ書くか論文ごとに 1 ファイルを書くかとともに列挙。 |
-| `search` | キーワード → 論文リスト。`top_tier_only`、`min_citations` を受理。デフォルトは API キー不要のソース全体。 `diagnostics=true` で、論文ごとのスコア内訳と助言としての `keep` / `review` / `prune` の提案が加わります (`papers` からは何も削除されません)。 |
+| `search` | キーワード → 論文リスト。`top_tier_only`、`min_citations` を受理。デフォルトは API キー不要のソース全体。 `diagnostics=true` で、論文ごとのスコア内訳と助言としての `keep` / `review` / `prune` の提案が加わります (`papers` からは何も削除されません)。 常に `source_stats` を返します。ソースごとの `requested`、`returned`、`after_dedup`、`status` (`ok` / `failed` / `rate_limited` / `disabled`) です。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別子 → 単一論文。 |
 | `fetch_pdf_text` | 単一 PDF をダウンロードし、抽出した本文を返す。**MCP 経由で「論文を読んだ」に至る入口。** |
 | `download_pdfs` | 論文リストの PDF を `{out_dir}/pdfs/` に一括ダウンロード。BibTeX キーをキーとする論文ごとの結果を返す。 |

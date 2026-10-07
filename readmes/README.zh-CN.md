@@ -226,6 +226,7 @@ for key in irrelevant_keys:
   提升:40-70 个百分点。
 - **导出前检查 (DOI / URL 验证)**: 写入任何文件之前,会到 doi.org 查询每个 DOI,并对每个网址发送一次请求。标识符错误或无法连接时,导出会停止并列出失败的论文与标识符。需要真实浏览器才能打开的出版商页面不会被请求 (由 DOI 检查覆盖),拒绝自动化访问的服务器会报告为“无法检查”而不会让整次运行失败。默认开启,离线时用 `--no-verify-identifiers` 关闭。
 - **可解释的排名与修剪建议**: 每次搜索都会记录每篇论文排在该位置的原因 (相关性、新近度、引用数三部分,命中的查询词,每项贡献一句说明),并为每条结果建议 `keep`、`review` 或 `prune`,同时指出触发的规则。仅凭引用数低不会触发任何建议。可用 `--diagnostics`、MCP `search` 工具的 `diagnostics=true`,或 GUI 的“建议”列查看。仅供参考,不会移除任何论文。
+- **各来源的搜索统计**: 每次搜索都会报告每个来源返回了几条记录、去重后有几篇论文归属于它,以及它是否失败、被限流或未启用。出错的来源会被跳过而不中断搜索,所以要分辨“主题本来就冷门”与“搜索丢了一半来源”,靠的就是这些数字。CLI 在每次 `--query` 搜索后打印,MCP `search` 工具以 `source_stats` 返回,GUI 则显示在状态栏。
 - **默认就安全**:仅 HTTPS 的 HTTP 传输、每来源速率限制(token bucket)、
   对任何 XML payload 用 `defusedxml`、防路径穿越的导出路径、不对
   用户输入用 `eval` / `exec` / `pickle`。
@@ -369,7 +370,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 列举每个插件 + 报告各自在当前环境下是否启用。在 `search` 前调用一次。 |
 | `list_exports` | 列举每种导出格式,附一行描述,并说明它写一个汇总文件还是每篇论文一文件。 |
-| `search` | 关键字 → 论文清单。接受 `top_tier_only`、`min_citations`;默认走完整的免 API 密钥来源组合。 `diagnostics=true` 会加上每篇论文的分数明细与仅供参考的 `keep` / `review` / `prune` 建议 (不会从 `papers` 移除任何项目)。 |
+| `search` | 关键字 → 论文清单。接受 `top_tier_only`、`min_citations`;默认走完整的免 API 密钥来源组合。 `diagnostics=true` 会加上每篇论文的分数明细与仅供参考的 `keep` / `review` / `prune` 建议 (不会从 `papers` 移除任何项目)。 始终返回 `source_stats`: 每个来源的 `requested`、`returned`、`after_dedup` 与 `status` (`ok` / `failed` / `rate_limited` / `disabled`)。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 标识符 → 单篇论文。 |
 | `fetch_pdf_text` | 下载一份 PDF,返回提取出的正文文本。**这是「我读了论文」的 MCP 路径。** |
 | `download_pdfs` | 批量把一份论文清单的 PDF 下载到 `{out_dir}/pdfs/`。返回以 BibTeX 键为索引的每篇论文结果。 |

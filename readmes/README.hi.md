@@ -147,6 +147,14 @@ output directory में `diagnostics.json` में भी लिखता �
   नाम के साथ। केवल कम citation count कभी कोई सिफ़ारिश trigger नहीं करता।
   `--diagnostics`, MCP `search` tool पर `diagnostics=true`, या GUI के
   सुझाव column में देखें। केवल सलाह: कोई paper हटाया नहीं जाता।
+- **हर source के search आँकड़े**: हर search बताता है कि हर source ने
+  कितने records लौटाए, de-duplication के बाद कितने unique papers उसके
+  खाते में गए, और वह विफल हुआ, rate limit में फँसा या बंद है या नहीं।
+  विफल source को search रोके बिना छोड़ दिया जाता है, इसलिए यही संख्याएँ
+  बताती हैं कि विषय पर सचमुच कम papers हैं या search ने अपने आधे sources
+  खो दिए। CLI इन्हें हर `--query` search के बाद print करता है, MCP
+  `search` tool इन्हें `source_stats` के रूप में लौटाता है, और GUI
+  status line में दिखाता है।
 - **डिफ़ॉल्ट रूप से सुरक्षित**: HTTPS-only HTTP परिवहन, प्रति-स्रोत दर सीमा (token bucket), किसी भी XML payload के लिए `defusedxml`, path-traversal-सुरक्षित निर्यात पथ, उपयोगकर्ता इनपुट पर कोई `eval` / `exec` / `pickle` नहीं।
 - **zh-tw / zh-cn शब्दावली रक्षक**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` में ~244 regex पैटर्न पारंपरिक हांज़ी में रेंडर किए गए सरलीकृत-चीनी उधार शब्द पकड़ते हैं (जैसे `內存` → `記憶體`, `魯棒性` → `穩健性`, `軟件` → `軟體`, `緩存` → `快取`)। वही रक्षक zh-cn locale स्ट्रिंग्स के लिए उलटा चलता है। पूर्ण नियम + regex कैटलॉग `.claude/agents/rules/language-vocabulary-check.md` में हैं।
 
@@ -276,7 +284,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | प्रत्येक plugin की गणना करें + रिपोर्ट करें कि वर्तमान env में प्रत्येक सक्षम है या नहीं। `search` से पहले इसे एक बार कॉल करें। |
 | `list_exports` | प्रत्येक निर्यात प्रारूप की एक-पंक्ति व्याख्या + यह एक aggregate फ़ाइल लिखता है या प्रति-शोध-पत्र एक फ़ाइल, इसके साथ गणना करें। |
-| `search` | कीवर्ड → शोध-पत्रों की सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूर्ण API-key-रहित स्रोत मिश्रण। `diagnostics=true` हर paper का score breakdown और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश जोड़ता है (`papers` से कुछ नहीं हटाया जाता)। |
+| `search` | कीवर्ड → शोध-पत्रों की सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूर्ण API-key-रहित स्रोत मिश्रण। `diagnostics=true` हर paper का score breakdown और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश जोड़ता है (`papers` से कुछ नहीं हटाया जाता)। हमेशा `source_stats` लौटाता है: हर source के लिए `requested`, `returned`, `after_dedup` और `status` (`ok` / `failed` / `rate_limited` / `disabled`)। |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE पहचानकर्ता → एकल शोध-पत्र। |
 | `fetch_pdf_text` | एक PDF डाउनलोड करें, निकाला गया मुख्य पाठ लौटाएँ। **"मैंने शोध-पत्र पढ़ा" तक का MCP पथ।** |
 | `download_pdfs` | एक शोध-पत्र सूची की PDFs को `{out_dir}/pdfs/` में बैच-डाउनलोड करें। BibTeX कुंजी द्वारा अनुक्रमित प्रति-शोध-पत्र परिणाम लौटाता है। |

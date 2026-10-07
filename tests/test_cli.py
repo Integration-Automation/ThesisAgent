@@ -1127,3 +1127,96 @@ def test_cli_diagnostics_survive_the_per_paper_deck_path(
     report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
     assert len(report["papers"]) == 2
     assert len(list(tmp_path.glob("*.pptx"))) == 2
+
+
+# ---------------------------------------------------------------------------
+# Per-source statistics printout
+# ---------------------------------------------------------------------------
+
+
+def _collection_with_stats(papers) -> PaperCollection:
+    from thesisagents.core.diagnostics import (
+        SearchDiagnostics,
+        SourceStat,
+        SourceStatus,
+    )
+
+    stats = (
+        SourceStat("arxiv", requested=25, returned=23, after_dedup=19),
+        SourceStat(
+            "semantic_scholar", requested=25, returned=0, after_dedup=0,
+            status=SourceStatus.RATE_LIMITED,
+            detail="gave up after 3 rate-limit retries: [semantic_scholar] slow down",
+        ),
+        SourceStat(
+            "springer", requested=25, returned=0, after_dedup=0,
+            status=SourceStatus.DISABLED, detail="x" * 300,
+        ),
+        SourceStat("dblp", requested=25, returned=0, after_dedup=0),
+    )
+    query = Query(keywords="attention", sources=("arxiv",), max_results=25)
+    return PaperCollection(
+        query=query, papers=tuple(papers),
+        diagnostics=SearchDiagnostics(source_stats=stats),
+    )
+
+
+def test_cli_prints_what_each_source_returned(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    pipeline_returning(_collection_with_stats(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    lines = capsys.readouterr().out.splitlines()
+    start = lines.index("Sources (up to 25 requested from each):")
+    block = lines[start + 1 : start + 5]
+    assert block[0] == "  arxiv              23 returned, 19 after dedup"
+    assert block[1] == (
+        "  semantic_scholar    0 returned  rate_limited: gave up after 3 "
+        "rate-limit retries: [semantic_scholar] slow down"
+    )
+    assert block[2].startswith("  springer            0 returned  disabled: xxx")
+    assert block[2].endswith("…")
+    assert len(block[2]) == len("  springer            0 returned  disabled: ") + 100
+    assert block[3] == "  dblp                0 returned, 0 after dedup"
+
+
+def test_cli_quiet_hides_the_source_block(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    pipeline_returning(_collection_with_stats(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--quiet"]
+    )
+    assert code == 0
+    assert "Sources (up to" not in capsys.readouterr().out
+
+
+def test_cli_prints_no_source_block_without_counts(tmp_path, patched_pipeline, capsys):
+    """``patched_pipeline`` returns a bare collection, as --paper and --pdf do."""
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    assert "Sources (up to" not in capsys.readouterr().out
+
+
+def test_cli_diagnostics_file_includes_the_source_stats(
+    tmp_path, pipeline_returning, sample_papers
+):
+    import json
+
+    pipeline_returning(_collection_with_stats(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--diagnostics", "--quiet"]
+    )
+    assert code == 0
+    report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
+    assert [stat["source"] for stat in report["source_stats"]] == [
+        "arxiv", "semantic_scholar", "springer", "dblp"
+    ]
+    assert report["source_stats"][0]["after_dedup"] == 19

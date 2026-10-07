@@ -126,6 +126,10 @@ The full plugin set is `arxiv`, `semantic_scholar`, `openalex`, `pubmed`,
 `springer`, `core`, `scholar` (15). `core` is opt-in via
 `THESISAGENTS_CORE_API_KEY`, like `springer`.
 
+`list_sources` reports configuration only: which plugins exist and
+which are enabled. How many records each source returned for a
+particular query is in the `search` response's `source_stats`.
+
 ### `list_exports`
 
 Discovery tool symmetric to `list_sources`: report every export format the
@@ -188,9 +192,42 @@ Returns:
 {
   "query": {"keywords": "attention is all you need", "sources": ["arxiv"], "max_results": 10, "year_from": 2017, "year_to": null},
   "count": 10,
-  "papers": [{"source": "arxiv", "source_id": "1706.03762v5", "title": "Attention Is All You Need", "...": "..."}]
+  "papers": [{"source": "arxiv", "source_id": "1706.03762v5", "title": "Attention Is All You Need", "...": "..."}],
+  "source_stats": [
+    {"source": "arxiv", "requested": 10, "returned": 10, "after_dedup": 10, "status": "ok", "detail": ""}
+  ]
 }
 ```
+
+`source_stats` is always present and has one entry per source of the
+query, in the order the sources were named:
+
+| Field | Meaning |
+|---|---|
+| `requested` | The per-source cap (`max_results`). |
+| `returned` | Records the source sent back, before de-duplication. |
+| `after_dedup` | Unique papers credited to this source. A paper several sources returned is credited to the first of them, so the values add up to the number of unique papers. |
+| `status` | `ok` (also when the source answered with nothing), `failed` (it raised an error), `rate_limited` (HTTP 429 through every retry) or `disabled` (the plugin could not be loaded, usually a missing API key). |
+| `detail` | The error text for any status but `ok`. |
+
+Read it before concluding that a topic has few papers. A failing source
+is skipped without stopping the search, so `count` alone cannot tell a
+narrow topic from a search that lost half its sources:
+
+```json
+"source_stats": [
+  {"source": "arxiv",    "requested": 25, "returned": 23, "after_dedup": 23, "status": "ok", "detail": ""},
+  {"source": "openalex", "requested": 25, "returned": 25, "after_dedup": 21, "status": "ok", "detail": ""},
+  {"source": "dblp",     "requested": 25, "returned": 0,  "after_dedup": 0,  "status": "ok", "detail": ""},
+  {"source": "ieee",     "requested": 25, "returned": 0,  "after_dedup": 0,  "status": "failed", "detail": "[ieee] search page returned HTTP 403"},
+  {"source": "springer", "requested": 25, "returned": 0,  "after_dedup": 0,  "status": "disabled", "detail": "THESISAGENTS_SPRINGER_API_KEY is not set"}
+]
+```
+
+Here IEEE and Springer contributed nothing for reasons unrelated to the
+topic, and four of OpenAlex's 25 records were papers arXiv had already
+returned. The counts are taken before the year, citation and top-tier
+filters and before the cut to `max_results`.
 
 `diagnostics` (default `false`) adds a `diagnostics` block that explains
 the ranking. Without it the response is exactly the one above. The

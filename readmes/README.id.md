@@ -293,6 +293,15 @@ mengikuti bentuk yang sama, dengan satu entri
   Ditampilkan dengan `--diagnostics`, dengan `diagnostics=true` pada
   tool MCP `search`, atau kolom Saran di GUI. Hanya saran: tidak ada
   makalah yang dihapus.
+- **Statistik pencarian per sumber**: setiap pencarian melaporkan, untuk
+  tiap sumber, berapa rekaman yang dikembalikannya, berapa makalah unik
+  yang dikreditkan kepadanya setelah deduplikasi, dan apakah sumber itu
+  gagal, kena batas laju, atau nonaktif. Sumber yang gagal dilewati
+  tanpa menghentikan pencarian, sehingga angka-angka inilah yang
+  membedakan topik yang memang sedikit makalahnya dari pencarian yang
+  kehilangan separuh sumbernya. CLI mencetaknya setelah setiap pencarian
+  `--query`, tool MCP `search` mengembalikannya sebagai `source_stats`,
+  dan GUI menampilkannya di baris status.
 - **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per
   sumber (token bucket), `defusedxml` untuk payload XML apa pun,
   jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle`
@@ -440,7 +449,7 @@ Tool:
 |---|---|
 | `list_sources` | Mendaftar setiap plugin + melaporkan apakah masing-masing aktif di env saat ini. Panggil ini sekali sebelum `search`. |
 | `list_exports` | Mendaftar setiap format ekspor dengan deskripsi satu-barisnya dan apakah ia menulis satu berkas agregat atau satu berkas per makalah. |
-| `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. `diagnostics=true` menambahkan rincian skor per makalah dan rekomendasi yang bersifat saran `keep` / `review` / `prune` (tidak ada yang dihapus dari `papers`). |
+| `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. `diagnostics=true` menambahkan rincian skor per makalah dan rekomendasi yang bersifat saran `keep` / `review` / `prune` (tidak ada yang dihapus dari `papers`). Selalu mengembalikan `source_stats`: per sumber, `requested`, `returned`, `after_dedup`, dan `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
 | `fetch_paper` | Identifier arXiv / DOI / PMID / IEEE → satu makalah. |
 | `fetch_pdf_text` | Unduh satu PDF, kembalikan teks tubuh hasil ekstraksi. **Jalur MCP menuju "saya membaca makalahnya".** |
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per-makalah berindeks kunci BibTeX. |

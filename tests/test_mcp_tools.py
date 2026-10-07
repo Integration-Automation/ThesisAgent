@@ -600,7 +600,11 @@ def _diagnosed_collection(query, papers) -> PaperCollection:
     )
 
 
-def test_search_without_the_flag_keeps_its_old_shape(monkeypatch, server, sample_papers):
+def test_search_without_the_flag_has_no_diagnostics_block(
+    monkeypatch, server, sample_papers
+):
+    """``source_stats`` is always there. The score breakdown is opt-in."""
+
     async def fake_run_search(query, **_kwargs):
         return _diagnosed_collection(query, sample_papers)
 
@@ -611,7 +615,7 @@ def test_search_without_the_flag_keeps_its_old_shape(monkeypatch, server, sample
     monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
     payload = asyncio.run(_call(server, "search", keywords="attention", sources=["arxiv"]))
 
-    assert set(payload) == {"query", "count", "papers"}
+    assert set(payload) == {"query", "count", "papers", "source_stats"}
     assert set(payload["papers"][0]) == set(sample_papers[0].to_dict())
 
 
@@ -658,3 +662,96 @@ def test_search_diagnostics_tolerate_a_collection_without_any(
     )
 
     assert [p["score"] for p in payload["diagnostics"]["papers"]] == [None, None]
+
+
+# ---------------------------------------------------------------------------
+# search: source_stats
+# ---------------------------------------------------------------------------
+
+
+def _collection_with_stats(query, papers) -> PaperCollection:
+    from thesisagents.core.diagnostics import (
+        SearchDiagnostics,
+        SourceStat,
+        SourceStatus,
+    )
+
+    stats = (
+        SourceStat("arxiv", requested=5, returned=2, after_dedup=2),
+        SourceStat(
+            "ieee", requested=5, returned=0, after_dedup=0,
+            status=SourceStatus.FAILED, detail="[ieee] blocked",
+        ),
+    )
+    return PaperCollection(
+        query=query, papers=tuple(papers),
+        diagnostics=SearchDiagnostics(source_stats=stats),
+    )
+
+
+def test_search_reports_what_each_source_returned(monkeypatch, server, sample_papers):
+    async def fake_run_search(query, **_kwargs):
+        return _collection_with_stats(query, sample_papers)
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "search", keywords="attention", sources=["arxiv", "ieee"], max_results=5)
+    )
+
+    assert payload["source_stats"] == [
+        {"source": "arxiv", "requested": 5, "returned": 2, "after_dedup": 2,
+         "status": "ok", "detail": ""},
+        {"source": "ieee", "requested": 5, "returned": 0, "after_dedup": 0,
+         "status": "failed", "detail": "[ieee] blocked"},
+    ]
+    # The papers are exactly what they were before the stats existed.
+    assert payload["papers"] == [paper.to_dict() for paper in sample_papers]
+    assert payload["count"] == 2
+
+
+def test_search_source_stats_is_an_empty_list_without_diagnostics(
+    monkeypatch, server, sample_papers
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(_call(server, "search", keywords="attention", sources=["arxiv"]))
+
+    assert payload["source_stats"] == []
+
+
+def test_search_diagnostics_block_repeats_the_source_stats(
+    monkeypatch, server, sample_papers
+):
+    async def fake_run_search(query, **_kwargs):
+        return _collection_with_stats(query, sample_papers)
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "search", keywords="attention", sources=["arxiv"], diagnostics=True)
+    )
+
+    assert payload["diagnostics"]["source_stats"] == payload["source_stats"]
+
+
+def test_list_sources_carries_no_query_state(server):
+    """Discovery only: per-query counts belong to ``search``."""
+    payload = asyncio.run(_call(server, "list_sources"))
+
+    assert set(payload) == {"sources", "default_sources"}
+    assert set(payload["sources"][0]) == {
+        "name", "in_default_mix", "opt_in_env_var", "opt_out_env_var", "enabled",
+    }

@@ -63,6 +63,14 @@ directory. The recommendations are advice and nothing is removed for
 you, so read the abstracts of the ``review`` and ``prune`` papers before
 deleting anything.
 
+**Check which sources answered.** Every ``search`` response carries
+``source_stats``: for each source, how many records it returned, how
+many unique papers it is credited with after de-duplication, and a
+``status`` of ``ok``, ``failed``, ``rate_limited`` or ``disabled``. A
+source that fails is skipped without stopping the search, so read these
+counts before concluding that a topic has few papers. The CLI prints the
+same table after every ``--query`` search.
+
 Mandatory: URL / DOI verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

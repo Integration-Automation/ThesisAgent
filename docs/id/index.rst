@@ -62,6 +62,15 @@ ambang yang memicunya. CLI juga menulis rincian lengkap ke
 saran dan tidak ada yang dihapus untuk Anda, jadi bacalah abstrak
 makalah ``review`` dan ``prune`` sebelum menghapus apa pun.
 
+**Periksa sumber mana yang menjawab.** Setiap respons ``search`` memuat
+``source_stats``: untuk tiap sumber, berapa rekaman yang
+dikembalikannya, berapa makalah unik yang dikreditkan kepadanya setelah
+deduplikasi, dan sebuah ``status`` bernilai ``ok``, ``failed``,
+``rate_limited``, atau ``disabled``. Sumber yang gagal dilewati tanpa
+menghentikan pencarian, jadi bacalah angka-angka ini sebelum
+menyimpulkan bahwa suatu topik sedikit makalahnya. CLI mencetak tabel
+yang sama setelah setiap pencarian ``--query``.
+
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

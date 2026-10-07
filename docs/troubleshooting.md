@@ -100,6 +100,32 @@ Crossref hit. Workarounds:
 - Use the arXiv version if the paper has one (`arxiv.org` mirror).
 - Search by query instead of by paper.
 
+### A search returns fewer papers than expected
+
+Look at the `Sources` table the CLI prints after the search (the MCP
+`search` tool returns the same as `source_stats`):
+
+```
+Sources (up to 25 requested from each):
+  arxiv      23 returned, 23 after dedup
+  openalex   25 returned, 21 after dedup
+  dblp        0 returned, 0 after dedup
+  ieee        0 returned  failed: [ieee] search page returned HTTP 403
+  springer    0 returned  disabled: THESISAGENTS_SPRINGER_API_KEY is not set
+```
+
+| What the table shows | Cause | What to do |
+|---|---|---|
+| `failed: ...` | The source raised an error: a block page, a changed response format, a network failure. | Read the message. For `ieee` and `scholar`, check that a Chrome window opened and that VPN / institutional access is active. |
+| `rate_limited: ...` | The source answered HTTP 429 through every retry. | Wait and run again, or set the source's API key (`THESISAGENTS_S2_API_KEY` for Semantic Scholar). |
+| `disabled: ...` | The plugin could not be loaded, usually a missing API key (`springer`, `core`). | Set the variable named in the message, or ignore the source. |
+| `0 returned, 0 after dedup` | The source answered and had nothing for this query. | Nothing is wrong. Try broader keywords. |
+| `returned` far above `after dedup` | Most of the source's records duplicated an earlier source's. | Nothing is wrong. The source adds little for this query. |
+
+A source that fails is skipped without stopping the search, so the
+result list alone cannot tell a narrow topic from a search that lost
+half its sources.
+
 ### `error: Unknown source(s): <name>`
 
 You passed `--source` a name not in `ALL_SOURCES`. The valid set:

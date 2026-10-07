@@ -62,6 +62,15 @@ raccomandazioni sono indicative e nulla viene rimosso al posto tuo,
 quindi leggi gli abstract degli articoli ``review`` e ``prune`` prima di
 eliminare qualcosa.
 
+**Controlla quali fonti hanno risposto.** Ogni risposta di ``search``
+contiene ``source_stats``: per ciascuna fonte, quanti record ha
+restituito, quanti articoli unici le sono attribuiti dopo la
+deduplicazione e uno ``status`` con valore ``ok``, ``failed``,
+``rate_limited`` o ``disabled``. Una fonte che fallisce viene saltata
+senza fermare la ricerca, quindi leggi questi numeri prima di concludere
+che un tema ha pochi articoli. La CLI stampa la stessa tabella dopo ogni
+ricerca ``--query``.
+
 Obbligatorio: verifica URL / DOI prima della consegna
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -65,6 +65,15 @@ recency और citations में बँटा हुआ, query के जो �
 जाता, इसलिए कुछ भी delete करने से पहले ``review`` और ``prune`` वाले
 papers के abstract पढ़ें।
 
+**जाँचें कि किन sources ने जवाब दिया।** हर ``search`` response में
+``source_stats`` होता है: हर source के लिए, उसने कितने records लौटाए,
+de-duplication के बाद कितने unique papers उसके खाते में गए, और एक
+``status`` जिसका मान ``ok``, ``failed``, ``rate_limited`` या
+``disabled`` होता है। विफल source को search रोके बिना छोड़ दिया जाता है,
+इसलिए यह निष्कर्ष निकालने से पहले कि किसी विषय पर कम papers हैं, ये
+संख्याएँ पढ़ें। CLI भी हर ``--query`` search के बाद यही table print करता
+है।
+
 अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

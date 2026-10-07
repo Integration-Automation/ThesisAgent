@@ -297,6 +297,15 @@ dans le tuple `PaperCollection`.
   `diagnostics=true` sur l'outil MCP `search`, ou dans la colonne
   Suggestion de la GUI. Indicatif seulement : aucun article n'est
   supprimé.
+- **Statistiques de recherche par source** : chaque recherche indique,
+  pour chaque source, combien d'enregistrements elle a renvoyés, combien
+  d'articles uniques lui sont attribués après déduplication, et si elle
+  a échoué, a été limitée en débit ou est désactivée. Une source en
+  échec est ignorée sans arrêter la recherche, ce sont donc ces chiffres
+  qui distinguent un sujet peu couvert d'une recherche qui a perdu la
+  moitié de ses sources. La CLI les affiche après chaque recherche
+  `--query`, l'outil MCP `search` les renvoie dans `source_stats` et la
+  GUI les montre dans la ligne d'état.
 - **Sûr par défaut** : transport HTTP uniquement HTTPS, limite de débit par
   source (token bucket), `defusedxml` pour toute charge utile XML, chemins
   d'export résistants à la traversée de répertoire, pas d'`eval` / `exec` /
@@ -446,7 +455,7 @@ Outils :
 |---|---|
 | `list_sources` | Énumère chaque plugin + indique si chacun est activé dans l'environnement actuel. Appelez ceci une fois avant `search`. |
 | `list_exports` | Énumère chaque format d'export avec sa description en une ligne et s'il écrit un fichier agrégé ou un fichier par article. |
-| `search` | Mots-clés → liste d'articles. Accepte `top_tier_only`, `min_citations` ; par défaut le mix complet de sources sans clé API. `diagnostics=true` ajoute le détail du score par article et une recommandation indicative `keep` / `review` / `prune` (rien n'est retiré de `papers`). |
+| `search` | Mots-clés → liste d'articles. Accepte `top_tier_only`, `min_citations` ; par défaut le mix complet de sources sans clé API. `diagnostics=true` ajoute le détail du score par article et une recommandation indicative `keep` / `review` / `prune` (rien n'est retiré de `papers`). Renvoie toujours `source_stats` : par source, `requested`, `returned`, `after_dedup` et `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
 | `fetch_paper` | Identifiant arXiv / DOI / PMID / IEEE → article unique. |
 | `fetch_pdf_text` | Télécharge un PDF, renvoie le texte du corps extrait. **Le chemin MCP vers « j'ai lu l'article ».** |
 | `download_pdfs` | Télécharge par lot les PDF d'une liste d'articles dans `{out_dir}/pdfs/`. Renvoie des résultats par article indexés par clé BibTeX. |

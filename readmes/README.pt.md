@@ -285,6 +285,14 @@ tupla `PaperCollection`.
   `--diagnostics`, com `diagnostics=true` na ferramenta MCP `search`, ou
   na coluna Sugestão da GUI. Apenas orientativo: nenhum artigo é
   removido.
+- **Estatísticas de busca por fonte**: cada busca informa, para cada
+  fonte, quantos registros ela retornou, quantos artigos únicos lhe são
+  atribuídos após a deduplicação e se ela falhou, atingiu o limite de
+  requisições ou está desativada. Uma fonte que falha é ignorada sem
+  interromper a busca, por isso são esses números que distinguem um tema
+  com poucos artigos de uma busca que perdeu metade das fontes. A CLI os
+  imprime após cada busca `--query`, a ferramenta MCP `search` os
+  retorna como `source_stats` e a GUI os mostra na linha de status.
 - **Segurança por padrão**: transporte HTTP somente HTTPS, limite de taxa por
   fonte (token bucket), `defusedxml` para qualquer payload XML, caminhos de
   exportação seguros contra travessia de diretório, nenhum `eval` / `exec` /
@@ -433,7 +441,7 @@ Ferramentas:
 |---|---|
 | `list_sources` | Enumera cada plugin + relata se cada um está habilitado no ambiente atual. Chame isto uma vez antes de `search`. |
 | `list_exports` | Enumera cada formato de exportação com a sua descrição de uma linha e se ele escreve um arquivo agregado ou um arquivo por artigo. |
-| `search` | Palavras-chave → lista de artigos. Aceita `top_tier_only`, `min_citations`; usa por padrão o mix completo de fontes sem chave de API. `diagnostics=true` acrescenta o detalhamento da pontuação por artigo e uma recomendação orientativa `keep` / `review` / `prune` (nada é removido de `papers`). |
+| `search` | Palavras-chave → lista de artigos. Aceita `top_tier_only`, `min_citations`; usa por padrão o mix completo de fontes sem chave de API. `diagnostics=true` acrescenta o detalhamento da pontuação por artigo e uma recomendação orientativa `keep` / `review` / `prune` (nada é removido de `papers`). Sempre retorna `source_stats`: por fonte, `requested`, `returned`, `after_dedup` e `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
 | `fetch_paper` | Identificador arXiv / DOI / PMID / IEEE → artigo único. |
 | `fetch_pdf_text` | Baixa um PDF, retorna o texto do corpo extraído. **O caminho MCP para "eu li o artigo".** |
 | `download_pdfs` | Baixa em lote os PDFs de uma lista de artigos em `{out_dir}/pdfs/`. Retorna resultados por artigo indexados pela chave BibTeX. |

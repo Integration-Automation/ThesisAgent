@@ -206,6 +206,46 @@ The paper's own `doi` and `url` are never rewritten. Where a link leads
 after its redirects is reported separately and is not written into the
 bibliography.
 
+## Source statistics
+
+After every `--query` search the CLI prints what each source contributed.
+No flag is needed, and `--quiet` hides it.
+
+```
+Sources (up to 25 requested from each):
+  arxiv      23 returned, 23 after dedup
+  openalex   25 returned, 21 after dedup
+  dblp        0 returned, 0 after dedup
+  ieee        0 returned  failed: [ieee] search page returned HTTP 403
+  springer    0 returned  disabled: THESISAGENTS_SPRINGER_API_KEY is not set
+```
+
+A source that fails is skipped without stopping the search. That keeps
+one broken publisher from sinking a run, and it also means a search that
+lost half its sources looks, from the result list alone, like a search
+on a topic with few papers. This table is how to tell them apart.
+
+| Column | Meaning |
+|---|---|
+| requested | The per-source cap of the query (`--max`). |
+| returned | Records the source sent back, before de-duplication. |
+| after dedup | Unique papers credited to this source. A paper several sources returned is credited to the first of them in `--source` order, so the values add up to the number of unique papers. |
+| status | Shown only when it is not `ok`: `failed` (the source raised an error), `rate_limited` (it kept answering HTTP 429 through every retry) or `disabled` (the plugin could not be loaded, usually a missing API key), followed by the error text. |
+
+In the example OpenAlex returned 25 records and is credited with 21,
+because four of them were papers arXiv had already returned and arXiv is
+named first. DBLP answered and had nothing, which is not a failure. IEEE
+and Springer contributed nothing for reasons that have nothing to do
+with the topic.
+
+The counts are taken before the year, citation and top-tier filters and
+before the final cut to `--max` results, so they describe the sources,
+not the filtered list. The example found 44 unique papers and the run
+kept the best 25.
+
+`--list-sources` is a different question: it lists the sources that
+exist and which run by default, not what they returned for a query.
+
 ## Ranking diagnostics
 
 A keyword search returns off-topic papers by construction: a "Claude

@@ -122,6 +122,66 @@ class PruningRecommendation:
         }
 
 
+class SourceStatus(StrEnum):
+    """How one source fared for one query.
+
+    ``ok`` covers a source that answered with nothing: an empty answer is an
+    answer. The other three mean the source contributed no papers and say why.
+    """
+
+    OK = "ok"
+    FAILED = "failed"
+    RATE_LIMITED = "rate_limited"
+    DISABLED = "disabled"
+
+
+@dataclass(frozen=True, slots=True)
+class SourceStat:
+    """What one source contributed to one search.
+
+    Why it exists: a failing source returns nothing and never breaks the
+    others, by design. That made a search that silently lost half its sources
+    look the same as one that found nothing there. These counts make the
+    difference visible.
+
+    * ``requested``: the per-source result cap of the query (``--max``).
+    * ``returned``: records the source sent back, before de-duplication.
+    * ``after_dedup``: how many of the de-duplicated papers are credited to
+      this source. A paper several sources returned is credited to the first
+      of them in the query's source order, so the values of all sources add up
+      to the number of unique papers. ``returned - after_dedup`` is therefore
+      how many of this source's records duplicated an earlier source's (or its
+      own).
+    * ``status`` / ``detail``: see :class:`SourceStatus`. ``detail`` carries
+      the error text for anything but ``ok``.
+
+    Both counts are taken before the query's filters (year range, minimum
+    citations, top-tier venues) and before the final ``max_results`` cut, so
+    they describe the sources, not the filtered result.
+
+    Example: ``SourceStat("arxiv", requested=25, returned=23, after_dedup=19,
+    status=SourceStatus.OK)`` means four of arXiv's 23 records were also
+    returned by a source listed before it.
+    """
+
+    source: str
+    requested: int
+    returned: int
+    after_dedup: int
+    status: SourceStatus = SourceStatus.OK
+    detail: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source": self.source,
+            "requested": self.requested,
+            "returned": self.returned,
+            "after_dedup": self.after_dedup,
+            "status": self.status.value,
+            "detail": self.detail,
+        }
+
+
 @dataclass(frozen=True, slots=True)
 class SearchDiagnostics:
     """Everything a search can say about itself beyond the papers.
@@ -133,6 +193,7 @@ class SearchDiagnostics:
 
     scores: tuple[PaperScore, ...] = ()
     pruning: tuple[PruningRecommendation, ...] = ()
+    source_stats: tuple[SourceStat, ...] = ()
 
     def score_for(self, paper_key: str) -> RelevanceScore | None:
         """The score recorded for ``paper_key``, or ``None``."""
@@ -152,7 +213,23 @@ class SearchDiagnostics:
         return {
             "scores": [entry.to_dict() for entry in self.scores],
             "pruning": [entry.to_dict() for entry in self.pruning],
+            "source_stats": [entry.to_dict() for entry in self.source_stats],
         }
+
+
+def source_stats_payload(collection: PaperCollection) -> list[dict[str, Any]]:
+    """The per-source counts of ``collection`` as JSON-ready dicts.
+
+    An empty list for a collection without diagnostics, so a caller can put
+    the result in a response unconditionally.
+
+    Example: ``[{"source": "arxiv", "requested": 25, "returned": 23,
+    "after_dedup": 19, "status": "ok", "detail": ""}]``.
+    """
+    diagnostics = collection.diagnostics
+    if diagnostics is None:
+        return []
+    return [stat.to_dict() for stat in diagnostics.source_stats]
 
 
 def collection_report(collection: PaperCollection) -> dict[str, Any]:
@@ -209,5 +286,6 @@ def collection_report(collection: PaperCollection) -> dict[str, Any]:
         "keywords": collection.query.keywords,
         "advisory": True,
         "summary": summary,
+        "source_stats": source_stats_payload(collection),
         "papers": entries,
     }

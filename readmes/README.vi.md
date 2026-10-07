@@ -287,6 +287,14 @@ cho mỗi bài trong tuple `PaperCollection`.
   khuyến nghị. Xem bằng `--diagnostics`, bằng `diagnostics=true` trên
   công cụ MCP `search`, hoặc cột Gợi ý trong GUI. Chỉ là gợi ý: không
   bài báo nào bị xóa.
+- **Thống kê tìm kiếm theo nguồn**: mỗi lần tìm kiếm báo cáo, với từng
+  nguồn, số bản ghi nguồn đó trả về, số bài báo duy nhất được tính cho
+  nguồn đó sau khi khử trùng lặp, và nguồn có bị lỗi, bị giới hạn tốc độ
+  hay đang tắt hay không. Một nguồn bị lỗi sẽ được bỏ qua mà không dừng
+  việc tìm kiếm, nên chính các con số này giúp phân biệt một chủ đề ít
+  bài với một lần tìm đã mất nửa số nguồn. CLI in chúng sau mỗi lần tìm
+  `--query`, công cụ MCP `search` trả về dưới dạng `source_stats`, còn
+  GUI hiển thị ở dòng trạng thái.
 - **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit theo
   từng nguồn (token bucket), `defusedxml` cho mọi payload XML,
   các đường xuất an-toàn-với-path-traversal, không `eval` / `exec` / `pickle` trên
@@ -432,7 +440,7 @@ Công cụ:
 |---|---|
 | `list_sources` | Liệt kê mọi plugin + báo cái nào đang bật trong env hiện tại. Gọi nó một lần trước `search`. |
 | `list_exports` | Liệt kê mọi định dạng xuất với mô tả một dòng và việc nó ghi một file tổng hợp hay một file mỗi bài. |
-| `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. `diagnostics=true` thêm bảng phân tích điểm theo từng bài và khuyến nghị tham khảo `keep` / `review` / `prune` (không có gì bị xóa khỏi `papers`). |
+| `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. `diagnostics=true` thêm bảng phân tích điểm theo từng bài và khuyến nghị tham khảo `keep` / `review` / `prune` (không có gì bị xóa khỏi `papers`). Luôn trả về `source_stats`: với mỗi nguồn, `requested`, `returned`, `after_dedup` và `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
 | `fetch_paper` | Định danh arXiv / DOI / PMID / IEEE → một bài đơn. |
 | `fetch_pdf_text` | Tải một PDF, trả về văn bản thân bài đã trích. **Cổng MCP tới "tôi đã đọc bài".** |
 | `download_pdfs` | Tải hàng loạt PDF của một danh sách bài vào `{out_dir}/pdfs/`. Trả về kết quả từng bài có khóa theo khóa BibTeX. |

@@ -10,9 +10,14 @@ Tools:
   ``export`` accepts plus a one-line description, so an agent can pick the
   format set without guessing.
 - search(keywords, sources, exclude_sources, max_results, year_from, year_to,
-         top_tier_only, min_citations, diagnostics) -> {papers: [...]}
+         top_tier_only, min_citations, diagnostics)
+         -> {papers: [...], source_stats: [...]}
+  source_stats says, per source, how many records it returned for this query,
+  how many unique papers it is credited with, and whether it failed.
   diagnostics=True adds a per-paper score breakdown and an advisory
   keep / review / prune recommendation. Nothing is removed from papers.
+- list_sources stays a discovery tool: it reports configuration, not the
+  result counts of a query. Those are in search's source_stats.
 - fetch_paper(identifier) -> {paper: {...}}
 - fetch_pdf_text(pdf_url) -> {text, page_count, chars}
 - download_pdfs(papers, out_dir) -> {results: [...]}
@@ -74,7 +79,7 @@ from thesisagents.core.constants import (
     EXPORT_PDF,
     EXPORT_PPTX,
 )
-from thesisagents.core.diagnostics import collection_report
+from thesisagents.core.diagnostics import collection_report, source_stats_payload
 from thesisagents.core.exceptions import ThesisAgentsError
 from thesisagents.core.export_validation import (
     IdentifierVerificationError,
@@ -356,6 +361,15 @@ def _register_search_tools(server: FastMCP) -> None:
 
         Returns a JSON-serialisable dict with a `papers` list. Each paper has
         the same fields as Paper.to_dict() — pass the list straight to `export`.
+
+        The response also carries ``source_stats``: one entry per source of
+        this query with ``requested`` (the per-source cap), ``returned``
+        (records it sent back), ``after_dedup`` (unique papers credited to it:
+        a paper several sources returned is credited to the first of them) and
+        ``status`` (``ok`` / ``failed`` / ``rate_limited`` / ``disabled``, with
+        the error text in ``detail``). Read it before concluding a topic has
+        few papers: a source with ``status: "failed"`` returned nothing
+        because it broke, not because nothing matched.
         """
         normalised = normalize_query(keywords)
         chosen = tuple(sources) if sources else DEFAULT_SOURCES
@@ -605,6 +619,9 @@ def _collection_to_payload(collection: PaperCollection) -> dict[str, Any]:
         },
         "count": len(collection),
         "papers": [paper.to_dict() for paper in collection.papers],
+        # What each source contributed to this query. Always present, so a
+        # client can tell "this source failed" from "this source found nothing".
+        "source_stats": source_stats_payload(collection),
     }
 
 

@@ -245,6 +245,25 @@ index when a record unites two existing groups, which is rare.
 Measured at the full pipeline load (15 sources × 200 results = 3000
 papers, heavy overlap) it completes in under 50 ms.
 
+### Per-source statistics
+
+`run_search` keeps one outcome per source instead of flattening the
+results at once, and records for each source `requested`, `returned`,
+`after_dedup` and a `status` (`ok`, `failed`, `rate_limited`,
+`disabled`) in `PaperCollection.diagnostics.source_stats`.
+
+Failure isolation is unchanged: a source that cannot be loaded or that
+raises contributes nothing and the others carry on. What changed is that
+the search now says so. Before, a run that lost half its sources was
+indistinguishable from a run on a topic with few papers.
+
+`after_dedup` follows from how de-duplication picks the canonical
+record. The merged paper keeps the `source` / `source_id` of its first
+occurrence, so it is credited to the first source whose results contain
+that pair, and the values of all sources add up to the number of unique
+papers. The counts are taken before the `Query` filters and the
+`max_results` cut: they describe the sources, not the filtered result.
+
 ### Ranking
 
 `core/ranking.py` scores each paper on three axes and sorts by the sum:

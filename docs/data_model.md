@@ -288,11 +288,28 @@ class PruningRecommendation:
     threshold: str                    # e.g. "prune_below_relevance=0.10", "" for keep
 
 @dataclass(frozen=True)
+class SourceStat:
+    source: str                       # the source name the query asked for
+    requested: int                    # the per-source cap (Query.max_results)
+    returned: int                     # records sent back, before de-duplication
+    after_dedup: int                  # unique papers credited to this source
+    status: SourceStatus              # "ok" | "failed" | "rate_limited" | "disabled"
+    detail: str                       # the error text for anything but "ok"
+
+@dataclass(frozen=True)
 class SearchDiagnostics:
     scores: tuple[PaperScore, ...]    # PaperScore(paper_key, rank, score)
     pruning: tuple[PruningRecommendation, ...]
+    source_stats: tuple[SourceStat, ...]   # one per source, in query order
     # .score_for(paper_key) / .recommendation_for(paper_key)
 ```
+
+`source_stats` is what makes a skipped source visible. A paper several
+sources returned is credited to the first of them in the query's source
+order, so the `after_dedup` values add up to the number of unique
+papers. Both counts are taken before the `Query` filters and the final
+`max_results` cut. `source_stats_payload(collection)` returns them as
+JSON-ready dicts, an empty list for a collection without diagnostics.
 
 Ranking a list yourself:
 

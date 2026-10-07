@@ -41,6 +41,7 @@ from thesisagents.core.constants import (
     EXPORT_XLSX,
     MAX_RESULTS_PER_SOURCE,
 )
+from thesisagents.core.diagnostics import SourceStatus
 from thesisagents.core.models import ExportOptions, PaperCollection, Query
 from thesisagents.core.pipeline import run_search
 from thesisagents.core.query import normalize_query
@@ -59,6 +60,14 @@ _MAX_YEAR = 2100
 #: format (the name is ``"bib"``), so the button reported
 #: "no exporter registered for this format" on every click.
 QUICK_EXPORT_FORMATS: tuple[str, ...] = (EXPORT_PPTX, EXPORT_XLSX, EXPORT_BIBTEX)
+#: Label shown next to a source that contributed nothing for a reason other
+#: than "no match". ``SourceStatus.OK`` is absent on purpose: an ok source
+#: shows its result count instead.
+_SOURCE_STATUS_KEYS: dict[SourceStatus, str] = {
+    SourceStatus.FAILED: "search.source_failed",
+    SourceStatus.RATE_LIMITED: "search.source_rate_limited",
+    SourceStatus.DISABLED: "search.source_disabled",
+}
 
 
 class SearchPage(QWidget):
@@ -216,13 +225,37 @@ class SearchPage(QWidget):
         # Tell downstream tabs (Enrich, Deck) about the fresh results
         # so they enable their own actions without polling.
         self.collection_ready.emit(collection)
-        self._set_status(
-            t(
-                "search.status_done",
-                self._ui_language,
-                count=len(collection.papers),
-            )
+        status = t(
+            "search.status_done",
+            self._ui_language,
+            count=len(collection.papers),
         )
+        summary = self._source_summary(collection)
+        if summary:
+            status += " " + t(
+                "search.sources_summary", self._ui_language, summary=summary
+            )
+        self._set_status(status)
+
+    def _source_summary(self, collection: PaperCollection) -> str:
+        """What each source returned, as ``"arxiv 23, openalex 25, ieee (failed)"``.
+
+        Why it is on the status line: a source that fails is skipped without
+        stopping the search, so "Found 3 papers" alone cannot tell a narrow
+        topic from a search that lost most of its sources. Empty when the
+        collection carries no per-source counts.
+        """
+        diagnostics = collection.diagnostics
+        if diagnostics is None:
+            return ""
+        parts: list[str] = []
+        for stat in diagnostics.source_stats:
+            label_key = _SOURCE_STATUS_KEYS.get(stat.status)
+            if label_key is None:
+                parts.append(f"{stat.source} {stat.returned}")
+            else:
+                parts.append(f"{stat.source} ({t(label_key, self._ui_language)})")
+        return ", ".join(parts)
 
     def _on_worker_failed(self, err: object) -> None:
         self._search_button.setEnabled(True)

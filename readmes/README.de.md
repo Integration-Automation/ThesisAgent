@@ -292,6 +292,15 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   löst nie eine Empfehlung aus. Sichtbar mit `--diagnostics`, mit
   `diagnostics=true` beim MCP-Tool `search` oder in der Spalte
   Empfehlung der GUI. Nur ein Hinweis: Kein Paper wird entfernt.
+- **Suchstatistik pro Quelle**: Jede Suche meldet für jede Quelle, wie
+  viele Datensätze sie geliefert hat, wie viele eindeutige Papers ihr
+  nach der Deduplizierung zugerechnet werden und ob sie fehlgeschlagen
+  ist, ins Ratenlimit lief oder deaktiviert ist. Eine fehlerhafte Quelle
+  wird übersprungen, ohne die Suche anzuhalten, daher zeigen erst diese
+  Zahlen, ob ein Thema wenig Literatur hat oder die Suche die Hälfte
+  ihrer Quellen verloren hat. Die CLI gibt sie nach jeder
+  `--query`-Suche aus, das MCP-Tool `search` liefert sie als
+  `source_stats` und die GUI zeigt sie in der Statuszeile.
 - **Standardmäßig sicher**: Nur-HTTPS-HTTP-Transport, quellenweise
   Ratenbegrenzung (Token-Bucket), `defusedxml` für jede XML-Nutzlast,
   pfadtraversierungssichere Exportpfade, kein `eval` / `exec` / `pickle` auf
@@ -441,7 +450,7 @@ Tools:
 |---|---|
 | `list_sources` | Zählt jedes Plugin auf + meldet, ob es in der aktuellen Umgebung aktiviert ist. Rufe dies einmal vor `search` auf. |
 | `list_exports` | Zählt jedes Exportformat mit seiner einzeiligen Beschreibung auf und ob es eine aggregierte Datei oder eine Datei pro Paper schreibt. |
-| `search` | Schlagwörter → Liste von Papern. Akzeptiert `top_tier_only`, `min_citations`; nutzt standardmäßig den vollständigen Quellenmix ohne API-Schlüssel. `diagnostics=true` ergänzt die Punkteaufschlüsselung pro Paper und eine unverbindliche Empfehlung `keep` / `review` / `prune` (aus `papers` wird nichts entfernt). |
+| `search` | Schlagwörter → Liste von Papern. Akzeptiert `top_tier_only`, `min_citations`; nutzt standardmäßig den vollständigen Quellenmix ohne API-Schlüssel. `diagnostics=true` ergänzt die Punkteaufschlüsselung pro Paper und eine unverbindliche Empfehlung `keep` / `review` / `prune` (aus `papers` wird nichts entfernt). Liefert immer `source_stats`: pro Quelle `requested`, `returned`, `after_dedup` und `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE-Identifikator → einzelnes Paper. |
 | `fetch_pdf_text` | Lädt ein PDF herunter, gibt extrahierten Fließtext zurück. **Der MCP-Pfad zu „Ich habe das Paper gelesen".** |
 | `download_pdfs` | Lädt die PDFs einer Paper-Liste stapelweise nach `{out_dir}/pdfs/` herunter. Gibt Ergebnisse pro Paper zurück, indiziert nach BibTeX-Schlüssel. |

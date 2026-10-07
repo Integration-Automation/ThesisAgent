@@ -549,3 +549,257 @@ def test_collection_report_lists_papers_that_have_no_score():
     assert report["papers"][0]["score"] is None
     assert report["papers"][0]["recommendation"] is None
     assert report["papers"][0]["title"] == "Title"
+
+
+# ---------------------------------------------------------------------------
+# Per-source statistics
+# ---------------------------------------------------------------------------
+
+
+def _stats(collection) -> dict[str, dict]:
+    return {stat.source: stat.to_dict() for stat in collection.diagnostics.source_stats}
+
+
+async def test_one_source_reports_what_it_returned(monkeypatch):
+    papers = [_scored_paper(str(i), f"Distinct Title Number {i}") for i in range(4)]
+    pool = {"arxiv": _make_fetcher("arxiv", papers)}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="x", sources=("arxiv",), max_results=25)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    assert _stats(collection) == {
+        "arxiv": {
+            "source": "arxiv", "requested": 25, "returned": 4, "after_dedup": 4,
+            "status": "ok", "detail": "",
+        }
+    }
+
+
+async def test_a_failed_source_reports_zero_and_a_failure_status(monkeypatch):
+    pool = {
+        "arxiv": _make_fetcher("arxiv", [_paper("arxiv", "1", "survivor")]),
+        "pubmed": _make_fetcher("pubmed", fail=True),
+    }
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="x", sources=("arxiv", "pubmed"), max_results=5)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    stats = _stats(collection)
+    assert stats["pubmed"]["status"] == "failed"
+    assert stats["pubmed"]["returned"] == 0
+    assert stats["pubmed"]["after_dedup"] == 0
+    assert stats["pubmed"]["detail"] == "[pubmed] boom"
+    assert stats["arxiv"]["status"] == "ok"
+    assert stats["arxiv"]["returned"] == 1
+    assert len(collection.papers) == 1  # the failure did not stop the search
+
+
+async def test_an_unexpected_exception_is_reported_with_its_type(monkeypatch):
+    rate = RateLimit(requests_per_second=100, burst=10, jitter_seconds=0)
+
+    class _Exploding(Fetcher):
+        def __init__(self) -> None:
+            self.config = FetcherConfig(name="openalex", rate_limit=rate)
+            super().__init__()
+
+        async def search(self, query):  # noqa: ARG002 (mirror real signature)
+            raise KeyError("best_oa_location")
+
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda _name: _Exploding())
+    query = Query(keywords="x", sources=("openalex",), max_results=5)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    stat = _stats(collection)["openalex"]
+    assert stat["status"] == "failed"
+    assert stat["detail"] == "KeyError: 'best_oa_location'"
+
+
+async def test_a_disabled_source_is_listed_with_the_reason(monkeypatch):
+    def fake_load(name: str):
+        if name == "springer":
+            raise ConfigError("THESISAGENTS_SPRINGER_API_KEY is not set")
+        return _make_fetcher(name, [_paper(name, "1", "from arxiv")])
+
+    monkeypatch.setattr(pipeline_module, "load_fetcher", fake_load)
+    query = Query(keywords="x", sources=("springer", "arxiv"), max_results=10)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    stats = collection.diagnostics.source_stats
+    assert [stat.source for stat in stats] == ["springer", "arxiv"]  # query order
+    assert stats[0].status.value == "disabled"
+    assert stats[0].detail == "THESISAGENTS_SPRINGER_API_KEY is not set"
+    assert stats[0].requested == 10
+    assert stats[0].returned == 0
+    assert stats[1].returned == 1
+
+
+async def test_a_rate_limited_source_is_reported_as_such(monkeypatch):
+    from thesisagents.core.constants import RATE_LIMIT_RETRY_ATTEMPTS
+
+    flaky = _make_flaky_fetcher(
+        "semantic_scholar", [_paper("semantic_scholar", "1", "x")],
+        fail_first_n=RATE_LIMIT_RETRY_ATTEMPTS + 5,
+    )
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda _name: flaky)
+    query = Query(keywords="x", sources=("semantic_scholar",), max_results=5)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    stat = _stats(collection)["semantic_scholar"]
+    assert stat["status"] == "rate_limited"
+    assert stat["returned"] == 0
+    assert f"gave up after {RATE_LIMIT_RETRY_ATTEMPTS} rate-limit retries" in stat["detail"]
+
+
+async def test_a_source_that_recovers_from_rate_limiting_is_ok(monkeypatch):
+    flaky = _make_flaky_fetcher("arxiv", [_paper("arxiv", "1", "x")], fail_first_n=2)
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda _name: flaky)
+    query = Query(keywords="x", sources=("arxiv",), max_results=5)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    assert _stats(collection)["arxiv"]["status"] == "ok"
+    assert _stats(collection)["arxiv"]["returned"] == 1
+
+
+async def test_sources_keep_independent_counts(monkeypatch):
+    pool = {
+        "arxiv": _make_fetcher(
+            "arxiv", [_scored_paper(f"a{i}", f"Arxiv Only Paper {i}") for i in range(3)]
+        ),
+        "pubmed": _make_fetcher(
+            "pubmed",
+            [
+                Paper(
+                    source="pubmed", source_id=f"p{i}", title=f"Pubmed Only Paper {i}",
+                    authors=("Bo Author",), year=2025, venue=None, abstract="",
+                    url=f"https://example.com/p{i}",
+                )
+                for i in range(5)
+            ],
+        ),
+        "dblp": _make_fetcher("dblp", []),
+    }
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="x", sources=("arxiv", "pubmed", "dblp"), max_results=50)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    stats = _stats(collection)
+    assert (stats["arxiv"]["returned"], stats["arxiv"]["after_dedup"]) == (3, 3)
+    assert (stats["pubmed"]["returned"], stats["pubmed"]["after_dedup"]) == (5, 5)
+    assert stats["dblp"] == {
+        "source": "dblp", "requested": 50, "returned": 0, "after_dedup": 0,
+        "status": "ok", "detail": "",   # an empty answer is still an answer
+    }
+
+
+async def test_dedup_count_is_lower_than_returned_when_records_overlap(monkeypatch):
+    """The paper both sources return is credited to the first source named."""
+
+    def _doi_paper(source: str, sid: str, title: str, doi: str) -> Paper:
+        return Paper(
+            source=source, source_id=sid, title=title, authors=("Ada Author",),
+            year=2025, venue=None, abstract="", url=f"https://example.com/{sid}",
+            doi=doi,
+        )
+
+    pool = {
+        "arxiv": _make_fetcher(
+            "arxiv",
+            [
+                _doi_paper("arxiv", "a1", "Shared One", "10.1000/one"),
+                _doi_paper("arxiv", "a2", "Shared Two", "10.1000/two"),
+                _doi_paper("arxiv", "a3", "Arxiv Only", "10.1000/three"),
+            ],
+        ),
+        "openalex": _make_fetcher(
+            "openalex",
+            [
+                _doi_paper("openalex", "o1", "Shared One", "10.1000/one"),
+                _doi_paper("openalex", "o2", "Shared Two", "10.1000/two"),
+                _doi_paper("openalex", "o3", "Openalex Only", "10.1000/four"),
+            ],
+        ),
+    }
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="x", sources=("arxiv", "openalex"), max_results=50)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    stats = _stats(collection)
+    assert (stats["arxiv"]["returned"], stats["arxiv"]["after_dedup"]) == (3, 3)
+    assert (stats["openalex"]["returned"], stats["openalex"]["after_dedup"]) == (3, 1)
+    assert stats["openalex"]["after_dedup"] < stats["openalex"]["returned"]
+    credited = sum(stat["after_dedup"] for stat in stats.values())
+    assert credited == len(collection.papers) == 4
+
+
+async def test_a_sources_own_duplicates_collapse_too(monkeypatch):
+    twin = _scored_paper("same", "Printed Twice By One Source")
+    pool = {"arxiv": _make_fetcher("arxiv", [twin, twin, _scored_paper("x", "Another")])}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="x", sources=("arxiv",), max_results=50)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    assert _stats(collection)["arxiv"]["returned"] == 3
+    assert _stats(collection)["arxiv"]["after_dedup"] == 2
+
+
+async def test_source_counts_describe_the_sources_not_the_filtered_result(monkeypatch):
+    """Filters and the final cut run after the counts are taken."""
+    papers = [
+        _scored_paper(str(i), f"Distinct Paper {i}", citations=i * 10) for i in range(6)
+    ]
+    pool = {"arxiv": _make_fetcher("arxiv", papers)}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(
+        keywords="x", sources=("arxiv",), max_results=2, min_citations=30
+    )
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    assert len(collection.papers) == 2
+    stat = _stats(collection)["arxiv"]
+    assert (stat["requested"], stat["returned"], stat["after_dedup"]) == (2, 6, 6)
+
+
+async def test_the_papers_are_the_same_with_or_without_the_stats(monkeypatch):
+    """Keeping per-source outcomes must not change what the search returns."""
+    from thesisagents.core.dedup import dedupe
+    from thesisagents.core.ranking import rank
+
+    arxiv = [_scored_paper(f"a{i}", f"Transformer Attention {i}") for i in range(3)]
+    openalex = [_scored_paper(f"a{i}", f"Transformer Attention {i}") for i in (1, 2)]
+    openalex.append(_scored_paper("o9", "Cooking With Gas"))
+    pool = {"arxiv": _make_fetcher("arxiv", arxiv), "openalex": _make_fetcher("openalex", openalex)}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(
+        keywords="transformer attention", sources=("arxiv", "openalex"), max_results=50
+    )
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    expected = rank(dedupe([*arxiv, *openalex]), keywords="transformer attention")
+    assert list(collection.papers) == expected
+
+
+def test_source_stat_serialises_to_json():
+    import json
+
+    from thesisagents.core.diagnostics import SourceStat, SourceStatus
+
+    stat = SourceStat(
+        "ieee", requested=25, returned=0, after_dedup=0,
+        status=SourceStatus.FAILED, detail="[ieee] blocked",
+    )
+
+    assert json.loads(json.dumps(stat.to_dict())) == {
+        "source": "ieee", "requested": 25, "returned": 0, "after_dedup": 0,
+        "status": "failed", "detail": "[ieee] blocked",
+    }

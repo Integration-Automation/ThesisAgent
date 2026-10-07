@@ -69,6 +69,15 @@ recommandations sont indicatives et rien n'est supprimé à votre place,
 lisez donc les résumés des articles ``review`` et ``prune`` avant de
 supprimer quoi que ce soit.
 
+**Vérifiez quelles sources ont répondu.** Chaque réponse de ``search``
+contient ``source_stats`` : pour chaque source, combien
+d'enregistrements elle a renvoyés, combien d'articles uniques lui sont
+attribués après déduplication, et un ``status`` valant ``ok``,
+``failed``, ``rate_limited`` ou ``disabled``. Une source en échec est
+ignorée sans arrêter la recherche, lisez donc ces chiffres avant de
+conclure qu'un sujet compte peu d'articles. La CLI affiche le même
+tableau après chaque recherche ``--query``.
+
 Obligatoire : vérification URL / DOI avant livraison
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

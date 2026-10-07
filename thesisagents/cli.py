@@ -30,7 +30,11 @@ from thesisagents.core.constants import (
     EXPORT_XLSX,
     MAX_RESULTS_PER_SOURCE,
 )
-from thesisagents.core.diagnostics import PruningAction, collection_report
+from thesisagents.core.diagnostics import (
+    PruningAction,
+    SourceStatus,
+    collection_report,
+)
 from thesisagents.core.exceptions import ConfigError, ExportError, ThesisAgentsError
 from thesisagents.core.export_validation import (
     IdentifierVerificationError,
@@ -502,6 +506,7 @@ async def _run(args: argparse.Namespace) -> int:
     pdf_results = []
     try:
         collection = await _collect(args)
+        _print_source_stats(collection, args.quiet)
         await _verify_identifiers_early(collection, args, verification_cache)
         _report_diagnostics(collection, args)
         collection = await _maybe_enrich(collection, args)
@@ -579,6 +584,45 @@ async def _verify_identifiers_early(
             f"Identifiers: {counts[VerificationStatus.OK.value]} verified, "
             f"{counts[VerificationStatus.SKIPPED.value]} not checkable, 0 failed."
         )
+
+
+_SOURCE_DETAIL_MAX_CHARS: Final[int] = 100
+
+
+def _print_source_stats(collection: PaperCollection, quiet: bool) -> None:
+    """Print what each source contributed to the search that just ran.
+
+    The boundary this guards: a failing source returns nothing and never stops
+    the others, so a search that lost half its sources used to look exactly
+    like one that found nothing there. Printed after every ``--query`` search,
+    with no flag needed, because the user cannot know to ask.
+
+    Nothing is printed under ``--quiet``, or for ``--paper`` / ``--pdf`` runs,
+    which have no per-source counts.
+
+    Example::
+
+        Sources (up to 25 requested from each):
+          arxiv              23 returned, 19 after dedup
+          semantic_scholar    0 returned  rate_limited: gave up after 3 rate-limit retries
+          springer            0 returned  disabled: THESISAGENTS_SPRINGER_API_KEY is not set
+    """
+    diagnostics = collection.diagnostics
+    if quiet or diagnostics is None or not diagnostics.source_stats:
+        return
+    stats = diagnostics.source_stats
+    width = max(len(stat.source) for stat in stats)
+    print(f"\nSources (up to {stats[0].requested} requested from each):")
+    for stat in stats:
+        line = f"  {stat.source:<{width}}  {stat.returned:>3} returned"
+        if stat.status is SourceStatus.OK:
+            line += f", {stat.after_dedup} after dedup"
+        else:
+            detail = " ".join(stat.detail.split())
+            if len(detail) > _SOURCE_DETAIL_MAX_CHARS:
+                detail = detail[: _SOURCE_DETAIL_MAX_CHARS - 1] + "…"
+            line += f"  {stat.status.value}: {detail}" if detail else f"  {stat.status.value}"
+        print(line)
 
 
 def _report_diagnostics(
@@ -664,6 +708,7 @@ async def _run_download_only(args: argparse.Namespace) -> int:
     """
     try:
         collection = await _collect(args)
+        _print_source_stats(collection, args.quiet)
         pdf_results = (
             await download_pdfs(collection, args.out)
             if collection.papers and not args.pdf

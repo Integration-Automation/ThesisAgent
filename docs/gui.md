@@ -59,6 +59,13 @@ Press **Search**. The query runs on a worker thread so the UI stays
 responsive; the status bar reports progress and the results table
 populates when the run finishes.
 
+When the run finishes the status line reports the number of papers and
+what each source returned, for example
+`Found 25 paper(s). Sources: arxiv 23, openalex 25, dblp 0, ieee (failed), springer (disabled)`.
+A source marked failed, rate limited or disabled contributed nothing
+for a reason other than the topic, so check it before concluding the
+topic has few papers.
+
 The last column, **Suggestion**, shows the advisory recommendation the
 search recorded for each paper: keep, review or prune. Hover any cell
 of a row to see why: the score split into relevance, recency and

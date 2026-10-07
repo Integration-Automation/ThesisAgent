@@ -285,6 +285,14 @@ entry per paper in the `PaperCollection` tuple.
   recommendation. Shown with `--diagnostics`, with `diagnostics=true` on
   the MCP `search` tool, or in the Suggestion column of the GUI. Advice
   only: no paper is removed.
+- **Per-source search statistics**: every search reports, for each
+  source, how many records it returned, how many unique papers it is
+  credited with after de-duplication, and whether it failed, was rate
+  limited or is disabled. A source that breaks is skipped without
+  stopping the search, so these counts are what tells a narrow topic
+  from a search that lost half its sources. Printed by the CLI after
+  each `--query` search, returned as `source_stats` by the MCP `search`
+  tool, and shown in the GUI status line.
 - **Safety by default**: HTTPS-only HTTP transport, per-source rate
   limit (token bucket), `defusedxml` for any XML payload,
   path-traversal-safe export paths, no `eval` / `exec` / `pickle` on
@@ -430,7 +438,7 @@ Tools:
 |---|---|
 | `list_sources` | Enumerate every plugin + report whether each is enabled in the current env. Call this once before `search`. |
 | `list_exports` | Enumerate every export format with its one-line description and whether it writes one aggregate file or one file per paper. |
-| `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. `diagnostics=true` adds a per-paper score breakdown and an advisory `keep` / `review` / `prune` recommendation (nothing is removed from `papers`). |
+| `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. `diagnostics=true` adds a per-paper score breakdown and an advisory `keep` / `review` / `prune` recommendation (nothing is removed from `papers`). Always returns `source_stats`: per source, `requested`, `returned`, `after_dedup` and `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |

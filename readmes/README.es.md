@@ -294,6 +294,15 @@ multi-artículo sigue la misma forma con una entrada
   recomendación. Se muestra con `--diagnostics`, con `diagnostics=true`
   en la herramienta MCP `search`, o en la columna Sugerencia de la GUI.
   Solo orientativo: no se elimina ningún artículo.
+- **Estadísticas de búsqueda por fuente**: cada búsqueda informa, para
+  cada fuente, cuántos registros devolvió, cuántos artículos únicos se
+  le atribuyen tras la deduplicación y si falló, alcanzó el límite de
+  peticiones o está desactivada. Una fuente que falla se omite sin
+  detener la búsqueda, así que estos recuentos son lo que distingue un
+  tema con pocos artículos de una búsqueda que perdió la mitad de sus
+  fuentes. La CLI los imprime tras cada búsqueda `--query`, la
+  herramienta MCP `search` los devuelve como `source_stats` y la GUI los
+  muestra en la línea de estado.
 - **Seguridad por defecto**: transporte HTTP solo-HTTPS, límite de tasa por
   fuente (token bucket), `defusedxml` para cualquier payload XML, rutas de
   exportación seguras frente a path-traversal, sin `eval` / `exec` / `pickle`
@@ -443,7 +452,7 @@ Herramientas:
 |---|---|
 | `list_sources` | Enumera cada plugin + reporta si cada uno está habilitado en el entorno actual. Llame esto una vez antes de `search`. |
 | `list_exports` | Enumera cada formato de exportación con su descripción de una línea y si escribe un archivo agregado o un archivo por artículo. |
-| `search` | Palabras clave → lista de artículos. Acepta `top_tier_only`, `min_citations`; por defecto la mezcla completa de fuentes sin clave API. `diagnostics=true` añade el desglose de la puntuación por artículo y una recomendación orientativa `keep` / `review` / `prune` (no se elimina nada de `papers`). |
+| `search` | Palabras clave → lista de artículos. Acepta `top_tier_only`, `min_citations`; por defecto la mezcla completa de fuentes sin clave API. `diagnostics=true` añade el desglose de la puntuación por artículo y una recomendación orientativa `keep` / `review` / `prune` (no se elimina nada de `papers`). Siempre devuelve `source_stats`: por fuente, `requested`, `returned`, `after_dedup` y `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
 | `fetch_paper` | Identificador arXiv / DOI / PMID / IEEE → un solo artículo. |
 | `fetch_pdf_text` | Descarga un PDF, devuelve el texto del cuerpo extraído. **La ruta MCP hacia «leí el artículo».** |
 | `download_pdfs` | Descarga por lotes los PDFs de una lista de artículos en `{out_dir}/pdfs/`. Devuelve resultados por artículo indexados por clave BibTeX. |

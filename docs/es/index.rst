@@ -69,6 +69,14 @@ directorio de salida. Las recomendaciones son orientativas y no se
 elimina nada por usted, así que lea los resúmenes de los artículos
 ``review`` y ``prune`` antes de borrar algo.
 
+**Compruebe qué fuentes respondieron.** Cada respuesta de ``search``
+incluye ``source_stats``: para cada fuente, cuántos registros devolvió,
+cuántos artículos únicos se le atribuyen tras la deduplicación y un
+``status`` que vale ``ok``, ``failed``, ``rate_limited`` o ``disabled``.
+Una fuente que falla se omite sin detener la búsqueda, así que lea estos
+recuentos antes de concluir que un tema tiene pocos artículos. La CLI
+imprime la misma tabla tras cada búsqueda ``--query``.
+
 Obligatorio: verificación URL / DOI antes de entregar
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -62,6 +62,14 @@ trong thư mục đầu ra. Các khuyến nghị chỉ mang tính tham khảo v�
 có gì bị xóa thay bạn, vì vậy hãy đọc tóm tắt của các bài ``review`` và
 ``prune`` trước khi xóa bất cứ thứ gì.
 
+**Hãy kiểm tra nguồn nào đã trả lời.** Mọi phản hồi của ``search`` đều
+kèm ``source_stats``: với từng nguồn, số bản ghi nguồn đó trả về, số bài
+báo duy nhất được tính cho nguồn đó sau khi khử trùng lặp, và một
+``status`` có giá trị ``ok``, ``failed``, ``rate_limited`` hoặc
+``disabled``. Một nguồn bị lỗi sẽ được bỏ qua mà không dừng việc tìm
+kiếm, vì vậy hãy đọc các con số này trước khi kết luận rằng một chủ đề
+có ít bài báo. CLI cũng in cùng bảng đó sau mỗi lần tìm ``--query``.
+
 Bắt buộc: xác minh URL / DOI trước khi giao
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

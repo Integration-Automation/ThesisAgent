@@ -9,7 +9,7 @@
 > [`docs/architecture.md`](docs/architecture.md); this file does not repeat it.
 > Last verified: 2026-10-08 on `dev`, with the export identifier preflight
 > (`thesisagents/core/export_validation.py`) and the search diagnostics
-> (`thesisagents/core/diagnostics.py`, `pruning.py`).
+> (`thesisagents/core/diagnostics.py`, `pruning.py`, per-source statistics in `pipeline.py`).
 
 ## 1. Purpose
 
@@ -87,7 +87,7 @@ An exporter never imports a fetcher; it only consumes a `PaperCollection`.
 Query (CLI flags / MCP search / GUI / library)
   → core.pipeline.run_search
   → fetchers.base.load_fetcher(name) for each source      (imports thesisagents.sources.<name>)
-  → asyncio.gather over Fetcher.fetch                      (per-source token bucket, HTTPS-only client;
+  → asyncio.gather over Fetcher.fetch, one outcome per source (per-source token bucket, HTTPS-only client;
                                                             ieee / scholar via visible Chrome)
   → parser → list[Paper] → core.dedup → core.ranking (score per paper kept) → Query filters
   → core.pruning (advisory keep / review / prune, nothing removed) → PaperCollection.diagnostics
@@ -97,7 +97,9 @@ Query (CLI flags / MCP search / GUI / library)
       → _REGISTRY[format] → files under --out
 ```
 
-A failing source returns nothing and never breaks the others. The CLI runs the identifier preflight
+A failing source returns nothing and never breaks the others, and the search records what each
+source returned and why a source came back empty (`PaperCollection.diagnostics.source_stats`,
+printed by the CLI and returned by the MCP `search` tool). The CLI runs the identifier preflight
 right after the search, before PDF download and enrichment, and reuses its verdicts for every
 export call of the run. When the paywalled share of a result
 set exceeds `--paywall-threshold`, the CLI asks before building per-paper decks (`--yes` skips).

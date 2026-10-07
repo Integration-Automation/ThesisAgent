@@ -62,6 +62,14 @@ completo em ``diagnostics.json`` no diretório de saída. As recomendações
 são orientativas e nada é removido por você, portanto leia os resumos
 dos artigos ``review`` e ``prune`` antes de apagar qualquer coisa.
 
+**Verifique quais fontes responderam.** Toda resposta de ``search`` traz
+``source_stats``: para cada fonte, quantos registros ela retornou,
+quantos artigos únicos lhe são atribuídos após a deduplicação e um
+``status`` com valor ``ok``, ``failed``, ``rate_limited`` ou
+``disabled``. Uma fonte que falha é ignorada sem interromper a busca,
+portanto leia esses números antes de concluir que um tema tem poucos
+artigos. A CLI imprime a mesma tabela após cada busca ``--query``.
+
 Obrigatório: verificação URL / DOI antes da entrega
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

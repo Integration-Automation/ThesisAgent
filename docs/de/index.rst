@@ -69,6 +69,15 @@ CLI schreibt die vollständige Aufschlüsselung außerdem in
 Hinweise und es wird nichts für Sie entfernt, lesen Sie daher die
 Abstracts der ``review``- und ``prune``-Papers, bevor Sie etwas löschen.
 
+**Prüfen Sie, welche Quellen geantwortet haben.** Jede Antwort von
+``search`` enthält ``source_stats``: für jede Quelle, wie viele
+Datensätze sie geliefert hat, wie viele eindeutige Papers ihr nach der
+Deduplizierung zugerechnet werden, und einen ``status`` mit dem Wert
+``ok``, ``failed``, ``rate_limited`` oder ``disabled``. Eine fehlerhafte
+Quelle wird übersprungen, ohne die Suche anzuhalten, lesen Sie diese
+Zahlen daher, bevor Sie schließen, dass es zu einem Thema wenige Papers
+gibt. Die CLI gibt dieselbe Tabelle nach jeder ``--query``-Suche aus.
+
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

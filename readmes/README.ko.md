@@ -267,6 +267,10 @@ for key in irrelevant_keys:
   발동된 규칙과 함께 권고합니다. 인용 수가 적다는 이유만으로는 권고가 발동되지 않습니다. `--diagnostics`, MCP
   `search` 도구의 `diagnostics=true`, 또는 GUI 의 제안 열에서 볼 수 있습니다. 조언일 뿐이며 논문은
   제거되지 않습니다.
+- **소스별 검색 통계**: 검색할 때마다 각 소스가 반환한 레코드 수, 중복 제거 후 그 소스에 귀속된 논문 수, 그리고
+  실패·요청 제한·비활성 여부를 보고합니다. 오류가 난 소스는 검색을 멈추지 않고 건너뛰므로, 원래 논문이 적은 주제인지 소스의
+  절반을 잃은 검색인지 구분해 주는 것이 이 수치입니다. CLI 는 `--query` 검색마다 출력하고, MCP `search`
+  도구는 `source_stats` 로 반환하며, GUI 는 상태 표시줄에 보여 줍니다.
 - **기본값이 안전**: HTTPS 전용 HTTP 전송, 소스별 속도 제한(토큰
   버킷), 모든 XML 페이로드에 `defusedxml`, 경로 순회에 안전한
   내보내기 경로, 사용자 입력에 대한 `eval` / `exec` / `pickle` 없음.
@@ -413,7 +417,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 모든 플러그인을 열거 + 현재 환경에서 각각이 활성인지 보고. `search` 전에 한 번 호출. |
 | `list_exports` | 모든 내보내기 형식을 한 줄 설명과 함께, 그리고 그것이 하나의 집계 파일을 쓰는지 논문당 하나의 파일을 쓰는지 열거. |
-| `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. `diagnostics=true` 는 논문별 점수 내역과 조언용 `keep` / `review` / `prune` 권고를 추가합니다 (`papers` 에서는 아무것도 제거되지 않습니다). |
+| `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. `diagnostics=true` 는 논문별 점수 내역과 조언용 `keep` / `review` / `prune` 권고를 추가합니다 (`papers` 에서는 아무것도 제거되지 않습니다). 항상 `source_stats` 를 반환합니다: 소스별 `requested`, `returned`, `after_dedup`, `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 식별자 → 단일 논문. |
 | `fetch_pdf_text` | 하나의 PDF 를 다운로드하여 추출한 본문 텍스트를 반환. **"내가 논문을 읽었다"에 이르는 MCP 경로.** |
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 로 일괄 다운로드. BibTeX 키로 키가 지정된 논문별 결과를 반환. |
