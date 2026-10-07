@@ -27,6 +27,10 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
                 [--paywall-threshold FLOAT] [--yes]
                 [--max-slides N] [--dark-mode]
                 [--no-verify-identifiers] [--diagnostics]
+                [--snowball {references,cited_by,both}]
+                [--snowball-seeds N] [--snowball-depth N]
+                [--snowball-max-per-seed N] [--snowball-max-total N]
+                [--snowball-min-relevance FLOAT]
                 [--quiet]
 ```
 
@@ -58,6 +62,12 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
 | `--dark-mode` | off | Render the pptx in dark mode. **The light navy-band deck is the default** (white slides, full-width navy header band with a white title, navy cover panel). Pass this flag for the dark variant — a post-build pass swaps to a dark slide background (`#12151B`) + near-white text (`#E5E7EB`) and lightens the navy band / cover / table-row fills so the same chrome reads on OLED projectors and in low-light venues. |
 | `--no-verify-identifiers` | off | Export without the identifier preflight. By default every paper's DOI is looked up at doi.org and every URL is requested once, right after the search, and a wrong or unreachable DOI / URL stops the run before any PDF is downloaded or any file is written. Pass this flag when working offline. The notice that the check was skipped goes to stderr even under `--quiet`. See "Identifier verification" below. |
 | `--diagnostics` | off | Explain the ranking of a `--query` search. Prints each paper's score split into relevance, recency and citations with an advisory `keep` / `review` / `prune` recommendation, and writes the full breakdown to `diagnostics.json` in `--out`. Advice only: every paper stays in the results. See "Ranking diagnostics" below. |
+| `--snowball` | off | Expand the results along citation links before exporting: `references` (what the top results cite), `cited_by` (what cites them) or `both`. The new papers are appended to the results and go through the same identifier check, PDF download and export. See "Citation snowballing" below. |
+| `--snowball-seeds` | `5` | How many of the top-ranked results are expanded. |
+| `--snowball-depth` | `1` | Steps to follow from a seed, 1 to 3. `2` also expands the papers found at step 1. |
+| `--snowball-max-per-seed` | `20` | Papers taken per seed and direction, 1 to 100. |
+| `--snowball-max-total` | `20` | New papers in all, 1 to 1000. Kept low by default because every new paper is also downloaded and exported. |
+| `--snowball-min-relevance` | off | Drop papers found by the snowball whose relevance to the `--query` keywords is below this fraction (0 to 1) of the best possible. Needs `--query`. |
 | `--quiet` | off | Suppress the per-paper one-line printout to stdout. |
 
 ## Examples
@@ -205,6 +215,90 @@ Copy each DOI / URL from the search results instead of typing it. To export with
 The paper's own `doi` and `url` are never rewritten. Where a link leads
 after its redirects is reported separately and is not written into the
 bibliography.
+
+## Citation snowballing
+
+A keyword search finds papers that use your words. Snowballing finds the
+ones that do not: it follows the citation links of the papers you
+already have.
+
+- **`references`** (backward): the papers a seed cites.
+- **`cited_by`** (forward): the papers that cite a seed.
+- **`both`**: both directions.
+
+```bash
+thesisagents --query "hyperparameter optimization framework" \
+    --source openalex,crossref --max 3 \
+    --snowball both --snowball-seeds 1 --snowball-min-relevance 0.3 \
+    --no-pdf --export bib --out ./exports/hpo/
+```
+
+A run of that command on 2026-10-08 printed:
+
+```
+Sources (up to 3 requested from each):
+  openalex    3 returned, 3 after dedup
+  crossref    3 returned, 3 after dedup
+Snowball (both, depth 1) from 1 seed(s): 2 new paper(s), 2 citation link(s).
+  + Flood susceptibility mapping using AutoML and a deep learning framework with evolutionary algorithms for hyperparameter optimization
+      cited_by of vincent2023improved (openalex, depth 1)
+  + Image steganalysis using active learning and hyperparameter optimization
+      cited_by of vincent2023improved (openalex, depth 1)
+Identifiers: 5 verified, 5 not checkable, 0 failed.
+Found 5 papers for: hyperparameter optimization framework
+```
+
+Each discovered paper is listed with the path that reached it: which
+direction, from which paper (its BibTeX key), reported by which source,
+at which step. The new papers are appended after the search results, so
+they are verified, downloaded and exported like any other.
+
+**Everything is capped**, because a citation graph has no natural end:
+
+| Bound | Flag | Default | Maximum |
+|---|---|---|---|
+| Seeds: top-ranked results that are expanded | `--snowball-seeds` | 5 | 200 |
+| Depth: steps from a seed | `--snowball-depth` | 1 | 3 |
+| Papers per seed and direction | `--snowball-max-per-seed` | 20 | 100 |
+| New papers in all | `--snowball-max-total` | 20 | 1000 |
+
+A value outside its range stops the run before the search starts. When
+the total cap ends the expansion early the CLI says so.
+
+**How papers are matched.** A paper found by snowballing is compared
+with the search results and with everything found so far by DOI, arXiv
+ID and title, the same matching de-duplication uses. A paper reached
+along two paths is one paper, and one that the search already returned
+is not reported as new. A paper is expanded at most once, so a citation
+cycle cannot loop.
+
+**Relevance is scored, not assumed.** In a `--query` run every
+discovered paper is scored against the keywords by the search ranker.
+Being cited often, or citing a seed, is not treated as evidence that a
+paper is on topic: the references of a machine-learning paper include
+the ImageNet paper whatever the query was. `--snowball-min-relevance 0.3`
+keeps only papers that reach 30% of the best possible relevance. With
+`--diagnostics`, discovered papers get a score and a recommendation
+like the search results, and the citation links are written to
+`diagnostics.json` as `relations`.
+
+**Where the links come from.** For each paper and direction the sources
+are asked in this order until one returns papers:
+
+| Source | Directions | Needs |
+|---|---|---|
+| OpenAlex | both | a DOI (or an OpenAlex record) |
+| Semantic Scholar | both | a DOI or an arXiv ID |
+| Crossref | `references` only | a DOI. Returns only the references that carry a DOI. |
+
+A source that fails is reported on stderr and the next one is asked, so
+one broken provider does not end the expansion. All three are open APIs
+and none needs VPN or institutional access.
+
+`--snowball` also works with `--paper` and `--pdf`, to grow a reading
+list from one paper. Those runs have no keywords, so the discovered
+papers are listed in the order they were found and
+`--snowball-min-relevance` cannot be used.
 
 ## Source statistics
 

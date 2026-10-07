@@ -65,7 +65,7 @@ Zwischenartefakt — deine Aufgabe ist es, ihn aufzuwerten.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Alle dreizehn MCP-Tools (einschließlich `list_sources`, `list_exports`,
+Alle vierzehn MCP-Tools (einschließlich `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) sind
 in [`docs/mcp.md`](../docs/mcp.md) dokumentiert.
@@ -248,8 +248,8 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   funktioniert mit jedem Foliensatz, den der Exporter erzeugt, plus den
   äquivalenten `pptx_*`-MCP-Tools, sodass ein LLM-Agent an einem erzeugten
   Foliensatz iterieren kann.
-- **MCP-Server**: 13 Tools — `list_sources` + `list_exports`
-  (Discovery), `search`, `fetch_paper`, `fetch_pdf_text`,
+- **MCP-Server**: 14 Tools — `list_sources` + `list_exports`
+  (Discovery), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export` und die sechs `pptx_*`-Deck-Tools
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Lässt jedes
@@ -301,6 +301,18 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   ihrer Quellen verloren hat. Die CLI gibt sie nach jeder
   `--query`-Suche aus, das MCP-Tool `search` liefert sie als
   `source_stats` und die GUI zeigt sie in der Statuszeile.
+- **Zitations-Schneeballsuche**: `--snowball references|cited_by|both`
+  (oder das MCP-Tool `snowball`) erweitert die obersten Ergebnisse
+  entlang ihrer Zitationsverknüpfungen, rückwärts zu dem, was sie
+  zitieren, und vorwärts zu dem, was sie zitiert, und findet Arbeiten,
+  die eine Stichwortsuche übersieht, weil die Autoren andere Begriffe
+  verwendet haben. Jede Dimension ist begrenzt (Tiefe 1 als Standard,
+  Papers pro Startpaper, Papers insgesamt), ein über mehrere Wege
+  erreichtes Paper zählt als eines, und jedes gefundene Paper behält den
+  Weg, der zu ihm führte. Die Verknüpfungen stammen von OpenAlex,
+  Semantic Scholar und Crossref, und gefundene Papers werden vom selben
+  Ranker bewertet, sodass häufiges Zitiertwerden nicht als thematisch
+  passend gilt.
 - **Standardmäßig sicher**: Nur-HTTPS-HTTP-Transport, quellenweise
   Ratenbegrenzung (Token-Bucket), `defusedxml` für jede XML-Nutzlast,
   pfadtraversierungssichere Exportpfade, kein `eval` / `exec` / `pickle` auf
@@ -385,6 +397,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | Rendert die pptx mit dunklem Hintergrund + fast weißem Text. Standard ist der helle Foliensatz mit marineblauem Band. |
 | `--no-verify-identifiers` | Exportiert, ohne die DOIs und URLs der Papers zu prüfen. Standardmäßig stoppt eine falsche oder nicht erreichbare DOI / URL den Lauf, bevor etwas geschrieben wird. Für den Offline-Einsatz. |
 | `--diagnostics` | Erklärt das Ranking einer `--query`-Suche: gibt die Punktzahl jedes Papers aus (Relevanz + Aktualität + Zitationen) sowie eine unverbindliche Empfehlung `keep` / `review` / `prune` und schreibt die vollständige Aufschlüsselung nach `diagnostics.json` in `--out`. Kein Paper wird entfernt. |
+| `--snowball` | Erweitert die Ergebnisse vor dem Export entlang der Zitationsverknüpfungen: `references` (was die obersten Ergebnisse zitieren), `cited_by` (was sie zitiert) oder `both`. Die neuen Papers werden angehängt und durchlaufen denselben Download und Export. Standardmäßig aus. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Grenzen für `--snowball`: zu erweiternde oberste Ergebnisse (Standard 5), zu folgende Schritte (1, höchstens 3), Papers pro Startpaper und Richtung (20), neue Papers insgesamt (20) und die niedrigste Relevanz, die behalten wird (0..1, standardmäßig aus). |
 | `--quiet` | Unterdrückt die Ausgabe pro Paper. |
 
 ### Umgebungsvariablen
@@ -450,7 +464,8 @@ Tools:
 |---|---|
 | `list_sources` | Zählt jedes Plugin auf + meldet, ob es in der aktuellen Umgebung aktiviert ist. Rufe dies einmal vor `search` auf. |
 | `list_exports` | Zählt jedes Exportformat mit seiner einzeiligen Beschreibung auf und ob es eine aggregierte Datei oder eine Datei pro Paper schreibt. |
-| `search` | Schlagwörter → Liste von Papern. Akzeptiert `top_tier_only`, `min_citations`; nutzt standardmäßig den vollständigen Quellenmix ohne API-Schlüssel. `diagnostics=true` ergänzt die Punkteaufschlüsselung pro Paper und eine unverbindliche Empfehlung `keep` / `review` / `prune` (aus `papers` wird nichts entfernt). Liefert immer `source_stats`: pro Quelle `requested`, `returned`, `after_dedup` und `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
+| `search` | Schlagwörter → Liste von Papern. Akzeptiert `top_tier_only`, `min_citations`; nutzt standardmäßig den vollständigen Quellenmix ohne API-Schlüssel. `diagnostics=true` ergänzt die Punkteaufschlüsselung pro Paper und eine unverbindliche Empfehlung `keep` / `review` / `prune` (aus `papers` wird nichts entfernt). Liefert immer `source_stats`: pro Quelle `requested`, `returned`, `after_dedup` und `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` erweitert zusätzlich die obersten Ergebnisse entlang ihrer Zitationsverknüpfungen und ergänzt einen `snowball`-Block (`papers` bleibt unverändert). |
+| `snowball` | Startpapers → Papers, die von ihnen zitiert werden (`references`), Papers, von denen sie zitiert werden (`cited_by`), oder `both`, innerhalb fester Grenzen (`depth`, `max_per_seed`, `max_total`). Jedes gefundene Paper trägt den Weg, über den es erreicht wurde. Optionale `keywords` bewerten und ordnen sie, `min_relevance` verwirft themenfremde. |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE-Identifikator → einzelnes Paper. |
 | `fetch_pdf_text` | Lädt ein PDF herunter, gibt extrahierten Fließtext zurück. **Der MCP-Pfad zu „Ich habe das Paper gelesen".** |
 | `download_pdfs` | Lädt die PDFs einer Paper-Liste stapelweise nach `{out_dir}/pdfs/` herunter. Gibt Ergebnisse pro Paper zurück, indiziert nach BibTeX-Schlüssel. |
@@ -486,7 +501,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (14 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

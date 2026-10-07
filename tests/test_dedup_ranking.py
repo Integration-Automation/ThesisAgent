@@ -426,3 +426,106 @@ def test_rank_golden_queries(query, expected_top):
     assert top_ids.index(expected_top) < top_ids.index("resnet"), (
         f"off-topic resnet outranked {expected_top!r} for {query!r}: {top_ids}"
     )
+
+
+# ---------------------------------------------------------------------------
+# IdentityIndex: de-duplication one paper at a time
+# ---------------------------------------------------------------------------
+
+
+def _record(sid: str, title: str, **fields) -> Paper:
+    base = {
+        "source": "arxiv", "source_id": sid, "title": title,
+        "authors": ("Ada Author",), "year": 2024, "venue": None, "abstract": "",
+        "url": f"https://example.org/{sid}",
+    }
+    base.update(fields)
+    return Paper(**base)
+
+
+def test_identity_index_reports_new_and_known_papers():
+    from thesisagents.core.dedup import IdentityIndex
+
+    index = IdentityIndex()
+    first, first_new = index.add(_record("a", "On Graphs", doi="10.1/a"))
+    again, again_new = index.add(_record("a-other-source", "On graphs.", doi="10.1/A"))
+    other, other_new = index.add(_record("b", "On Trees", doi="10.1/b"))
+
+    assert (first_new, again_new, other_new) == (True, False, True)
+    assert again == first
+    assert other != first
+    assert len(index) == 2
+    assert [paper.source_id for paper in index.papers()] == ["a", "b"]
+
+
+def test_identity_index_merges_fields_into_the_known_record():
+    from thesisagents.core.dedup import IdentityIndex
+
+    index = IdentityIndex([_record("a", "On Graphs", doi="10.1/a")])
+    slot, is_new = index.add(
+        _record("a2", "On Graphs", doi="10.1/a", pdf_url="https://example.org/a.pdf")
+    )
+
+    assert is_new is False
+    merged = index.get(slot)
+    assert merged.source_id == "a"                       # canonical record kept
+    assert merged.pdf_url == "https://example.org/a.pdf"  # field backfilled
+
+
+def test_identity_index_find_does_not_change_anything():
+    from thesisagents.core.dedup import IdentityIndex
+
+    index = IdentityIndex([_record("a", "On Graphs", doi="10.1/a")])
+    probe = _record("zz", "On Graphs", doi="10.1/a", venue="KDD")
+
+    assert index.find(probe) == 0
+    assert index.find(_record("b", "On Trees", doi="10.1/b")) is None
+    assert len(index) == 1
+    assert index.get(0).venue is None   # find() merged nothing
+
+
+def test_identity_index_redirects_a_slot_absorbed_by_a_later_join():
+    """A record carrying one paper's DOI and the other's arXiv ID shows they
+    were one paper all along. The later slot folds into the earlier one."""
+    from thesisagents.core.dedup import IdentityIndex
+
+    index = IdentityIndex()
+    by_doi, _ = index.add(_record("pub", "Published Version", doi="10.1/x", year=2023))
+    by_arxiv, _ = index.add(_record("pre", "Preprint Version", arxiv_id="2401.00001", year=2024))
+    assert by_doi != by_arxiv
+
+    joined, is_new = index.add(
+        _record("both", "Either Title", doi="10.1/x", arxiv_id="2401.00001", year=2022)
+    )
+
+    assert is_new is False
+    assert joined == by_doi
+    assert index.resolve(by_arxiv) == by_doi
+    assert index.get(by_arxiv) is index.get(by_doi)
+    assert len(index) == 1
+    assert index.get(by_doi).arxiv_id == "2401.00001"
+
+
+def test_identity_index_respects_the_conflicting_doi_guard():
+    from thesisagents.core.dedup import IdentityIndex
+
+    index = IdentityIndex([_record("ws", "Same Title", doi="10.1/workshop")])
+    slot, is_new = index.add(_record("jn", "Same Title", doi="10.1/journal"))
+
+    assert is_new is True
+    assert slot == 1
+    assert len(index) == 2
+
+
+def test_dedupe_is_the_index_run_over_a_whole_list():
+    from thesisagents.core.dedup import IdentityIndex
+
+    papers = [
+        _record("a", "On Graphs", doi="10.1/a"),
+        _record("b", "On Trees"),
+        _record("a2", "On Graphs", doi="10.1/a", venue="KDD"),
+        _record("c", "On Trees"),          # same title hash as b
+    ]
+
+    assert dedupe(papers) == IdentityIndex(papers).papers()
+    assert [paper.source_id for paper in dedupe(papers)] == ["a", "b"]

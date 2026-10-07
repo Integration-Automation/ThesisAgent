@@ -51,8 +51,8 @@ Flujo MCP de 6 pasos
    5. (lee cada PDF y produce dict summary estructurado)
    6. export(papers=[{...paper, "summary": {...}}], language="es", ...)
 
-13 herramientas MCP en total: descubrimiento (``list_sources``,
-``list_exports``), ``search``, ``fetch_paper``, ``fetch_pdf_text``,
+14 herramientas MCP en total: descubrimiento (``list_sources``,
+``list_exports``), ``search``, ``snowball``, ``fetch_paper``, ``fetch_pdf_text``,
 ``download_pdfs``, ``export`` y seis operaciones de deck ``pptx_*``
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
@@ -76,6 +76,15 @@ cuántos artículos únicos se le atribuyen tras la deduplicación y un
 Una fuente que falla se omite sin detener la búsqueda, así que lea estos
 recuentos antes de concluir que un tema tiene pocos artículos. La CLI
 imprime la misma tabla tras cada búsqueda ``--query``.
+
+**Siga las citas.** ``--snowball both`` (CLI) o la herramienta
+``snowball`` amplía los primeros resultados siguiendo sus enlaces de
+citación: ``references`` añade lo que citan y ``cited_by`` añade lo que
+los cita. Encuentra trabajos que una búsqueda por palabras clave pierde
+porque los autores usaron otros términos. La ampliación está acotada (un
+paso por defecto), cada artículo descubierto conserva el camino que lo
+alcanzó, y todos se puntúan frente a sus palabras clave, de modo que un
+artículo no se conserva solo por ser muy citado.
 
 Obligatorio: verificación URL / DOI antes de entregar
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -186,7 +195,7 @@ Dónde buscar más
 ----------------
 
 * Flags CLI y variables de entorno: :doc:`/cli`
-* 13 herramientas del servidor MCP: :doc:`/mcp`
+* 14 herramientas del servidor MCP: :doc:`/mcp`
 * Kit de edición PPTX: :doc:`/pptx_editing`
 * El archivo ``readmes/README.es.md`` en la raíz del repo tiene la lista
   completa de funcionalidades del proyecto.

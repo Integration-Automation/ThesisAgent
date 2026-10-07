@@ -51,8 +51,8 @@ Workflow MCP en 6 étapes
    5. (vous lisez chaque PDF et produisez un dict de résumé structuré)
    6. export(papers=[{...paper, "summary": {...}}], language="fr", ...)
 
-13 outils MCP au total : découverte (``list_sources``,
-``list_exports``), ``search``, ``fetch_paper``, ``fetch_pdf_text``,
+14 outils MCP au total : découverte (``list_sources``,
+``list_exports``), ``search``, ``snowball``, ``fetch_paper``, ``fetch_pdf_text``,
 ``download_pdfs``, ``export`` et six opérations de deck ``pptx_*``
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
@@ -77,6 +77,16 @@ attribués après déduplication, et un ``status`` valant ``ok``,
 ignorée sans arrêter la recherche, lisez donc ces chiffres avant de
 conclure qu'un sujet compte peu d'articles. La CLI affiche le même
 tableau après chaque recherche ``--query``.
+
+**Suivez les citations.** ``--snowball both`` (CLI) ou l'outil
+``snowball`` étend les premiers résultats en suivant leurs liens de
+citation : ``references`` ajoute ce qu'ils citent et ``cited_by`` ajoute
+ce qui les cite. Cela trouve des travaux qu'une recherche par mots-clés
+manque parce que les auteurs ont employé d'autres termes. L'extension
+est bornée (une étape par défaut), chaque article découvert garde le
+chemin qui l'a atteint, et tous sont notés par rapport à vos mots-clés,
+si bien qu'un article n'est pas conservé au seul motif qu'il est souvent
+cité.
 
 Obligatoire : vérification URL / DOI avant livraison
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -188,7 +198,7 @@ Où chercher plus loin
 ---------------------
 
 * Flags CLI + variables d'environnement : :doc:`/cli`
-* 13 outils du serveur MCP : :doc:`/mcp`
+* 14 outils du serveur MCP : :doc:`/mcp`
 * Boîte à outils d'édition PPTX : :doc:`/pptx_editing`
 * Le fichier ``readmes/README.fr.md`` à la racine du repo donne la liste
   complète des fonctionnalités.

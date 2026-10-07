@@ -182,6 +182,68 @@ class SourceStat:
         }
 
 
+class RelationKind(StrEnum):
+    """How a paper found by snowballing relates to the paper it was found from."""
+
+    #: The found paper is in the reference list of the paper expanded.
+    REFERENCES = "references"
+    #: The found paper cites the paper expanded.
+    CITED_BY = "cited_by"
+
+
+@dataclass(frozen=True, slots=True)
+class PaperRelation:
+    """One citation link found by a snowball search, with its provenance.
+
+    ``source_key`` is the paper that was expanded and ``target_key`` the paper
+    found from it, both as ``Paper.dedup_key()``. Read together with
+    ``relation`` it says which way the citation runs: for ``references`` the
+    source cites the target, for ``cited_by`` the target cites the source.
+    ``citing_key`` / ``cited_key`` give that direction without the reader
+    having to work it out.
+
+    ``provider`` is the source that reported the link and ``depth`` how many
+    steps from a seed it was found (1 = straight from a seed). Together with
+    ``source_key`` this is the answer to "why is this paper here?".
+
+    Kept outside ``Paper`` on purpose: a paper can be reached along many
+    paths, and a list of them does not belong in the bibliographic record.
+
+    Example: ``PaperRelation("doi:10.1/seed", "doi:10.1/found",
+    RelationKind.CITED_BY, "openalex", 1)`` reads "10.1/found cites
+    10.1/seed, reported by OpenAlex, found directly from a seed".
+    """
+
+    source_key: str
+    target_key: str
+    relation: RelationKind
+    provider: str
+    depth: int
+
+    @property
+    def citing_key(self) -> str:
+        """The paper that cites."""
+        if self.relation is RelationKind.REFERENCES:
+            return self.source_key
+        return self.target_key
+
+    @property
+    def cited_key(self) -> str:
+        """The paper that is cited."""
+        if self.relation is RelationKind.REFERENCES:
+            return self.target_key
+        return self.source_key
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source_key": self.source_key,
+            "target_key": self.target_key,
+            "relation": self.relation.value,
+            "provider": self.provider,
+            "depth": self.depth,
+        }
+
+
 @dataclass(frozen=True, slots=True)
 class SearchDiagnostics:
     """Everything a search can say about itself beyond the papers.
@@ -194,6 +256,9 @@ class SearchDiagnostics:
     scores: tuple[PaperScore, ...] = ()
     pruning: tuple[PruningRecommendation, ...] = ()
     source_stats: tuple[SourceStat, ...] = ()
+    #: Citation links found when the search was expanded by snowballing.
+    #: Empty for a plain search.
+    relations: tuple[PaperRelation, ...] = ()
 
     def score_for(self, paper_key: str) -> RelevanceScore | None:
         """The score recorded for ``paper_key``, or ``None``."""
@@ -214,6 +279,7 @@ class SearchDiagnostics:
             "scores": [entry.to_dict() for entry in self.scores],
             "pruning": [entry.to_dict() for entry in self.pruning],
             "source_stats": [entry.to_dict() for entry in self.source_stats],
+            "relations": [entry.to_dict() for entry in self.relations],
         }
 
 
@@ -287,5 +353,10 @@ def collection_report(collection: PaperCollection) -> dict[str, Any]:
         "advisory": True,
         "summary": summary,
         "source_stats": source_stats_payload(collection),
+        # Citation links found by a snowball expansion, empty for a plain search.
+        "relations": [
+            relation.to_dict()
+            for relation in (diagnostics.relations if diagnostics else ())
+        ],
         "papers": entries,
     }

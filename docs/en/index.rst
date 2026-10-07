@@ -51,7 +51,7 @@ Decision tree
    5. (you read each PDF and produce a structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-tw", ...)
 
-Twelve MCP tools total; full reference at :doc:`/mcp`.
+Fourteen MCP tools total; full reference at :doc:`/mcp`.
 
 **To spot off-topic results, start from the tool's own advice.**
 ``--diagnostics`` (CLI) or ``diagnostics=true`` on the MCP ``search``
@@ -70,6 +70,14 @@ many unique papers it is credited with after de-duplication, and a
 source that fails is skipped without stopping the search, so read these
 counts before concluding that a topic has few papers. The CLI prints the
 same table after every ``--query`` search.
+
+**Follow the citations.** ``--snowball both`` (CLI) or the ``snowball``
+tool expands the top results along their citation links: ``references``
+adds what they cite, ``cited_by`` adds what cites them. It finds work a
+keyword search misses because the authors used other words. The
+expansion is bounded (one step by default), each discovered paper keeps
+the path that reached it, and every one is scored against your keywords,
+so a paper is not kept just because it is cited often.
 
 Mandatory: URL / DOI verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -417,8 +425,8 @@ reverse for zh-cn strings. Full rule + the regex catalogue live in
 MCP server
 ----------
 
-ThesisAgents ships an MCP server exposing **thirteen tools** — discovery
-(``list_sources``, ``list_exports``), search, single-paper fetch,
+ThesisAgents ships an MCP server exposing **fourteen tools** — discovery
+(``list_sources``, ``list_exports``), search, citation snowballing (``snowball``), single-paper fetch,
 single-PDF text extraction (``fetch_pdf_text``), batch PDF download
 (``download_pdfs``), export, and six PPTX deck operations
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
@@ -462,6 +470,12 @@ Tools at a glance:
        Accepts ``top_tier_only`` (default ``True``) and
        ``min_citations``; defaults to the full no-API-key source mix
        when ``sources`` is omitted.
+   * - ``snowball``
+     - Seed papers → the papers they cite (``references``), the papers
+       that cite them (``cited_by``) or ``both``, within fixed bounds
+       (``depth``, ``max_per_seed``, ``max_total``). Each discovered
+       paper carries the path that reached it. ``keywords`` score and
+       order the results, ``min_relevance`` drops the off-topic ones.
    * - ``fetch_paper``
      - arXiv / DOI / PMID / IEEE identifier → single paper.
    * - ``fetch_pdf_text``
@@ -570,7 +584,7 @@ Architecture
    │   ├── exporters/                # pptx (thesis-style + lightweight), xlsx,
    │   │                             #   bibtex, markdown, json + pptx_edit + i18n
    │   ├── intelligence/             # PDF fetch + Anthropic summariser ([intelligence] extra)
-   │   ├── mcp/                      # FastMCP server registering 13 tools
+   │   ├── mcp/                      # FastMCP server registering 14 tools
    │   ├── utils/                    # logging, path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`

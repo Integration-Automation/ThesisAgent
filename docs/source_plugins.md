@@ -428,6 +428,62 @@ positives).
 - Document any caveats (e.g. "results are limited to titles +
   abstracts; full text not available via the API").
 
+## Adding a citation provider
+
+A plugin whose source knows what a paper cites, or who cites it, can
+offer that to the snowball search. It is optional and separate from the
+fetcher: `arxiv` has a fetcher and no citation provider.
+
+1. Add `thesisagents/sources/<name>/citations.py` with a subclass of
+   `thesisagents.fetchers.citations.CitationProvider`:
+
+   ```python
+   class MySourceCitations(CitationProvider):
+       name = "my_source"
+
+       def __init__(self) -> None:
+           self._bucket = TokenBucket(MySourceFetcher.config.rate_limit)
+
+       async def references(self, paper: Paper, limit: int) -> list[Paper]:
+           data = await get_json(self.name, self._bucket, url, params=...)
+           return [parse_record(r) for r in data["items"]][:limit]
+
+       async def cited_by(self, paper: Paper, limit: int) -> list[Paper]:
+           raise CitationNotAvailableError(self.name, "no citing works")
+   ```
+
+2. Expose it in the plugin's `__init__.py` next to `fetcher_class`:
+
+   ```python
+   citation_provider_class = MySourceCitations
+   ```
+
+3. To have it asked by default, add the name to
+   `DEFAULT_CITATION_PROVIDERS` in `thesisagents/core/constants.py`. The
+   order there is the order the providers are asked in.
+
+Rules that keep a provider well-behaved:
+
+- **Use `fetchers.citations.get_json`.** It goes through the plugin's
+  token bucket and the shared HTTPS-only client, and it maps a 404 to
+  `CitationNotAvailableError`. Do not build a client of your own.
+- **Raise `CitationNotAvailableError` when you have no answer**: the
+  paper carries no identifier you understand, you do not know the paper,
+  or you cannot serve the direction. The snowball then asks the next
+  provider without reporting an error. Decide this before any request
+  when you can (a paper with no DOI needs no round trip to find out).
+- **Return an empty list only when you know the paper and it has none.**
+- **Reuse the plugin's parser**, so a record found through a citation
+  is the same `Paper` shape as one found through search.
+- **Check the fields the endpoint accepts.** Semantic Scholar's
+  citation endpoints reject `authors.name`, which its search endpoint
+  accepts. Record a real response and build the fixture from it.
+
+Tests go in `tests/sources/test_citation_providers.py`, against
+responses recorded into `tests/fixtures/<name>/`. A provider that makes
+two requests per call (resolve an identifier, then list) uses
+`tests/sources/_mock.py::RoutingTransport`.
+
 ## Common pitfalls
 
 ### Constructing your own `httpx.AsyncClient`

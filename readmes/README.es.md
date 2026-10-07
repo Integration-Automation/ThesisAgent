@@ -63,7 +63,7 @@ es elevarlo.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Las trece herramientas MCP (incluyendo `list_sources`, `list_exports`,
+Las catorce herramientas MCP (incluyendo `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) están
 documentadas en [`docs/mcp.md`](../docs/mcp.md).
@@ -247,8 +247,8 @@ multi-artículo sigue la misma forma con una entrada
   funciona contra cualquier presentación que el exportador produzca, más las
   herramientas MCP `pptx_*` equivalentes para que un agente LLM pueda iterar
   sobre una presentación generada.
-- **Servidor MCP**: 13 herramientas — `list_sources` + `list_exports`
-  (descubrimiento), `search`, `fetch_paper`, `fetch_pdf_text`,
+- **Servidor MCP**: 14 herramientas — `list_sources` + `list_exports`
+  (descubrimiento), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export`, y las seis herramientas de deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Permite a
@@ -303,6 +303,18 @@ multi-artículo sigue la misma forma con una entrada
   fuentes. La CLI los imprime tras cada búsqueda `--query`, la
   herramienta MCP `search` los devuelve como `source_stats` y la GUI los
   muestra en la línea de estado.
+- **Búsqueda en bola de nieve por citas**: `--snowball
+  references|cited_by|both` (o la herramienta MCP `snowball`) amplía los
+  primeros resultados siguiendo sus enlaces de citación, hacia atrás a
+  lo que citan y hacia adelante a lo que los cita, y encuentra trabajos
+  que una búsqueda por palabras clave pierde porque los autores usaron
+  otros términos. Cada dimensión tiene un tope (profundidad 1 por
+  defecto, artículos por semilla, artículos en total), un artículo
+  alcanzado por varios caminos cuenta como uno, y cada artículo
+  descubierto conserva el camino que lo encontró. Los enlaces provienen
+  de OpenAlex, Semantic Scholar y Crossref, y los artículos descubiertos
+  se puntúan con el mismo clasificador, de modo que ser muy citado no
+  cuenta como estar dentro del tema.
 - **Seguridad por defecto**: transporte HTTP solo-HTTPS, límite de tasa por
   fuente (token bucket), `defusedxml` para cualquier payload XML, rutas de
   exportación seguras frente a path-traversal, sin `eval` / `exec` / `pickle`
@@ -387,6 +399,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | Renderiza el pptx con un fondo oscuro + texto casi blanco. El default es la presentación clara con banda azul marino. |
 | `--no-verify-identifiers` | Exporta sin comprobar los DOI y las URL de los artículos. Por defecto, un DOI / URL incorrecto o inalcanzable detiene la ejecución antes de escribir nada. Para uso sin conexión. |
 | `--diagnostics` | Explica la clasificación de una búsqueda `--query`: imprime la puntuación de cada artículo (relevancia + actualidad + citas) y una recomendación orientativa `keep` / `review` / `prune`, y escribe el desglose completo en `diagnostics.json` dentro de `--out`. No se elimina ningún artículo. |
+| `--snowball` | Amplía los resultados siguiendo los enlaces de citación antes de exportar: `references` (lo que citan los primeros resultados), `cited_by` (lo que los cita) o `both`. Los artículos nuevos se añaden al final y pasan por la misma descarga y exportación. Desactivado por defecto. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Límites de `--snowball`: primeros resultados a ampliar (5 por defecto), pasos a seguir (1, como máximo 3), artículos por semilla y dirección (20), artículos nuevos en total (20) y la relevancia mínima que se conserva (0..1, desactivada por defecto). |
 | `--quiet` | Suprime la impresión por artículo. |
 
 ### Variables de entorno
@@ -452,7 +466,8 @@ Herramientas:
 |---|---|
 | `list_sources` | Enumera cada plugin + reporta si cada uno está habilitado en el entorno actual. Llame esto una vez antes de `search`. |
 | `list_exports` | Enumera cada formato de exportación con su descripción de una línea y si escribe un archivo agregado o un archivo por artículo. |
-| `search` | Palabras clave → lista de artículos. Acepta `top_tier_only`, `min_citations`; por defecto la mezcla completa de fuentes sin clave API. `diagnostics=true` añade el desglose de la puntuación por artículo y una recomendación orientativa `keep` / `review` / `prune` (no se elimina nada de `papers`). Siempre devuelve `source_stats`: por fuente, `requested`, `returned`, `after_dedup` y `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
+| `search` | Palabras clave → lista de artículos. Acepta `top_tier_only`, `min_citations`; por defecto la mezcla completa de fuentes sin clave API. `diagnostics=true` añade el desglose de la puntuación por artículo y una recomendación orientativa `keep` / `review` / `prune` (no se elimina nada de `papers`). Siempre devuelve `source_stats`: por fuente, `requested`, `returned`, `after_dedup` y `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` además amplía los primeros resultados por sus enlaces de citación y añade un bloque `snowball` (`papers` no cambia). |
+| `snowball` | Artículos semilla → artículos que citan (`references`), artículos que los citan (`cited_by`) o `both`, dentro de límites fijos (`depth`, `max_per_seed`, `max_total`). Cada artículo descubierto lleva el camino que lo alcanzó. Las `keywords` opcionales los puntúan y ordenan, y `min_relevance` descarta los que están fuera de tema. |
 | `fetch_paper` | Identificador arXiv / DOI / PMID / IEEE → un solo artículo. |
 | `fetch_pdf_text` | Descarga un PDF, devuelve el texto del cuerpo extraído. **La ruta MCP hacia «leí el artículo».** |
 | `download_pdfs` | Descarga por lotes los PDFs de una lista de artículos en `{out_dir}/pdfs/`. Devuelve resultados por artículo indexados por clave BibTeX. |
@@ -489,7 +504,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (14 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

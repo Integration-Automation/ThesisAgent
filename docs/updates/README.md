@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-05 | 2026-10-08 | Citation providers and a bounded snowball search | #done #snowball #sources #cli #mcp | [2026-10](2026-10.md) |
 | U-20261008-04 | 2026-10-08 | Every search reports what each source returned | #done #search #cli #mcp #gui | [2026-10](2026-10.md) |
 | U-20261008-03 | 2026-10-08 | Rankings are explained, results get advisory pruning recommendations | #done #ranking #cli #mcp #gui | [2026-10](2026-10.md) |
 | U-20261008-02 | 2026-10-08 | Export verifies every DOI and URL before writing | #done #export #cli #mcp #gui | [2026-10](2026-10.md) |
@@ -97,5 +98,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 9 |
+| [2026-10.md](2026-10.md) | 2026-10 | 10 |
 | [2026-09.md](2026-09.md) | 2026-09 | 25 |

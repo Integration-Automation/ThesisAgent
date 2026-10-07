@@ -47,8 +47,8 @@ Concretely, the assistant:
    Python pipeline (`ANTHROPIC_API_KEY` set — Anthropic API call).
 4. **Generates** `.pptx` (three rendering tiers — lightweight / enriched-flat /
    thesis-style), `.xlsx`, `.bib`, `.md`, `.json` outputs.
-5. **Exposes** every step as an MCP tool (13 in all: `list_sources`, `list_exports`,
-   `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`,
+5. **Exposes** every step as an MCP tool (14 in all: `list_sources`, `list_exports`,
+   `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`,
    `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
    `pptx_reorder_slides`, `pptx_add_slide`). `pptx_review` audits an existing deck
    (overflow + colour contracts + `paper_rule` section completeness) in one call —

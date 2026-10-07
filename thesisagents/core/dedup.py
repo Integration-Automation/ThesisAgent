@@ -58,26 +58,97 @@ def dedupe(papers: Iterable[Paper]) -> list[Paper]:
     returns one paper — sourced ``acm``, carrying OpenAlex's ``pdf_url`` and
     the DOI both later records supplied.
     """
-    slots: list[Paper | None] = []      # None once absorbed into an earlier slot
-    index: dict[str, int] = {}          # identity key -> slot position
-    for paper in papers:
+    return IdentityIndex(papers).papers()
+
+
+class IdentityIndex:
+    """De-duplication one paper at a time, for callers that keep adding.
+
+    :func:`dedupe` answers "which of these papers are the same" for a list it
+    holds in full. Snowballing and the literature library meet papers one by
+    one and must ask of each "have I seen this one?" before deciding what to
+    do with it. This class is the same matching (every identity key, the fuzzy
+    guard, the field merge) with that question exposed.
+
+    A paper is referred to by its **slot**, the integer :meth:`add` returns.
+    Slots are handles, not list positions to rely on: when a later paper joins
+    two earlier ones (it carries the DOI of one and the arXiv ID of the
+    other), the two slots become one and the absorbed slot redirects to the
+    survivor. Pass any slot through :meth:`resolve` before comparing it with
+    another.
+
+    Example::
+
+        index = IdentityIndex(seeds)
+        slot, is_new = index.add(candidate)
+        if is_new:
+            discovered.append(slot)
+        canonical = index.get(slot)   # merged record, fields backfilled
+    """
+
+    def __init__(self, papers: Iterable[Paper] = ()) -> None:
+        self._slots: list[Paper | None] = []    # None once absorbed
+        self._keys: dict[str, int] = {}         # identity key -> slot
+        self._redirect: dict[int, int] = {}     # absorbed slot -> survivor
+        for paper in papers:
+            self.add(paper)
+
+    def add(self, paper: Paper) -> tuple[int, bool]:
+        """Register ``paper`` and return ``(slot, is_new)``.
+
+        ``is_new`` is False when the paper matched one already held, in which
+        case its non-empty optional fields were merged into that record.
+        """
         keys = paper.identity_keys()
-        matches = _matching_slots(slots, index, paper, keys)
+        matches = _matching_slots(self._slots, self._keys, paper, keys)
         if not matches:
-            slots.append(paper)
-            position = len(slots) - 1
+            self._slots.append(paper)
+            position = len(self._slots) - 1
         else:
             position = min(matches)
             for absorbed in sorted(matches - {position}):
-                slots[position] = _merge(slots[position], slots[absorbed])
-                slots[absorbed] = None
-                _repoint(index, absorbed, position)
-            slots[position] = _merge(slots[position], paper)
+                self._slots[position] = _merge(
+                    self._slots[position], self._slots[absorbed]
+                )
+                self._slots[absorbed] = None
+                self._redirect[absorbed] = position
+                _repoint(self._keys, absorbed, position)
+            self._slots[position] = _merge(self._slots[position], paper)
         # ``setdefault``: a key already claimed by a DIFFERENT slot was rejected
         # by the conflict guard, so it must stay with the slot that owns it.
         for key in keys:
-            index.setdefault(key, position)
-    return [paper for paper in slots if paper is not None]
+            self._keys.setdefault(key, position)
+        return position, not matches
+
+    def find(self, paper: Paper) -> int | None:
+        """Slot of the held paper ``paper`` is the same as, or ``None``.
+
+        Does not add or merge anything.
+        """
+        matches = _matching_slots(
+            self._slots, self._keys, paper, paper.identity_keys()
+        )
+        return min(matches) if matches else None
+
+    def resolve(self, slot: int) -> int:
+        """The slot ``slot`` stands for now, following any merges."""
+        while slot in self._redirect:
+            slot = self._redirect[slot]
+        return slot
+
+    def get(self, slot: int) -> Paper:
+        """The current (merged) record of ``slot``."""
+        paper = self._slots[self.resolve(slot)]
+        if paper is None:  # unreachable: resolve() never lands on an absorbed slot
+            raise KeyError(slot)
+        return paper
+
+    def papers(self) -> list[Paper]:
+        """Every distinct paper, in order of first appearance."""
+        return [paper for paper in self._slots if paper is not None]
+
+    def __len__(self) -> int:
+        return sum(1 for paper in self._slots if paper is not None)
 
 
 def _matching_slots(

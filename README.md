@@ -64,7 +64,7 @@ it.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-All thirteen MCP tools (including `list_sources`, `list_exports`,
+All fourteen MCP tools (including `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) are
 documented in [`docs/mcp.md`](docs/mcp.md).
@@ -242,8 +242,8 @@ entry per paper in the `PaperCollection` tuple.
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   works against any deck the exporter produces, plus the equivalent
   `pptx_*` MCP tools so an LLM agent can iterate on a generated deck.
-- **MCP server**: 13 tools — `list_sources` + `list_exports`
-  (discovery), `search`, `fetch_paper`, `fetch_pdf_text`,
+- **MCP server**: 14 tools — `list_sources` + `list_exports`
+  (discovery), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export`, and the six `pptx_*` deck tools
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Lets
@@ -293,6 +293,16 @@ entry per paper in the `PaperCollection` tuple.
   from a search that lost half its sources. Printed by the CLI after
   each `--query` search, returned as `source_stats` by the MCP `search`
   tool, and shown in the GUI status line.
+- **Citation snowballing**: `--snowball references|cited_by|both` (or
+  the MCP `snowball` tool) expands the top results along their citation
+  links, backward to what they cite and forward to what cites them, and
+  finds work a keyword search misses because the authors used other
+  words. Every dimension is capped (depth 1 by default, papers per seed,
+  papers in total), a paper reached along several paths is one paper,
+  and each discovered paper keeps the path that found it. Links come
+  from OpenAlex, Semantic Scholar and Crossref, and discovered papers
+  are scored by the same ranker, so being cited often does not count as
+  being on topic.
 - **Safety by default**: HTTPS-only HTTP transport, per-source rate
   limit (token bucket), `defusedxml` for any XML payload,
   path-traversal-safe export paths, no `eval` / `exec` / `pickle` on
@@ -375,6 +385,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | Render the pptx with a dark background + near-white text. The default is the light navy-band deck. |
 | `--no-verify-identifiers` | Export without checking the papers' DOIs and URLs. By default a wrong or unreachable DOI / URL stops the run before anything is written. For offline use. |
 | `--diagnostics` | Explain the ranking of a `--query` search: prints each paper's score (relevance + recency + citations) and an advisory `keep` / `review` / `prune` recommendation, and writes the full breakdown to `diagnostics.json` in `--out`. No paper is removed. |
+| `--snowball` | Expand the results along citation links before exporting: `references` (what the top results cite), `cited_by` (what cites them) or `both`. The new papers are appended and go through the same download and export. Off by default. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Bounds for `--snowball`: top results to expand (default 5), steps to follow (1, at most 3), papers per seed and direction (20), new papers in all (20), and the lowest relevance to keep (0..1, off by default). |
 | `--quiet` | Suppress per-paper printout. |
 
 ### Environment variables
@@ -438,7 +450,8 @@ Tools:
 |---|---|
 | `list_sources` | Enumerate every plugin + report whether each is enabled in the current env. Call this once before `search`. |
 | `list_exports` | Enumerate every export format with its one-line description and whether it writes one aggregate file or one file per paper. |
-| `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. `diagnostics=true` adds a per-paper score breakdown and an advisory `keep` / `review` / `prune` recommendation (nothing is removed from `papers`). Always returns `source_stats`: per source, `requested`, `returned`, `after_dedup` and `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
+| `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. `diagnostics=true` adds a per-paper score breakdown and an advisory `keep` / `review` / `prune` recommendation (nothing is removed from `papers`). Always returns `source_stats`: per source, `requested`, `returned`, `after_dedup` and `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` also expands the top results along citation links and adds a `snowball` block (`papers` is unchanged). |
+| `snowball` | Seed papers → papers they cite (`references`), papers that cite them (`cited_by`) or `both`, within fixed bounds (`depth`, `max_per_seed`, `max_total`). Each discovered paper carries the path that reached it. Optional `keywords` score and order them, `min_relevance` drops the off-topic ones. |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |
@@ -474,7 +487,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (14 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

@@ -64,7 +64,7 @@ meningkatkannya.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Ketiga belas tool MCP (termasuk `list_sources`, `list_exports`,
+Keempat belas tool MCP (termasuk `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / dll.)
 didokumentasikan di [`docs/mcp.md`](../docs/mcp.md).
@@ -247,8 +247,8 @@ mengikuti bentuk yang sama, dengan satu entri
   bekerja terhadap deck apa pun yang dihasilkan eksportir, plus tool MCP
   `pptx_*` setara sehingga agen LLM dapat beriterasi di atas deck yang
   telah dibuat.
-- **Server MCP**: 13 tool — `list_sources` + `list_exports`
-  (discovery), `search`, `fetch_paper`, `fetch_pdf_text`,
+- **Server MCP**: 14 tool — `list_sources` + `list_exports`
+  (discovery), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export`, dan enam tool deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Memungkinkan
@@ -302,6 +302,18 @@ mengikuti bentuk yang sama, dengan satu entri
   kehilangan separuh sumbernya. CLI mencetaknya setelah setiap pencarian
   `--query`, tool MCP `search` mengembalikannya sebagai `source_stats`,
   dan GUI menampilkannya di baris status.
+- **Pencarian bola salju lewat sitasi**: `--snowball
+  references|cited_by|both` (atau tool MCP `snowball`) memperluas hasil
+  teratas mengikuti tautan sitasinya, mundur ke apa yang mereka sitasi
+  dan maju ke apa yang menyitasi mereka, dan menemukan karya yang
+  terlewat oleh pencarian kata kunci karena penulisnya memakai istilah
+  lain. Setiap dimensi dibatasi (kedalaman 1 secara default, makalah per
+  benih, makalah secara keseluruhan), makalah yang dicapai lewat
+  beberapa jalur dihitung satu, dan setiap makalah yang ditemukan
+  menyimpan jalur yang menemukannya. Tautan berasal dari OpenAlex,
+  Semantic Scholar, dan Crossref, dan makalah yang ditemukan dinilai
+  oleh pemeringkat yang sama, sehingga sering disitasi tidak dianggap
+  berarti sesuai topik.
 - **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per
   sumber (token bucket), `defusedxml` untuk payload XML apa pun,
   jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle`
@@ -384,6 +396,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | Render pptx dengan latar gelap + teks hampir-putih. Default adalah deck terang band-navy. |
 | `--no-verify-identifiers` | Mengekspor tanpa memeriksa DOI dan URL makalah. Secara default, DOI / URL yang salah atau tidak dapat dijangkau menghentikan proses sebelum apa pun ditulis. Untuk penggunaan luring. |
 | `--diagnostics` | Menjelaskan peringkat pencarian `--query`: mencetak skor setiap makalah (relevansi + kebaruan + sitasi) dan rekomendasi yang bersifat saran `keep` / `review` / `prune`, serta menulis rincian lengkap ke `diagnostics.json` di `--out`. Tidak ada makalah yang dihapus. |
+| `--snowball` | Memperluas hasil mengikuti tautan sitasi sebelum mengekspor: `references` (yang disitasi hasil teratas), `cited_by` (yang menyitasi mereka), atau `both`. Makalah baru ditambahkan di akhir dan melewati unduhan serta ekspor yang sama. Mati secara default. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Batas untuk `--snowball`: hasil teratas yang diperluas (default 5), langkah yang diikuti (1, paling banyak 3), makalah per benih dan arah (20), makalah baru secara keseluruhan (20), dan relevansi terendah yang dipertahankan (0..1, mati secara default). |
 | `--quiet` | Tekan cetakan per-makalah. |
 
 ### Variabel lingkungan
@@ -449,7 +463,8 @@ Tool:
 |---|---|
 | `list_sources` | Mendaftar setiap plugin + melaporkan apakah masing-masing aktif di env saat ini. Panggil ini sekali sebelum `search`. |
 | `list_exports` | Mendaftar setiap format ekspor dengan deskripsi satu-barisnya dan apakah ia menulis satu berkas agregat atau satu berkas per makalah. |
-| `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. `diagnostics=true` menambahkan rincian skor per makalah dan rekomendasi yang bersifat saran `keep` / `review` / `prune` (tidak ada yang dihapus dari `papers`). Selalu mengembalikan `source_stats`: per sumber, `requested`, `returned`, `after_dedup`, dan `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
+| `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. `diagnostics=true` menambahkan rincian skor per makalah dan rekomendasi yang bersifat saran `keep` / `review` / `prune` (tidak ada yang dihapus dari `papers`). Selalu mengembalikan `source_stats`: per sumber, `requested`, `returned`, `after_dedup`, dan `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` juga memperluas hasil teratas mengikuti tautan sitasi dan menambahkan blok `snowball` (`papers` tidak berubah). |
+| `snowball` | Makalah benih → makalah yang mereka sitasi (`references`), makalah yang menyitasi mereka (`cited_by`), atau `both`, dalam batas tetap (`depth`, `max_per_seed`, `max_total`). Setiap makalah yang ditemukan membawa jalur yang mencapainya. `keywords` opsional menilai dan mengurutkannya, dan `min_relevance` membuang yang melenceng dari topik. |
 | `fetch_paper` | Identifier arXiv / DOI / PMID / IEEE → satu makalah. |
 | `fetch_pdf_text` | Unduh satu PDF, kembalikan teks tubuh hasil ekstraksi. **Jalur MCP menuju "saya membaca makalahnya".** |
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per-makalah berindeks kunci BibTeX. |
@@ -485,7 +500,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (gaya tesis) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # unduh PDF + summarizer Anthropic  (extra [intelligence])
 │   ├── evaluation/                  # benchmark kualitas-pencarian offline (docs/search-quality.md)
-│   ├── mcp/                         # server FastMCP (13 tool)
+│   ├── mcp/                         # server FastMCP (14 tool)
 │   ├── sources/<name>/              # folder plugin: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

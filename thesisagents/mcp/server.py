@@ -18,6 +18,14 @@ Tools:
   keep / review / prune recommendation. Nothing is removed from papers.
 - list_sources stays a discovery tool: it reports configuration, not the
   result counts of a query. Those are in search's source_stats.
+  search(snowball="both", ...) also expands the top results along their
+  citation links and adds a snowball block. papers is left unchanged.
+- snowball(papers, direction, depth, max_per_seed, max_total, keywords,
+           min_relevance, known) -> {discovered, papers, relations, errors,
+           truncated}
+  Bounded citation search from seed papers: references (what they cite),
+  cited_by (what cites them) or both. Each discovered paper carries the path
+  that reached it. Links come from OpenAlex, Semantic Scholar and Crossref.
 - fetch_paper(identifier) -> {paper: {...}}
 - fetch_pdf_text(pdf_url) -> {text, page_count, chars}
 - download_pdfs(papers, out_dir) -> {results: [...]}
@@ -91,6 +99,8 @@ from thesisagents.core.models import ExportOptions, Paper, PaperCollection, Quer
 from thesisagents.core.pdf_download import download_pdfs as core_download_pdfs
 from thesisagents.core.pipeline import run_search, run_single_paper
 from thesisagents.core.query import normalize_query
+from thesisagents.core.snowball import SnowballResult
+from thesisagents.core.snowball import snowball as run_snowball
 from thesisagents.exporters import export_collection, pptx_edit, review
 from thesisagents.fetchers.http import shutdown_clients
 from thesisagents.utils.logging import get_logger
@@ -113,6 +123,10 @@ _PLUGIN_OPT_OUT_ENV: dict[str, tuple[str, ...]] = {
     "ieee": ("THESISAGENTS_DISABLE_IEEE_SCRAPING",),
     "scholar": ("THESISAGENTS_DISABLE_SCHOLAR_SCRAPING",),
 }
+#: New papers a snowball started from an MCP tool may collect by default. Far
+#: below the hard cap (1000): the result goes into a model's context, and
+#: fifty papers with abstracts is already a long response.
+_SEARCH_SNOWBALL_MAX_TOTAL = 50
 
 
 def _as_tool_error(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -158,6 +172,7 @@ def build_server() -> FastMCP:
     server = FastMCP("thesisagents")
     _register_discovery_tools(server)
     _register_search_tools(server)
+    _register_snowball_tool(server)
     _register_export_tool(server)
     _register_pdf_tool(server)
     _register_pdf_download_tool(server)
@@ -327,8 +342,20 @@ def _register_search_tools(server: FastMCP) -> None:
         top_tier_only: bool = True,
         min_citations: int | None = None,
         diagnostics: bool = False,
+        snowball: str | None = None,
+        snowball_seeds: int = 5,
+        snowball_depth: int = 1,
+        snowball_max_per_seed: int = 20,
     ) -> dict[str, Any]:
         """Search papers by keywords across one or more sources.
+
+        ``snowball`` (``"references"``, ``"cited_by"`` or ``"both"``, default
+        off) expands the top ``snowball_seeds`` results along their citation
+        links and adds a ``snowball`` block with the papers found, how each
+        was reached and every link seen. ``papers`` is left as the search
+        returned it: the discovered papers are listed separately so you choose
+        which to keep. They are scored against ``keywords`` and listed best
+        first. For other seeds or tighter bounds call the ``snowball`` tool.
 
         ``diagnostics`` (default ``False``) adds a ``diagnostics`` block that
         explains the ranking: per paper, the score split into relevance /
@@ -389,13 +416,26 @@ def _register_search_tools(server: FastMCP) -> None:
             top_tier_only=top_tier_only,
             min_citations=min_citations,
         )
+        expansion: SnowballResult | None = None
         try:
             collection = await run_search(query)
+            if snowball is not None and collection.papers:
+                expansion = await _run_snowball(
+                    collection.papers[: max(1, snowball_seeds)],
+                    known=collection.papers,
+                    direction=snowball,
+                    depth=snowball_depth,
+                    max_per_seed=snowball_max_per_seed,
+                    max_total=_SEARCH_SNOWBALL_MAX_TOTAL,
+                    keywords=normalised,
+                )
         finally:
             await shutdown_clients()
         payload = _collection_to_payload(collection)
         if diagnostics:
             payload["diagnostics"] = collection_report(collection)
+        if expansion is not None:
+            payload["snowball"] = expansion.to_dict()
         return payload
 
     @_tool(server)
@@ -412,6 +452,64 @@ def _register_search_tools(server: FastMCP) -> None:
             "paper": collection.papers[0].to_dict(),
             "identifier": {"kind": parsed.kind.value, "value": parsed.value},
         }
+
+
+def _register_snowball_tool(server: FastMCP) -> None:
+    @_tool(server)
+    async def snowball(
+        papers: list[dict[str, Any]],
+        direction: str = "both",
+        depth: int = 1,
+        max_per_seed: int = 20,
+        max_total: int = _SEARCH_SNOWBALL_MAX_TOTAL,
+        keywords: str | None = None,
+        min_relevance: float | None = None,
+        known: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Grow a set of papers along its citation links.
+
+        ``papers`` are the seeds (paper dicts from ``search`` or
+        ``fetch_paper``). ``direction`` is ``"references"`` (what the seeds
+        cite), ``"cited_by"`` (what cites them) or ``"both"``. It finds work a
+        keyword search misses because the authors used other words.
+
+        Every dimension is capped: ``depth`` 1..3 (2 also expands the papers
+        found at step 1), ``max_per_seed`` 1..100 papers per seed and
+        direction, ``max_total`` 1..1000 new papers in all. ``truncated`` in
+        the response is true when ``max_total`` stopped the search early.
+
+        ``keywords`` scores each discovered paper with the search ranker and
+        lists them best first. ``min_relevance`` (0..1, needs ``keywords``)
+        drops papers below that fraction of the best possible relevance.
+        Being cited often is not treated as a sign of being on topic.
+
+        ``known`` lists papers you already hold besides the seeds, so they are
+        not reported as new.
+
+        Returns ``discovered`` (each with ``paper``, ``found_by`` and
+        ``score``), ``papers`` (the same papers as plain dicts, ready for
+        ``download_pdfs`` or ``export``), ``relations`` (every link seen) and
+        ``errors`` (a provider that failed: the search carried on without it).
+        Links come from OpenAlex, Semantic Scholar and Crossref.
+        """
+        if not papers:
+            raise ThesisAgentsError("snowball requires at least one seed paper")
+        try:
+            result = await _run_snowball(
+                tuple(Paper.from_dict(entry) for entry in papers),
+                known=tuple(Paper.from_dict(entry) for entry in known or ()),
+                direction=direction,
+                depth=depth,
+                max_per_seed=max_per_seed,
+                max_total=max_total,
+                keywords=normalize_query(keywords) if keywords else None,
+                min_relevance=min_relevance,
+            )
+        finally:
+            await shutdown_clients()
+        payload = result.to_dict()
+        payload["papers"] = [paper.to_dict() for paper in result.papers]
+        return payload
 
 
 def _register_export_tool(server: FastMCP) -> None:
@@ -606,6 +704,20 @@ def _register_pptx_tools(server: FastMCP) -> None:
             out_path=out_path,
         )
         return {"path": str(written), "position": position}
+
+
+async def _run_snowball(seeds, **bounds: Any) -> SnowballResult:
+    """Run the snowball search and report a bad bound as a tool error.
+
+    ``snowball`` raises ``ValueError`` for a bound outside its range. Left as
+    it is, the 2.x SDK would report that to the client as an unexplained crash
+    ("Error executing tool"). Re-raised as ``ThesisAgentsError`` it reaches the
+    client with its message, for example "depth must be in [1, 3]".
+    """
+    try:
+        return await run_snowball(seeds, **bounds)
+    except ValueError as err:
+        raise ThesisAgentsError(str(err)) from err
 
 
 def _collection_to_payload(collection: PaperCollection) -> dict[str, Any]:

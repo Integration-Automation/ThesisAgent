@@ -57,7 +57,7 @@ README 想搞清楚要做什麼 —— 從這裡開始。** 底下的所有內�
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-全部十三個 MCP 工具(包含 `list_sources`、`list_exports`、
+全部十四個 MCP 工具(包含 `list_sources`、`list_exports`、
 `download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / 等等)都記載於 [`docs/mcp.md`](../docs/mcp.md)。
 
@@ -199,8 +199,8 @@ for key in irrelevant_keys:
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   可對匯出器產出的任何投影片運作,加上對應的 `pptx_*` MCP 工具,好讓
   一個 LLM agent 能在產出的投影片上反覆迭代。
-- **MCP 伺服器**:13 個工具 —— `list_sources` + `list_exports`
-  (探索)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
+- **MCP 伺服器**:14 個工具 —— `list_sources` + `list_exports`
+  (探索)、`search`、`snowball`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
   `export`,以及六個 `pptx_*` 投影片工具(`inspect`、`review`、
   `update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。讓任何
   懂 MCP 的 LLM(Claude Code、Claude Desktop、Cursor …)驅動整個工作
@@ -227,6 +227,7 @@ for key in irrelevant_keys:
 - **匯出前檢查 (DOI / URL 驗證)**: 寫入任何檔案之前,會到 doi.org 查詢每個 DOI,並對每個網址送出一次請求。識別碼錯誤或無法連線時,匯出會停止並列出失敗的論文與識別碼。需要真實瀏覽器才能開啟的出版商頁面不會被請求 (由 DOI 檢查涵蓋),拒絕自動化存取的伺服器會回報為「無法檢查」而不會讓整次執行失敗。預設開啟,離線時用 `--no-verify-identifiers` 關閉。
 - **可解釋的排名與修剪建議**: 每次搜尋都會記錄每篇論文排在該位置的原因 (相關性、新近度、引用數三部分,命中的查詢詞,每項貢獻一句說明),並為每筆結果建議 `keep`、`review` 或 `prune`,同時指出觸發的規則。單憑引用數低不會觸發任何建議。可用 `--diagnostics`、MCP `search` 工具的 `diagnostics=true`,或 GUI 的「建議」欄查看。僅供參考,不會移除任何論文。
 - **各來源的搜尋統計**: 每次搜尋都會回報每個來源回傳了幾筆記錄、去重後有幾篇論文歸屬於它,以及它是否失敗、被限流或未啟用。出錯的來源會被跳過而不中斷搜尋,所以要分辨「主題本來就冷門」與「搜尋掉了一半來源」,靠的就是這些數字。CLI 在每次 `--query` 搜尋後印出,MCP `search` 工具以 `source_stats` 回傳,GUI 則顯示在狀態列。
+- **引用滾雪球搜尋**: `--snowball references|cited_by|both` (或 MCP 的 `snowball` 工具) 會沿著引用關係擴充排名最前面的結果,往回找它們引用的文獻、往前找引用它們的文獻,補上關鍵字搜尋因作者用詞不同而漏掉的研究。每個維度都有上限 (預設深度 1、每個種子的篇數、總篇數),經由多條路徑找到的同一篇論文只算一篇,每篇新找到的論文都會記下找到它的路徑。引用資料來自 OpenAlex、Semantic Scholar 與 Crossref,新找到的論文同樣由排名器評分,所以被引用得多不代表切題。
 - **預設就安全**:僅 HTTPS 的 HTTP 傳輸、每來源速率限制(token bucket)、
   對任何 XML payload 用 `defusedxml`、防路徑穿越的匯出路徑、不對
   使用者輸入用 `eval` / `exec` / `pickle`。
@@ -307,6 +308,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | 以深色背景 + 近白文字渲染 pptx。預設是淺色深藍帶投影片。 |
 | `--no-verify-identifiers` | 匯出時不檢查論文的 DOI 與網址。預設情況下,DOI / 網址錯誤或無法連線會在寫入任何檔案之前停止執行。供離線使用。 |
 | `--diagnostics` | 解釋 `--query` 搜尋的排名: 印出每篇論文的分數 (相關性 + 新近度 + 引用數) 與僅供參考的 `keep` / `review` / `prune` 建議,並把完整明細寫到 `--out` 目錄的 `diagnostics.json`。不會移除任何論文。 |
+| `--snowball` | 匯出前沿著引用關係擴充結果: `references` (最前面的結果所引用的文獻)、`cited_by` (引用它們的文獻) 或 `both`。新論文會附加在結果後面,並走同樣的下載與匯出流程。預設關閉。 |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` 的上限: 要擴充的前幾筆結果 (預設 5)、追蹤的步數 (1,最多 3)、每個種子每個方向的篇數 (20)、新論文總數 (20),以及保留的最低相關性 (0..1,預設不啟用)。 |
 | `--quiet` | 抑制每篇論文的列印輸出。 |
 
 ### 環境變數
@@ -370,7 +373,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 列舉每個外掛 + 回報各自在目前環境下是否啟用。在 `search` 前呼叫一次。 |
 | `list_exports` | 列舉每種匯出格式,附一行描述,並說明它寫一個彙總檔還是每篇論文一檔。 |
-| `search` | 關鍵字 → 論文清單。接受 `top_tier_only`、`min_citations`;預設走完整的免 API 金鑰來源組合。 `diagnostics=true` 會加上每篇論文的分數明細與僅供參考的 `keep` / `review` / `prune` 建議 (不會從 `papers` 移除任何項目)。 一律回傳 `source_stats`: 每個來源的 `requested`、`returned`、`after_dedup` 與 `status` (`ok` / `failed` / `rate_limited` / `disabled`)。 |
+| `search` | 關鍵字 → 論文清單。接受 `top_tier_only`、`min_citations`;預設走完整的免 API 金鑰來源組合。 `diagnostics=true` 會加上每篇論文的分數明細與僅供參考的 `keep` / `review` / `prune` 建議 (不會從 `papers` 移除任何項目)。 一律回傳 `source_stats`: 每個來源的 `requested`、`returned`、`after_dedup` 與 `status` (`ok` / `failed` / `rate_limited` / `disabled`)。 `snowball="both"` 還會沿著引用關係擴充最前面的結果,並加上 `snowball` 區塊 (`papers` 不變)。 |
+| `snowball` | 種子論文 → 它們引用的文獻 (`references`)、引用它們的文獻 (`cited_by`) 或 `both`,皆在固定上限內 (`depth`、`max_per_seed`、`max_total`)。每篇新找到的論文都帶有找到它的路徑。可選的 `keywords` 會評分並排序,`min_relevance` 會濾掉離題的論文。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別碼 → 單篇論文。 |
 | `fetch_pdf_text` | 下載一份 PDF,回傳擷取出的本文文字。**這是「我讀了論文」的 MCP 路徑。** |
 | `download_pdfs` | 批次把一份論文清單的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX 鍵為索引的每篇論文結果。 |
@@ -406,7 +410,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (14 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

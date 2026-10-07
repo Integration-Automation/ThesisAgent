@@ -39,3 +39,32 @@ def install_mock(monkeypatch, target_module_path: str, transport: MockTransport)
         return httpx.AsyncClient(transport=transport)
 
     monkeypatch.setattr(f"{target_module_path}.get_client", fake_get_client)
+
+
+class RoutingTransport(httpx.AsyncBaseTransport):
+    """Answer each request from the first route whose marker is in its URL.
+
+    For plugins that make more than one request per call (resolve an
+    identifier, then list). ``routes`` is ``[(marker, status, body), ...]``,
+    tried in order, and ``requests`` records every URL asked for, so a test
+    can assert both what was requested and in which order. A request that
+    matches no route fails the test instead of returning something plausible.
+    """
+
+    def __init__(self, routes: list[tuple[str, int, str | bytes]]) -> None:
+        self._routes = routes
+        self.requests: list[httpx.URL] = []
+        self.headers: list[httpx.Headers] = []
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request.url)
+        self.headers.append(request.headers)
+        url = str(request.url)
+        for marker, status, body in self._routes:
+            if marker in url:
+                content = body.encode("utf-8") if isinstance(body, str) else body
+                return httpx.Response(status, content=content, request=request)
+        raise AssertionError(f"unexpected request: {url}")
+
+    async def aclose(self) -> None:
+        return None

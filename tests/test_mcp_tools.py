@@ -755,3 +755,237 @@ def test_list_sources_carries_no_query_state(server):
     assert set(payload["sources"][0]) == {
         "name", "in_default_mix", "opt_in_env_var", "opt_out_env_var", "enabled",
     }
+
+
+# ---------------------------------------------------------------------------
+# snowball tool + search(snowball=...)
+# ---------------------------------------------------------------------------
+
+
+class _GraphProvider:
+    """Citation provider answering from a dict keyed by ``(source_id, direction)``."""
+
+    def __init__(self, graph, name="graph", fail_with=None):
+        self.name = name
+        self._graph = graph
+        self._fail_with = fail_with
+        self.calls: list[tuple[str, str, int]] = []
+
+    async def _answer(self, paper, direction, limit):
+        self.calls.append((paper.source_id, direction, limit))
+        if self._fail_with is not None:
+            raise self._fail_with
+        return list(self._graph.get((paper.source_id, direction), []))
+
+    async def references(self, paper, limit):
+        return await self._answer(paper, "references", limit)
+
+    async def cited_by(self, paper, limit):
+        return await self._answer(paper, "cited_by", limit)
+
+
+def _found(sid: str, title: str):
+    from thesisagents.core.models import Paper
+
+    return Paper(
+        source="openalex", source_id=sid, title=title, authors=("Ada Author",),
+        year=2024, venue=None, abstract="", url=f"https://example.org/{sid}",
+        doi=f"10.1000/{sid}",
+    )
+
+
+@pytest.fixture()
+def citation_graph(monkeypatch, sample_papers):
+    """Install an in-memory citation provider as the only default provider."""
+    seed_id = sample_papers[0].source_id
+    provider = _GraphProvider(
+        {
+            (seed_id, "references"): [_found("r1", "Attention Mechanisms Reviewed")],
+            (seed_id, "cited_by"): [
+                _found("c1", "Sparse Attention at Scale"),
+                _found("c2", "Cooking With Gas"),
+            ],
+        }
+    )
+    monkeypatch.setattr(
+        "thesisagents.core.snowball._default_providers", lambda: [provider]
+    )
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    return provider
+
+
+def test_snowball_tool_returns_discovered_papers_with_their_path(
+    server, sample_papers, citation_graph
+):
+    seed = sample_papers[0]
+    payload = asyncio.run(
+        _call(server, "snowball", papers=[seed.to_dict()], keywords="attention")
+    )
+
+    assert payload["seed_count"] == 1
+    assert payload["discovered_count"] == 3
+    assert payload["truncated"] is False
+    assert payload["errors"] == []
+    titles = [entry["paper"]["title"] for entry in payload["discovered"]]
+    assert titles[-1] == "Cooking With Gas"          # scored last: off topic
+    assert set(titles[:2]) == {"Attention Mechanisms Reviewed", "Sparse Attention at Scale"}
+    by_title = {entry["paper"]["title"]: entry for entry in payload["discovered"]}
+    assert by_title["Attention Mechanisms Reviewed"]["found_by"] == {
+        "source_key": seed.dedup_key(), "target_key": "doi:10.1000/r1",
+        "relation": "references", "provider": "graph", "depth": 1,
+    }
+    assert by_title["Cooking With Gas"]["score"]["relevance"] == 0.0
+    # ``papers`` is the same list as plain paper dicts, ready for export.
+    assert [paper["title"] for paper in payload["papers"]] == titles
+    assert len(payload["relations"]) == 3
+
+
+def test_snowball_tool_passes_its_bounds_through(server, sample_papers, citation_graph):
+    payload = asyncio.run(
+        _call(
+            server, "snowball", papers=[sample_papers[0].to_dict()],
+            direction="cited_by", max_per_seed=7, max_total=1,
+        )
+    )
+
+    assert citation_graph.calls == [(sample_papers[0].source_id, "cited_by", 7)]
+    assert payload["discovered_count"] == 1
+    assert payload["truncated"] is True
+    assert payload["discovered"][0]["score"] is None   # no keywords, no score
+
+
+def test_snowball_tool_does_not_rediscover_known_papers(
+    server, sample_papers, citation_graph
+):
+    known = _found("c1", "Sparse Attention at Scale").to_dict()
+    payload = asyncio.run(
+        _call(
+            server, "snowball", papers=[sample_papers[0].to_dict()],
+            direction="cited_by", known=[known],
+        )
+    )
+
+    assert [entry["paper"]["source_id"] for entry in payload["discovered"]] == ["c2"]
+    assert len(payload["relations"]) == 2   # the link to the known paper is kept
+
+
+def test_snowball_tool_reports_a_bad_bound_as_a_tool_error(
+    server, sample_papers, citation_graph
+):
+    with pytest.raises(ToolError, match=r"depth must be in \[1, 3\]"):
+        asyncio.run(
+            _call(server, "snowball", papers=[sample_papers[0].to_dict()], depth=9)
+        )
+    assert citation_graph.calls == []
+
+
+def test_snowball_tool_needs_a_seed(server, citation_graph):
+    with pytest.raises(ToolError, match="at least one seed paper"):
+        asyncio.run(_call(server, "snowball", papers=[]))
+
+
+def test_snowball_tool_reports_provider_errors_without_failing(
+    server, sample_papers, monkeypatch
+):
+    from thesisagents.core.exceptions import SourceUnavailableError
+
+    broken = _GraphProvider({}, name="openalex",
+                            fail_with=SourceUnavailableError("openalex", "HTTP 503"))
+    monkeypatch.setattr("thesisagents.core.snowball._default_providers", lambda: [broken])
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "snowball", papers=[sample_papers[0].to_dict()], direction="references")
+    )
+
+    assert payload["discovered"] == []
+    assert len(payload["errors"]) == 1
+    assert "openalex references lookup failed" in payload["errors"][0]
+
+
+def test_search_without_snowball_has_no_snowball_block(
+    monkeypatch, server, sample_papers, citation_graph
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    payload = asyncio.run(_call(server, "search", keywords="attention", sources=["arxiv"]))
+
+    assert "snowball" not in payload
+    assert citation_graph.calls == []
+
+
+def test_search_snowball_expands_the_top_results_and_leaves_papers_alone(
+    monkeypatch, server, sample_papers, citation_graph
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    payload = asyncio.run(
+        _call(
+            server, "search", keywords="attention", sources=["arxiv"],
+            snowball="both", snowball_seeds=1, snowball_max_per_seed=9,
+        )
+    )
+
+    assert payload["count"] == 2
+    assert payload["papers"] == [paper.to_dict() for paper in sample_papers]
+    block = payload["snowball"]
+    assert block["seed_count"] == 1
+    assert block["discovered_count"] == 3
+    assert block["discovered"][0]["score"] is not None   # scored against the keywords
+    seed_id = sample_papers[0].source_id
+    assert citation_graph.calls == [(seed_id, "references", 9), (seed_id, "cited_by", 9)]
+
+
+def test_search_snowball_knows_the_whole_result_not_only_the_seeds(
+    monkeypatch, server, sample_papers
+):
+    """The second search result is not a seed. Found again through a citation
+    link, it must not come back as a new paper."""
+    second = sample_papers[1]
+    provider = _GraphProvider(
+        {(sample_papers[0].source_id, "references"): [second, _found("r9", "A New Paper")]}
+    )
+    monkeypatch.setattr("thesisagents.core.snowball._default_providers", lambda: [provider])
+
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(
+            server, "search", keywords="attention", sources=["arxiv"],
+            snowball="references", snowball_seeds=1,
+        )
+    )
+
+    found = [entry["paper"]["source_id"] for entry in payload["snowball"]["discovered"]]
+    assert found == ["r9"]
+
+
+def test_search_snowball_bad_direction_is_a_tool_error(
+    monkeypatch, server, sample_papers, citation_graph
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    with pytest.raises(ToolError, match="direction must be one of"):
+        asyncio.run(
+            _call(server, "search", keywords="attention", sources=["arxiv"],
+                  snowball="sideways")
+        )

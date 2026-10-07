@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 ```
 
-सभी तेरह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / आदि सहित) [`docs/mcp.md`](../docs/mcp.md) में प्रलेखित हैं।
+सभी चौदह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / आदि सहित) [`docs/mcp.md`](../docs/mcp.md) में प्रलेखित हैं।
 
 ### अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 
@@ -125,7 +125,7 @@ output directory में `diagnostics.json` में भी लिखता �
   - `.csv` — spreadsheets / त्वरित grep छँटाई के लिए flat एक-पंक्ति-प्रति-शोध-पत्र तालिका (RFC-4180 quoting, इसलिए शीर्षकों में अल्पविराम कभी कॉलम नहीं खिसकाते)।
   - `.csl.json` — Pandoc / citeproc के लिए CSL-JSON; किसी भी CSL शैली (APA, IEEE, Nature, …) में bibliography रेंडर करें। `.csl.json` एक्सटेंशन इसे सादे `.json` dump से अलग रखता है।
 - **PPT संपादन टूलकिट**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) एक्सपोर्टर द्वारा उत्पन्न किसी भी डेक पर काम करता है, साथ ही समकक्ष `pptx_*` MCP उपकरण ताकि एक LLM एजेंट उत्पन्न डेक पर पुनरावृत्ति कर सके।
-- **MCP सर्वर**: 13 उपकरण — `list_sources` + `list_exports` (खोज/सूची), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, और छह `pptx_*` डेक उपकरण (`inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`)। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
+- **MCP सर्वर**: 14 उपकरण — `list_sources` + `list_exports` (खोज/सूची), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, और छह `pptx_*` डेक उपकरण (`inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`)। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
 - **दो समृद्धि पथ** सार से आगे एक वास्तविक थीसिस-शैली डेक तक जाने के लिए:
   - **LLM-as-agent (कोई API key नहीं)** — कॉलिंग LLM `fetch_pdf_text` के माध्यम से PDF मुख्य पाठ पढ़ता है, संदर्भ में एक संरचित सारांश लिखता है, और उसे `export` को पास करता है।
   - **Python pipeline (`--enrich`)** — CLI स्वयं Anthropic का API कॉल करती है; डिफ़ॉल्ट मॉडल `claude-opus-4-7`।
@@ -155,6 +155,16 @@ output directory में `diagnostics.json` में भी लिखता �
   खो दिए। CLI इन्हें हर `--query` search के बाद print करता है, MCP
   `search` tool इन्हें `source_stats` के रूप में लौटाता है, और GUI
   status line में दिखाता है।
+- **Citation snowball खोज**: `--snowball references|cited_by|both` (या
+  MCP `snowball` tool) शीर्ष परिणामों को उनके citation links के सहारे
+  फैलाता है, पीछे की ओर जिन्हें वे cite करते हैं और आगे की ओर जो उन्हें
+  cite करते हैं, और वह काम खोज निकालता है जिसे keyword search इसलिए चूक
+  जाता है कि लेखकों ने दूसरे शब्द इस्तेमाल किए। हर आयाम की सीमा तय है
+  (default depth 1, प्रति seed papers, कुल papers), कई रास्तों से पहुँचा
+  गया paper एक ही गिना जाता है, और हर खोजा गया paper वह रास्ता सँभाल कर
+  रखता है जिससे वह मिला। Links OpenAlex, Semantic Scholar और Crossref से
+  आते हैं, और खोजे गए papers को वही ranker score करता है, इसलिए बहुत
+  cite होना विषय से जुड़ा होना नहीं माना जाता।
 - **डिफ़ॉल्ट रूप से सुरक्षित**: HTTPS-only HTTP परिवहन, प्रति-स्रोत दर सीमा (token bucket), किसी भी XML payload के लिए `defusedxml`, path-traversal-सुरक्षित निर्यात पथ, उपयोगकर्ता इनपुट पर कोई `eval` / `exec` / `pickle` नहीं।
 - **zh-tw / zh-cn शब्दावली रक्षक**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` में ~244 regex पैटर्न पारंपरिक हांज़ी में रेंडर किए गए सरलीकृत-चीनी उधार शब्द पकड़ते हैं (जैसे `內存` → `記憶體`, `魯棒性` → `穩健性`, `軟件` → `軟體`, `緩存` → `快取`)। वही रक्षक zh-cn locale स्ट्रिंग्स के लिए उलटा चलता है। पूर्ण नियम + regex कैटलॉग `.claude/agents/rules/language-vocabulary-check.md` में हैं।
 
@@ -227,6 +237,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | pptx को गहरे पृष्ठभूमि + लगभग-सफ़ेद टेक्स्ट के साथ render करें। डिफ़ॉल्ट हल्का navy-band डेक है। |
 | `--no-verify-identifiers` | Papers के DOI और URL जाँचे बिना export करता है। Default रूप से ग़लत या पहुँच से बाहर DOI / URL कुछ भी लिखने से पहले run रोक देता है। Offline उपयोग के लिए। |
 | `--diagnostics` | `--query` search की ranking समझाता है: हर paper का score (relevance + recency + citations) और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश print करता है, और पूरा breakdown `--out` में `diagnostics.json` में लिखता है। कोई paper हटाया नहीं जाता। |
+| `--snowball` | Export से पहले परिणामों को citation links के सहारे फैलाता है: `references` (शीर्ष परिणाम जिन्हें cite करते हैं), `cited_by` (जो उन्हें cite करते हैं) या `both`। नए papers अंत में जोड़े जाते हैं और उसी download तथा export से गुज़रते हैं। Default रूप से बंद। |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` की सीमाएँ: फैलाए जाने वाले शीर्ष परिणाम (default 5), कितने कदम चलना है (1, अधिकतम 3), प्रति seed और दिशा papers (20), कुल नए papers (20), और रखी जाने वाली न्यूनतम relevance (0..1, default रूप से बंद)। |
 | `--quiet` | प्रति-शोध-पत्र प्रिंटआउट दबाएँ। |
 
 ### पर्यावरण चर
@@ -284,7 +296,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | प्रत्येक plugin की गणना करें + रिपोर्ट करें कि वर्तमान env में प्रत्येक सक्षम है या नहीं। `search` से पहले इसे एक बार कॉल करें। |
 | `list_exports` | प्रत्येक निर्यात प्रारूप की एक-पंक्ति व्याख्या + यह एक aggregate फ़ाइल लिखता है या प्रति-शोध-पत्र एक फ़ाइल, इसके साथ गणना करें। |
-| `search` | कीवर्ड → शोध-पत्रों की सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूर्ण API-key-रहित स्रोत मिश्रण। `diagnostics=true` हर paper का score breakdown और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश जोड़ता है (`papers` से कुछ नहीं हटाया जाता)। हमेशा `source_stats` लौटाता है: हर source के लिए `requested`, `returned`, `after_dedup` और `status` (`ok` / `failed` / `rate_limited` / `disabled`)। |
+| `search` | कीवर्ड → शोध-पत्रों की सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूर्ण API-key-रहित स्रोत मिश्रण। `diagnostics=true` हर paper का score breakdown और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश जोड़ता है (`papers` से कुछ नहीं हटाया जाता)। हमेशा `source_stats` लौटाता है: हर source के लिए `requested`, `returned`, `after_dedup` और `status` (`ok` / `failed` / `rate_limited` / `disabled`)। `snowball="both"` शीर्ष परिणामों को citation links के सहारे भी फैलाता है और एक `snowball` block जोड़ता है (`papers` नहीं बदलता)। |
+| `snowball` | Seed papers → वे papers जिन्हें वे cite करते हैं (`references`), वे papers जो उन्हें cite करते हैं (`cited_by`) या `both`, तय सीमाओं (`depth`, `max_per_seed`, `max_total`) के भीतर। हर खोजे गए paper के साथ वह रास्ता आता है जिससे वह मिला। वैकल्पिक `keywords` उन्हें score और क्रमबद्ध करते हैं, और `min_relevance` विषय से बाहर वालों को हटा देता है। |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE पहचानकर्ता → एकल शोध-पत्र। |
 | `fetch_pdf_text` | एक PDF डाउनलोड करें, निकाला गया मुख्य पाठ लौटाएँ। **"मैंने शोध-पत्र पढ़ा" तक का MCP पथ।** |
 | `download_pdfs` | एक शोध-पत्र सूची की PDFs को `{out_dir}/pdfs/` में बैच-डाउनलोड करें। BibTeX कुंजी द्वारा अनुक्रमित प्रति-शोध-पत्र परिणाम लौटाता है। |
@@ -320,7 +333,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (थीसिस-शैली) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── evaluation/                  # ऑफ़लाइन search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP सर्वर (13 उपकरण)
+│   ├── mcp/                         # FastMCP सर्वर (14 उपकरण)
 │   ├── sources/<name>/              # plugin फ़ोल्डर: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

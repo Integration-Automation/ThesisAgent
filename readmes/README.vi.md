@@ -64,7 +64,7 @@ nâng cấp nó.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Cả mười ba công cụ MCP (gồm `list_sources`, `list_exports`,
+Cả mười bốn công cụ MCP (gồm `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / v.v.) đều được
 tài liệu hóa trong [`docs/mcp.md`](../docs/mcp.md).
@@ -244,8 +244,8 @@ cho mỗi bài trong tuple `PaperCollection`.
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   làm việc với bất kỳ deck nào exporter sinh ra, cộng với các công cụ MCP
   `pptx_*` tương đương để một LLM agent có thể lặp trên một deck đã sinh.
-- **Server MCP**: 13 công cụ — `list_sources` + `list_exports`
-  (khám phá), `search`, `fetch_paper`, `fetch_pdf_text`,
+- **Server MCP**: 14 công cụ — `list_sources` + `list_exports`
+  (khám phá), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export`, và sáu công cụ deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Cho phép
@@ -295,6 +295,17 @@ cho mỗi bài trong tuple `PaperCollection`.
   bài với một lần tìm đã mất nửa số nguồn. CLI in chúng sau mỗi lần tìm
   `--query`, công cụ MCP `search` trả về dưới dạng `source_stats`, còn
   GUI hiển thị ở dòng trạng thái.
+- **Tìm kiếm lăn cầu tuyết theo trích dẫn**: `--snowball
+  references|cited_by|both` (hoặc công cụ MCP `snowball`) mở rộng các
+  kết quả đứng đầu theo liên kết trích dẫn, lùi về những gì chúng trích
+  dẫn và tiến tới những gì trích dẫn chúng, nhờ đó tìm ra các công trình
+  mà tìm kiếm theo từ khóa bỏ sót vì tác giả dùng thuật ngữ khác. Mọi
+  chiều đều có giới hạn (độ sâu mặc định 1, số bài mỗi hạt giống, tổng
+  số bài), một bài báo được tìm thấy qua nhiều đường chỉ tính là một, và
+  mỗi bài báo tìm được đều giữ lại đường đã dẫn tới nó. Liên kết lấy từ
+  OpenAlex, Semantic Scholar và Crossref, và các bài tìm được cũng do
+  cùng bộ xếp hạng chấm điểm, nên được trích dẫn nhiều không có nghĩa là
+  đúng chủ đề.
 - **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit theo
   từng nguồn (token bucket), `defusedxml` cho mọi payload XML,
   các đường xuất an-toàn-với-path-traversal, không `eval` / `exec` / `pickle` trên
@@ -377,6 +388,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | Render pptx với nền tối + chữ gần trắng. Mặc định là deck sáng dải navy. |
 | `--no-verify-identifiers` | Xuất mà không kiểm tra DOI và URL của các bài báo. Theo mặc định, DOI / URL sai hoặc không thể kết nối sẽ dừng lần chạy trước khi ghi bất cứ thứ gì. Dùng khi ngoại tuyến. |
 | `--diagnostics` | Giải thích thứ hạng của một lần tìm `--query`: in điểm của từng bài báo (độ liên quan + độ mới + trích dẫn) cùng khuyến nghị tham khảo `keep` / `review` / `prune`, và ghi bảng phân tích đầy đủ vào `diagnostics.json` trong `--out`. Không bài báo nào bị xóa. |
+| `--snowball` | Mở rộng kết quả theo liên kết trích dẫn trước khi xuất: `references` (những gì các kết quả đứng đầu trích dẫn), `cited_by` (những gì trích dẫn chúng) hoặc `both`. Các bài mới được nối vào cuối và đi qua cùng bước tải xuống và xuất. Mặc định tắt. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Giới hạn cho `--snowball`: số kết quả đứng đầu cần mở rộng (mặc định 5), số bước đi theo (1, tối đa 3), số bài mỗi hạt giống và mỗi chiều (20), tổng số bài mới (20) và độ liên quan thấp nhất được giữ (0..1, mặc định tắt). |
 | `--quiet` | Tắt in ấn theo từng bài. |
 
 ### Biến môi trường
@@ -440,7 +453,8 @@ Công cụ:
 |---|---|
 | `list_sources` | Liệt kê mọi plugin + báo cái nào đang bật trong env hiện tại. Gọi nó một lần trước `search`. |
 | `list_exports` | Liệt kê mọi định dạng xuất với mô tả một dòng và việc nó ghi một file tổng hợp hay một file mỗi bài. |
-| `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. `diagnostics=true` thêm bảng phân tích điểm theo từng bài và khuyến nghị tham khảo `keep` / `review` / `prune` (không có gì bị xóa khỏi `papers`). Luôn trả về `source_stats`: với mỗi nguồn, `requested`, `returned`, `after_dedup` và `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
+| `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. `diagnostics=true` thêm bảng phân tích điểm theo từng bài và khuyến nghị tham khảo `keep` / `review` / `prune` (không có gì bị xóa khỏi `papers`). Luôn trả về `source_stats`: với mỗi nguồn, `requested`, `returned`, `after_dedup` và `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` còn mở rộng các kết quả đứng đầu theo liên kết trích dẫn và thêm một khối `snowball` (`papers` không đổi). |
+| `snowball` | Bài hạt giống → các bài chúng trích dẫn (`references`), các bài trích dẫn chúng (`cited_by`) hoặc `both`, trong giới hạn cố định (`depth`, `max_per_seed`, `max_total`). Mỗi bài tìm được mang theo đường đã dẫn tới nó. `keywords` tùy chọn sẽ chấm điểm và sắp xếp, còn `min_relevance` loại các bài lạc đề. |
 | `fetch_paper` | Định danh arXiv / DOI / PMID / IEEE → một bài đơn. |
 | `fetch_pdf_text` | Tải một PDF, trả về văn bản thân bài đã trích. **Cổng MCP tới "tôi đã đọc bài".** |
 | `download_pdfs` | Tải hàng loạt PDF của một danh sách bài vào `{out_dir}/pdfs/`. Trả về kết quả từng bài có khóa theo khóa BibTeX. |
@@ -476,7 +490,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (phong cách luận văn) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # tải PDF + bộ tóm tắt Anthropic  ([intelligence] extra)
 │   ├── evaluation/                  # benchmark chất lượng tìm kiếm offline (docs/search-quality.md)
-│   ├── mcp/                         # server FastMCP (13 công cụ)
+│   ├── mcp/                         # server FastMCP (14 công cụ)
 │   ├── sources/<name>/              # thư mục plugin: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

@@ -49,8 +49,8 @@ MCP 6 चरण
    5. (आप प्रत्येक PDF पढ़ें और संरचित summary dict तैयार करें)
    6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 
-कुल 13 MCP उपकरण: डिस्कवरी (``list_sources``, ``list_exports``),
-``search``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+कुल 14 MCP उपकरण: डिस्कवरी (``list_sources``, ``list_exports``),
+``search``, ``snowball``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
 ``export`` और छह ``pptx_*`` डेक ऑपरेशन (``pptx_inspect``,
 ``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
 ``pptx_reorder_slides``, ``pptx_add_slide``)। पूर्ण संदर्भ: :doc:`/mcp`।
@@ -73,6 +73,15 @@ de-duplication के बाद कितने unique papers उसके ख�
 इसलिए यह निष्कर्ष निकालने से पहले कि किसी विषय पर कम papers हैं, ये
 संख्याएँ पढ़ें। CLI भी हर ``--query`` search के बाद यही table print करता
 है।
+
+**Citations का पीछा करें।** ``--snowball both`` (CLI) या ``snowball``
+tool शीर्ष परिणामों को उनके citation links के सहारे फैलाता है:
+``references`` वह जोड़ता है जिसे वे cite करते हैं और ``cited_by`` वह
+जोड़ता है जो उन्हें cite करता है। इससे वह काम मिलता है जिसे keyword
+search इसलिए चूक जाता है कि लेखकों ने दूसरे शब्द इस्तेमाल किए। यह फैलाव
+सीमित है (default रूप से एक कदम), हर खोजा गया paper वह रास्ता रखता है
+जिससे वह मिला, और सभी को आपके keywords के सामने score किया जाता है,
+इसलिए कोई paper केवल बहुत cite होने के कारण नहीं रखा जाता।
 
 अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -180,7 +189,7 @@ CLI फ़्लैग की पूरी तालिका: :doc:`/cli`।
 --------------
 
 * CLI फ़्लैग और पर्यावरण चर: :doc:`/cli`
-* 13 MCP सर्वर उपकरण: :doc:`/mcp`
+* 14 MCP सर्वर उपकरण: :doc:`/mcp`
 * PPTX संपादन टूलकिट: :doc:`/pptx_editing`
 * repo जड़ में ``readmes/README.hi.md`` फ़ाइल में सुविधाओं की पूरी सूची है।
 * गहन तकनीकी संदर्भ (प्लगइन वास्तुकला, सुरक्षा नीतियाँ, Definition of

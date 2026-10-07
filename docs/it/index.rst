@@ -49,7 +49,7 @@ Flusso MCP in 6 passi
    5. (leggi ogni PDF e produci dict di riassunto strutturato)
    6. export(papers=[{...paper, "summary": {...}}], language="it", ...)
 
-I 13 strumenti MCP completi: :doc:`/mcp`.
+I 14 strumenti MCP completi: :doc:`/mcp`.
 
 **Per individuare i risultati fuori tema, parti dai consigli dello
 strumento stesso.** ``--diagnostics`` (CLI) o ``diagnostics=true`` sullo
@@ -70,6 +70,16 @@ deduplicazione e uno ``status`` con valore ``ok``, ``failed``,
 senza fermare la ricerca, quindi leggi questi numeri prima di concludere
 che un tema ha pochi articoli. La CLI stampa la stessa tabella dopo ogni
 ricerca ``--query``.
+
+**Segui le citazioni.** ``--snowball both`` (CLI) o lo strumento
+``snowball`` estende i primi risultati seguendo i loro collegamenti di
+citazione: ``references`` aggiunge ciò che citano e ``cited_by``
+aggiunge ciò che li cita. Trova lavori che una ricerca per parole chiave
+perde perché gli autori hanno usato altri termini. L'estensione è
+limitata (un passo per impostazione predefinita), ogni articolo scoperto
+conserva il percorso che lo ha raggiunto, e tutti sono valutati rispetto
+alle tue parole chiave, quindi un articolo non viene tenuto solo perché
+è citato spesso.
 
 Obbligatorio: verifica URL / DOI prima della consegna
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -179,7 +189,7 @@ Dove cercare oltre
 ------------------
 
 * Flag CLI e variabili d'ambiente: :doc:`/cli`
-* 13 strumenti del server MCP: :doc:`/mcp`
+* 14 strumenti del server MCP: :doc:`/mcp`
 * Toolkit di editing PPTX: :doc:`/pptx_editing`
 * Il file ``readmes/README.it.md`` nella radice del repo contiene l'elenco
   completo delle funzionalità.

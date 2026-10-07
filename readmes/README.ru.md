@@ -64,7 +64,7 @@ API Anthropic (поток Python pipeline).
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Все тринадцать MCP-инструментов (включая `list_sources`, `list_exports`,
+Все четырнадцать MCP-инструментов (включая `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / и т. д.)
 задокументированы в [`docs/mcp.md`](../docs/mcp.md).
@@ -247,8 +247,8 @@ for key in irrelevant_keys:
   работает с любым деком, произведённым экспортёром, плюс эквивалентные
   MCP-инструменты `pptx_*`, чтобы LLM-агент мог итеративно дорабатывать
   сгенерированный дек.
-- **MCP-сервер**: 13 инструментов — `list_sources` + `list_exports`
-  (обнаружение), `search`, `fetch_paper`, `fetch_pdf_text`,
+- **MCP-сервер**: 14 инструментов — `list_sources` + `list_exports`
+  (обнаружение), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export` и шесть инструментов дека `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Позволяет
@@ -300,6 +300,18 @@ for key in irrelevant_keys:
   числом статей от поиска, потерявшего половину источников. CLI выводит
   их после каждого поиска `--query`, инструмент MCP `search` возвращает
   их как `source_stats`, а GUI показывает в строке состояния.
+- **Поиск «снежным комом» по цитированиям**: `--snowball
+  references|cited_by|both` (или инструмент MCP `snowball`) расширяет
+  верхние результаты по связям цитирования, назад к тому, что они
+  цитируют, и вперёд к тому, что цитирует их, и находит работы, которые
+  поиск по ключевым словам пропускает, потому что авторы использовали
+  другие термины. Каждое измерение ограничено (глубина 1 по умолчанию,
+  число статей на исходную статью, число статей всего), статья,
+  достигнутая несколькими путями, считается одной, и каждая найденная
+  статья хранит путь, которым её нашли. Связи берутся из OpenAlex,
+  Semantic Scholar и Crossref, а найденные статьи оцениваются тем же
+  ранжированием, так что частое цитирование не считается признаком
+  соответствия теме.
 - **Безопасность по умолчанию**: только HTTPS-транспорт HTTP, ограничение
   скорости по каждому источнику (token bucket), `defusedxml` для любого XML-payload,
   пути экспорта, защищённые от обхода каталогов, никакого `eval` / `exec` / `pickle` на
@@ -382,6 +394,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | Отрисовать pptx с тёмным фоном + почти белым текстом. По умолчанию — светлый дек с тёмно-синей полосой. |
 | `--no-verify-identifiers` | Экспорт без проверки DOI и URL статей. По умолчанию неверный или недоступный DOI / URL останавливает запуск до записи файлов. Для работы без сети. |
 | `--diagnostics` | Объясняет ранжирование поиска `--query`: выводит оценку каждой статьи (релевантность + новизна + цитирования) и справочную рекомендацию `keep` / `review` / `prune`, а полную разбивку записывает в `diagnostics.json` в `--out`. Ни одна статья не удаляется. |
+| `--snowball` | Расширяет результаты по связям цитирования перед экспортом: `references` (что цитируют верхние результаты), `cited_by` (что цитирует их) или `both`. Новые статьи добавляются в конец и проходят ту же загрузку и экспорт. По умолчанию выключено. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Границы для `--snowball`: сколько верхних результатов расширять (по умолчанию 5), сколько шагов проходить (1, не более 3), статей на исходную статью и направление (20), новых статей всего (20) и минимальная сохраняемая релевантность (0..1, по умолчанию выключена). |
 | `--quiet` | Подавить построчную печать по каждой статье. |
 
 ### Переменные окружения
@@ -445,7 +459,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | Перечислить каждый плагин + сообщить, включён ли каждый в текущем окружении. Вызовите это один раз перед `search`. |
 | `list_exports` | Перечислить каждый формат экспорта с однострочным описанием и тем, пишет ли он один сводный файл или один файл на статью. |
-| `search` | Ключевые слова → список статей. Принимает `top_tier_only`, `min_citations`; по умолчанию — полный набор источников без ключа API. `diagnostics=true` добавляет разбивку оценки по каждой статье и справочную рекомендацию `keep` / `review` / `prune` (из `papers` ничего не удаляется). Всегда возвращает `source_stats`: по каждому источнику `requested`, `returned`, `after_dedup` и `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
+| `search` | Ключевые слова → список статей. Принимает `top_tier_only`, `min_citations`; по умолчанию — полный набор источников без ключа API. `diagnostics=true` добавляет разбивку оценки по каждой статье и справочную рекомендацию `keep` / `review` / `prune` (из `papers` ничего не удаляется). Всегда возвращает `source_stats`: по каждому источнику `requested`, `returned`, `after_dedup` и `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` дополнительно расширяет верхние результаты по связям цитирования и добавляет блок `snowball` (`papers` не меняется). |
+| `snowball` | Исходные статьи → статьи, которые они цитируют (`references`), статьи, которые цитируют их (`cited_by`), или `both`, в фиксированных границах (`depth`, `max_per_seed`, `max_total`). Каждая найденная статья несёт путь, которым она достигнута. Необязательные `keywords` оценивают и упорядочивают их, а `min_relevance` отбрасывает не относящиеся к теме. |
 | `fetch_paper` | Идентификатор arXiv / DOI / PMID / IEEE → одна статья. |
 | `fetch_pdf_text` | Загрузить один PDF, вернуть извлечённый текст тела. **MCP-путь к «я прочитал статью».** |
 | `download_pdfs` | Пакетно загрузить PDF из списка статей в `{out_dir}/pdfs/`. Возвращает результаты по каждой статье с ключами по ключу BibTeX. |
@@ -481,7 +496,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (14 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

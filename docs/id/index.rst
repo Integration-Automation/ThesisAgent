@@ -50,7 +50,7 @@ Alur MCP 6 langkah
    5. (Anda membaca tiap PDF dan menghasilkan dict ringkasan terstruktur)
    6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 
-13 tool MCP lengkap: :doc:`/mcp`.
+14 tool MCP lengkap: :doc:`/mcp`.
 
 **Untuk menemukan hasil yang melenceng dari topik, mulailah dari saran
 alat itu sendiri.** ``--diagnostics`` (CLI) atau ``diagnostics=true``
@@ -70,6 +70,16 @@ deduplikasi, dan sebuah ``status`` bernilai ``ok``, ``failed``,
 menghentikan pencarian, jadi bacalah angka-angka ini sebelum
 menyimpulkan bahwa suatu topik sedikit makalahnya. CLI mencetak tabel
 yang sama setelah setiap pencarian ``--query``.
+
+**Ikuti sitasinya.** ``--snowball both`` (CLI) atau tool ``snowball``
+memperluas hasil teratas mengikuti tautan sitasinya: ``references``
+menambahkan apa yang mereka sitasi dan ``cited_by`` menambahkan apa yang
+menyitasi mereka. Cara ini menemukan karya yang terlewat oleh pencarian
+kata kunci karena penulisnya memakai istilah lain. Perluasan ini
+dibatasi (satu langkah secara default), setiap makalah yang ditemukan
+menyimpan jalur yang mencapainya, dan semuanya dinilai terhadap kata
+kunci Anda, sehingga sebuah makalah tidak dipertahankan hanya karena
+sering disitasi.
 
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -179,7 +189,7 @@ Bacaan lebih lanjut
 -------------------
 
 * Flag CLI dan variabel lingkungan: :doc:`/cli`
-* 13 tool server MCP: :doc:`/mcp`
+* 14 tool server MCP: :doc:`/mcp`
 * Toolkit edit PPTX: :doc:`/pptx_editing`
 * Berkas ``readmes/README.id.md`` di akar repo berisi daftar fitur lengkap.
 * Referensi teknis mendalam (arsitektur plugin, kebijakan keamanan,

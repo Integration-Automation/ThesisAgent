@@ -60,7 +60,7 @@ DOAJ, HAL, CORE, Google Scholar 에서 결과를 가져와 하나의 레코드
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-열세 개의 MCP 도구 전체(`list_sources`, `list_exports`,
+열네 개의 MCP 도구 전체(`list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / 등 포함)는 [`docs/mcp.md`](../docs/mcp.md)에
 문서화되어 있습니다.
@@ -229,8 +229,8 @@ for key in irrelevant_keys:
   add_slide)는 내보내기가 만들어 낸 어떤 덱에도 작동하며, 여기에
   더해 동등한 `pptx_*` MCP 도구가 있어 LLM 에이전트가 생성된 덱을
   반복 개선할 수 있습니다.
-- **MCP 서버**: 13개 도구 — `list_sources` + `list_exports`
-  (탐색), `search`, `fetch_paper`, `fetch_pdf_text`,
+- **MCP 서버**: 14개 도구 — `list_sources` + `list_exports`
+  (탐색), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`,
   `download_pdfs`, `export`, 그리고 여섯 개의 `pptx_*` 덱 도구
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). MCP 를 인식하는 어떤 LLM
@@ -271,6 +271,12 @@ for key in irrelevant_keys:
   실패·요청 제한·비활성 여부를 보고합니다. 오류가 난 소스는 검색을 멈추지 않고 건너뛰므로, 원래 논문이 적은 주제인지 소스의
   절반을 잃은 검색인지 구분해 주는 것이 이 수치입니다. CLI 는 `--query` 검색마다 출력하고, MCP `search`
   도구는 `source_stats` 로 반환하며, GUI 는 상태 표시줄에 보여 줍니다.
+- **인용 스노볼 검색**: `--snowball references|cited_by|both` (또는 MCP
+  `snowball` 도구) 는 상위 결과를 인용 관계를 따라 확장합니다. 뒤로는 그 논문들이 인용한 문헌을, 앞으로는 그
+  논문들을 인용한 문헌을 따라가, 저자가 다른 용어를 써서 키워드 검색이 놓치는 연구를 찾아냅니다. 모든 차원에 상한이 있고
+  (기본 깊이 1, 시드당 편수, 전체 편수), 여러 경로로 도달한 같은 논문은 한 편으로 처리되며, 발견된 논문마다 도달
+  경로가 기록됩니다. 인용 정보는 OpenAlex, Semantic Scholar, Crossref 에서 가져오고, 발견된
+  논문도 같은 랭커로 채점하므로 많이 인용되었다고 해서 주제에 맞는 것으로 보지 않습니다.
 - **기본값이 안전**: HTTPS 전용 HTTP 전송, 소스별 속도 제한(토큰
   버킷), 모든 XML 페이로드에 `defusedxml`, 경로 순회에 안전한
   내보내기 경로, 사용자 입력에 대한 `eval` / `exec` / `pickle` 없음.
@@ -353,6 +359,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | pptx 를 어두운 배경 + 거의 흰 텍스트로 렌더링. 기본은 라이트 네이비 밴드 덱. |
 | `--no-verify-identifiers` | 논문의 DOI 와 URL 을 확인하지 않고 내보냅니다. 기본적으로는 잘못되었거나 연결할 수 없는 DOI / URL 이 있으면 아무것도 쓰기 전에 실행이 중단됩니다. 오프라인용. |
 | `--diagnostics` | `--query` 검색의 순위를 설명합니다. 각 논문의 점수 (관련성 + 최신성 + 인용 수) 와 조언용 `keep` / `review` / `prune` 권고를 출력하고, 전체 내역을 `--out` 의 `diagnostics.json` 에 기록합니다. 논문은 제거되지 않습니다. |
+| `--snowball` | 내보내기 전에 결과를 인용 관계를 따라 확장합니다: `references` (상위 결과가 인용한 문헌), `cited_by` (그것들을 인용한 문헌) 또는 `both`. 새 논문은 결과 뒤에 추가되어 같은 다운로드와 내보내기를 거칩니다. 기본은 꺼짐. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` 의 상한: 확장할 상위 결과 수 (기본 5), 따라갈 단계 (1, 최대 3), 시드와 방향마다의 편수 (20), 새 논문 전체 수 (20), 유지할 최소 관련성 (0..1, 기본은 사용 안 함). |
 | `--quiet` | 논문별 출력을 억제. |
 
 ### 환경 변수
@@ -417,7 +425,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 모든 플러그인을 열거 + 현재 환경에서 각각이 활성인지 보고. `search` 전에 한 번 호출. |
 | `list_exports` | 모든 내보내기 형식을 한 줄 설명과 함께, 그리고 그것이 하나의 집계 파일을 쓰는지 논문당 하나의 파일을 쓰는지 열거. |
-| `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. `diagnostics=true` 는 논문별 점수 내역과 조언용 `keep` / `review` / `prune` 권고를 추가합니다 (`papers` 에서는 아무것도 제거되지 않습니다). 항상 `source_stats` 를 반환합니다: 소스별 `requested`, `returned`, `after_dedup`, `status` (`ok` / `failed` / `rate_limited` / `disabled`). |
+| `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. `diagnostics=true` 는 논문별 점수 내역과 조언용 `keep` / `review` / `prune` 권고를 추가합니다 (`papers` 에서는 아무것도 제거되지 않습니다). 항상 `source_stats` 를 반환합니다: 소스별 `requested`, `returned`, `after_dedup`, `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` 를 주면 상위 결과를 인용 관계를 따라 확장하고 `snowball` 블록을 추가합니다 (`papers` 는 그대로입니다). |
+| `snowball` | 시드 논문 → 그 논문들이 인용한 문헌 (`references`), 그 논문들을 인용한 문헌 (`cited_by`) 또는 `both` 를 고정된 상한 (`depth`, `max_per_seed`, `max_total`) 안에서 가져옵니다. 발견된 논문마다 도달 경로가 붙습니다. 선택 항목 `keywords` 로 채점하고 정렬하며, `min_relevance` 로 주제에서 벗어난 논문을 걸러냅니다. |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 식별자 → 단일 논문. |
 | `fetch_pdf_text` | 하나의 PDF 를 다운로드하여 추출한 본문 텍스트를 반환. **"내가 논문을 읽었다"에 이르는 MCP 경로.** |
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 로 일괄 다운로드. BibTeX 키로 키가 지정된 논문별 결과를 반환. |
@@ -453,7 +462,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (14 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

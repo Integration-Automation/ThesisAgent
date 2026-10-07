@@ -57,7 +57,7 @@ README 想搞清楚要做什么 —— 从这里开始。** 下面的所有内�
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-全部十三个 MCP 工具(包含 `list_sources`、`list_exports`、
+全部十四个 MCP 工具(包含 `list_sources`、`list_exports`、
 `download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / 等等)都记载于 [`docs/mcp.md`](../docs/mcp.md)。
 
@@ -199,8 +199,8 @@ for key in irrelevant_keys:
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   可对导出器产出的任何幻灯片运作,加上对应的 `pptx_*` MCP 工具,好让
   一个 LLM agent 能在产出的幻灯片上反复迭代。
-- **MCP 服务器**:13 个工具 —— `list_sources` + `list_exports`
-  (发现)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
+- **MCP 服务器**:14 个工具 —— `list_sources` + `list_exports`
+  (发现)、`search`、`snowball`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
   `export`,以及六个 `pptx_*` 幻灯片工具(`inspect`、`review`、
   `update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。让任何
   懂 MCP 的 LLM(Claude Code、Claude Desktop、Cursor …)驱动整个工作
@@ -227,6 +227,7 @@ for key in irrelevant_keys:
 - **导出前检查 (DOI / URL 验证)**: 写入任何文件之前,会到 doi.org 查询每个 DOI,并对每个网址发送一次请求。标识符错误或无法连接时,导出会停止并列出失败的论文与标识符。需要真实浏览器才能打开的出版商页面不会被请求 (由 DOI 检查覆盖),拒绝自动化访问的服务器会报告为“无法检查”而不会让整次运行失败。默认开启,离线时用 `--no-verify-identifiers` 关闭。
 - **可解释的排名与修剪建议**: 每次搜索都会记录每篇论文排在该位置的原因 (相关性、新近度、引用数三部分,命中的查询词,每项贡献一句说明),并为每条结果建议 `keep`、`review` 或 `prune`,同时指出触发的规则。仅凭引用数低不会触发任何建议。可用 `--diagnostics`、MCP `search` 工具的 `diagnostics=true`,或 GUI 的“建议”列查看。仅供参考,不会移除任何论文。
 - **各来源的搜索统计**: 每次搜索都会报告每个来源返回了几条记录、去重后有几篇论文归属于它,以及它是否失败、被限流或未启用。出错的来源会被跳过而不中断搜索,所以要分辨“主题本来就冷门”与“搜索丢了一半来源”,靠的就是这些数字。CLI 在每次 `--query` 搜索后打印,MCP `search` 工具以 `source_stats` 返回,GUI 则显示在状态栏。
+- **引用滚雪球搜索**: `--snowball references|cited_by|both` (或 MCP 的 `snowball` 工具) 会沿着引用关系扩充排名最前面的结果,往回找它们引用的文献、往前找引用它们的文献,补上关键词搜索因作者用词不同而漏掉的研究。每个维度都有上限 (默认深度 1、每个种子的篇数、总篇数),经由多条路径找到的同一篇论文只算一篇,每篇新找到的论文都会记下找到它的路径。引用数据来自 OpenAlex、Semantic Scholar 与 Crossref,新找到的论文同样由排名器评分,所以被引用得多不代表切题。
 - **默认就安全**:仅 HTTPS 的 HTTP 传输、每来源速率限制(token bucket)、
   对任何 XML payload 用 `defusedxml`、防路径穿越的导出路径、不对
   用户输入用 `eval` / `exec` / `pickle`。
@@ -307,6 +308,8 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--dark-mode` | 以深色背景 + 近白文本渲染 pptx。默认是浅色深蓝带幻灯片。 |
 | `--no-verify-identifiers` | 导出时不检查论文的 DOI 与网址。默认情况下,DOI / 网址错误或无法连接会在写入任何文件之前停止运行。供离线使用。 |
 | `--diagnostics` | 解释 `--query` 搜索的排名: 打印每篇论文的分数 (相关性 + 新近度 + 引用数) 与仅供参考的 `keep` / `review` / `prune` 建议,并把完整明细写到 `--out` 目录的 `diagnostics.json`。不会移除任何论文。 |
+| `--snowball` | 导出前沿着引用关系扩充结果: `references` (最前面的结果所引用的文献)、`cited_by` (引用它们的文献) 或 `both`。新论文会附加在结果后面,并走同样的下载与导出流程。默认关闭。 |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` 的上限: 要扩充的前几条结果 (默认 5)、追踪的步数 (1,最多 3)、每个种子每个方向的篇数 (20)、新论文总数 (20),以及保留的最低相关性 (0..1,默认不启用)。 |
 | `--quiet` | 抑制每篇论文的打印输出。 |
 
 ### 环境变量
@@ -370,7 +373,8 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 列举每个插件 + 报告各自在当前环境下是否启用。在 `search` 前调用一次。 |
 | `list_exports` | 列举每种导出格式,附一行描述,并说明它写一个汇总文件还是每篇论文一文件。 |
-| `search` | 关键字 → 论文清单。接受 `top_tier_only`、`min_citations`;默认走完整的免 API 密钥来源组合。 `diagnostics=true` 会加上每篇论文的分数明细与仅供参考的 `keep` / `review` / `prune` 建议 (不会从 `papers` 移除任何项目)。 始终返回 `source_stats`: 每个来源的 `requested`、`returned`、`after_dedup` 与 `status` (`ok` / `failed` / `rate_limited` / `disabled`)。 |
+| `search` | 关键字 → 论文清单。接受 `top_tier_only`、`min_citations`;默认走完整的免 API 密钥来源组合。 `diagnostics=true` 会加上每篇论文的分数明细与仅供参考的 `keep` / `review` / `prune` 建议 (不会从 `papers` 移除任何项目)。 始终返回 `source_stats`: 每个来源的 `requested`、`returned`、`after_dedup` 与 `status` (`ok` / `failed` / `rate_limited` / `disabled`)。 `snowball="both"` 还会沿着引用关系扩充最前面的结果,并加上 `snowball` 区块 (`papers` 不变)。 |
+| `snowball` | 种子论文 → 它们引用的文献 (`references`)、引用它们的文献 (`cited_by`) 或 `both`,皆在固定上限内 (`depth`、`max_per_seed`、`max_total`)。每篇新找到的论文都带有找到它的路径。可选的 `keywords` 会评分并排序,`min_relevance` 会滤掉离题的论文。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 标识符 → 单篇论文。 |
 | `fetch_pdf_text` | 下载一份 PDF,返回提取出的正文文本。**这是「我读了论文」的 MCP 路径。** |
 | `download_pdfs` | 批量把一份论文清单的 PDF 下载到 `{out_dir}/pdfs/`。返回以 BibTeX 键为索引的每篇论文结果。 |
@@ -406,7 +410,7 @@ ThesisAgents/
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (14 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,

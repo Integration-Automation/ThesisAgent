@@ -301,6 +301,7 @@ class SearchDiagnostics:
     scores: tuple[PaperScore, ...]    # PaperScore(paper_key, rank, score)
     pruning: tuple[PruningRecommendation, ...]
     source_stats: tuple[SourceStat, ...]   # one per source, in query order
+    relations: tuple[PaperRelation, ...]   # citation links, empty without snowballing
     # .score_for(paper_key) / .recommendation_for(paper_key)
 ```
 
@@ -364,6 +365,59 @@ class ExportOptions:
 | `max_slides_per_paper` | Caps each paper's slide count; the exporter drops lower-priority sections (figures, paper-tables, contribution-summary, pagination tails) until the count fits. Cover / overview / contributions / metrics / core observation / references are always kept. Pass `0` to disable the cap. |
 | `dark_mode` | `False` builds the light navy-band deck. `True` runs the dark post-build pass (slide background `#12151B`, body text `#E5E7EB`). |
 | `verify_identifiers` | `True` makes `export_collection` check every paper's DOI and URL first and raise `IdentifierVerificationError` when one is wrong or unreachable, before any file is written. `False` skips the check and logs a warning, for a machine with no network. See "Identifier verification report" below. |
+
+## Citation links and snowballing
+
+`thesisagents.core.snowball.snowball()` grows a set of papers along its
+citation links. A link is a `PaperRelation`, kept outside `Paper`
+because one paper can be reached along many paths:
+
+```python
+@dataclass(frozen=True)
+class PaperRelation:
+    source_key: str            # Paper.dedup_key() of the paper that was expanded
+    target_key: str            # Paper.dedup_key() of the paper found from it
+    relation: RelationKind     # "references" | "cited_by"
+    provider: str              # the source that reported the link
+    depth: int                 # steps from a seed, 1 = straight from a seed
+    # .citing_key / .cited_key give the direction of the citation
+```
+
+For `references` the source cites the target. For `cited_by` the target
+cites the source.
+
+```python
+from thesisagents.core.snowball import expand_collection, snowball
+
+result = await snowball(
+    collection.papers[:5],              # seeds
+    known=collection.papers,            # do not rediscover the rest
+    direction="both",                   # "references" | "cited_by" | "both"
+    depth=1,                            # 1..3
+    max_per_seed=20,                    # 1..100
+    max_total=200,                      # 1..1000
+    keywords=collection.query.keywords, # scores what is found
+    min_relevance=0.3,                  # optional, needs keywords
+)
+for found in result.discovered:         # DiscoveredPaper(paper, found_by, score)
+    print(found.paper.title, found.found_by.relation, found.found_by.source_key)
+collection = expand_collection(collection, result)
+```
+
+`SnowballResult` carries `seeds`, `discovered`, `relations` (every link
+seen), `errors` (a provider that failed) and `truncated` (the total cap
+ended the search early). `expand_collection` appends the discovered
+papers to the collection and records the links, scores and pruning
+recommendations in its `diagnostics`.
+
+`CitationProvider` (`thesisagents/fetchers/citations.py`) is the
+source-neutral interface behind it, with `references(paper, limit)` and
+`cited_by(paper, limit)`. See
+[`source_plugins.md`](source_plugins.md) "Adding a citation provider".
+
+`IdentityIndex` (`thesisagents/core/dedup.py`) is the incremental form
+of `dedupe`: `add(paper)` returns `(slot, is_new)`, so a caller that
+meets papers one at a time can ask "have I seen this one?".
 
 ## Identifier verification report
 
@@ -454,6 +508,7 @@ ThesisAgentsError                     # base — surfaces as exit code 2
 ├── FetchError
 │   ├── RateLimitError                   # 429 / explicit upstream rate limit
 │   ├── ParseError                       # malformed JSON / XML / HTML
+│   ├── CitationNotAvailableError        # a citation provider has no answer for this paper (expected, not a failure)
 │   └── SourceUnavailableError           # 5xx that retries can't recover
 ├── CacheError                           # disk-cache I/O failure
 └── ExportError                          # exporter failed to write

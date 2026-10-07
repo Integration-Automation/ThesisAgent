@@ -11,12 +11,17 @@ import argparse
 import asyncio
 import contextlib
 import dataclasses
-import json
 import sys
 from pathlib import Path
 from typing import Final
 
 from thesisagents import __version__
+from thesisagents.cli_output import (
+    DIAGNOSTICS_FILENAME,
+    print_snowball,
+    print_source_stats,
+    report_diagnostics,
+)
 from thesisagents.core.constants import (
     AGGREGATE_EXPORTS,
     ALL_EXPORTS,
@@ -29,13 +34,13 @@ from thesisagents.core.constants import (
     EXPORT_PPTX,
     EXPORT_XLSX,
     MAX_RESULTS_PER_SOURCE,
+    SNOWBALL_DEFAULT_DEPTH,
+    SNOWBALL_DEFAULT_MAX_PER_SEED,
+    SNOWBALL_MAX_DEPTH,
+    SNOWBALL_MAX_PER_SEED,
+    SNOWBALL_MAX_TOTAL,
 )
-from thesisagents.core.diagnostics import (
-    PruningAction,
-    SourceStatus,
-    collection_report,
-)
-from thesisagents.core.exceptions import ConfigError, ExportError, ThesisAgentsError
+from thesisagents.core.exceptions import ConfigError, ThesisAgentsError
 from thesisagents.core.export_validation import (
     IdentifierVerificationError,
     MemoryVerificationCache,
@@ -52,6 +57,7 @@ from thesisagents.core.pipeline import (
     run_single_paper,
 )
 from thesisagents.core.query import normalize_query
+from thesisagents.core.snowball import Direction, expand_collection, snowball
 from thesisagents.exporters import export_collection
 from thesisagents.exporters.i18n import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from thesisagents.fetchers.http import shutdown_clients
@@ -62,9 +68,11 @@ _LOG = get_logger(__name__)
 _DEFAULT_OUT_DIR = "./exports"
 _DEFAULT_EXPORTS_SEARCH = (EXPORT_PPTX, EXPORT_XLSX, EXPORT_BIBTEX)
 _DEFAULT_EXPORTS_SINGLE = (EXPORT_PPTX, EXPORT_BIBTEX)
-#: Written into --out by --diagnostics. A fixed name, so a script that
-#: prunes a run directory knows where to read the recommendations.
-DIAGNOSTICS_FILENAME = "diagnostics.json"
+#: --snowball defaults that are the CLI's own. Five seeds and twenty new
+#: papers keep a first expansion to a size a person can read through, and
+#: every new paper also costs a PDF download and a deck.
+DEFAULT_SNOWBALL_SEEDS = 5
+DEFAULT_SNOWBALL_MAX_TOTAL = 20
 DEFAULT_PAYWALL_THRESHOLD = 0.30
 
 
@@ -340,6 +348,67 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.set_defaults(resolve_oa=True)
     parser.add_argument(
+        "--snowball",
+        choices=tuple(direction.value for direction in Direction),
+        default=None,
+        help=(
+            "Expand the result along citation links before exporting. "
+            "'references' adds papers the top results cite, 'cited_by' adds "
+            "papers that cite them, 'both' does both. The new papers are "
+            "appended to the results and go through the same PDF download "
+            "and export. Off by default. Links come from OpenAlex, Semantic "
+            "Scholar and Crossref."
+        ),
+    )
+    parser.add_argument(
+        "--snowball-seeds",
+        type=int,
+        default=DEFAULT_SNOWBALL_SEEDS,
+        help=(
+            "How many of the top-ranked results to expand (used with "
+            f"--snowball). Default: {DEFAULT_SNOWBALL_SEEDS}."
+        ),
+    )
+    parser.add_argument(
+        "--snowball-depth",
+        type=int,
+        default=SNOWBALL_DEFAULT_DEPTH,
+        help=(
+            "Steps to follow from a seed (used with --snowball). 2 also "
+            "expands the papers found at step 1. "
+            f"1..{SNOWBALL_MAX_DEPTH}. Default: {SNOWBALL_DEFAULT_DEPTH}."
+        ),
+    )
+    parser.add_argument(
+        "--snowball-max-per-seed",
+        type=int,
+        default=SNOWBALL_DEFAULT_MAX_PER_SEED,
+        help=(
+            "Papers taken per seed and direction (used with --snowball). "
+            f"1..{SNOWBALL_MAX_PER_SEED}. Default: {SNOWBALL_DEFAULT_MAX_PER_SEED}."
+        ),
+    )
+    parser.add_argument(
+        "--snowball-max-total",
+        type=int,
+        default=DEFAULT_SNOWBALL_MAX_TOTAL,
+        help=(
+            "Stop after this many new papers in all (used with --snowball). "
+            f"1..{SNOWBALL_MAX_TOTAL}. Default: {DEFAULT_SNOWBALL_MAX_TOTAL}, "
+            "kept low because every new paper is also downloaded and exported."
+        ),
+    )
+    parser.add_argument(
+        "--snowball-min-relevance",
+        type=float,
+        default=None,
+        help=(
+            "Drop papers found by --snowball whose relevance to the --query "
+            "keywords is below this fraction (0..1) of the best possible. "
+            "Needs --query. Omit to keep every paper found."
+        ),
+    )
+    parser.add_argument(
         "--diagnostics",
         action="store_true",
         help=(
@@ -469,6 +538,7 @@ def _print_results(collection, quiet: bool) -> None:
 async def _run(args: argparse.Namespace) -> int:
     formats = _resolve_formats(args)
     _validate_exports(formats)
+    _validate_snowball_args(args)
     # ``pdf`` is advertised by --list-exports but has no exporter class: it
     # means "save the papers' PDFs", which is the --no-pdf download stage, not
     # a rendered artefact. Left in the list it reached export_collection and
@@ -506,9 +576,10 @@ async def _run(args: argparse.Namespace) -> int:
     pdf_results = []
     try:
         collection = await _collect(args)
-        _print_source_stats(collection, args.quiet)
+        print_source_stats(collection, args.quiet)
+        collection = await _maybe_snowball(collection, args)
         await _verify_identifiers_early(collection, args, verification_cache)
-        _report_diagnostics(collection, args)
+        report_diagnostics(collection, args)
         collection = await _maybe_enrich(collection, args)
         if gate_pptx and collection.papers and not _confirm_paywall(
             collection, threshold=args.paywall_threshold, auto_yes=args.yes
@@ -586,117 +657,68 @@ async def _verify_identifiers_early(
         )
 
 
-_SOURCE_DETAIL_MAX_CHARS: Final[int] = 100
+def _validate_snowball_args(args: argparse.Namespace) -> None:
+    """Reject a ``--snowball-*`` value outside its range before any search runs.
 
+    The boundary this guards: ``snowball()`` checks the same ranges, but only
+    when it is called, which is after the search. A typo in a flag should not
+    cost the user a multi-source search first.
 
-def _print_source_stats(collection: PaperCollection, quiet: bool) -> None:
-    """Print what each source contributed to the search that just ran.
-
-    The boundary this guards: a failing source returns nothing and never stops
-    the others, so a search that lost half its sources used to look exactly
-    like one that found nothing there. Printed after every ``--query`` search,
-    with no flag needed, because the user cannot know to ask.
-
-    Nothing is printed under ``--quiet``, or for ``--paper`` / ``--pdf`` runs,
-    which have no per-source counts.
-
-    Example::
-
-        Sources (up to 25 requested from each):
-          arxiv              23 returned, 19 after dedup
-          semantic_scholar    0 returned  rate_limited: gave up after 3 rate-limit retries
-          springer            0 returned  disabled: THESISAGENTS_SPRINGER_API_KEY is not set
+    Example: ``--snowball both --snowball-depth 9`` exits at once with
+    ``--snowball-depth must be in 1..3``.
     """
-    diagnostics = collection.diagnostics
-    if quiet or diagnostics is None or not diagnostics.source_stats:
+    if args.snowball is None:
         return
-    stats = diagnostics.source_stats
-    width = max(len(stat.source) for stat in stats)
-    print(f"\nSources (up to {stats[0].requested} requested from each):")
-    for stat in stats:
-        line = f"  {stat.source:<{width}}  {stat.returned:>3} returned"
-        if stat.status is SourceStatus.OK:
-            line += f", {stat.after_dedup} after dedup"
-        else:
-            detail = " ".join(stat.detail.split())
-            if len(detail) > _SOURCE_DETAIL_MAX_CHARS:
-                detail = detail[: _SOURCE_DETAIL_MAX_CHARS - 1] + "…"
-            line += f"  {stat.status.value}: {detail}" if detail else f"  {stat.status.value}"
-        print(line)
+    bounds = (
+        ("--snowball-seeds", args.snowball_seeds, MAX_RESULTS_PER_SOURCE),
+        ("--snowball-depth", args.snowball_depth, SNOWBALL_MAX_DEPTH),
+        ("--snowball-max-per-seed", args.snowball_max_per_seed, SNOWBALL_MAX_PER_SEED),
+        ("--snowball-max-total", args.snowball_max_total, SNOWBALL_MAX_TOTAL),
+    )
+    for flag, value, upper in bounds:
+        if not 1 <= value <= upper:
+            raise SystemExit(f"{flag} must be in 1..{upper}")
+    floor = args.snowball_min_relevance
+    if floor is None:
+        return
+    if not 0.0 <= floor <= 1.0:
+        raise SystemExit("--snowball-min-relevance must be in 0..1")
+    if not args.query:
+        raise SystemExit(
+            "--snowball-min-relevance scores papers against the --query "
+            "keywords, so it cannot be used with --paper or --pdf"
+        )
 
 
-def _report_diagnostics(
+async def _maybe_snowball(
     collection: PaperCollection, args: argparse.Namespace
-) -> None:
-    """Print and save the ranking explanation when ``--diagnostics`` is set.
+) -> PaperCollection:
+    """Expand ``collection`` along citation links when ``--snowball`` is set.
 
-    The boundary this guards: the search returns papers in an order the user
-    cannot otherwise question. This is where the score behind each position
-    and the pruning advice become visible, right after the search and before
-    any PDF is downloaded, so off-topic results can be spotted early.
+    The top ``--snowball-seeds`` papers are the seeds. The rest of the
+    collection is passed as ``known`` so a paper the search already returned
+    is not reported as new. Discovered papers are appended, which sends them
+    through the identifier preflight, the PDF download and the export like
+    any search result.
 
-    stdout gets one line per paper, with the reasons spelled out only for
-    papers recommended for review or pruning (a 25-paper run would otherwise
-    print some 200 lines). ``diagnostics.json`` in ``--out`` holds everything.
-    ``--quiet`` silences stdout and still writes the file.
-
-    Nothing is removed from ``collection``: the recommendations are advice.
-
-    Example line: ``[  4] prune   total 2.18 = relevance 0.00 + recency 0.11
-    + citations 2.07``.
+    Only a ``--query`` run scores what it finds: its keywords are what the
+    papers are scored against. ``--paper`` and ``--pdf`` have no keywords, so
+    their discoveries are kept in the order they were found.
     """
-    if not args.diagnostics or not collection.papers:
-        return
-    if collection.diagnostics is None:
-        print(
-            "No ranking diagnostics for this run: they are produced by "
-            "--query searches, not by --paper or --pdf.",
-            file=sys.stderr,
-        )
-        return
-    report = collection_report(collection)
-    path = ensure_export_dir(args.out) / DIAGNOSTICS_FILENAME
-    try:
-        path.write_text(
-            json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-    except OSError as err:
-        raise ExportError("diagnostics", f"could not write {path}: {err}") from err
-    if args.quiet:
-        return
-    print(f"\nRanking diagnostics for: {collection.query.keywords}")
-    for entry in report["papers"]:
-        _print_diagnostic_entry(entry)
-    summary = report["summary"]
-    print(
-        f"Recommendations: {summary[PruningAction.KEEP.value]} keep, "
-        f"{summary[PruningAction.REVIEW.value]} review, "
-        f"{summary[PruningAction.PRUNE.value]} prune. "
-        "Advice only, nothing was removed."
+    if args.snowball is None or not collection.papers:
+        return collection
+    result = await snowball(
+        collection.papers[: args.snowball_seeds],
+        known=collection.papers,
+        direction=args.snowball,
+        depth=args.snowball_depth,
+        max_per_seed=args.snowball_max_per_seed,
+        max_total=args.snowball_max_total,
+        keywords=collection.query.keywords if args.query else None,
+        min_relevance=args.snowball_min_relevance,
     )
-    print(f"Diagnostics written to: {path.resolve()}")
-
-
-def _print_diagnostic_entry(entry: dict) -> None:
-    """One paper of the ``--diagnostics`` printout (see ``_report_diagnostics``)."""
-    score = entry["score"]
-    advice = entry["recommendation"]
-    if score is None or advice is None:
-        print(f"  [{entry['rank']:>3}] (no score recorded) {entry['title']}")
-        return
-    print(
-        f"  [{entry['rank']:>3}] {advice['action']:<7} "
-        f"total {score['total']:.2f} = relevance {score['relevance']:.2f} "
-        f"+ recency {score['recency']:.2f} + citations {score['citation']:.2f}"
-    )
-    print(f"        {entry['title']}")
-    if advice["action"] == PruningAction.KEEP.value:
-        return
-    for reason in score["reasons"]:
-        print(f"        - {reason}")
-    for reason in advice["reasons"]:
-        print(f"        > {reason}")
-    print(f"        rule: {advice['threshold']}")
+    print_snowball(collection, result, args)
+    return expand_collection(collection, result)
 
 
 async def _run_download_only(args: argparse.Namespace) -> int:
@@ -708,7 +730,7 @@ async def _run_download_only(args: argparse.Namespace) -> int:
     """
     try:
         collection = await _collect(args)
-        _print_source_stats(collection, args.quiet)
+        print_source_stats(collection, args.quiet)
         pdf_results = (
             await download_pdfs(collection, args.out)
             if collection.papers and not args.pdf

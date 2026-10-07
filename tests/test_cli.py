@@ -1220,3 +1220,240 @@ def test_cli_diagnostics_file_includes_the_source_stats(
         "arxiv", "semantic_scholar", "springer", "dblp"
     ]
     assert report["source_stats"][0]["after_dedup"] == 19
+
+
+# ---------------------------------------------------------------------------
+# --snowball
+# ---------------------------------------------------------------------------
+
+
+class _GraphProvider:
+    """Citation provider answering from a dict keyed by ``(source_id, direction)``."""
+
+    def __init__(self, graph, name="openalex", fail_with=None):
+        self.name = name
+        self._graph = graph
+        self._fail_with = fail_with
+        self.calls: list[tuple[str, str, int]] = []
+
+    async def _answer(self, paper, direction, limit):
+        self.calls.append((paper.source_id, direction, limit))
+        if self._fail_with is not None:
+            raise self._fail_with
+        return list(self._graph.get((paper.source_id, direction), []))
+
+    async def references(self, paper, limit):
+        return await self._answer(paper, "references", limit)
+
+    async def cited_by(self, paper, limit):
+        return await self._answer(paper, "cited_by", limit)
+
+
+def _found(sid: str, title: str):
+    from thesisagents.core.models import Paper
+
+    return Paper(
+        source="openalex", source_id=sid, title=title, authors=("Ada Author",),
+        year=2024, venue=None, abstract="An abstract.",
+        url=f"https://example.org/{sid}", doi=f"10.1000/{sid}",
+        pdf_url=f"https://example.org/{sid}.pdf",
+    )
+
+
+@pytest.fixture()
+def citation_graph(monkeypatch, sample_papers):
+    seed_id = sample_papers[0].source_id
+    provider = _GraphProvider(
+        {
+            (seed_id, "references"): [_found("r1", "Attention Mechanisms Reviewed")],
+            (seed_id, "cited_by"): [
+                _found("c1", "Sparse Attention at Scale"),
+                _found("c2", "Cooking With Gas"),
+            ],
+        }
+    )
+    monkeypatch.setattr("thesisagents.core.snowball._default_providers", lambda: [provider])
+    return provider
+
+
+def test_cli_snowball_appends_the_discovered_papers_to_the_export(
+    tmp_path, patched_pipeline, citation_graph, sample_papers, capsys
+):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "both", "--snowball-seeds", "1"]
+    )
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "Snowball (both, depth 1) from 1 seed(s): 3 new paper(s), 3 citation link(s)." in out
+    assert "  + Attention Mechanisms Reviewed" in out
+    seed_key = sample_papers[0].bibtex_key()
+    assert f"      references of {seed_key} (openalex, depth 1)" in out
+    assert f"      cited_by of {seed_key} (openalex, depth 1)" in out
+    bib = next(tmp_path.glob("*.bib")).read_text(encoding="utf-8")
+    assert bib.count("@") == 5          # 2 search results + 3 discovered
+    assert "Sparse Attention at Scale" in bib
+    # The discovered papers are verified like any other: 2 URLs + 1 DOI from
+    # the search, 3 URLs + 3 DOIs from the snowball.
+    assert "Identifiers: 9 verified" in out
+
+
+def test_cli_snowball_is_off_by_default(tmp_path, patched_pipeline, citation_graph, capsys):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    assert citation_graph.calls == []
+    assert "Snowball" not in capsys.readouterr().out
+
+
+def test_cli_snowball_passes_the_flags_through(
+    tmp_path, patched_pipeline, citation_graph, sample_papers
+):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "cited_by", "--snowball-seeds", "1",
+         "--snowball-max-per-seed", "7", "--snowball-max-total", "1", "--quiet"]
+    )
+    assert code == 0
+    assert citation_graph.calls == [(sample_papers[0].source_id, "cited_by", 7)]
+    assert next(tmp_path.glob("*.bib")).read_text(encoding="utf-8").count("@") == 3
+
+
+def test_cli_snowball_min_relevance_drops_off_topic_papers(
+    tmp_path, patched_pipeline, citation_graph
+):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "both", "--snowball-seeds", "1",
+         "--snowball-min-relevance", "0.3", "--quiet"]
+    )
+    assert code == 0
+    bib = next(tmp_path.glob("*.bib")).read_text(encoding="utf-8")
+    assert "Sparse Attention at Scale" in bib
+    assert "Cooking With Gas" not in bib
+
+
+def test_cli_snowball_says_when_the_cap_stopped_it(
+    tmp_path, patched_pipeline, citation_graph, capsys
+):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "both", "--snowball-seeds", "1",
+         "--snowball-max-total", "2"]
+    )
+    assert code == 0
+    assert "Stopped at --snowball-max-total 2" in capsys.readouterr().out
+
+
+def test_cli_snowball_reports_a_failing_provider_and_still_exports(
+    tmp_path, patched_pipeline, monkeypatch, capsys
+):
+    from thesisagents.core.exceptions import SourceUnavailableError
+
+    broken = _GraphProvider({}, fail_with=SourceUnavailableError("openalex", "HTTP 503"))
+    monkeypatch.setattr("thesisagents.core.snowball._default_providers", lambda: [broken])
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "references", "--quiet"]
+    )
+    assert code == 0
+    err = capsys.readouterr().err
+    assert "snowball: openalex references lookup failed" in err   # shown despite --quiet
+    assert next(tmp_path.glob("*.bib")).read_text(encoding="utf-8").count("@") == 2
+
+
+def test_cli_snowball_records_the_links_in_the_diagnostics_file(
+    tmp_path, pipeline_returning, citation_graph, sample_papers
+):
+    import json
+
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "references", "--snowball-seeds", "1",
+         "--diagnostics", "--quiet"]
+    )
+    assert code == 0
+    report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
+    assert report["relations"] == [
+        {"source_key": sample_papers[0].dedup_key(), "target_key": "doi:10.1000/r1",
+         "relation": "references", "provider": "openalex", "depth": 1}
+    ]
+    assert [entry["rank"] for entry in report["papers"]] == [1, 2, 3]
+    discovered = report["papers"][2]
+    assert discovered["title"] == "Attention Mechanisms Reviewed"
+    assert discovered["score"]["matched_terms"] == ["attention"]
+    assert discovered["recommendation"]["action"] == "keep"
+
+
+@pytest.mark.parametrize(
+    ("flags", "message"),
+    [
+        (["--snowball-depth", "9"], "--snowball-depth must be in 1..3"),
+        (["--snowball-depth", "0"], "--snowball-depth must be in 1..3"),
+        (["--snowball-seeds", "0"], "--snowball-seeds must be in 1..200"),
+        (["--snowball-max-per-seed", "101"], "--snowball-max-per-seed must be in 1..100"),
+        (["--snowball-max-total", "1001"], "--snowball-max-total must be in 1..1000"),
+        (["--snowball-min-relevance", "1.5"], "--snowball-min-relevance must be in 0..1"),
+    ],
+)
+def test_cli_snowball_rejects_a_bad_bound_before_searching(
+    tmp_path, patched_pipeline, flags, message
+):
+    with pytest.raises(SystemExit) as raised:
+        cli_module.main(
+            ["--query", "x", "--source", "arxiv", "--out", str(tmp_path),
+             "--snowball", "both", *flags]
+        )
+    assert str(raised.value) == message
+    assert "query" not in patched_pipeline   # the search never ran
+
+
+def test_cli_snowball_bounds_are_ignored_when_snowball_is_off(tmp_path, patched_pipeline):
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path),
+         "--snowball-depth", "9"]
+    )
+    assert code == 0
+
+
+def test_cli_snowball_min_relevance_needs_a_query(tmp_path, monkeypatch, sample_papers):
+    with pytest.raises(SystemExit, match="cannot be used with --paper or --pdf"):
+        cli_module.main(
+            ["--paper", "2401.08741", "--out", str(tmp_path), "--snowball", "both",
+             "--snowball-min-relevance", "0.3"]
+        )
+
+
+def test_cli_snowball_rejects_an_unknown_direction(tmp_path):
+    with pytest.raises(SystemExit):
+        cli_module.main(
+            ["--query", "x", "--out", str(tmp_path), "--snowball", "sideways"]
+        )
+
+
+def test_cli_snowball_from_a_single_paper_keeps_discovery_order(
+    tmp_path, monkeypatch, sample_papers, citation_graph, capsys
+):
+    """--paper has no keywords, so nothing is scored and nothing reordered."""
+
+    async def fake_single(identifier: PaperIdentifier) -> PaperCollection:
+        query = Query(keywords=identifier.value, sources=("arxiv",), max_results=1)
+        return PaperCollection(query=query, papers=(sample_papers[0],))
+
+    async def fake_shutdown() -> None:
+        return None
+
+    monkeypatch.setattr(cli_module, "run_single_paper", fake_single)
+    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
+    code = cli_module.main(
+        ["--paper", "2401.08741", "--export", "bib", "--out", str(tmp_path),
+         "--snowball", "both"]
+    )
+    assert code == 0
+    out = capsys.readouterr().out
+    order = [out.index(title) for title in (
+        "Attention Mechanisms Reviewed", "Sparse Attention at Scale", "Cooking With Gas",
+    )]
+    assert order == sorted(order)

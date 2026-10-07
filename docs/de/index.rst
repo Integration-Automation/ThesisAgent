@@ -51,8 +51,8 @@ MCP-Workflow in 6 Schritten
    5. (Sie lesen jedes PDF und erzeugen strukturierten Summary-Dict)
    6. export(papers=[{...paper, "summary": {...}}], language="de", ...)
 
-Insgesamt 13 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
-``search``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+Insgesamt 14 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
+``search``, ``snowball``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
 ``export`` und sechs ``pptx_*``-Deck-Operationen (``pptx_inspect``,
 ``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
 ``pptx_reorder_slides``, ``pptx_add_slide``). Vollständige Referenz:
@@ -77,6 +77,16 @@ Deduplizierung zugerechnet werden, und einen ``status`` mit dem Wert
 Quelle wird übersprungen, ohne die Suche anzuhalten, lesen Sie diese
 Zahlen daher, bevor Sie schließen, dass es zu einem Thema wenige Papers
 gibt. Die CLI gibt dieselbe Tabelle nach jeder ``--query``-Suche aus.
+
+**Folgen Sie den Zitationen.** ``--snowball both`` (CLI) oder das Tool
+``snowball`` erweitert die obersten Ergebnisse entlang ihrer
+Zitationsverknüpfungen: ``references`` ergänzt, was sie zitieren, und
+``cited_by`` ergänzt, was sie zitiert. So finden sich Arbeiten, die eine
+Stichwortsuche übersieht, weil die Autoren andere Begriffe verwendet
+haben. Die Erweiterung ist begrenzt (standardmäßig ein Schritt), jedes
+gefundene Paper behält den Weg, der zu ihm führte, und alle werden gegen
+Ihre Stichwörter bewertet, sodass ein Paper nicht allein deshalb bleibt,
+weil es häufig zitiert wird.
 
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -190,7 +200,7 @@ Weiterführende Quellen
 ----------------------
 
 * CLI-Flags und Umgebungsvariablen: :doc:`/cli`
-* 13 MCP-Server-Tools: :doc:`/mcp`
+* 14 MCP-Server-Tools: :doc:`/mcp`
 * PPTX-Edit-Toolkit: :doc:`/pptx_editing`
 * Die Datei ``readmes/README.de.md`` im Repo-Root enthält die vollständige
   Feature-Liste.

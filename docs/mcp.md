@@ -87,7 +87,9 @@ venv-resolved binary directly:
 
 ## Tools
 
-The server exposes thirteen tools, grouped into five concerns.
+The server exposes fourteen tools, grouped into six concerns:
+discovery, search, citation snowballing, PDF retrieval, export and deck
+editing.
 
 ### `list_sources`
 
@@ -182,7 +184,11 @@ preprints always pass through.
   "year_to": null,
   "top_tier_only": true,
   "min_citations": 50,
-  "diagnostics": false
+  "diagnostics": false,
+  "snowball": null,
+  "snowball_seeds": 5,
+  "snowball_depth": 1,
+  "snowball_max_per_seed": 20
 }
 ```
 
@@ -284,6 +290,92 @@ nothing is removed for you. Use the block to decide which results are
 off-topic before calling `download_pdfs`, and read the abstract of a
 `review` or `prune` paper before dropping it. The rules behind the
 recommendations are listed in [`cli.md`](cli.md) "Ranking diagnostics".
+
+`snowball` (`"references"`, `"cited_by"` or `"both"`, default off)
+expands the top `snowball_seeds` results along their citation links and
+adds a `snowball` block shaped like the response of the `snowball` tool
+below. `papers` is left as the search returned it: the discovered papers
+are listed separately so you choose which to keep. They are scored
+against `keywords` and capped at 50. For other seeds, a relevance floor
+or a different cap, call the `snowball` tool.
+
+### `snowball`
+
+Grow a set of papers along its citation links. It finds work a keyword
+search misses because the authors used other words.
+
+```json
+{
+  "papers": [{"source": "crossref", "source_id": "10.1145/3292500.3330701",
+              "title": "Optuna: A Next-generation Hyperparameter Optimization Framework",
+              "url": "https://doi.org/10.1145/3292500.3330701",
+              "doi": "10.1145/3292500.3330701", "...": "..."}],
+  "direction": "both",
+  "depth": 1,
+  "max_per_seed": 10,
+  "max_total": 20,
+  "keywords": "hyperparameter optimization",
+  "min_relevance": 0.3,
+  "known": []
+}
+```
+
+| Argument | Meaning |
+|---|---|
+| `papers` | The seeds: paper dicts from `search` or `fetch_paper`. |
+| `direction` | `references` (what the seeds cite), `cited_by` (what cites them) or `both`. |
+| `depth` | Steps from a seed, 1 to 3. `2` also expands the papers found at step 1. |
+| `max_per_seed` | Papers taken per seed and direction, 1 to 100. |
+| `max_total` | New papers in all, 1 to 1000. |
+| `keywords` | Scores every discovered paper with the search ranker and lists them best first. |
+| `min_relevance` | 0 to 1, needs `keywords`. Drops papers below that fraction of the best possible relevance. A dropped paper is not expanded either. |
+| `known` | Papers you already hold besides the seeds. They are not reported as new. |
+
+Returns (abridged from a run of that request on 2026-10-08, which found
+five papers and listed this one second):
+
+```json
+{
+  "seed_count": 1,
+  "discovered_count": 5,
+  "truncated": false,
+  "errors": [],
+  "discovered": [
+    {"paper": {"source": "openalex", "title": "Hyperopt: a Python library for model selection and hyperparameter optimization", "...": "..."},
+     "found_by": {"source_key": "doi:10.1145/3292500.3330701",
+                  "target_key": "doi:10.1088/1749-4699/8/1/014008",
+                  "relation": "references", "provider": "openalex", "depth": 1},
+     "score": {"relevance_ratio": 1.0, "...": "..."}}
+  ],
+  "papers": [{"source": "openalex", "title": "Hyperopt: a Python library for model selection and hyperparameter optimization", "...": "..."}],
+  "relations": [
+    {"source_key": "doi:10.1145/3292500.3330701",
+     "target_key": "doi:10.1088/1749-4699/8/1/014008",
+     "relation": "references", "provider": "openalex", "depth": 1}
+  ]
+}
+```
+
+- `discovered` lists the new papers, best score first when `keywords`
+  were given. `found_by` is the first path that reached the paper:
+  `relation: "references"` means the paper at `source_key` cites the one
+  at `target_key`, and `"cited_by"` means the one at `target_key` cites
+  the one at `source_key`. `depth` is the number of steps from a seed.
+- `papers` is the same list as plain paper dicts, ready for
+  `download_pdfs` or `export`.
+- `relations` holds every link seen, including links to papers that were
+  already known.
+- `errors` names a provider that failed. The search carried on with the
+  next one.
+- `truncated` is true when `max_total` ended the expansion early.
+
+A paper reached along several paths is one paper, a seed is never
+reported as discovered, and no paper is expanded twice. Being cited
+often is not treated as a sign of being on topic, which is what
+`keywords` and `min_relevance` are for. Links come from OpenAlex,
+Semantic Scholar and Crossref, asked in that order until one returns
+papers. A bound outside its range fails the call with a message such as
+`depth must be in [1, 3]`.
 
 ### `fetch_paper`
 

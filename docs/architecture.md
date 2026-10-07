@@ -55,7 +55,7 @@ ThesisAgents/
 │   ├── exporters/                  # pptx / xlsx / bib / md / json / ris / csv / csl + pptx_edit + i18n
 │   ├── intelligence/               # PDF + Anthropic summariser ([intelligence] extra)
 │   ├── evaluation/                 # offline search-quality benchmark (see docs/search-quality.md)
-│   ├── mcp/                        # FastMCP server registering 13 tools ([mcp] extra)
+│   ├── mcp/                        # FastMCP server registering 14 tools ([mcp] extra)
 │   ├── gui/                        # PySide6 desktop UI ([gui] extra)
 │   ├── utils/                      # logging, path safety, async helpers
 │   ├── cli.py                      # argparse CLI
@@ -135,6 +135,9 @@ came back.
           └────────────────┘  fills pdf_url for paywalled-source papers
                   │
                   ▼
+        (optional) snowball    citation links → more papers, each with
+                  │            the path that reached it
+                  ▼
         (optional) enrich      PDF → PaperSummary
                   │
                   ▼
@@ -150,6 +153,50 @@ came back.
           │ Exporter      │  pptx, xlsx, bibtex, md, json, ris, csv, csl
           └───────────────┘
 ```
+
+### Citation providers and snowballing
+
+`core/snowball.py` grows a result along citation links: backward to the
+papers a seed cites, forward to the papers that cite it. It runs after
+ranking, on the top results, and the papers it finds join the collection
+before the export preflight.
+
+The citation logic is not in the search plugins' fetchers and not in the
+exporters. It sits behind `fetchers/citations.py::CitationProvider`
+(`references(paper, limit)`, `cited_by(paper, limit)`), implemented by a
+`citations.py` inside each plugin that has citation data:
+
+| Provider | Directions | Resolves a paper by |
+|---|---|---|
+| `openalex` | both | DOI, or its own work ID |
+| `semantic_scholar` | both | DOI, arXiv ID, or its own paper ID |
+| `crossref` | references only, and only those with a DOI | DOI |
+
+For each paper and direction the providers are asked in that order until
+one returns papers. `CitationNotAvailableError` ("I have no answer for
+this paper") moves on quietly. Any other error is recorded in the
+result and the next provider is asked, the same containment the search
+applies to a failing source.
+
+Four properties keep an unbounded graph in check:
+
+- **Bounds.** Depth 1 by default and at most 3, a cap per seed and
+  direction, and a cap on the total. A paper is expanded at most once.
+- **One identity model.** Found papers are matched with
+  `dedup.IdentityIndex`, the incremental form of `dedupe`: same DOI /
+  arXiv ID / title-hash keys, same guard against merging two papers
+  whose DOIs disagree. A paper reached along two paths is one paper.
+- **Provenance.** Each discovered paper keeps the first path that
+  reached it as a `PaperRelation(source_key, target_key, relation,
+  provider, depth)`. Levels are expanded in order, so the first path is
+  also a shortest one. Every link seen is kept for a citation graph.
+- **Relevance is scored.** Discovered papers go through
+  `rank_with_scores` against the query. A citation link is not treated
+  as evidence that a paper is on topic.
+
+The relationship lives in `PaperRelation`, outside `Paper`, because one
+paper can be reached along many paths and a list of them does not
+belong in a bibliographic record.
 
 ### Export preflight
 
@@ -363,9 +410,9 @@ library APIs return coroutines.
 
 ### MCP server (`thesisagents.mcp`)
 
-FastMCP registers thirteen tools. The agent calls them in sequence
-(`list_sources` → `search` → `fetch_pdf_text` per paper →
-`export`); the server is stateless across tool calls so the
+FastMCP registers fourteen tools. The agent calls them in sequence
+(`list_sources` → `search` → optionally `snowball` → `fetch_pdf_text`
+per paper → `export`); the server is stateless across tool calls so the
 agent's context is the only place state lives. See [MCP doc](mcp.md).
 
 ### Desktop GUI (`thesisagents.gui`)

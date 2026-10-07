@@ -9,7 +9,8 @@
 > [`docs/architecture.md`](docs/architecture.md); this file does not repeat it.
 > Last verified: 2026-10-08 on `dev`, with the export identifier preflight
 > (`thesisagents/core/export_validation.py`) and the search diagnostics
-> (`thesisagents/core/diagnostics.py`, `pruning.py`, per-source statistics in `pipeline.py`).
+> (`thesisagents/core/diagnostics.py`, `pruning.py`, per-source statistics in `pipeline.py`), and
+> citation snowballing (`thesisagents/core/snowball.py`, `thesisagents/fetchers/citations.py`).
 
 ## 1. Purpose
 
@@ -26,9 +27,9 @@
 | Path | Responsibility |
 |---|---|
 | `thesisagents/cli.py`, `__main__.py` | argparse CLI; bare invocation or `gui` launches the GUI, `review` audits a deck |
-| `thesisagents/core/` | Frozen models (`models.py`: `Query`, `Paper`, `PaperSummary`, `PaperCollection`, `ExportOptions`), `pipeline.run_search`, `dedup.py`, `ranking.py` (`rank` and the explained `rank_with_scores`), `pruning.py` (advisory keep / review / prune), `diagnostics.py` (the records both produce), `top_venues.py`, `oa_resolver.py`, `pdf_download.py`, `export_validation.py` (the DOI / URL preflight every export runs first), `constants.py` (source and export names) |
-| `thesisagents/fetchers/` | `Fetcher` base and `load_fetcher()`, HTTPS-only per-source `httpx` client (`http.get_client`, plus `http.scoped_client` for code that runs on a private event loop), token-bucket `rate_limit.py`, visible-Chrome helpers (`webrunner_browser.py`, `webrunner_pdf.py`) |
-| `thesisagents/sources/<name>/` | One plugin per source: `__init__.py` exposes `fetcher_class`, `fetcher.py`, `parser.py`; browser-backed sources (`ieee`, `scholar`) add `webrunner_backend.py` |
+| `thesisagents/core/` | Frozen models (`models.py`: `Query`, `Paper`, `PaperSummary`, `PaperCollection`, `ExportOptions`), `pipeline.run_search`, `dedup.py`, `ranking.py` (`rank` and the explained `rank_with_scores`), `pruning.py` (advisory keep / review / prune), `diagnostics.py` (the records both produce), `top_venues.py`, `oa_resolver.py`, `pdf_download.py`, `snowball.py` (bounded citation snowballing over `CitationProvider`s), `export_validation.py` (the DOI / URL preflight every export runs first), `constants.py` (source and export names) |
+| `thesisagents/fetchers/` | `Fetcher` base and `load_fetcher()`, HTTPS-only per-source `httpx` client (`http.get_client`, plus `http.scoped_client` for code that runs on a private event loop), token-bucket `rate_limit.py`, `citations.py` (`CitationProvider` base, `load_citation_provider()`, the shared `get_json`), visible-Chrome helpers (`webrunner_browser.py`, `webrunner_pdf.py`) |
+| `thesisagents/sources/<name>/` | One plugin per source: `__init__.py` exposes `fetcher_class`, `fetcher.py`, `parser.py`; browser-backed sources (`ieee`, `scholar`) add `webrunner_backend.py`, and sources with citation data (`openalex`, `semantic_scholar`, `crossref`) add `citations.py` exposing `citation_provider_class` |
 | `thesisagents/exporters/` | `Exporter` strategies (`pptx`, `xlsx`, `bibtex`, `markdown`, `json`, `ris`, `csv`, `csl`) and the `_REGISTRY` in `__init__.py`; `pptx_edit.py`, `review.py` / `audit.py` / `overflow.py` (deck audits), `i18n.py` (deck strings) |
 | `thesisagents/intelligence/` | PDF text / asset / metadata extraction and the API summariser (`summarise.py`), `[intelligence]` extra |
 | `thesisagents/mcp/` | FastMCP server (`server.build_server()`), `[mcp]` extra (held below mcp 2.0, which renamed FastMCP) |
@@ -52,12 +53,13 @@ An exporter never imports a fetcher; it only consumes a `PaperCollection`.
   `--year-from`, `--year-to`, `--min-citations`, `--top-tier-only`, `--export/-e`, `--out/-o`,
   `--filename-stem`, `--lang/-l`, `--enrich`, `--llm-model`, `--lightweight`, `--max-slides`,
   `--dark-mode`, `--no-pdf`, `--no-oa-resolve`, `--no-verify-identifiers`, `--diagnostics`,
-  `--paywall-threshold`,
+  `--snowball` (with `--snowball-seeds`, `--snowball-depth`, `--snowball-max-per-seed`,
+  `--snowball-max-total`, `--snowball-min-relevance`), `--paywall-threshold`,
   `--yes/-y`, `--quiet`.
   Discovery: `--list-sources`, `--list-exports`. Subcommands: `review <deck.pptx>`
   (`exporters/review.py`), `gui`. Reference: `docs/cli.md`.
 - **MCP**: `thesisagents-mcp` (`thesisagents/mcp/__main__.py`). Tools cover discovery (`list_sources`,
-  `list_exports`), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, and deck
+  `list_exports`), `search`, `snowball`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, and deck
   tools `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
   `pptx_reorder_slides`, `pptx_add_slide`. Stateless across calls. Reference: `docs/mcp.md`.
 - **GUI**: `thesisagents-gui` (`thesisagents.gui.app:main`), or `thesisagents` with no arguments.
@@ -91,6 +93,7 @@ Query (CLI flags / MCP search / GUI / library)
                                                             ieee / scholar via visible Chrome)
   → parser → list[Paper] → core.dedup → core.ranking (score per paper kept) → Query filters
   → core.pruning (advisory keep / review / prune, nothing removed) → PaperCollection.diagnostics
+  → optional core.snowball (top results → CitationProviders → more papers, each with its path)
   → core.oa_resolver (fills pdf_url) → optional PDF download → optional enrichment → PaperCollection
   → exporters.export_collection
       → core.export_validation (identifier preflight: DOI at doi.org, URL once; a failure stops here)
@@ -124,6 +127,10 @@ no key, no model → lightweight, abstract-based deck
   if it should run by default), and add recorded fixtures under `tests/fixtures/<name>/`.
   Paywalled or captcha-prone sources add a `webrunner_backend.py` on top of
   `thesisagents/fetchers/webrunner_browser.py`. Guide: [`docs/source_plugins.md`](docs/source_plugins.md).
+- **New citation provider**: add `thesisagents/sources/<name>/citations.py` with a `CitationProvider`
+  subclass, expose it as `citation_provider_class` in the plugin's `__init__.py`, and add the name to
+  `DEFAULT_CITATION_PROVIDERS` in `thesisagents/core/constants.py` if it should be asked by default.
+  Guide: [`docs/source_plugins.md`](docs/source_plugins.md) "Adding a citation provider".
 - **New exporter**: subclass `Exporter` (`thesisagents/exporters/base.py`), add an `EXPORT_*` name in
   `thesisagents/core/constants.py`, and register it in `_REGISTRY` in `thesisagents/exporters/__init__.py`.
 - **New MCP tool**: add it in one of the `_register_*` functions called by
