@@ -376,3 +376,176 @@ async def test_enrich_collection_caps_concurrency(monkeypatch):
     out = await pipeline_module.enrich_collection(collection, concurrency=3)
     assert len(out.papers) == 8
     assert 1 <= counters["peak"] <= 3  # never more than the cap in flight at once
+
+
+# ---------------------------------------------------------------------------
+# Diagnostics: the score behind each position + advisory pruning
+# ---------------------------------------------------------------------------
+
+
+def _scored_paper(sid: str, title: str, *, year: int = 2025, citations=None, venue=None):
+    return Paper(
+        source="arxiv", source_id=sid, title=title, authors=("Ada Author",),
+        year=year, venue=venue, abstract="", url=f"https://example.com/{sid}",
+        citation_count=citations,
+    )
+
+
+async def test_run_search_attaches_a_score_and_advice_per_paper(monkeypatch):
+    on_topic = _scored_paper("on", "Transformer Attention Explained")
+    off_topic = _scored_paper("off", "Cooking With Gas")
+    pool = {"arxiv": _make_fetcher("arxiv", [off_topic, on_topic])}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="transformer attention", sources=("arxiv",), max_results=10)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    diagnostics = collection.diagnostics
+    assert [p.source_id for p in collection.papers] == ["on", "off"]
+    assert [s.paper_key for s in diagnostics.scores] == [
+        p.dedup_key() for p in collection.papers
+    ]
+    assert [s.rank for s in diagnostics.scores] == [1, 2]
+    assert diagnostics.scores[0].score.matched_terms == ("transformer", "attention")
+    assert [a.action.value for a in diagnostics.pruning] == ["keep", "prune"]
+
+
+async def test_pruning_advice_never_removes_a_paper(monkeypatch):
+    """Advisory by design: a paper recommended for pruning is still returned."""
+    papers = [_scored_paper(str(i), f"Cooking With Gas Volume {i}") for i in range(4)]
+    pool = {"arxiv": _make_fetcher("arxiv", papers)}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="transformer attention", sources=("arxiv",), max_results=10)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    assert len(collection.papers) == 4
+    assert {a.action.value for a in collection.diagnostics.pruning} == {"prune"}
+
+
+async def test_diagnostic_ranks_are_renumbered_after_filters_and_the_cut(monkeypatch):
+    """A filter can remove the papers that held ranks 1 and 2. The recorded
+    ranks must match the positions in the collection the caller receives."""
+    papers = [
+        _scored_paper("a", "Transformer Attention One", citations=1),
+        _scored_paper("b", "Transformer Attention Two", citations=2),
+        _scored_paper("c", "Transformer Attention Three", citations=300),
+        _scored_paper("d", "Transformer Attention Four", citations=400),
+        _scored_paper("e", "Transformer Attention Five", citations=500),
+    ]
+    pool = {"arxiv": _make_fetcher("arxiv", papers)}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(
+        keywords="transformer attention", sources=("arxiv",), max_results=2,
+        min_citations=100,
+    )
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    assert [p.source_id for p in collection.papers] == ["e", "d"]
+    assert [s.rank for s in collection.diagnostics.scores] == [1, 2]
+    assert [a.rank for a in collection.diagnostics.pruning] == [1, 2]
+    assert len(collection.diagnostics.scores) == len(collection.papers)
+
+
+async def test_diagnostics_survive_oa_resolution_and_enrichment(monkeypatch):
+    """Both stages rebuild the collection. The explanation must come along,
+    and still find its paper after ``pdf_url`` / ``summary`` were filled in."""
+    import dataclasses
+
+    paper = _scored_paper("p", "Transformer Attention Explained")
+    pool = {"arxiv": _make_fetcher("arxiv", [paper])}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+
+    async def fake_enrich_one(paper, *, language, model):
+        return dataclasses.replace(paper, pdf_url="https://example.com/p.pdf")
+
+    monkeypatch.setattr(pipeline_module, "_enrich_one", fake_enrich_one)
+    query = Query(keywords="transformer attention", sources=("arxiv",), max_results=5)
+
+    searched = await pipeline_module.run_search(query)  # resolve_oa=True, network refused
+    enriched = await pipeline_module.enrich_collection(searched)
+
+    assert searched.diagnostics is not None
+    assert enriched.diagnostics is searched.diagnostics
+    key = enriched.papers[0].dedup_key()
+    assert enriched.diagnostics.score_for(key) is not None
+    assert enriched.diagnostics.recommendation_for(key).action.value == "keep"
+
+
+async def test_an_empty_search_still_carries_empty_diagnostics(monkeypatch):
+    pool = {"arxiv": _make_fetcher("arxiv", [])}
+    monkeypatch.setattr(pipeline_module, "load_fetcher", lambda name: pool[name])
+    query = Query(keywords="x", sources=("arxiv",), max_results=5)
+
+    collection = await pipeline_module.run_search(query, resolve_oa=False)
+
+    assert collection.papers == ()
+    assert collection.diagnostics.scores == ()
+    assert collection.diagnostics.pruning == ()
+
+
+def test_collection_equality_ignores_diagnostics():
+    """Two collections holding the same papers are the same result, however
+    they were explained. Tests and callers compare collections freely."""
+    from thesisagents.core.diagnostics import SearchDiagnostics
+    from thesisagents.core.models import PaperCollection
+
+    query = Query(keywords="x", sources=("arxiv",), max_results=5)
+    papers = (_scored_paper("p", "Title"),)
+
+    plain = PaperCollection(query=query, papers=papers)
+    explained = PaperCollection(query=query, papers=papers, diagnostics=SearchDiagnostics())
+
+    assert plain.diagnostics is None
+    assert plain == explained
+
+
+def test_collection_report_joins_scores_to_papers():
+    from thesisagents.core.diagnostics import collection_report
+    from thesisagents.core.models import PaperCollection
+    from thesisagents.core.ranking import rank_with_scores
+
+    papers = [
+        _scored_paper("on", "Transformer Attention Explained"),
+        _scored_paper("off", "Cooking With Gas"),
+    ]
+    ranked = rank_with_scores(papers, "transformer attention", current_year=2026)
+    query = Query(keywords="transformer attention", sources=("arxiv",), max_results=5)
+    collection = PaperCollection(
+        query=query,
+        papers=tuple(e.paper for e in ranked),
+        diagnostics=pipeline_module._diagnose(ranked),  # noqa: SLF001
+    )
+
+    report = collection_report(collection)
+
+    assert report["keywords"] == "transformer attention"
+    assert report["advisory"] is True
+    assert report["summary"] == {"keep": 1, "review": 0, "prune": 1}
+    first, second = report["papers"]
+    assert first["rank"] == 1
+    assert first["bibtex_key"] == papers[0].bibtex_key()
+    assert first["paper_key"] == papers[0].dedup_key()
+    assert first["score"]["matched_terms"] == ["transformer", "attention"]
+    assert first["recommendation"] == {
+        "action": "keep", "threshold": "",
+        "reasons": ["relevance is 87% of the best this query allows"],
+    }
+    assert second["recommendation"]["action"] == "prune"
+    assert second["recommendation"]["threshold"] == "prune_below_relevance=0.10"
+
+
+def test_collection_report_lists_papers_that_have_no_score():
+    from thesisagents.core.diagnostics import collection_report
+    from thesisagents.core.models import PaperCollection
+
+    query = Query(keywords="x", sources=("arxiv",), max_results=5)
+    collection = PaperCollection(query=query, papers=(_scored_paper("p", "Title"),))
+
+    report = collection_report(collection)
+
+    assert report["summary"] == {"keep": 0, "review": 0, "prune": 0}
+    assert report["papers"][0]["score"] is None
+    assert report["papers"][0]["recommendation"] is None
+    assert report["papers"][0]["title"] == "Title"

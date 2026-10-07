@@ -59,6 +59,15 @@ Press **Search**. The query runs on a worker thread so the UI stays
 responsive; the status bar reports progress and the results table
 populates when the run finishes.
 
+The last column, **Suggestion**, shows the advisory recommendation the
+search recorded for each paper: keep, review or prune. Hover any cell
+of a row to see why: the score split into relevance, recency and
+citations, a sentence per contribution, and the rule that triggered the
+recommendation. The column is advice. Every result stays in the table
+and in the export, and a low citation count alone never produces a
+recommendation. The rules are listed in [`cli.md`](cli.md) "Ranking
+diagnostics".
+
 Press **Export…**, pick an output directory, and the standard
 `.pptx` + `.xlsx` + `.bib` triple lands there.
 

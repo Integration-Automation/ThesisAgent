@@ -85,6 +85,15 @@ for key in irrelevant_keys:
 
 `exports/<run>/pdfs/<key>.pdf` + `exports/<run>/<key>.pptx` हटाएँ। aggregate `<slug>-<timestamp>.xlsx` / `.bib` को **रखें** — वे इस बात का ईमानदार रिकॉर्ड हैं कि खोज ने क्या लौटाया। सीमांत मामलों को समृद्ध सारांश मिलता है; किसी संभावित मिलान को चुपचाप गिराने की तुलना में अधिक-शामिल करना बेहतर है।
 
+**विषय से बाहर के परिणाम पहचानने के लिए tool की अपनी सलाह से शुरू
+करें।** `--diagnostics` (CLI) या MCP `search` tool पर `diagnostics=true`
+ranking समझाता है: हर paper का score relevance, recency और citations में
+बँटा हुआ, query के जो शब्द मिले, और `keep` / `review` / `prune` की
+सिफ़ारिश उस threshold के साथ जिसने उसे trigger किया। CLI पूरा breakdown
+output directory में `diagnostics.json` में भी लिखता है। ये सिफ़ारिशें
+केवल सलाह हैं और आपके लिए कुछ भी हटाया नहीं जाता, इसलिए कुछ भी delete
+करने से पहले `review` और `prune` वाले papers के abstract पढ़ें।
+
 ### कार्यान्वित उदाहरण
 
 [`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) में ठीक इसी प्रक्रिया से हाथ से लिखा एक समृद्ध सारांश है (एकल शोध-पत्र, rich-tier, zh-tw, हर समृद्ध फ़ील्ड भरा हुआ)। बहु-शोध-पत्र खोज इसी आकार का अनुसरण करती है — `PaperCollection` tuple में प्रति शोध-पत्र एक `Paper(...summary=PaperSummary(...))` प्रविष्टि।
@@ -131,6 +140,13 @@ for key in irrelevant_keys:
   और जो server automated access से इनकार करता है उसे run विफल करने के
   बजाय जाँच-योग्य नहीं के रूप में report किया जाता है। Default रूप से
   चालू, offline काम के लिए `--no-verify-identifiers` इसे बंद करता है।
+- **समझाने योग्य ranking और pruning सलाह**: हर search दर्ज करता है कि हर
+  paper अपनी जगह पर क्यों है (relevance, recency और citation के हिस्से,
+  query के मिले हुए शब्द, हर योगदान के लिए एक वाक्य) और हर परिणाम के लिए
+  `keep`, `review` या `prune` की सिफ़ारिश करता है, trigger हुए नियम के
+  नाम के साथ। केवल कम citation count कभी कोई सिफ़ारिश trigger नहीं करता।
+  `--diagnostics`, MCP `search` tool पर `diagnostics=true`, या GUI के
+  सुझाव column में देखें। केवल सलाह: कोई paper हटाया नहीं जाता।
 - **डिफ़ॉल्ट रूप से सुरक्षित**: HTTPS-only HTTP परिवहन, प्रति-स्रोत दर सीमा (token bucket), किसी भी XML payload के लिए `defusedxml`, path-traversal-सुरक्षित निर्यात पथ, उपयोगकर्ता इनपुट पर कोई `eval` / `exec` / `pickle` नहीं।
 - **zh-tw / zh-cn शब्दावली रक्षक**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` में ~244 regex पैटर्न पारंपरिक हांज़ी में रेंडर किए गए सरलीकृत-चीनी उधार शब्द पकड़ते हैं (जैसे `內存` → `記憶體`, `魯棒性` → `穩健性`, `軟件` → `軟體`, `緩存` → `快取`)। वही रक्षक zh-cn locale स्ट्रिंग्स के लिए उलटा चलता है। पूर्ण नियम + regex कैटलॉग `.claude/agents/rules/language-vocabulary-check.md` में हैं।
 
@@ -202,6 +218,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | प्रति-शोध-पत्र स्लाइड सीमा (डिफ़ॉल्ट 25; असीमित के लिए 0 पास करें)। |
 | `--dark-mode` | pptx को गहरे पृष्ठभूमि + लगभग-सफ़ेद टेक्स्ट के साथ render करें। डिफ़ॉल्ट हल्का navy-band डेक है। |
 | `--no-verify-identifiers` | Papers के DOI और URL जाँचे बिना export करता है। Default रूप से ग़लत या पहुँच से बाहर DOI / URL कुछ भी लिखने से पहले run रोक देता है। Offline उपयोग के लिए। |
+| `--diagnostics` | `--query` search की ranking समझाता है: हर paper का score (relevance + recency + citations) और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश print करता है, और पूरा breakdown `--out` में `diagnostics.json` में लिखता है। कोई paper हटाया नहीं जाता। |
 | `--quiet` | प्रति-शोध-पत्र प्रिंटआउट दबाएँ। |
 
 ### पर्यावरण चर
@@ -259,7 +276,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | प्रत्येक plugin की गणना करें + रिपोर्ट करें कि वर्तमान env में प्रत्येक सक्षम है या नहीं। `search` से पहले इसे एक बार कॉल करें। |
 | `list_exports` | प्रत्येक निर्यात प्रारूप की एक-पंक्ति व्याख्या + यह एक aggregate फ़ाइल लिखता है या प्रति-शोध-पत्र एक फ़ाइल, इसके साथ गणना करें। |
-| `search` | कीवर्ड → शोध-पत्रों की सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूर्ण API-key-रहित स्रोत मिश्रण। |
+| `search` | कीवर्ड → शोध-पत्रों की सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूर्ण API-key-रहित स्रोत मिश्रण। `diagnostics=true` हर paper का score breakdown और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश जोड़ता है (`papers` से कुछ नहीं हटाया जाता)। |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE पहचानकर्ता → एकल शोध-पत्र। |
 | `fetch_pdf_text` | एक PDF डाउनलोड करें, निकाला गया मुख्य पाठ लौटाएँ। **"मैंने शोध-पत्र पढ़ा" तक का MCP पथ।** |
 | `download_pdfs` | एक शोध-पत्र सूची की PDFs को `{out_dir}/pdfs/` में बैच-डाउनलोड करें। BibTeX कुंजी द्वारा अनुक्रमित प्रति-शोध-पत्र परिणाम लौटाता है। |

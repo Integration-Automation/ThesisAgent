@@ -58,6 +58,17 @@ Flujo MCP de 6 pasos
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
 Referencia completa: :doc:`/mcp`.
 
+**Para detectar resultados fuera de tema, empiece por el consejo de la
+propia herramienta.** ``--diagnostics`` (CLI) o ``diagnostics=true`` en
+la herramienta MCP ``search`` explica la clasificación: la puntuación de
+cada artículo dividida en relevancia, actualidad y citas, los términos
+de la consulta que coincidieron y una recomendación ``keep`` /
+``review`` / ``prune`` con el umbral que la motivó. La CLI también
+escribe el desglose completo en ``diagnostics.json`` dentro del
+directorio de salida. Las recomendaciones son orientativas y no se
+elimina nada por usted, así que lea los resúmenes de los artículos
+``review`` y ``prune`` antes de borrar algo.
+
 Obligatorio: verificación URL / DOI antes de entregar
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

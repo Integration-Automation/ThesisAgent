@@ -136,6 +136,17 @@ l'enregistrement honnête de ce que la recherche a renvoyé. Les cas limites
 reçoivent un résumé riche ; mieux vaut trop inclure que d'écarter
 silencieusement une correspondance possible.
 
+**Pour repérer les résultats hors sujet, partez des conseils de l'outil
+lui-même.** `--diagnostics` (CLI) ou `diagnostics=true` sur l'outil MCP
+`search` explique le classement : le score de chaque article réparti en
+pertinence, récence et citations, les termes de la requête qui
+correspondent, et une recommandation `keep` / `review` / `prune` avec le
+seuil qui l'a déclenchée. La CLI écrit aussi le détail complet dans
+`diagnostics.json` dans le répertoire de sortie. Les recommandations
+sont indicatives et rien n'est supprimé à votre place, lisez donc les
+résumés des articles `review` et `prune` avant de supprimer quoi que ce
+soit.
+
 ### Exemple travaillé
 
 [`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) fournit un résumé riche
@@ -276,6 +287,16 @@ dans le tuple `PaperCollection`.
   automatisé est signalé comme non vérifiable au lieu de faire échouer
   l'exécution. Activé par défaut, `--no-verify-identifiers` le désactive
   pour le travail hors ligne.
+- **Classement explicable et conseils d'élagage** : chaque recherche
+  enregistre pourquoi chaque article occupe son rang (parts de
+  pertinence, de récence et de citations, termes de la requête qui
+  correspondent, une phrase par contribution) et recommande `keep`,
+  `review` ou `prune` pour chaque résultat, en nommant la règle
+  déclenchée. Un faible nombre de citations ne déclenche jamais à lui
+  seul une recommandation. Visible avec `--diagnostics`, avec
+  `diagnostics=true` sur l'outil MCP `search`, ou dans la colonne
+  Suggestion de la GUI. Indicatif seulement : aucun article n'est
+  supprimé.
 - **Sûr par défaut** : transport HTTP uniquement HTTPS, limite de débit par
   source (token bucket), `defusedxml` pour toute charge utile XML, chemins
   d'export résistants à la traversée de répertoire, pas d'`eval` / `exec` /
@@ -359,6 +380,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | Plafond de diapositives par article (défaut 25 ; passez 0 pour illimité). |
 | `--dark-mode` | Rend la pptx avec un arrière-plan sombre + texte presque blanc. Le défaut est la présentation claire à bande bleu marine. |
 | `--no-verify-identifiers` | Exporte sans vérifier les DOI et les URL des articles. Par défaut, un DOI / URL erroné ou injoignable arrête l'exécution avant toute écriture. Pour un usage hors ligne. |
+| `--diagnostics` | Explique le classement d'une recherche `--query` : affiche le score de chaque article (pertinence + récence + citations) et une recommandation indicative `keep` / `review` / `prune`, et écrit le détail complet dans `diagnostics.json` sous `--out`. Aucun article n'est supprimé. |
 | `--quiet` | Supprime l'affichage par article. |
 
 ### Variables d'environnement
@@ -424,7 +446,7 @@ Outils :
 |---|---|
 | `list_sources` | Énumère chaque plugin + indique si chacun est activé dans l'environnement actuel. Appelez ceci une fois avant `search`. |
 | `list_exports` | Énumère chaque format d'export avec sa description en une ligne et s'il écrit un fichier agrégé ou un fichier par article. |
-| `search` | Mots-clés → liste d'articles. Accepte `top_tier_only`, `min_citations` ; par défaut le mix complet de sources sans clé API. |
+| `search` | Mots-clés → liste d'articles. Accepte `top_tier_only`, `min_citations` ; par défaut le mix complet de sources sans clé API. `diagnostics=true` ajoute le détail du score par article et une recommandation indicative `keep` / `review` / `prune` (rien n'est retiré de `papers`). |
 | `fetch_paper` | Identifiant arXiv / DOI / PMID / IEEE → article unique. |
 | `fetch_pdf_text` | Télécharge un PDF, renvoie le texte du corps extrait. **Le chemin MCP vers « j'ai lu l'article ».** |
 | `download_pdfs` | Télécharge par lot les PDF d'une liste d'articles dans `{out_dir}/pdfs/`. Renvoie des résultats par article indexés par clé BibTeX. |

@@ -215,6 +215,28 @@ is about Claude the model's multilingual ability, not Claude Code
 the agentic tool). Borderline cases get a rich summary — better to
 over-include than to silently drop a possible match.
 
+**Start from the tool's recommendations, then read the abstracts.** Run
+the search with `--diagnostics` (CLI) or `diagnostics=true` (MCP
+`search`). Each paper comes back with its score split into relevance,
+recency and citations, the query terms that matched, and a `keep` /
+`review` / `prune` recommendation naming the threshold that triggered
+it. The CLI writes the same to `exports/<run>/diagnostics.json`, with
+each paper's `bibtex_key`, the name its PDF and deck carry on disk.
+
+* **Why**: the classification used to rest on the agent noticing an
+  off-topic title among 25 results. The ranking already knew that a
+  paper matched none of the query terms and threw that away.
+* **It is advice.** Nothing is removed for you, and the rule is
+  lexical: a paper on the right topic that words it differently can be
+  marked `prune`, and an off-topic paper that repeats the query words
+  can be marked `keep`. Read the abstract before deleting.
+* **Example**: for "LLM code review", an object-detection literature
+  review comes back `review` with "title matches 1 of 3 query terms
+  (review)". Its abstract confirms it is off-topic, so it is pruned.
+* **Anti-pattern**: deleting every `prune` paper without opening one.
+  The recommendation narrows where to look, it does not replace the
+  judgement this section asks for.
+
 ## Sources you can search
 
 All fifteen sources sit in the default mix (used when `--source` is not

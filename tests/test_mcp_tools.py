@@ -580,3 +580,81 @@ def test_export_can_skip_verification(server, sample_papers, tmp_path):
     )
     assert payload["verification"] == {"enabled": False}
     assert Path(payload["written"]["bib"]).exists()
+
+
+# ---------------------------------------------------------------------------
+# search: diagnostics
+# ---------------------------------------------------------------------------
+
+
+def _diagnosed_collection(query, papers) -> PaperCollection:
+    """A collection the way ``run_search`` returns it: ranked, with diagnostics."""
+    from thesisagents.core import pipeline
+    from thesisagents.core.ranking import rank_with_scores
+
+    ranked = rank_with_scores(papers, query.keywords, current_year=2026)
+    return PaperCollection(
+        query=query,
+        papers=tuple(entry.paper for entry in ranked),
+        diagnostics=pipeline._diagnose(ranked),  # noqa: SLF001
+    )
+
+
+def test_search_without_the_flag_keeps_its_old_shape(monkeypatch, server, sample_papers):
+    async def fake_run_search(query, **_kwargs):
+        return _diagnosed_collection(query, sample_papers)
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(_call(server, "search", keywords="attention", sources=["arxiv"]))
+
+    assert set(payload) == {"query", "count", "papers"}
+    assert set(payload["papers"][0]) == set(sample_papers[0].to_dict())
+
+
+def test_search_diagnostics_explain_the_ranking(monkeypatch, server, sample_papers):
+    async def fake_run_search(query, **_kwargs):
+        return _diagnosed_collection(query, sample_papers)
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "search", keywords="attention", sources=["arxiv"], diagnostics=True)
+    )
+
+    report = payload["diagnostics"]
+    assert report["advisory"] is True
+    assert report["summary"] == {"keep": 1, "review": 0, "prune": 1}
+    assert payload["count"] == 2  # advice only: both papers are still returned
+    on_topic, off_topic = report["papers"]
+    assert on_topic["title"] == "Sample Paper on Attention"
+    assert on_topic["bibtex_key"] == sample_papers[0].bibtex_key()
+    assert on_topic["score"]["matched_terms"] == ["attention"]
+    assert on_topic["recommendation"]["action"] == "keep"
+    assert off_topic["recommendation"]["action"] == "prune"
+    assert off_topic["recommendation"]["threshold"] == "prune_below_relevance=0.10"
+    assert [p["rank"] for p in report["papers"]] == [1, 2]
+
+
+def test_search_diagnostics_tolerate_a_collection_without_any(
+    monkeypatch, server, sample_papers
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "search", keywords="attention", sources=["arxiv"], diagnostics=True)
+    )
+
+    assert [p["score"] for p in payload["diagnostics"]["papers"]] == [None, None]

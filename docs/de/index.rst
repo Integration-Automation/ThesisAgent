@@ -58,6 +58,17 @@ Insgesamt 13 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
 ``pptx_reorder_slides``, ``pptx_add_slide``). Vollständige Referenz:
 :doc:`/mcp`.
 
+**Um themenfremde Ergebnisse zu erkennen, beginnen Sie mit den Hinweisen
+des Werkzeugs selbst.** ``--diagnostics`` (CLI) oder
+``diagnostics=true`` beim MCP-Tool ``search`` erklärt das Ranking: die
+Punktzahl jedes Papers, aufgeteilt in Relevanz, Aktualität und
+Zitationen, die übereinstimmenden Suchbegriffe und eine Empfehlung
+``keep`` / ``review`` / ``prune`` mit dem auslösenden Schwellenwert. Die
+CLI schreibt die vollständige Aufschlüsselung außerdem in
+``diagnostics.json`` im Ausgabeverzeichnis. Die Empfehlungen sind
+Hinweise und es wird nichts für Sie entfernt, lesen Sie daher die
+Abstracts der ``review``- und ``prune``-Papers, bevor Sie etwas löschen.
+
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

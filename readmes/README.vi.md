@@ -133,6 +133,16 @@ bản ghi trung thực về những gì tìm kiếm đã trả về. Các trư�
 giới thì cứ tạo một bản tóm tắt đầy đủ; thà bao gồm quá mức còn hơn âm
 thầm bỏ sót một khả năng khớp.
 
+**Để tìm các kết quả lạc đề, hãy bắt đầu từ gợi ý của chính công cụ.**
+`--diagnostics` (CLI) hoặc `diagnostics=true` trên công cụ MCP `search`
+giải thích thứ hạng: điểm của từng bài báo được tách thành độ liên quan,
+độ mới và số trích dẫn, các từ khóa truy vấn đã khớp, cùng một khuyến
+nghị `keep` / `review` / `prune` kèm ngưỡng đã kích hoạt nó. CLI cũng
+ghi bảng phân tích đầy đủ vào `diagnostics.json` trong thư mục đầu ra.
+Các khuyến nghị chỉ mang tính tham khảo và không có gì bị xóa thay bạn,
+vì vậy hãy đọc tóm tắt của các bài `review` và `prune` trước khi xóa bất
+cứ thứ gì.
+
 ### Ví dụ thực tế
 
 [`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) chứa một bản
@@ -269,6 +279,14 @@ cho mỗi bài trong tuple `PaperCollection`.
   phủ), còn máy chủ từ chối truy cập tự động được báo là không thể kiểm
   tra thay vì làm hỏng lần chạy. Bật theo mặc định,
   `--no-verify-identifiers` tắt nó khi làm việc ngoại tuyến.
+- **Xếp hạng có giải thích và gợi ý lược bỏ**: mỗi lần tìm kiếm ghi lại
+  vì sao từng bài báo đứng ở vị trí đó (phần độ liên quan, độ mới và
+  trích dẫn, các từ khóa truy vấn đã khớp, một câu cho mỗi đóng góp) và
+  khuyến nghị `keep`, `review` hoặc `prune` cho từng kết quả, nêu rõ quy
+  tắc đã kích hoạt. Chỉ riêng số trích dẫn thấp không bao giờ kích hoạt
+  khuyến nghị. Xem bằng `--diagnostics`, bằng `diagnostics=true` trên
+  công cụ MCP `search`, hoặc cột Gợi ý trong GUI. Chỉ là gợi ý: không
+  bài báo nào bị xóa.
 - **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit theo
   từng nguồn (token bucket), `defusedxml` cho mọi payload XML,
   các đường xuất an-toàn-với-path-traversal, không `eval` / `exec` / `pickle` trên
@@ -350,6 +368,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | Giới hạn slide mỗi bài (mặc định 25; truyền 0 cho không giới hạn). |
 | `--dark-mode` | Render pptx với nền tối + chữ gần trắng. Mặc định là deck sáng dải navy. |
 | `--no-verify-identifiers` | Xuất mà không kiểm tra DOI và URL của các bài báo. Theo mặc định, DOI / URL sai hoặc không thể kết nối sẽ dừng lần chạy trước khi ghi bất cứ thứ gì. Dùng khi ngoại tuyến. |
+| `--diagnostics` | Giải thích thứ hạng của một lần tìm `--query`: in điểm của từng bài báo (độ liên quan + độ mới + trích dẫn) cùng khuyến nghị tham khảo `keep` / `review` / `prune`, và ghi bảng phân tích đầy đủ vào `diagnostics.json` trong `--out`. Không bài báo nào bị xóa. |
 | `--quiet` | Tắt in ấn theo từng bài. |
 
 ### Biến môi trường
@@ -413,7 +432,7 @@ Công cụ:
 |---|---|
 | `list_sources` | Liệt kê mọi plugin + báo cái nào đang bật trong env hiện tại. Gọi nó một lần trước `search`. |
 | `list_exports` | Liệt kê mọi định dạng xuất với mô tả một dòng và việc nó ghi một file tổng hợp hay một file mỗi bài. |
-| `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. |
+| `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. `diagnostics=true` thêm bảng phân tích điểm theo từng bài và khuyến nghị tham khảo `keep` / `review` / `prune` (không có gì bị xóa khỏi `papers`). |
 | `fetch_paper` | Định danh arXiv / DOI / PMID / IEEE → một bài đơn. |
 | `fetch_pdf_text` | Tải một PDF, trả về văn bản thân bài đã trích. **Cổng MCP tới "tôi đã đọc bài".** |
 | `download_pdfs` | Tải hàng loạt PDF của một danh sách bài vào `{out_dir}/pdfs/`. Trả về kết quả từng bài có khóa theo khóa BibTeX. |

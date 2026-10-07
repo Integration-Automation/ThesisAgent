@@ -123,8 +123,8 @@ came back.
                   │
                   ▼
             ┌──────────┐
-            │ rank     │  recency × log(citation_count)
-            └──────────┘
+            │ rank     │  relevance + recency + citation, the three
+            └──────────┘  parts kept per paper (rank_with_scores)
                   │
                   ▼
         (optional) top-tier filter
@@ -138,8 +138,8 @@ came back.
         (optional) enrich      PDF → PaperSummary
                   │
                   ▼
-          PaperCollection
-                  │
+          PaperCollection      + diagnostics: score per paper and
+                  │              advisory keep / review / prune
                   ▼
           ┌───────────────┐
           │ preflight     │  every DOI at doi.org, every URL once;
@@ -247,15 +247,55 @@ papers, heavy overlap) it completes in under 50 ms.
 
 ### Ranking
 
-Default rank score: `0.5 · normalised_year + 0.5 · log(1 + citation_count) / 20`.
+`core/ranking.py` scores each paper on three axes and sorts by the sum:
 
-Older but heavily-cited papers (the "Attention Is All You Need"
-of any field) still win against recent unknowns; very recent
-papers without citations are surfaced because the recency term
-keeps them in the top quartile.
+| Axis | Formula | Range |
+|---|---|---|
+| relevance | `3.0 · (query terms in the title / query terms) + 0.6 · (query terms in the abstract / query terms) + 1.0 · (adjacent query pairs adjacent in the title / adjacent query pairs)` | 0 to 4.6 (3.6 for a one-word query) |
+| recency | `exp(-age_in_years / 5)` | 0 to 1 |
+| citation | `0.4 · log10(citation_count + 1)` | about 2.0 at 100,000 citations |
 
-Override the weight split per query via the optional `min_citations`
-filter on the MCP `search` tool.
+Relevance dominates on purpose. De-duplication merges the sources'
+lists and discards each source's own ordering, so without a relevance
+term the merged list would sort by recency and citations alone and a
+heavily cited off-topic paper would bury an on-topic one. A full title
+match (3.0) outranks even a 100,000-citation paper (2.0).
+
+Matching is more than exact words: light stemming (`transformers`
+matches `transformer`), a small acronym map (`llm` matches "large
+language model" and the reverse), and character bigrams for Chinese,
+Japanese and Korean text.
+
+`rank(papers, keywords)` returns the sorted papers.
+`rank_with_scores(papers, keywords)` returns the same order with a
+`RelevanceScore` per paper: the three axis values, the matched terms
+and phrases, and one sentence per contribution. `run_search` uses the
+second form and attaches the result to `PaperCollection.diagnostics`.
+
+### Pruning recommendations
+
+`core/pruning.py` reads those scores and labels each paper `keep`,
+`review` or `prune`, naming the rule and threshold behind the label:
+
+1. relevance below 10% of the best the query allows is `prune`, below
+   30% is `review`,
+2. a `review` paper that is also ten or more years old and has fewer
+   than 5 citations becomes `prune`,
+3. a paper whose title shares at least 85% of its terms with a
+   higher-ranked paper is `review`. De-duplication keeps a workshop
+   paper and its journal version apart because their DOIs differ, and
+   this is where the overlap is reported.
+
+The recommendations are advice. `run_search` attaches them to the
+collection and removes nothing: a paper marked `prune` is still
+returned, downloaded and exported until a person or an agent decides
+otherwise. Two things never trigger a recommendation: a low citation
+count on its own (a new on-topic paper has none yet), and an unknown
+year or citation count (the source did not say, which is not the same
+as old or uncited).
+
+The `min_citations`, year-range and top-tier filters are separate from
+ranking. They run after it, in `run_search`, for every source.
 
 ### Enrichment
 

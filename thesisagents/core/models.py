@@ -12,6 +12,7 @@ from thesisagents.core.constants import (
     DEFAULT_PAGE_SIZE,
     MAX_RESULTS_PER_SOURCE,
 )
+from thesisagents.core.diagnostics import SearchDiagnostics
 from thesisagents.core.exceptions import ThesisAgentsError
 
 _TITLE_NOISE_RE = re.compile(r"[^a-z0-9]+")
@@ -537,6 +538,15 @@ class PaperCollection:
 
     query: Query
     papers: tuple[Paper, ...]
+    #: What the search can say about itself: the score behind each paper's
+    #: position and the advisory pruning recommendations. ``run_search`` fills
+    #: it in. A collection built by hand (the MCP ``export`` tool, a regen
+    #: script, ``--pdf`` mode) leaves it ``None``, so every reader must accept
+    #: that. Left out of ``==``: two collections holding the same papers are
+    #: the same result however they were explained. A stage that swaps papers
+    #: should use ``dataclasses.replace(collection, papers=...)`` so this
+    #: survives, as the entries are keyed by ``Paper.dedup_key()``.
+    diagnostics: SearchDiagnostics | None = field(default=None, compare=False)
 
     def __len__(self) -> int:
         return len(self.papers)

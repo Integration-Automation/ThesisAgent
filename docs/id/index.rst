@@ -52,6 +52,16 @@ Alur MCP 6 langkah
 
 13 tool MCP lengkap: :doc:`/mcp`.
 
+**Untuk menemukan hasil yang melenceng dari topik, mulailah dari saran
+alat itu sendiri.** ``--diagnostics`` (CLI) atau ``diagnostics=true``
+pada tool MCP ``search`` menjelaskan peringkat: skor setiap makalah yang
+dipecah menjadi relevansi, kebaruan, dan sitasi, istilah kueri yang
+cocok, serta rekomendasi ``keep`` / ``review`` / ``prune`` beserta
+ambang yang memicunya. CLI juga menulis rincian lengkap ke
+``diagnostics.json`` di direktori keluaran. Rekomendasi ini hanyalah
+saran dan tidak ada yang dihapus untuk Anda, jadi bacalah abstrak
+makalah ``review`` dan ``prune`` sebelum menghapus apa pun.
+
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

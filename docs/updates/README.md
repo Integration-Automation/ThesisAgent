@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-03 | 2026-10-08 | Rankings are explained, results get advisory pruning recommendations | #done #ranking #cli #mcp #gui | [2026-10](2026-10.md) |
 | U-20261008-02 | 2026-10-08 | Export verifies every DOI and URL before writing | #done #export #cli #mcp #gui | [2026-10](2026-10.md) |
 | U-20261008-01 | 2026-10-08 | Test suite restores the environment and refuses live HTTP | #incident #tests | [2026-10](2026-10.md) |
 | U-20261001-05 | 2026-10-01 | Publish job builds with the locked build backend | #done #ci #security #X-13 | [2026-10](2026-10.md) |
@@ -95,5 +96,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 7 |
+| [2026-10.md](2026-10.md) | 2026-10 | 8 |
 | [2026-09.md](2026-09.md) | 2026-09 | 25 |

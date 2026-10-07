@@ -53,6 +53,16 @@ Decision tree
 
 Twelve MCP tools total; full reference at :doc:`/mcp`.
 
+**To spot off-topic results, start from the tool's own advice.**
+``--diagnostics`` (CLI) or ``diagnostics=true`` on the MCP ``search``
+tool explains the ranking: each paper's score split into relevance,
+recency and citations, the query terms that matched, and a ``keep`` /
+``review`` / ``prune`` recommendation with the threshold behind it. The
+CLI also writes the full breakdown to ``diagnostics.json`` in the output
+directory. The recommendations are advice and nothing is removed for
+you, so read the abstracts of the ``review`` and ``prune`` papers before
+deleting anything.
+
 Mandatory: URL / DOI verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

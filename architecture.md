@@ -8,7 +8,8 @@
 > and ranking rules, OA-PDF resolution, rendering tiers, design rationale) is in
 > [`docs/architecture.md`](docs/architecture.md); this file does not repeat it.
 > Last verified: 2026-10-08 on `dev`, with the export identifier preflight
-> (`thesisagents/core/export_validation.py`).
+> (`thesisagents/core/export_validation.py`) and the search diagnostics
+> (`thesisagents/core/diagnostics.py`, `pruning.py`).
 
 ## 1. Purpose
 
@@ -25,7 +26,7 @@
 | Path | Responsibility |
 |---|---|
 | `thesisagents/cli.py`, `__main__.py` | argparse CLI; bare invocation or `gui` launches the GUI, `review` audits a deck |
-| `thesisagents/core/` | Frozen models (`models.py`: `Query`, `Paper`, `PaperSummary`, `PaperCollection`, `ExportOptions`), `pipeline.run_search`, `dedup.py`, `ranking.py`, `top_venues.py`, `oa_resolver.py`, `pdf_download.py`, `export_validation.py` (the DOI / URL preflight every export runs first), `constants.py` (source and export names) |
+| `thesisagents/core/` | Frozen models (`models.py`: `Query`, `Paper`, `PaperSummary`, `PaperCollection`, `ExportOptions`), `pipeline.run_search`, `dedup.py`, `ranking.py` (`rank` and the explained `rank_with_scores`), `pruning.py` (advisory keep / review / prune), `diagnostics.py` (the records both produce), `top_venues.py`, `oa_resolver.py`, `pdf_download.py`, `export_validation.py` (the DOI / URL preflight every export runs first), `constants.py` (source and export names) |
 | `thesisagents/fetchers/` | `Fetcher` base and `load_fetcher()`, HTTPS-only per-source `httpx` client (`http.get_client`, plus `http.scoped_client` for code that runs on a private event loop), token-bucket `rate_limit.py`, visible-Chrome helpers (`webrunner_browser.py`, `webrunner_pdf.py`) |
 | `thesisagents/sources/<name>/` | One plugin per source: `__init__.py` exposes `fetcher_class`, `fetcher.py`, `parser.py`; browser-backed sources (`ieee`, `scholar`) add `webrunner_backend.py` |
 | `thesisagents/exporters/` | `Exporter` strategies (`pptx`, `xlsx`, `bibtex`, `markdown`, `json`, `ris`, `csv`, `csl`) and the `_REGISTRY` in `__init__.py`; `pptx_edit.py`, `review.py` / `audit.py` / `overflow.py` (deck audits), `i18n.py` (deck strings) |
@@ -50,7 +51,8 @@ An exporter never imports a fetcher; it only consumes a `PaperCollection`.
   overrides). Source and output control: `--source/-s`, `--exclude-source/-x`, `--max/-n`,
   `--year-from`, `--year-to`, `--min-citations`, `--top-tier-only`, `--export/-e`, `--out/-o`,
   `--filename-stem`, `--lang/-l`, `--enrich`, `--llm-model`, `--lightweight`, `--max-slides`,
-  `--dark-mode`, `--no-pdf`, `--no-oa-resolve`, `--no-verify-identifiers`, `--paywall-threshold`,
+  `--dark-mode`, `--no-pdf`, `--no-oa-resolve`, `--no-verify-identifiers`, `--diagnostics`,
+  `--paywall-threshold`,
   `--yes/-y`, `--quiet`.
   Discovery: `--list-sources`, `--list-exports`. Subcommands: `review <deck.pptx>`
   (`exporters/review.py`), `gui`. Reference: `docs/cli.md`.
@@ -87,7 +89,8 @@ Query (CLI flags / MCP search / GUI / library)
   → fetchers.base.load_fetcher(name) for each source      (imports thesisagents.sources.<name>)
   → asyncio.gather over Fetcher.fetch                      (per-source token bucket, HTTPS-only client;
                                                             ieee / scholar via visible Chrome)
-  → parser → list[Paper] → core.dedup → core.ranking → optional top-venue filter
+  → parser → list[Paper] → core.dedup → core.ranking (score per paper kept) → Query filters
+  → core.pruning (advisory keep / review / prune, nothing removed) → PaperCollection.diagnostics
   → core.oa_resolver (fills pdf_url) → optional PDF download → optional enrichment → PaperCollection
   → exporters.export_collection
       → core.export_validation (identifier preflight: DOI at doi.org, URL once; a failure stops here)

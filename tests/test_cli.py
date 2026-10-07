@@ -1005,3 +1005,125 @@ def test_cli_verify_identifiers_defaults_on():
         parser.parse_args(["--query", "x", "--no-verify-identifiers"]).verify_identifiers
         is False
     )
+
+
+# ---------------------------------------------------------------------------
+# --diagnostics
+# ---------------------------------------------------------------------------
+
+
+def _diagnosed(papers, keywords: str = "attention") -> PaperCollection:
+    """A collection the way ``run_search`` returns it: ranked, with diagnostics."""
+    from thesisagents.core import pipeline
+    from thesisagents.core.ranking import rank_with_scores
+
+    ranked = rank_with_scores(papers, keywords, current_year=2026)
+    query = Query(keywords=keywords, sources=("arxiv",), max_results=5)
+    return PaperCollection(
+        query=query,
+        papers=tuple(entry.paper for entry in ranked),
+        diagnostics=pipeline._diagnose(ranked),  # noqa: SLF001
+    )
+
+
+def test_cli_diagnostics_prints_and_writes_the_breakdown(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    import json
+
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        [
+            "--query", "attention", "--source", "arxiv", "--export", "bib",
+            "--out", str(tmp_path), "--diagnostics",
+        ]
+    )
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "Ranking diagnostics for: attention" in out
+    assert "[  1] keep " in out
+    assert "[  2] prune " in out
+    assert "total " in out and "= relevance " in out
+    # Reasons are spelled out only for papers that are not "keep".
+    assert "        - no query term appears in the title or abstract" in out
+    assert "        rule: prune_below_relevance=0.10" in out
+    assert "title matches 1 of 1 query terms" not in out
+    assert "Recommendations: 1 keep, 0 review, 1 prune. Advice only, nothing was removed." in out
+
+    report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
+    assert report["summary"] == {"keep": 1, "review": 0, "prune": 1}
+    assert [p["bibtex_key"] for p in report["papers"]] == [
+        sample_papers[0].bibtex_key(), sample_papers[1].bibtex_key()
+    ]
+    # The file holds the full reasons for every paper, including "keep".
+    assert report["papers"][0]["score"]["reasons"][0].startswith(
+        "title matches 1 of 1 query terms (attention)"
+    )
+    # Advice only: the pruned paper is still exported.
+    bib = next(tmp_path.glob("*.bib")).read_text(encoding="utf-8")
+    assert bib.count("@") == 2
+
+
+def test_cli_without_diagnostics_writes_no_report(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    assert "Ranking diagnostics" not in capsys.readouterr().out
+    assert not (tmp_path / "diagnostics.json").exists()
+
+
+def test_cli_diagnostics_quiet_still_writes_the_file(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        [
+            "--query", "attention", "--source", "arxiv", "--export", "bib",
+            "--out", str(tmp_path), "--diagnostics", "--quiet",
+        ]
+    )
+    assert code == 0
+    assert "Ranking diagnostics" not in capsys.readouterr().out
+    assert (tmp_path / "diagnostics.json").exists()
+
+
+def test_cli_diagnostics_says_when_a_run_has_none(tmp_path, monkeypatch, sample_papers, capsys):
+    """--paper fetches one paper by ID: there is no query to be relevant to."""
+
+    async def fake_single(identifier: PaperIdentifier) -> PaperCollection:
+        query = Query(keywords=identifier.value, sources=("arxiv",), max_results=1)
+        return PaperCollection(query=query, papers=(sample_papers[0],))
+
+    async def fake_shutdown() -> None:
+        return None
+
+    monkeypatch.setattr(cli_module, "run_single_paper", fake_single)
+    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
+    code = cli_module.main(
+        ["--paper", "2401.08741", "--export", "bib", "--out", str(tmp_path), "--diagnostics"]
+    )
+    assert code == 0
+    assert "No ranking diagnostics for this run" in capsys.readouterr().err
+    assert not (tmp_path / "diagnostics.json").exists()
+
+
+def test_cli_diagnostics_survive_the_per_paper_deck_path(
+    tmp_path, pipeline_returning, sample_papers
+):
+    """The per-paper path rebuilds the collection from the downloadable papers.
+    The report is written before that, from the full ranked result."""
+    import json
+
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--out", str(tmp_path),
+         "--diagnostics", "--yes"]
+    )
+    assert code == 0
+    report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
+    assert len(report["papers"]) == 2
+    assert len(list(tmp_path.glob("*.pptx"))) == 2

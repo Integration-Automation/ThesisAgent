@@ -239,20 +239,85 @@ The pipeline's output and every exporter's input.
 class PaperCollection:
     query: Query              # the originating query (for provenance)
     papers: tuple[Paper, ...] # deduplicated, ranked
+    diagnostics: SearchDiagnostics | None = None  # why each paper ranks where it does
 ```
 
 | Field | Notes |
 |---|---|
 | `query` | Used by the `.xlsx` exporter's "Query" provenance sheet, by the `.md` exporter's header, and by the `.pptx` exporter's footer. |
 | `papers` | Tuple (frozen). Order matters — exporters render in the order given. |
+| `diagnostics` | Filled in by `run_search`: the score behind each paper's position and the advisory pruning recommendations. `None` for a collection built by hand (the MCP `export` tool, a regen script, `--pdf` mode), so every reader must accept `None`. Not part of `==`: two collections with the same papers are equal however they were explained. See "Search diagnostics" below. |
 
 ### Helpers
 
 ```python
 len(collection)                # → len(collection.papers)
-collection.to_dict()           # → JSON-serialisable
-PaperCollection.from_dict(d)   # → round-trip
+for paper in collection: ...   # iterates collection.papers
+collection[0]                  # → collection.papers[0]
 ```
+
+A stage that swaps the papers of a collection uses
+`dataclasses.replace(collection, papers=...)`, so `diagnostics` comes
+along. Its entries are keyed by `Paper.dedup_key()`, which stays the
+same when a later stage fills in `pdf_url` or attaches a `summary`.
+
+## Search diagnostics
+
+`thesisagents.core.diagnostics` holds the records that explain a search
+result. `ranking.rank_with_scores` and `pruning.recommend_pruning`
+produce them.
+
+```python
+@dataclass(frozen=True)
+class RelevanceScore:
+    total: float                      # relevance + recency + citation
+    relevance: float                  # query overlap with title / abstract, plus phrase bonus
+    recency: float                    # exp(-age / 5 years)
+    citation: float                   # 0.4 * log10(citations + 1)
+    matched_terms: tuple[str, ...]    # query terms found, in query order, stemmed
+    matched_phrases: tuple[str, ...]  # adjacent query pairs adjacent in the title
+    reasons: tuple[str, ...]          # one sentence per contribution
+    relevance_ratio: float | None     # relevance / best possible, None without a query
+
+@dataclass(frozen=True)
+class PruningRecommendation:
+    paper_key: str                    # Paper.dedup_key()
+    rank: int                         # 1-based position in the collection
+    action: PruningAction             # "keep" | "review" | "prune"
+    reasons: tuple[str, ...]
+    threshold: str                    # e.g. "prune_below_relevance=0.10", "" for keep
+
+@dataclass(frozen=True)
+class SearchDiagnostics:
+    scores: tuple[PaperScore, ...]    # PaperScore(paper_key, rank, score)
+    pruning: tuple[PruningRecommendation, ...]
+    # .score_for(paper_key) / .recommendation_for(paper_key)
+```
+
+Ranking a list yourself:
+
+```python
+from thesisagents.core.pruning import recommend_pruning
+from thesisagents.core.ranking import rank_with_scores
+
+ranked = rank_with_scores(papers, "retrieval augmented generation")
+for entry, advice in zip(ranked, recommend_pruning(ranked)):
+    print(entry.rank, f"{entry.score.total:.2f}", advice.action, entry.paper.title)
+```
+
+`rank(papers, keywords)` returns the same order as
+`rank_with_scores(papers, keywords)` without the scores.
+`RankingPolicy` (the axis weights) and `PruningPolicy` (the thresholds)
+are optional arguments with the defaults described in
+[`architecture.md`](architecture.md) "Ranking" and
+[`cli.md`](cli.md) "Ranking diagnostics".
+
+`collection_report(collection)` joins the scores and recommendations to
+the papers, one entry per paper. It is the shape of the CLI's
+`diagnostics.json` and of the MCP `search` tool's `diagnostics` block.
+
+The pruning recommendations are advice. Nothing in the pipeline removes
+a paper because of them.
 
 ## `ExportOptions`
 

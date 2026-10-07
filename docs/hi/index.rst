@@ -55,6 +55,16 @@ MCP 6 चरण
 ``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
 ``pptx_reorder_slides``, ``pptx_add_slide``)। पूर्ण संदर्भ: :doc:`/mcp`।
 
+**विषय से बाहर के परिणाम पहचानने के लिए tool की अपनी सलाह से शुरू
+करें।** ``--diagnostics`` (CLI) या MCP ``search`` tool पर
+``diagnostics=true`` ranking समझाता है: हर paper का score relevance,
+recency और citations में बँटा हुआ, query के जो शब्द मिले, और ``keep`` /
+``review`` / ``prune`` की सिफ़ारिश उस threshold के साथ जिसने उसे trigger
+किया। CLI पूरा breakdown output directory में ``diagnostics.json`` में
+भी लिखता है। ये सिफ़ारिशें केवल सलाह हैं और आपके लिए कुछ भी हटाया नहीं
+जाता, इसलिए कुछ भी delete करने से पहले ``review`` और ``prune`` वाले
+papers के abstract पढ़ें।
+
 अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

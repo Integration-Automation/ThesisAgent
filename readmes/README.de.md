@@ -133,6 +133,17 @@ ehrliche Aufzeichnung dessen, was die Suche zurückgegeben hat. Grenzfälle
 erhalten eine reichhaltige Zusammenfassung; besser zu viel aufnehmen als
 stillschweigend einen möglichen Treffer fallen zu lassen.
 
+**Um themenfremde Ergebnisse zu erkennen, beginnen Sie mit den Hinweisen
+des Werkzeugs selbst.** `--diagnostics` (CLI) oder `diagnostics=true`
+beim MCP-Tool `search` erklärt das Ranking: die Punktzahl jedes Papers,
+aufgeteilt in Relevanz, Aktualität und Zitationen, die übereinstimmenden
+Suchbegriffe und eine Empfehlung `keep` / `review` / `prune` mit dem
+auslösenden Schwellenwert. Die CLI schreibt die vollständige
+Aufschlüsselung außerdem in `diagnostics.json` im Ausgabeverzeichnis.
+Die Empfehlungen sind Hinweise und es wird nichts für Sie entfernt,
+lesen Sie daher die Abstracts der `review`- und `prune`-Papers, bevor
+Sie etwas löschen.
+
 ### Durchgearbeitetes Beispiel
 
 [`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) liefert eine von Hand
@@ -273,6 +284,14 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   automatisierten Zugriff ablehnt, wird als nicht prüfbar gemeldet,
   statt den Lauf scheitern zu lassen. Standardmäßig aktiv,
   `--no-verify-identifiers` schaltet sie für Offline-Arbeit ab.
+- **Erklärbares Ranking und Aussortier-Hinweise**: Jede Suche hält fest,
+  warum ein Paper an seiner Position steht (Anteile von Relevanz,
+  Aktualität und Zitationen, übereinstimmende Suchbegriffe, ein Satz pro
+  Beitrag), und empfiehlt für jedes Ergebnis `keep`, `review` oder
+  `prune` samt der auslösenden Regel. Eine niedrige Zitationszahl allein
+  löst nie eine Empfehlung aus. Sichtbar mit `--diagnostics`, mit
+  `diagnostics=true` beim MCP-Tool `search` oder in der Spalte
+  Empfehlung der GUI. Nur ein Hinweis: Kein Paper wird entfernt.
 - **Standardmäßig sicher**: Nur-HTTPS-HTTP-Transport, quellenweise
   Ratenbegrenzung (Token-Bucket), `defusedxml` für jede XML-Nutzlast,
   pfadtraversierungssichere Exportpfade, kein `eval` / `exec` / `pickle` auf
@@ -356,6 +375,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | Folienobergrenze pro Paper (Standard 25; übergib 0 für unbegrenzt). |
 | `--dark-mode` | Rendert die pptx mit dunklem Hintergrund + fast weißem Text. Standard ist der helle Foliensatz mit marineblauem Band. |
 | `--no-verify-identifiers` | Exportiert, ohne die DOIs und URLs der Papers zu prüfen. Standardmäßig stoppt eine falsche oder nicht erreichbare DOI / URL den Lauf, bevor etwas geschrieben wird. Für den Offline-Einsatz. |
+| `--diagnostics` | Erklärt das Ranking einer `--query`-Suche: gibt die Punktzahl jedes Papers aus (Relevanz + Aktualität + Zitationen) sowie eine unverbindliche Empfehlung `keep` / `review` / `prune` und schreibt die vollständige Aufschlüsselung nach `diagnostics.json` in `--out`. Kein Paper wird entfernt. |
 | `--quiet` | Unterdrückt die Ausgabe pro Paper. |
 
 ### Umgebungsvariablen
@@ -421,7 +441,7 @@ Tools:
 |---|---|
 | `list_sources` | Zählt jedes Plugin auf + meldet, ob es in der aktuellen Umgebung aktiviert ist. Rufe dies einmal vor `search` auf. |
 | `list_exports` | Zählt jedes Exportformat mit seiner einzeiligen Beschreibung auf und ob es eine aggregierte Datei oder eine Datei pro Paper schreibt. |
-| `search` | Schlagwörter → Liste von Papern. Akzeptiert `top_tier_only`, `min_citations`; nutzt standardmäßig den vollständigen Quellenmix ohne API-Schlüssel. |
+| `search` | Schlagwörter → Liste von Papern. Akzeptiert `top_tier_only`, `min_citations`; nutzt standardmäßig den vollständigen Quellenmix ohne API-Schlüssel. `diagnostics=true` ergänzt die Punkteaufschlüsselung pro Paper und eine unverbindliche Empfehlung `keep` / `review` / `prune` (aus `papers` wird nichts entfernt). |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE-Identifikator → einzelnes Paper. |
 | `fetch_pdf_text` | Lädt ein PDF herunter, gibt extrahierten Fließtext zurück. **Der MCP-Pfad zu „Ich habe das Paper gelesen".** |
 | `download_pdfs` | Lädt die PDFs einer Paper-Liste stapelweise nach `{out_dir}/pdfs/` herunter. Gibt Ergebnisse pro Paper zurück, indiziert nach BibTeX-Schlüssel. |

@@ -112,6 +112,8 @@ for key in irrelevant_keys:
 返回了什么的诚实记录。边界情况就给它一份丰富摘要;宁可多收也不要
 默默漏掉一个可能的匹配。
 
+**要找出离题的结果,先参考工具自己的建议。** CLI 的 `--diagnostics` 或 MCP `search` 工具的 `diagnostics=true` 会解释排名: 每篇论文的分数拆成相关性、新近度与引用数三部分,列出命中的查询词,并给出 `keep` / `review` / `prune` 建议与触发它的阈值。CLI 还会把完整明细写到输出目录的 `diagnostics.json`。这些只是建议,工具不会替你移除任何论文,所以删除前请先读过 `review` 与 `prune` 论文的摘要。
+
 ### 实作范例
 
 [`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) 附了一份正是
@@ -223,6 +225,7 @@ for key in irrelevant_keys:
   密钥时)。在 IEEE / ACM / Springer / Elsevier 为主的查询上典型的
   提升:40-70 个百分点。
 - **导出前检查 (DOI / URL 验证)**: 写入任何文件之前,会到 doi.org 查询每个 DOI,并对每个网址发送一次请求。标识符错误或无法连接时,导出会停止并列出失败的论文与标识符。需要真实浏览器才能打开的出版商页面不会被请求 (由 DOI 检查覆盖),拒绝自动化访问的服务器会报告为“无法检查”而不会让整次运行失败。默认开启,离线时用 `--no-verify-identifiers` 关闭。
+- **可解释的排名与修剪建议**: 每次搜索都会记录每篇论文排在该位置的原因 (相关性、新近度、引用数三部分,命中的查询词,每项贡献一句说明),并为每条结果建议 `keep`、`review` 或 `prune`,同时指出触发的规则。仅凭引用数低不会触发任何建议。可用 `--diagnostics`、MCP `search` 工具的 `diagnostics=true`,或 GUI 的“建议”列查看。仅供参考,不会移除任何论文。
 - **默认就安全**:仅 HTTPS 的 HTTP 传输、每来源速率限制(token bucket)、
   对任何 XML payload 用 `defusedxml`、防路径穿越的导出路径、不对
   用户输入用 `eval` / `exec` / `pickle`。
@@ -302,6 +305,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | 每篇论文的幻灯片上限(默认 25;传 0 表示无上限)。 |
 | `--dark-mode` | 以深色背景 + 近白文本渲染 pptx。默认是浅色深蓝带幻灯片。 |
 | `--no-verify-identifiers` | 导出时不检查论文的 DOI 与网址。默认情况下,DOI / 网址错误或无法连接会在写入任何文件之前停止运行。供离线使用。 |
+| `--diagnostics` | 解释 `--query` 搜索的排名: 打印每篇论文的分数 (相关性 + 新近度 + 引用数) 与仅供参考的 `keep` / `review` / `prune` 建议,并把完整明细写到 `--out` 目录的 `diagnostics.json`。不会移除任何论文。 |
 | `--quiet` | 抑制每篇论文的打印输出。 |
 
 ### 环境变量
@@ -365,7 +369,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 列举每个插件 + 报告各自在当前环境下是否启用。在 `search` 前调用一次。 |
 | `list_exports` | 列举每种导出格式,附一行描述,并说明它写一个汇总文件还是每篇论文一文件。 |
-| `search` | 关键字 → 论文清单。接受 `top_tier_only`、`min_citations`;默认走完整的免 API 密钥来源组合。 |
+| `search` | 关键字 → 论文清单。接受 `top_tier_only`、`min_citations`;默认走完整的免 API 密钥来源组合。 `diagnostics=true` 会加上每篇论文的分数明细与仅供参考的 `keep` / `review` / `prune` 建议 (不会从 `papers` 移除任何项目)。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 标识符 → 单篇论文。 |
 | `fetch_pdf_text` | 下载一份 PDF,返回提取出的正文文本。**这是「我读了论文」的 MCP 路径。** |
 | `download_pdfs` | 批量把一份论文清单的 PDF 下载到 `{out_dir}/pdfs/`。返回以 BibTeX 键为索引的每篇论文结果。 |

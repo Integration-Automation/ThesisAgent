@@ -109,6 +109,8 @@ What you KEEP intact (pruning them would rewrite history):
 - The aggregate `exports/<run>/<slug>-<timestamp>.xlsx`
 - The aggregate `exports/<run>/<slug>-<timestamp>.bib`
 - Every rich `.pptx` (and language variants like `<key>-zh-tw.pptx`) for ON-topic papers
+**Use `diagnostics.json` as the starting list, not as the verdict.** When the search ran with `--diagnostics` (or MCP `search` with `diagnostics=true`), `exports/<run>/diagnostics.json` lists every paper with a `keep` / `review` / `prune` recommendation, the threshold that triggered it, and the `bibtex_key` its files carry. Read the abstracts of the `review` and `prune` entries first. **Why**: the recommendation is computed from word overlap between the query and the title / abstract, so it finds the papers that share no query term at once, which is the case this audit most often missed. **Example**: an entry with `"action": "prune"` and the reason "no query term appears in the title or abstract" for a query about code review is the Viterbi-decoder kind of hit. **Anti-pattern**: deleting every `prune` entry unread, or skipping the `keep` entries. The rule is lexical, so a paper that repeats the query words in another sense is marked `keep` and is still off-topic.
+
 
 ## Audit 3 — Drafting-metadata leak scan
 

@@ -133,6 +133,15 @@ the honest record of what the search returned. Borderline cases get
 a rich summary; better to over-include than to silently drop a
 possible match.
 
+**To spot off-topic results, start from the tool's own advice.**
+`--diagnostics` (CLI) or `diagnostics=true` on the MCP `search` tool
+explains the ranking: each paper's score split into relevance, recency
+and citations, the query terms that matched, and a `keep` / `review` /
+`prune` recommendation with the threshold behind it. The CLI also writes
+the full breakdown to `diagnostics.json` in the output directory. The
+recommendations are advice and nothing is removed for you, so read the
+abstracts of the `review` and `prune` papers before deleting anything.
+
 ### Worked example
 
 [`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) ships a
@@ -268,6 +277,14 @@ entry per paper in the `PaperCollection` tuple.
   server that refuses automated access is reported as not checkable
   instead of failing the run. On by default, `--no-verify-identifiers`
   turns it off for offline work.
+- **Explainable ranking and pruning advice**: every search records why
+  each paper ranks where it does (relevance, recency and citation parts,
+  the matched query terms, one sentence per contribution) and recommends
+  `keep`, `review` or `prune` for each result, naming the rule that
+  triggered it. A low citation count alone never triggers a
+  recommendation. Shown with `--diagnostics`, with `diagnostics=true` on
+  the MCP `search` tool, or in the Suggestion column of the GUI. Advice
+  only: no paper is removed.
 - **Safety by default**: HTTPS-only HTTP transport, per-source rate
   limit (token bucket), `defusedxml` for any XML payload,
   path-traversal-safe export paths, no `eval` / `exec` / `pickle` on
@@ -349,6 +366,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | Per-paper slide cap (default 25; pass 0 for unlimited). |
 | `--dark-mode` | Render the pptx with a dark background + near-white text. The default is the light navy-band deck. |
 | `--no-verify-identifiers` | Export without checking the papers' DOIs and URLs. By default a wrong or unreachable DOI / URL stops the run before anything is written. For offline use. |
+| `--diagnostics` | Explain the ranking of a `--query` search: prints each paper's score (relevance + recency + citations) and an advisory `keep` / `review` / `prune` recommendation, and writes the full breakdown to `diagnostics.json` in `--out`. No paper is removed. |
 | `--quiet` | Suppress per-paper printout. |
 
 ### Environment variables
@@ -412,7 +430,7 @@ Tools:
 |---|---|
 | `list_sources` | Enumerate every plugin + report whether each is enabled in the current env. Call this once before `search`. |
 | `list_exports` | Enumerate every export format with its one-line description and whether it writes one aggregate file or one file per paper. |
-| `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. |
+| `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. `diagnostics=true` adds a per-paper score breakdown and an advisory `keep` / `review` / `prune` recommendation (nothing is removed from `papers`). |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |

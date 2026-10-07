@@ -112,6 +112,8 @@ for key in irrelevant_keys:
 回傳了什麼的誠實紀錄。邊界案例就給它一份豐富摘要;寧可多收也不要
 默默漏掉一個可能的匹配。
 
+**要找出離題的結果,先參考工具自己的建議。** CLI 的 `--diagnostics` 或 MCP `search` 工具的 `diagnostics=true` 會解釋排名: 每篇論文的分數拆成相關性、新近度與引用數三部分,列出命中的查詢詞,並給出 `keep` / `review` / `prune` 建議與觸發它的門檻。CLI 還會把完整明細寫到輸出目錄的 `diagnostics.json`。這些只是建議,工具不會替你移除任何論文,所以刪除前請先讀過 `review` 與 `prune` 論文的摘要。
+
 ### 實作範例
 
 [`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) 附了一份正是
@@ -223,6 +225,7 @@ for key in irrelevant_keys:
   金鑰時)。在 IEEE / ACM / Springer / Elsevier 為主的查詢上典型的
   提升:40-70 個百分點。
 - **匯出前檢查 (DOI / URL 驗證)**: 寫入任何檔案之前,會到 doi.org 查詢每個 DOI,並對每個網址送出一次請求。識別碼錯誤或無法連線時,匯出會停止並列出失敗的論文與識別碼。需要真實瀏覽器才能開啟的出版商頁面不會被請求 (由 DOI 檢查涵蓋),拒絕自動化存取的伺服器會回報為「無法檢查」而不會讓整次執行失敗。預設開啟,離線時用 `--no-verify-identifiers` 關閉。
+- **可解釋的排名與修剪建議**: 每次搜尋都會記錄每篇論文排在該位置的原因 (相關性、新近度、引用數三部分,命中的查詢詞,每項貢獻一句說明),並為每筆結果建議 `keep`、`review` 或 `prune`,同時指出觸發的規則。單憑引用數低不會觸發任何建議。可用 `--diagnostics`、MCP `search` 工具的 `diagnostics=true`,或 GUI 的「建議」欄查看。僅供參考,不會移除任何論文。
 - **預設就安全**:僅 HTTPS 的 HTTP 傳輸、每來源速率限制(token bucket)、
   對任何 XML payload 用 `defusedxml`、防路徑穿越的匯出路徑、不對
   使用者輸入用 `eval` / `exec` / `pickle`。
@@ -302,6 +305,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | 每篇論文的投影片上限(預設 25;傳 0 表示無上限)。 |
 | `--dark-mode` | 以深色背景 + 近白文字渲染 pptx。預設是淺色深藍帶投影片。 |
 | `--no-verify-identifiers` | 匯出時不檢查論文的 DOI 與網址。預設情況下,DOI / 網址錯誤或無法連線會在寫入任何檔案之前停止執行。供離線使用。 |
+| `--diagnostics` | 解釋 `--query` 搜尋的排名: 印出每篇論文的分數 (相關性 + 新近度 + 引用數) 與僅供參考的 `keep` / `review` / `prune` 建議,並把完整明細寫到 `--out` 目錄的 `diagnostics.json`。不會移除任何論文。 |
 | `--quiet` | 抑制每篇論文的列印輸出。 |
 
 ### 環境變數
@@ -365,7 +369,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 列舉每個外掛 + 回報各自在目前環境下是否啟用。在 `search` 前呼叫一次。 |
 | `list_exports` | 列舉每種匯出格式,附一行描述,並說明它寫一個彙總檔還是每篇論文一檔。 |
-| `search` | 關鍵字 → 論文清單。接受 `top_tier_only`、`min_citations`;預設走完整的免 API 金鑰來源組合。 |
+| `search` | 關鍵字 → 論文清單。接受 `top_tier_only`、`min_citations`;預設走完整的免 API 金鑰來源組合。 `diagnostics=true` 會加上每篇論文的分數明細與僅供參考的 `keep` / `review` / `prune` 建議 (不會從 `papers` 移除任何項目)。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別碼 → 單篇論文。 |
 | `fetch_pdf_text` | 下載一份 PDF,回傳擷取出的本文文字。**這是「我讀了論文」的 MCP 路徑。** |
 | `download_pdfs` | 批次把一份論文清單的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX 鍵為索引的每篇論文結果。 |

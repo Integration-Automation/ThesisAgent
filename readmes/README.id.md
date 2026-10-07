@@ -133,6 +133,16 @@ jujur tentang apa yang dikembalikan pencarian. Kasus ambang mendapat
 ringkasan kaya; lebih baik terlalu banyak menyertakan daripada diam-diam
 menjatuhkan kemungkinan kecocokan.
 
+**Untuk menemukan hasil yang melenceng dari topik, mulailah dari saran
+alat itu sendiri.** `--diagnostics` (CLI) atau `diagnostics=true` pada
+tool MCP `search` menjelaskan peringkat: skor setiap makalah yang
+dipecah menjadi relevansi, kebaruan, dan sitasi, istilah kueri yang
+cocok, serta rekomendasi `keep` / `review` / `prune` beserta ambang yang
+memicunya. CLI juga menulis rincian lengkap ke `diagnostics.json` di
+direktori keluaran. Rekomendasi ini hanyalah saran dan tidak ada yang
+dihapus untuk Anda, jadi bacalah abstrak makalah `review` dan `prune`
+sebelum menghapus apa pun.
+
 ### Contoh kerja
 
 [`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) memuat sebuah
@@ -274,6 +284,15 @@ mengikuti bentuk yang sama, dengan satu entri
   sebagai tidak dapat diperiksa alih-alih menggagalkan proses. Aktif
   secara default, `--no-verify-identifiers` mematikannya untuk kerja
   luring.
+- **Peringkat yang dapat dijelaskan dan saran pemangkasan**: setiap
+  pencarian mencatat mengapa tiap makalah berada di posisinya (bagian
+  relevansi, kebaruan, dan sitasi, istilah kueri yang cocok, satu
+  kalimat per kontribusi) dan merekomendasikan `keep`, `review`, atau
+  `prune` untuk setiap hasil, dengan menyebut aturan yang memicunya.
+  Jumlah sitasi yang rendah saja tidak pernah memicu rekomendasi.
+  Ditampilkan dengan `--diagnostics`, dengan `diagnostics=true` pada
+  tool MCP `search`, atau kolom Saran di GUI. Hanya saran: tidak ada
+  makalah yang dihapus.
 - **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per
   sumber (token bucket), `defusedxml` untuk payload XML apa pun,
   jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle`
@@ -355,6 +374,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | Batas slide per-makalah (default 25; berikan 0 untuk tanpa batas). |
 | `--dark-mode` | Render pptx dengan latar gelap + teks hampir-putih. Default adalah deck terang band-navy. |
 | `--no-verify-identifiers` | Mengekspor tanpa memeriksa DOI dan URL makalah. Secara default, DOI / URL yang salah atau tidak dapat dijangkau menghentikan proses sebelum apa pun ditulis. Untuk penggunaan luring. |
+| `--diagnostics` | Menjelaskan peringkat pencarian `--query`: mencetak skor setiap makalah (relevansi + kebaruan + sitasi) dan rekomendasi yang bersifat saran `keep` / `review` / `prune`, serta menulis rincian lengkap ke `diagnostics.json` di `--out`. Tidak ada makalah yang dihapus. |
 | `--quiet` | Tekan cetakan per-makalah. |
 
 ### Variabel lingkungan
@@ -420,7 +440,7 @@ Tool:
 |---|---|
 | `list_sources` | Mendaftar setiap plugin + melaporkan apakah masing-masing aktif di env saat ini. Panggil ini sekali sebelum `search`. |
 | `list_exports` | Mendaftar setiap format ekspor dengan deskripsi satu-barisnya dan apakah ia menulis satu berkas agregat atau satu berkas per makalah. |
-| `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. |
+| `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. `diagnostics=true` menambahkan rincian skor per makalah dan rekomendasi yang bersifat saran `keep` / `review` / `prune` (tidak ada yang dihapus dari `papers`). |
 | `fetch_paper` | Identifier arXiv / DOI / PMID / IEEE → satu makalah. |
 | `fetch_pdf_text` | Unduh satu PDF, kembalikan teks tubuh hasil ekstraksi. **Jalur MCP menuju "saya membaca makalahnya".** |
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per-makalah berindeks kunci BibTeX. |

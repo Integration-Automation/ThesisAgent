@@ -10,7 +10,9 @@ Tools:
   ``export`` accepts plus a one-line description, so an agent can pick the
   format set without guessing.
 - search(keywords, sources, exclude_sources, max_results, year_from, year_to,
-         top_tier_only, min_citations) -> {papers: [...]}
+         top_tier_only, min_citations, diagnostics) -> {papers: [...]}
+  diagnostics=True adds a per-paper score breakdown and an advisory
+  keep / review / prune recommendation. Nothing is removed from papers.
 - fetch_paper(identifier) -> {paper: {...}}
 - fetch_pdf_text(pdf_url) -> {text, page_count, chars}
 - download_pdfs(papers, out_dir) -> {results: [...]}
@@ -72,6 +74,7 @@ from thesisagents.core.constants import (
     EXPORT_PDF,
     EXPORT_PPTX,
 )
+from thesisagents.core.diagnostics import collection_report
 from thesisagents.core.exceptions import ThesisAgentsError
 from thesisagents.core.export_validation import (
     IdentifierVerificationError,
@@ -318,8 +321,19 @@ def _register_search_tools(server: FastMCP) -> None:
         year_to: int | None = None,
         top_tier_only: bool = True,
         min_citations: int | None = None,
+        diagnostics: bool = False,
     ) -> dict[str, Any]:
         """Search papers by keywords across one or more sources.
+
+        ``diagnostics`` (default ``False``) adds a ``diagnostics`` block that
+        explains the ranking: per paper, the score split into relevance /
+        recency / citation, the query terms and phrases that matched, a
+        sentence per contribution, and a pruning recommendation (``keep`` /
+        ``review`` / ``prune``) with the threshold that triggered it. The
+        recommendations are advice: ``papers`` always holds every result, and
+        nothing is removed for you. Use it to decide which results are
+        off-topic before downloading PDFs. Without the flag the response is
+        unchanged.
 
         Defaults to the project's full default source mix (all plugins
         that need no API key) when ``sources`` is omitted — call
@@ -365,7 +379,10 @@ def _register_search_tools(server: FastMCP) -> None:
             collection = await run_search(query)
         finally:
             await shutdown_clients()
-        return _collection_to_payload(collection)
+        payload = _collection_to_payload(collection)
+        if diagnostics:
+            payload["diagnostics"] = collection_report(collection)
+        return payload
 
     @_tool(server)
     async def fetch_paper(identifier: str) -> dict[str, Any]:

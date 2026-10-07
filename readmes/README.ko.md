@@ -124,6 +124,12 @@ for key in irrelevant_keys:
 경계선상의 경우에는 리치 요약을 부여하세요. 가능한 매칭을 조용히
 버리는 것보다 과하게 포함하는 편이 낫습니다.
 
+**주제에서 벗어난 결과를 찾으려면 먼저 도구가 내놓는 권고를 참고하세요.** CLI 의 `--diagnostics` 또는 MCP
+`search` 도구의 `diagnostics=true` 는 순위의 근거를 설명합니다. 각 논문의 점수를 관련성, 최신성, 인용
+수로 나누고, 일치한 검색어를 나열하며, `keep` / `review` / `prune` 권고와 그 근거가 된 임계값을
+제시합니다. CLI 는 전체 내역을 출력 디렉터리의 `diagnostics.json` 에도 기록합니다. 권고는 조언일 뿐이며 어떤
+논문도 자동으로 제거되지 않으므로, 삭제하기 전에 `review` 와 `prune` 논문의 초록을 읽어 보세요.
+
 ### 작동 예시
 
 [`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py)는 정확히 이
@@ -256,6 +262,11 @@ for key in irrelevant_keys:
   목록이 표시됩니다. 실제 브라우저가 필요한 출판사 페이지에는 요청을 보내지 않으며 (DOI 검사가 대신합니다), 자동 접근을
   거부하는 서버는 실행을 실패시키지 않고 확인 불가로 보고됩니다. 기본적으로 켜져 있으며, 오프라인 작업 시
   `--no-verify-identifiers` 로 끕니다.
+- **설명 가능한 순위와 정리 권고**: 검색할 때마다 각 논문이 그 순위에 놓인 이유 (관련성, 최신성, 인용 수 구성과
+  일치한 검색어, 기여 항목마다 한 문장) 를 기록하고, 결과마다 `keep`, `review`, `prune` 중 하나를
+  발동된 규칙과 함께 권고합니다. 인용 수가 적다는 이유만으로는 권고가 발동되지 않습니다. `--diagnostics`, MCP
+  `search` 도구의 `diagnostics=true`, 또는 GUI 의 제안 열에서 볼 수 있습니다. 조언일 뿐이며 논문은
+  제거되지 않습니다.
 - **기본값이 안전**: HTTPS 전용 HTTP 전송, 소스별 속도 제한(토큰
   버킷), 모든 XML 페이로드에 `defusedxml`, 경로 순회에 안전한
   내보내기 경로, 사용자 입력에 대한 `eval` / `exec` / `pickle` 없음.
@@ -337,6 +348,7 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--max-slides` | 논문당 슬라이드 상한(기본 25; 무제한은 0 을 넘김). |
 | `--dark-mode` | pptx 를 어두운 배경 + 거의 흰 텍스트로 렌더링. 기본은 라이트 네이비 밴드 덱. |
 | `--no-verify-identifiers` | 논문의 DOI 와 URL 을 확인하지 않고 내보냅니다. 기본적으로는 잘못되었거나 연결할 수 없는 DOI / URL 이 있으면 아무것도 쓰기 전에 실행이 중단됩니다. 오프라인용. |
+| `--diagnostics` | `--query` 검색의 순위를 설명합니다. 각 논문의 점수 (관련성 + 최신성 + 인용 수) 와 조언용 `keep` / `review` / `prune` 권고를 출력하고, 전체 내역을 `--out` 의 `diagnostics.json` 에 기록합니다. 논문은 제거되지 않습니다. |
 | `--quiet` | 논문별 출력을 억제. |
 
 ### 환경 변수
@@ -401,7 +413,7 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 모든 플러그인을 열거 + 현재 환경에서 각각이 활성인지 보고. `search` 전에 한 번 호출. |
 | `list_exports` | 모든 내보내기 형식을 한 줄 설명과 함께, 그리고 그것이 하나의 집계 파일을 쓰는지 논문당 하나의 파일을 쓰는지 열거. |
-| `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. |
+| `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. `diagnostics=true` 는 논문별 점수 내역과 조언용 `keep` / `review` / `prune` 권고를 추가합니다 (`papers` 에서는 아무것도 제거되지 않습니다). |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 식별자 → 단일 논문. |
 | `fetch_pdf_text` | 하나의 PDF 를 다운로드하여 추출한 본문 텍스트를 반환. **"내가 논문을 읽었다"에 이르는 MCP 경로.** |
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 로 일괄 다운로드. BibTeX 키로 키가 지정된 논문별 결과를 반환. |

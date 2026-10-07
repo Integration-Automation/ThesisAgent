@@ -11,6 +11,7 @@ import argparse
 import asyncio
 import contextlib
 import dataclasses
+import json
 import sys
 from pathlib import Path
 from typing import Final
@@ -29,7 +30,8 @@ from thesisagents.core.constants import (
     EXPORT_XLSX,
     MAX_RESULTS_PER_SOURCE,
 )
-from thesisagents.core.exceptions import ConfigError, ThesisAgentsError
+from thesisagents.core.diagnostics import PruningAction, collection_report
+from thesisagents.core.exceptions import ConfigError, ExportError, ThesisAgentsError
 from thesisagents.core.export_validation import (
     IdentifierVerificationError,
     MemoryVerificationCache,
@@ -56,6 +58,9 @@ _LOG = get_logger(__name__)
 _DEFAULT_OUT_DIR = "./exports"
 _DEFAULT_EXPORTS_SEARCH = (EXPORT_PPTX, EXPORT_XLSX, EXPORT_BIBTEX)
 _DEFAULT_EXPORTS_SINGLE = (EXPORT_PPTX, EXPORT_BIBTEX)
+#: Written into --out by --diagnostics. A fixed name, so a script that
+#: prunes a run directory knows where to read the recommendations.
+DIAGNOSTICS_FILENAME = "diagnostics.json"
 DEFAULT_PAYWALL_THRESHOLD = 0.30
 
 
@@ -331,6 +336,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.set_defaults(resolve_oa=True)
     parser.add_argument(
+        "--diagnostics",
+        action="store_true",
+        help=(
+            "Explain the ranking of a --query search. Prints each paper's "
+            "score split into relevance / recency / citations and an "
+            "advisory keep / review / prune recommendation with the "
+            "threshold behind it, and writes the full breakdown (matched "
+            f"terms, a sentence per contribution) to {DIAGNOSTICS_FILENAME} "
+            "in --out. Advice only: every paper stays in the results."
+        ),
+    )
+    parser.add_argument(
         "--no-verify-identifiers",
         dest="verify_identifiers",
         action="store_false",
@@ -486,6 +503,7 @@ async def _run(args: argparse.Namespace) -> int:
     try:
         collection = await _collect(args)
         await _verify_identifiers_early(collection, args, verification_cache)
+        _report_diagnostics(collection, args)
         collection = await _maybe_enrich(collection, args)
         if gate_pptx and collection.papers and not _confirm_paywall(
             collection, threshold=args.paywall_threshold, auto_yes=args.yes
@@ -561,6 +579,80 @@ async def _verify_identifiers_early(
             f"Identifiers: {counts[VerificationStatus.OK.value]} verified, "
             f"{counts[VerificationStatus.SKIPPED.value]} not checkable, 0 failed."
         )
+
+
+def _report_diagnostics(
+    collection: PaperCollection, args: argparse.Namespace
+) -> None:
+    """Print and save the ranking explanation when ``--diagnostics`` is set.
+
+    The boundary this guards: the search returns papers in an order the user
+    cannot otherwise question. This is where the score behind each position
+    and the pruning advice become visible, right after the search and before
+    any PDF is downloaded, so off-topic results can be spotted early.
+
+    stdout gets one line per paper, with the reasons spelled out only for
+    papers recommended for review or pruning (a 25-paper run would otherwise
+    print some 200 lines). ``diagnostics.json`` in ``--out`` holds everything.
+    ``--quiet`` silences stdout and still writes the file.
+
+    Nothing is removed from ``collection``: the recommendations are advice.
+
+    Example line: ``[  4] prune   total 2.18 = relevance 0.00 + recency 0.11
+    + citations 2.07``.
+    """
+    if not args.diagnostics or not collection.papers:
+        return
+    if collection.diagnostics is None:
+        print(
+            "No ranking diagnostics for this run: they are produced by "
+            "--query searches, not by --paper or --pdf.",
+            file=sys.stderr,
+        )
+        return
+    report = collection_report(collection)
+    path = ensure_export_dir(args.out) / DIAGNOSTICS_FILENAME
+    try:
+        path.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except OSError as err:
+        raise ExportError("diagnostics", f"could not write {path}: {err}") from err
+    if args.quiet:
+        return
+    print(f"\nRanking diagnostics for: {collection.query.keywords}")
+    for entry in report["papers"]:
+        _print_diagnostic_entry(entry)
+    summary = report["summary"]
+    print(
+        f"Recommendations: {summary[PruningAction.KEEP.value]} keep, "
+        f"{summary[PruningAction.REVIEW.value]} review, "
+        f"{summary[PruningAction.PRUNE.value]} prune. "
+        "Advice only, nothing was removed."
+    )
+    print(f"Diagnostics written to: {path.resolve()}")
+
+
+def _print_diagnostic_entry(entry: dict) -> None:
+    """One paper of the ``--diagnostics`` printout (see ``_report_diagnostics``)."""
+    score = entry["score"]
+    advice = entry["recommendation"]
+    if score is None or advice is None:
+        print(f"  [{entry['rank']:>3}] (no score recorded) {entry['title']}")
+        return
+    print(
+        f"  [{entry['rank']:>3}] {advice['action']:<7} "
+        f"total {score['total']:.2f} = relevance {score['relevance']:.2f} "
+        f"+ recency {score['recency']:.2f} + citations {score['citation']:.2f}"
+    )
+    print(f"        {entry['title']}")
+    if advice["action"] == PruningAction.KEEP.value:
+        return
+    for reason in score["reasons"]:
+        print(f"        - {reason}")
+    for reason in advice["reasons"]:
+        print(f"        > {reason}")
+    print(f"        rule: {advice['threshold']}")
 
 
 async def _run_download_only(args: argparse.Namespace) -> int:
@@ -685,8 +777,8 @@ def _emit_per_paper(
         _print_pdf_summary(pdf_results, args.quiet)
         return 1
 
-    accessible_collection = PaperCollection(
-        query=collection.query, papers=tuple(accessible_papers)
+    accessible_collection = dataclasses.replace(
+        collection, papers=tuple(accessible_papers)
     )
 
     aggregate_formats = tuple(f for f in options.formats if f != EXPORT_PPTX)
@@ -876,7 +968,7 @@ async def _enrich_local_pdf_collection(
             enriched.append(paper)
         else:
             enriched.append(dataclasses.replace(paper, summary=summary))
-    return PaperCollection(query=collection.query, papers=tuple(enriched))
+    return dataclasses.replace(collection, papers=tuple(enriched))
 
 
 def _build_from_local_pdf(args: argparse.Namespace) -> PaperCollection:

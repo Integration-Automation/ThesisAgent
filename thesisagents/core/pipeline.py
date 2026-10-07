@@ -15,6 +15,7 @@ from thesisagents.core.constants import (
     RATE_LIMIT_RETRY_BASE_SECONDS,
 )
 from thesisagents.core.dedup import dedupe
+from thesisagents.core.diagnostics import PaperScore, SearchDiagnostics
 from thesisagents.core.exceptions import (
     ConfigError,
     FetchError,
@@ -24,7 +25,8 @@ from thesisagents.core.exceptions import (
 from thesisagents.core.identifiers import PaperIdentifier
 from thesisagents.core.models import Paper, PaperCollection, Query
 from thesisagents.core.oa_resolver import resolve_oa_pdfs
-from thesisagents.core.ranking import rank
+from thesisagents.core.pruning import recommend_pruning
+from thesisagents.core.ranking import RankedPaper, rank_with_scores
 from thesisagents.core.top_venues import is_top_tier
 from thesisagents.fetchers.base import load_fetcher
 from thesisagents.utils.logging import get_logger
@@ -66,10 +68,32 @@ async def run_search(
     for source_papers in results:
         flat.extend(source_papers)
     unique = dedupe(flat)
-    ordered = rank(unique, keywords=query.keywords)
+    ranked = rank_with_scores(unique, keywords=query.keywords)
+    kept = _apply_query_filters(ranked, query)[: query.max_results]
+    collection = PaperCollection(
+        query=query,
+        papers=tuple(entry.paper for entry in kept),
+        diagnostics=_diagnose(kept),
+    )
+    if resolve_oa:
+        collection = await resolve_oa_pdfs(collection)
+    return collection
+
+
+def _apply_query_filters(
+    ranked: list[RankedPaper], query: Query
+) -> list[RankedPaper]:
+    """Apply every ``Query`` filter, for all sources, after ranking.
+
+    Filters live here and not in the source plugins so that they hold for
+    every source (see ``compliance-auditor`` "Query semantics are enforced in
+    core"). They run on the ranked entries, so each surviving paper keeps the
+    score that explains its position.
+    """
+    ordered = ranked
     if query.top_tier_only:
         before = len(ordered)
-        ordered = [paper for paper in ordered if is_top_tier(paper)]
+        ordered = [entry for entry in ordered if is_top_tier(entry.paper)]
         _LOG.info(
             "top-tier filter kept %d / %d papers", len(ordered), before
         )
@@ -81,10 +105,10 @@ async def run_search(
         # treated as zero and silently dropped.
         before = len(ordered)
         ordered = [
-            paper
-            for paper in ordered
-            if paper.citation_count is None
-            or paper.citation_count >= query.min_citations
+            entry
+            for entry in ordered
+            if entry.paper.citation_count is None
+            or entry.paper.citation_count >= query.min_citations
         ]
         _LOG.info(
             "min-citations(>=%d) filter kept %d / %d papers (unknown counts kept)",
@@ -97,20 +121,36 @@ async def run_search(
         # (uncertainty must not silently drop a possibly-in-range paper).
         before = len(ordered)
         ordered = [
-            paper
-            for paper in ordered
-            if _in_year_range(paper.year, query.year_from, query.year_to)
+            entry
+            for entry in ordered
+            if _in_year_range(entry.paper.year, query.year_from, query.year_to)
         ]
         _LOG.info(
             "year filter [%s..%s] kept %d / %d papers (unknown years kept)",
             query.year_from or "", query.year_to or "", len(ordered), before,
         )
-    collection = PaperCollection(
-        query=query, papers=tuple(ordered[: query.max_results])
+    return ordered
+
+
+def _diagnose(kept: list[RankedPaper]) -> SearchDiagnostics:
+    """Record why each surviving paper ranks where it does, and the advice.
+
+    ``kept`` is the ranked list after the filters and the ``max_results`` cut,
+    so positions are renumbered 1..n to match the collection the caller sees
+    (a filter may have removed the papers that held ranks 2 and 3).
+
+    The pruning recommendations are advice. Every paper in ``kept`` stays in
+    the collection, whatever the advice says.
+    """
+    final = [
+        dataclasses.replace(entry, rank=position)
+        for position, entry in enumerate(kept, start=1)
+    ]
+    scores = tuple(
+        PaperScore(paper_key=entry.paper.dedup_key(), rank=entry.rank, score=entry.score)
+        for entry in final
     )
-    if resolve_oa:
-        collection = await resolve_oa_pdfs(collection)
-    return collection
+    return SearchDiagnostics(scores=scores, pruning=recommend_pruning(final))
 
 
 def _load_fetcher_safe(name: str):
@@ -247,7 +287,9 @@ async def enrich_collection(
     enriched_papers = await asyncio.gather(
         *(_bounded(paper) for paper in collection.papers)
     )
-    return PaperCollection(query=collection.query, papers=tuple(enriched_papers))
+    # ``replace`` keeps ``diagnostics``: a summary changes neither a paper's
+    # identity key nor the score that ranked it.
+    return dataclasses.replace(collection, papers=tuple(enriched_papers))
 
 
 async def _enrich_one(

@@ -26,7 +26,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
                 [--top-tier-only]
                 [--paywall-threshold FLOAT] [--yes]
                 [--max-slides N] [--dark-mode]
-                [--no-verify-identifiers]
+                [--no-verify-identifiers] [--diagnostics]
                 [--quiet]
 ```
 
@@ -57,6 +57,7 @@ thesisagents (--query KEYWORDS | --paper IDENTIFIER)
 | `--max-slides` | `25` | Per-paper slide cap. Pass `0` for unlimited. |
 | `--dark-mode` | off | Render the pptx in dark mode. **The light navy-band deck is the default** (white slides, full-width navy header band with a white title, navy cover panel). Pass this flag for the dark variant — a post-build pass swaps to a dark slide background (`#12151B`) + near-white text (`#E5E7EB`) and lightens the navy band / cover / table-row fills so the same chrome reads on OLED projectors and in low-light venues. |
 | `--no-verify-identifiers` | off | Export without the identifier preflight. By default every paper's DOI is looked up at doi.org and every URL is requested once, right after the search, and a wrong or unreachable DOI / URL stops the run before any PDF is downloaded or any file is written. Pass this flag when working offline. The notice that the check was skipped goes to stderr even under `--quiet`. See "Identifier verification" below. |
+| `--diagnostics` | off | Explain the ranking of a `--query` search. Prints each paper's score split into relevance, recency and citations with an advisory `keep` / `review` / `prune` recommendation, and writes the full breakdown to `diagnostics.json` in `--out`. Advice only: every paper stays in the results. See "Ranking diagnostics" below. |
 | `--quiet` | off | Suppress the per-paper one-line printout to stdout. |
 
 ## Examples
@@ -204,6 +205,112 @@ Copy each DOI / URL from the search results instead of typing it. To export with
 The paper's own `doi` and `url` are never rewritten. Where a link leads
 after its redirects is reported separately and is not written into the
 bibliography.
+
+## Ranking diagnostics
+
+A keyword search returns off-topic papers by construction: a "Claude
+code" query once returned a Viterbi-decoder paper because both contain
+"code". `--diagnostics` shows why each paper ranks where it does, so
+those papers can be spotted before their PDFs are read.
+
+```bash
+thesisagents --query "transformer attention" --source arxiv --max 10 \
+    --diagnostics --out ./exports/attention/
+```
+
+Right after the search the CLI prints one line per paper. The reasons
+are spelled out only for papers recommended for review or pruning. The
+four papers below are made up for the example, and the numbers are what
+the tool prints for them in 2026:
+
+```
+Ranking diagnostics for: transformer attention
+  [  1] keep    total 5.42 = relevance 4.60 + recency 0.82 + citations 0.00
+        Transformer Attention at Scale
+  [  2] keep    total 3.85 = relevance 3.30 + recency 0.55 + citations 0.00
+        Efficient Attention for Vision Transformers
+  [  3] review  total 1.61 = relevance 0.60 + recency 0.37 + citations 0.65
+        A Survey of Sequence Models
+        - abstract matches 2 of 2 query terms (transformer, attention): +0.60
+        - published 2021: recency +0.37
+        - 40 citations: +0.65
+        > relevance is 13% of the best this query allows, below the review threshold 30%
+        rule: review_below_relevance=0.30
+  [  4] prune   total 0.56 = relevance 0.00 + recency 0.11 + citations 0.45
+        Cooking With Gas: A Kitchen Safety Study
+        - no query term appears in the title or abstract
+        - published 2015: recency +0.11
+        - 12 citations: +0.45
+        > relevance is 0% of the best this query allows, below the prune threshold 10%
+        rule: prune_below_relevance=0.10
+Recommendations: 2 keep, 1 review, 1 prune. Advice only, nothing was removed.
+Diagnostics written to: /abs/path/exports/attention/diagnostics.json
+```
+
+Paper 3 mentions both query words only in its abstract, which earns 13%
+of the best possible relevance, so it is worth a second look. Paper 4
+shares no word with the query.
+
+The score is the sum of three parts (see
+[`architecture.md`](architecture.md) "Ranking"):
+
+| Part | What it measures |
+|---|---|
+| `relevance` | How much of the query appears in the title (weighted most) and the abstract, plus a bonus when query words that are adjacent in the query are also adjacent in the title. |
+| `recency` | Decays with the paper's age. A paper published this year scores 1.00, a five-year-old one 0.37. |
+| `citations` | Grows with the logarithm of the citation count, damped so that a heavily cited off-topic paper cannot outrank an on-topic one. |
+
+The recommendation comes from three rules, applied in this order:
+
+| Rule | Recommendation |
+|---|---|
+| Relevance below 10% of the best this query allows | `prune` |
+| Relevance below 30% | `review`, or `prune` when the paper is also ten or more years old and has fewer than 5 citations |
+| Title shares at least 85% of its terms with a higher-ranked paper | `review` (the two are probably versions of one work) |
+
+A low citation count on its own never produces a recommendation: a new,
+on-topic paper has no citations yet. An unknown year or an unknown
+citation count is not treated as old or uncited.
+
+`diagnostics.json` holds one entry per paper with the full reasons for
+every paper, including the ones marked `keep`:
+
+```json
+{
+  "keywords": "transformer attention",
+  "advisory": true,
+  "summary": {"keep": 2, "review": 1, "prune": 1},
+  "papers": [
+    {"rank": 4, "paper_key": "hash:c91ad152ca0a7fa4",
+     "bibtex_key": "park2015cooking",
+     "title": "Cooking With Gas: A Kitchen Safety Study",
+     "score": {"total": 0.5564, "relevance": 0.0, "recency": 0.1108,
+               "citation": 0.4456, "relevance_ratio": 0.0,
+               "matched_terms": [], "matched_phrases": [],
+               "reasons": ["no query term appears in the title or abstract",
+                           "published 2015: recency +0.11",
+                           "12 citations: +0.45"]},
+     "recommendation": {"action": "prune",
+                        "threshold": "prune_below_relevance=0.10",
+                        "reasons": ["relevance is 0% of the best this query allows, below the prune threshold 10%"]}}
+  ]
+}
+```
+
+(Only the fourth of the four entries is shown.) `paper_key` is the
+paper's identity key: its DOI, else its arXiv ID, else a hash of title,
+first author and year, as here.
+
+`bibtex_key` is how the PDFs and per-paper decks of the run are named
+(`pdfs/<bibtex_key>.pdf`, `<bibtex_key>.pptx`), so a script that acts on
+the recommendations can find the files.
+
+The recommendations are advice. No paper is removed from the results,
+the exports, or the disk. Read the abstracts of the `review` and
+`prune` papers before deleting anything.
+
+`--diagnostics` applies to `--query` searches. `--paper` and `--pdf`
+fetch specific papers with no query to be relevant to, and say so.
 
 ## Exit codes
 

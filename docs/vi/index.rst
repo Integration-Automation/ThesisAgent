@@ -52,6 +52,16 @@ Quy trình MCP 6 bước
 
 13 công cụ MCP đầy đủ: :doc:`/mcp`.
 
+**Để tìm các kết quả lạc đề, hãy bắt đầu từ gợi ý của chính công cụ.**
+``--diagnostics`` (CLI) hoặc ``diagnostics=true`` trên công cụ MCP
+``search`` giải thích thứ hạng: điểm của từng bài báo được tách thành độ
+liên quan, độ mới và số trích dẫn, các từ khóa truy vấn đã khớp, cùng
+một khuyến nghị ``keep`` / ``review`` / ``prune`` kèm ngưỡng đã kích
+hoạt nó. CLI cũng ghi bảng phân tích đầy đủ vào ``diagnostics.json``
+trong thư mục đầu ra. Các khuyến nghị chỉ mang tính tham khảo và không
+có gì bị xóa thay bạn, vì vậy hãy đọc tóm tắt của các bài ``review`` và
+``prune`` trước khi xóa bất cứ thứ gì.
+
 Bắt buộc: xác minh URL / DOI trước khi giao
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -52,6 +52,16 @@ Fluxo MCP de 6 passos
 
 As 13 ferramentas MCP completas: :doc:`/mcp`.
 
+**Para identificar resultados fora do tema, comece pelo conselho da
+própria ferramenta.** ``--diagnostics`` (CLI) ou ``diagnostics=true`` na
+ferramenta MCP ``search`` explica a classificação: a pontuação de cada
+artigo dividida em relevância, atualidade e citações, os termos da
+consulta que coincidiram e uma recomendação ``keep`` / ``review`` /
+``prune`` com o limiar que a motivou. A CLI também grava o detalhamento
+completo em ``diagnostics.json`` no diretório de saída. As recomendações
+são orientativas e nada é removido por você, portanto leia os resumos
+dos artigos ``review`` e ``prune`` antes de apagar qualquer coisa.
+
 Obrigatório: verificação URL / DOI antes da entrega
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

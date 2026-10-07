@@ -177,7 +177,8 @@ preprints always pass through.
   "year_from": 2017,
   "year_to": null,
   "top_tier_only": true,
-  "min_citations": 50
+  "min_citations": 50,
+  "diagnostics": false
 }
 ```
 
@@ -190,6 +191,62 @@ Returns:
   "papers": [{"source": "arxiv", "source_id": "1706.03762v5", "title": "Attention Is All You Need", "...": "..."}]
 }
 ```
+
+`diagnostics` (default `false`) adds a `diagnostics` block that explains
+the ranking. Without it the response is exactly the one above. The
+example shows the block for a search that returned the one arXiv
+record, scored in 2026:
+
+```json
+{
+  "query": {"...": "..."},
+  "count": 1,
+  "papers": ["..."],
+  "diagnostics": {
+    "keywords": "attention is all you need",
+    "advisory": true,
+    "summary": {"keep": 1, "review": 0, "prune": 0},
+    "papers": [
+      {"rank": 1, "paper_key": "arxiv:1706.03762",
+       "bibtex_key": "vaswani2017attention",
+       "title": "Attention Is All You Need",
+       "score": {"total": 4.1653, "relevance": 4.0, "recency": 0.1653,
+                 "citation": 0.0, "relevance_ratio": 0.8696,
+                 "matched_terms": ["attention", "all", "you", "need"],
+                 "matched_phrases": ["attention all", "all you", "you need"],
+                 "reasons": ["title matches 4 of 4 query terms (attention, all, you, need): +3.00",
+                             "query words adjacent in the title (\"attention all\", \"all you\", \"you need\"): +1.00",
+                             "published 2017: recency +0.17",
+                             "citation count unknown: citations +0.00"]},
+       "recommendation": {"action": "keep", "threshold": "",
+                          "reasons": ["relevance is 87% of the best this query allows"]}}
+    ]
+  }
+}
+```
+
+The query word "is" does not appear among the terms: words shorter than
+three letters are dropped as noise. arXiv reports no citation count, so
+that part is 0 and is said to be unknown, not zero.
+
+Each entry of `diagnostics.papers` describes the paper at the same
+position in `papers`:
+
+| Field | Meaning |
+|---|---|
+| `score.total` | `relevance + recency + citation`, the number the results are sorted by. |
+| `score.relevance_ratio` | Relevance as a fraction of the best this query allows, `0` to `1`. |
+| `score.matched_terms` / `matched_phrases` | Query terms found in the title or abstract, and adjacent query word pairs that are adjacent in the title. Terms are shown in their stemmed form. |
+| `score.reasons` | One sentence per contribution to the score. |
+| `recommendation.action` | `keep`, `review` or `prune`. |
+| `recommendation.threshold` | The rule that triggered a `review` / `prune`, for example `prune_below_relevance=0.10`. Empty for `keep`. |
+| `bibtex_key` | The name `download_pdfs` and the per-paper decks use for this paper. |
+
+The recommendations are advice. `papers` always holds every result and
+nothing is removed for you. Use the block to decide which results are
+off-topic before calling `download_pdfs`, and read the abstract of a
+`review` or `prune` paper before dropping it. The rules behind the
+recommendations are listed in [`cli.md`](cli.md) "Ranking diagnostics".
 
 ### `fetch_paper`
 

@@ -58,6 +58,17 @@ Workflow MCP en 6 étapes
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
 Référence complète : :doc:`/mcp`.
 
+**Pour repérer les résultats hors sujet, partez des conseils de l'outil
+lui-même.** ``--diagnostics`` (CLI) ou ``diagnostics=true`` sur l'outil
+MCP ``search`` explique le classement : le score de chaque article
+réparti en pertinence, récence et citations, les termes de la requête
+qui correspondent, et une recommandation ``keep`` / ``review`` /
+``prune`` avec le seuil qui l'a déclenchée. La CLI écrit aussi le détail
+complet dans ``diagnostics.json`` dans le répertoire de sortie. Les
+recommandations sont indicatives et rien n'est supprimé à votre place,
+lisez donc les résumés des articles ``review`` et ``prune`` avant de
+supprimer quoi que ce soit.
+
 Obligatoire : vérification URL / DOI avant livraison
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
