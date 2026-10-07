@@ -576,6 +576,10 @@ toggle mode Terang + batas-slide + max-figures mengalir ke
 `ExportOptions`). Zip rilis Windows memuat bundle terkompilasi-Nuitka
 dengan PySide6 disertakan, jadi `thesisagents.exe gui` bekerja tanpa
 instalasi Python terpisah.
+Tab Search juga dapat mengikuti sitasi dari hasil teratas (bola salju),
+menyimpan hasil dalam file pustaka dan mencari di pustaka itu tanpa
+jaringan, dan tab Deck dapat menyusun deck di atas templat PowerPoint
+Anda sendiri.
 **UI hadir dalam semua 14 bahasa** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — run pertama memilih

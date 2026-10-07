@@ -565,6 +565,10 @@ Light mode + slide-cap + max-figures luồng vào
 `ExportOptions`). Bản release zip Windows đóng gói bundle được biên dịch
 bằng Nuitka kèm sẵn PySide6, nên `thesisagents.exe gui` chạy
 mà không cần cài Python riêng.
+Tab Search còn có thể lần theo trích dẫn từ các kết quả đứng đầu (lăn
+cầu tuyết), lưu kết quả vào một tệp thư viện và tìm trong thư viện đó
+khi không có mạng, còn tab Deck có thể dựng bộ trang chiếu trên mẫu
+PowerPoint của riêng bạn.
 **Giao diện phát hành đủ 14 ngôn ngữ** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — lần chạy đầu chọn

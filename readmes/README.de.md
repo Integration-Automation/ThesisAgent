@@ -577,6 +577,10 @@ die Folienobergrenze- und Max-Figures-Steuerungen fließen in `ExportOptions`
 ein). Das Windows-Release-Zip liefert das mit Nuitka kompilierte Bündel mit
 enthaltenem PySide6, sodass `thesisagents.exe gui` ohne separate
 Python-Installation funktioniert.
+Der Tab Search kann außerdem den Zitationen der obersten Ergebnisse
+folgen (Schneeball), Ergebnisse in einer Bibliotheksdatei aufbewahren
+und diese Bibliothek ohne Netzwerk durchsuchen, und der Tab Deck kann
+das Deck auf Ihrer eigenen PowerPoint-Vorlage aufbauen.
 **Die UI wird in allen 14 Sprachen ausgeliefert** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — der erste Start wählt die

@@ -337,6 +337,7 @@ thesisagents-gui                 # or: thesisagents gui
 ```
 
 ウィンドウには 4 つのタブがあります — **Search**、**Settings**(QSettings 経由で API キーを永続化)、**Enrich**(`collection_ready` シグナルを介して LLM-as-agent / Python パイプラインのエンリッチを駆動)、**Deck**(Light モードトグル + スライド上限 + 最大図数のコントロールが `ExportOptions` に流れる)。Windows リリース zip は PySide6 を含む Nuitka コンパイル済みバンドルを同梱するので、別途 Python をインストールせずに `thesisagents.exe gui` が動作します。
+Search タブでは、上位の結果から引用をたどること (スノーボール)、結果をライブラリファイルに保存してネットワークなしでそのライブラリを検索することもでき、Deck タブでは手持ちの PowerPoint テンプレートの上にスライドを作れます。
 **UI は 14 言語すべてで提供**(English、繁體中文、简体中文、日本語、Español、Français、Deutsch、한국어、Português、Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia) — 初回起動は OS ロケールから言語を選び、その後 **Settings → Interface language** で変更できます。デッキ出力言語は別のドロップダウンなので、UI を 1 つの言語で動かしつつ別の言語でスライドを出力できます。レイアウトはレスポンシブ: すべてのフォームが `QScrollArea` に収まり、ウィンドウは 900×600 まで縮小可能(720p にもなお収まる)、HiDPI スケーリングはデフォルトで有効です。
 
 完全な参照: [`docs/gui.md`](../docs/gui.md)。

@@ -400,6 +400,10 @@ thesisagents-gui                 # या: thesisagents gui
 ```
 
 विंडो में चार tab हैं — **Search**, **Settings** (QSettings के माध्यम से API keys बनाए रखता है), **Enrich** (एक `collection_ready` सिग्नल पर LLM-as-agent / Python-pipeline समृद्धि चलाता है), और **Deck** (Light mode toggle + slide-cap + max-figures नियंत्रण `ExportOptions` तक प्रवाहित होते हैं)। Windows रिलीज़ zip में PySide6 सहित Nuitka-compiled बंडल आता है, इसलिए `thesisagents.exe gui` एक अलग Python इंस्टॉल के बिना काम करता है।
+Search tab शीर्ष परिणामों से citations का पीछा भी कर सकता है (snowball),
+results को एक library file में रख सकता है और बिना network के उस library
+में खोज सकता है, और Deck tab आपके अपने PowerPoint template पर deck बना
+सकता है।
 **UI सभी 14 भाषाओं में आता है** (English, 繁體中文, 简体中文, 日本語, Español, Français, Deutsch, 한국어, Português, Русский, Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — पहला रन आपके OS locale से भाषा चुनता है, फिर **Settings → Interface language** आपको इसे बदलने देता है। डेक आउटपुट भाषा एक अलग dropdown है ताकि आप UI को एक भाषा में चला सकें और स्लाइड दूसरी में जारी कर सकें। लेआउट उत्तरदायी है: हर फ़ॉर्म एक `QScrollArea` में बैठता है और विंडो 900×600 तक नीचे resize होती है (फिर भी 720p में फ़िट), डिफ़ॉल्ट रूप से HiDPI स्केलिंग चालू के साथ।
 
 पूर्ण संदर्भ: [`docs/gui.md`](../docs/gui.md)।

@@ -464,6 +464,7 @@ Python-pipeline 增强),以及 **Deck**(浅色模式切换 + 幻灯片上限 +
 最大图数控件会流向 `ExportOptions`)。Windows 发行版 zip 发货的是
 Nuitka 编译的包,已含 PySide6,所以 `thesisagents.exe gui` 不必另外
 装 Python 就能运作。
+Search 标签页还可以沿着引用关系扩充最前面的结果 (滚雪球)、把结果保存到文献库文件并在没有网络时搜索该文献库,Deck 标签页则可以在你自己的 PowerPoint 模板上生成幻灯片。
 **UI 以全部 14 种语言发货**(English、繁體中文、简体中文、日本語、
 Español、Français、Deutsch、한국어、Português、Русский、Italiano、
 Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次运行会从你的 OS 语系挑选

@@ -584,6 +584,11 @@ contrôles de plafond de diapositives + max-figures se répercutent dans
 `ExportOptions`). Le zip de release Windows livre le bundle compilé par Nuitka
 avec PySide6 inclus, de sorte que `thesisagents.exe gui` fonctionne sans
 installation Python séparée.
+L'onglet Search peut aussi suivre les citations des premiers résultats
+(boule de neige), conserver les résultats dans un fichier de
+bibliothèque et chercher dans cette bibliothèque sans réseau, et
+l'onglet Deck peut construire la présentation sur votre propre modèle
+PowerPoint.
 **L'interface est livrée dans les 14 langues** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — le premier lancement choisit

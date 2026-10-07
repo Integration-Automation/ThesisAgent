@@ -74,6 +74,7 @@ class MainWindow(QMainWindow):
         # Enrich → Deck (so the enriched collection takes precedence).
         self._search_page.collection_ready.connect(self._enrich_page.set_collection)
         self._search_page.collection_ready.connect(self._deck_page.set_collection)
+        self._search_page.library_path_changed.connect(self._deck_page.set_library_path)
         self._enrich_page.collection_ready.connect(self._deck_page.set_collection)
 
         self._settings_page = SettingsPage(ui_language=ui_language)

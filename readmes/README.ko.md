@@ -529,6 +529,8 @@ LLM-as-agent / Python 파이프라인 보강을 구동), 그리고 **Deck**(Ligh
 흘러 들어감). Windows 릴리스 zip 은 PySide6 를 포함한 Nuitka 컴파일
 번들을 제공하므로, 별도의 Python 설치 없이 `thesisagents.exe gui` 가
 동작합니다.
+Search 탭에서는 상위 결과에서 인용을 따라가거나 (스노볼), 결과를 라이브러리 파일에 보관하고 네트워크 없이 그 라이브러리를
+검색할 수도 있으며, Deck 탭에서는 사용자의 PowerPoint 템플릿 위에 슬라이드를 만들 수 있습니다.
 **UI 는 14개 언어 모두로 제공됩니다**(English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — 첫 실행은 OS

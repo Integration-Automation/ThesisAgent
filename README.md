@@ -560,6 +560,10 @@ mode toggle + slide-cap + max-figures controls flow through to
 `ExportOptions`). The Windows release zip ships the Nuitka-compiled
 bundle with PySide6 included, so `thesisagents.exe gui` works
 without a separate Python install.
+The Search tab can also follow citations from the top results
+(snowball), keep results in a library file and search that library with
+no network, and the Deck tab can build the deck on your own PowerPoint
+template.
 **UI ships in all 14 languages** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — first run picks

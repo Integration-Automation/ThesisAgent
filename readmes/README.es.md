@@ -582,6 +582,10 @@ modo claro + los controles de tope de diapositivas + máximo de figuras fluyen a
 `ExportOptions`). El zip de release de Windows trae el paquete compilado con
 Nuitka con PySide6 incluido, de modo que `thesisagents.exe gui` funciona sin
 una instalación de Python separada.
+La pestaña Search también puede seguir las citas de los primeros
+resultados (bola de nieve), guardar los resultados en un archivo de
+biblioteca y buscar en esa biblioteca sin red, y la pestaña Deck puede
+construir la presentación sobre su propia plantilla de PowerPoint.
 **La UI se distribuye en los 14 idiomas** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — la primera ejecución elige el
