@@ -128,7 +128,9 @@ async def resolve_oa_pdfs(collection: PaperCollection) -> PaperCollection:
             found,
             missing,
         )
-    return PaperCollection(query=collection.query, papers=tuple(resolved))
+    # ``replace`` keeps ``diagnostics``: filling ``pdf_url`` changes neither a
+    # paper's identity key nor the score that ranked it.
+    return dataclasses.replace(collection, papers=tuple(resolved))
 
 
 #: DOI-keyed OA lookup strategies, tried in order until one returns a URL.

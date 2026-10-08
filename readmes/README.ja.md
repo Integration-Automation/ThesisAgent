@@ -14,7 +14,7 @@
 
 ## このプロジェクトを駆動する AI エージェントへ
 
-**あなたが LLM(Claude Code、Cursor、Aider、Codex CLI、…)で、この README を読んで何をすべきか把握しようとしているなら、ここから始めてください。** 以下の内容はすべて [`AGENTS.md`](AGENTS.md)(エージェント横断のミラー)と [`CLAUDE.md`](CLAUDE.md)(正式な参照先)にも固定されています。非自明な変更を加える前にそちらを読んでください。
+**あなたが LLM(Claude Code、Cursor、Aider、Codex CLI、…)で、この README を読んで何をすべきか把握しようとしているなら、ここから始めてください。** 以下の内容はすべて [`AGENTS.md`](../AGENTS.md)(エージェント横断のミラー)と [`CLAUDE.md`](../CLAUDE.md)(正式な参照先)にも固定されています。非自明な変更を加える前にそちらを読んでください。
 
 ### ユーザーが本当に欲しいもの
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-13 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` など)はすべて [`docs/mcp.md`](docs/mcp.md) に記載されています。
+18 個の MCP ツール(`list_sources`、`list_exports`、`download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` など)はすべて [`docs/mcp.md`](../docs/mcp.md) に記載されています。
 
 ### 必須: 納品前に URL / DOI を検証
 
@@ -60,6 +60,8 @@ for p in ALL_PAPERS:
 
 この方法で本番で検出された 2 件の偽造: AAAI 巻号の誤り(`v39i23.34521` 対 実際の `v39i22.34537`)と、捏造された著者 slug パス(`v40i5.37389` の代わりに `view/fang2026`)。
 
+**エクスポート時に実行時チェックが入ります。** ファイルを書き出す前に、CLI、MCP の `export` ツール、GUI の Deck タブが各論文の DOI を doi.org で照会し、各 URL に 1 回ずつリクエストを送ります。未登録の DOI、404 を返す URL、到達できないホストがあるとエクスポートは中止され、該当する論文と識別子が示されます。このチェックが示すのは識別子が存在することだけで、その論文のものであることまでは保証しません。したがって上記の「xlsx から逐語コピー」の規則と監査は引き続き必要です。オフラインで作業する場合は `--no-verify-identifiers` (CLI) または `verify_identifiers=false` (MCP) を指定してください。
+
 ### 必須: 納品前に無関係なダウンロードを整理
 
 検索のキーワードマッチはキーワードベースなので、話題外の論文が紛れ込みます: 「Claude code」クエリはどちらにも「code」を含むため Viterbi デコーダ論文を返し、「LLM code review」は物体検出のレビュー論文にマッチしました。要旨を読んでユーザーの実際の意図に対して話題外だと分類したら、実行ディレクトリを整理します:
@@ -76,9 +78,11 @@ for key in irrelevant_keys:
 
 `exports/<run>/pdfs/<key>.pdf` + `exports/<run>/<key>.pptx` を削除します。集約された `<slug>-<timestamp>.xlsx` / `.bib` は **残す** — それらは検索が何を返したかの正直な記録です。境界的なケースにはリッチサマリを付けます。可能性のあるマッチを黙って落とすよりは、含めすぎるほうが良いです。
 
+**主題から外れた結果を見つけるには、まずツール自身の提案を参考にしてください。** CLI の `--diagnostics`、または MCP `search` ツールの `diagnostics=true` はランキングの根拠を示します。各論文のスコアを関連性・新しさ・被引用数に分け、一致した検索語を挙げ、 `keep` / `review` / `prune` の提案とその根拠となったしきい値を付けます。CLI は詳細の全体を出力ディレクトリの `diagnostics.json` にも書き出します。提案は助言であり、論文が自動で削除されることはありません。削除する前に `review` と `prune` の論文のアブストラクトを読んでください。
+
 ### 実例
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) には、まさにこの方法で手書きされたリッチサマリが収録されています(単一論文、リッチ層、zh-tw、すべてのリッチフィールドを埋めたもの)。複数論文検索も同じ形に従い、`PaperCollection` タプル内に論文ごとに `Paper(...summary=PaperSummary(...))` エントリを 1 件ずつ置きます。
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) には、まさにこの方法で手書きされたリッチサマリが収録されています(単一論文、リッチ層、zh-tw、すべてのリッチフィールドを埋めたもの)。複数論文検索も同じ形に従い、`PaperCollection` タプル内に論文ごとに `Paper(...summary=PaperSummary(...))` エントリを 1 件ずつ置きます。
 
 ### 禁止事項
 
@@ -107,13 +111,19 @@ for key in irrelevant_keys:
   - `.csv` — スプレッドシート / 手早い grep トリアージ用の 1 論文 1 行のフラットな表(RFC-4180 クオート、タイトル内のカンマが列をずらしません)。
   - `.csl.json` — Pandoc / citeproc 用の CSL-JSON。任意の CSL スタイル(APA、IEEE、Nature、…)で文献目録をレンダリング。`.csl.json` 拡張子でプレーンな `.json` ダンプと区別されます。
 - **PPT 編集ツールキット**: `thesisagents.exporters.pptx_edit`(inspect / update_slide / delete_slide / reorder_slides / add_slide)はエクスポータが生成する任意のデッキに対して動作し、加えて同等の `pptx_*` MCP ツールにより LLM エージェントが生成済みデッキ上で反復できます。
-- **MCP サーバー**: 13 ツール — `list_sources` + `list_exports`(発見)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`export`、および 6 個の `pptx_*` デッキツール(`inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。MCP 対応の任意の LLM(Claude Code、Claude Desktop、Cursor、…)がワークフロー全体を駆動できます。
+- **MCP サーバー**: 18 ツール — `list_sources` + `list_exports`(発見)、`search`、`snowball`、`library_add`、`library_search`、`library_stats`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`pptx_validate_template`、`export`、および 6 個の `pptx_*` デッキツール(`inspect`、`review`、`update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。MCP 対応の任意の LLM(Claude Code、Claude Desktop、Cursor、…)がワークフロー全体を駆動できます。
 - **2 つのエンリッチパス**(要約を超えて真の論文発表級デッキに至るため):
   - **LLM-as-agent(API キー不要)** — 呼び出し側 LLM が `fetch_pdf_text` で PDF 本文を読み、構造化サマリをコンテキスト内で書き、`export` に渡します。
   - **Python パイプライン(`--enrich`)** — CLI が Anthropic の API を自身で呼びます。デフォルトモデルは `claude-opus-4-7`。
 - **可視 Chrome の出版社フロー**: Scholar の SERP、IEEE の `/rest/search`、およびすべての paywalled-PDF ダウンロード(ieeexplore / dl.acm / link.springer / sciencedirect / wiley / oup / nature / science / …)は、`selenium` 経由で本物の可視 Chrome セッション内で実行されます。ユーザーはライブウィンドウで captcha を解いたり SSO を完了したりを一度だけ行い、`THESISAGENTS_CHROME_PROFILE_DIR` が実行間で cookie を永続化します。
 - **LLM-as-agent フロー**: MCP ツールが検索、PDF ダウンロード、テキスト抽出を提供します。`scripts/regen_*.py` には、論文ごとにリッチな `PaperSummary` を手書きする再現可能な例が含まれています。
 - **OA PDF リゾルバ**: 重複排除後、`pdf_url` の無い各論文は Unpaywall → S2 `openAccessPdf` → arXiv タイトル検索 → CORE.ac.uk(キー設定時)を通過します。IEEE / ACM / Springer / Elsevier 中心のクエリでの典型的な向上: 40〜70 パーセントポイント。
+- **エクスポート前チェック (DOI / URL 検証)**: ファイルを書き出す前に、すべての DOI を doi.org で照会し、すべての URL に 1 回ずつリクエストを送ります。誤った識別子や到達できない識別子があるとエクスポートは中止され、失敗した論文と識別子の一覧が表示されます。実ブラウザが必要な出版社ページにはリクエストを送らず (DOI チェックが代わりになります)、自動アクセスを拒否するサーバーは実行を失敗させずに「確認不可」として報告されます。既定で有効で、オフライン作業時は `--no-verify-identifiers` で無効にできます。
+- **説明可能なランキングと絞り込みの提案**: 検索のたびに、各論文がその順位になった理由 (関連性・新しさ・被引用数の内訳、一致した検索語、寄与ごとに 1 文) を記録し、各結果に `keep`、`review`、`prune` のいずれかを、発動したルールとともに提案します。被引用数が少ないことだけでは提案は発動しません。 `--diagnostics`、MCP `search` ツールの `diagnostics=true`、または GUI の「提案」列で確認できます。助言のみで、論文は削除されません。
+- **ソース別の検索統計**: 検索のたびに、各ソースが返したレコード数、重複排除後にそのソースに帰属する論文数、失敗・レート制限・無効のいずれであったかを報告します。エラーになったソースは検索を止めずにスキップされるため、「もともと論文の少ないテーマ」と「ソースの半分を失った検索」を見分けられるのはこの数字です。CLI は `--query` 検索のたびに表示し、MCP `search` ツールは `source_stats` として返し、GUI はステータス行に表示します。
+- **引用スノーボール検索**: `--snowball references|cited_by|both` (または MCP の `snowball` ツール) は、上位の結果を引用関係に沿って広げます。後方にはそれらが引用する文献、前方にはそれらを引用する文献をたどり、著者の用語が違うためにキーワード検索では見つからない研究を拾います。すべての次元に上限があり (既定の深さは 1、シードあたりの件数、合計件数)、複数の経路でたどり着いた同じ論文は 1 件として扱われ、見つかった論文ごとに到達経路が記録されます。引用情報は OpenAlex、Semantic Scholar、Crossref から取得し、見つかった論文も同じランカーで採点するため、被引用数が多いだけでは主題に合うとは見なされません。
+- **文献ライブラリ**: `--library thesis.db` は、実行で見つかった内容を 1 つの SQLite ファイルに保存します。検索結果はプロセスの終了とともに消えなくなります。保存されるのは、論文、各論文を見つけた実行とソース、スコア、`--snowball` が見つけた引用関係、DOI / URL の確認結果です。`--library-add` は実行結果を取り込み (既にある論文は更新され、重複しません)、`--library-search` はネットワークを使わずに保存済みの論文を探し、`--library-export` はそれらを任意のエクスポート形式に出力します。以前の実行で確認できた DOI や URL は、30 日間は再確認されません。MCP ツール `library_add`、`library_search`、`library_stats` としても使えます。
+- **スライドテンプレート**: `--pptx-template thesis.pptx` は、手持ちの PowerPoint テンプレートの上にスライドを作ります。組み込みのネイビー帯のデザインではなく、テンプレートの背景、ロゴ、レイアウトがそのまま使われます。スライドの種類 (表紙、セクション、内容、表、参考文献、Q&A) ごとに、指定したレイアウトが使われ、任意の TOML / JSON 設定ファイル (`--pptx-template-config`) でフォント、配色、ヘッダー帯と表紙パネルを描くかどうかを指定できます。テンプレートは検索が始まる前に確認され、 `thesisagents validate-template thesis.pptx` を実行すると、各種類のスライドがどのレイアウトを使うかと、直すべき点が表示されます。テンプレートを指定しない場合、組み込みのスライドは変わりません。
 - **デフォルトで安全**: HTTPS-only な HTTP トランスポート、ソースごとのレート制限(トークンバケット)、任意の XML ペイロードには `defusedxml`、パストラバーサル対策済みのエクスポートパス、ユーザー入力に対する `eval` / `exec` / `pickle` の不使用。
 - **zh-tw / zh-cn 語彙ガード**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` にある約 244 個の正規表現パターンが、繁体字で書かれた簡体字由来の借用語(例: `內存` → `記憶體`、`魯棒性` → `穩健性`、`軟件` → `軟體`、`緩存` → `快取`)を捕捉します。同じガードが zh-cn ロケール文字列に対して逆方向にも走ります。完全なルールと正規表現カタログは `.claude/agents/rules/language-vocabulary-check.md` にあります。
 
@@ -184,6 +194,16 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | paywall プロンプトをスキップして続行。 |
 | `--max-slides` | 論文ごとのスライド上限(デフォルト 25、0 で無制限)。 |
 | `--dark-mode` | pptx をダーク背景 + ほぼ白のテキストでレンダリング。デフォルトはライトの navy バンドデッキ。 |
+| `--pptx-template FILE` | 組み込みのネイビー帯スライドの代わりに、PowerPoint テンプレート (.pptx / .potx) の上にスライドを作ります。検索が始まる前に確認されます。16:9 のスライドと、内容を置くレイアウトが必要です。`thesisagents validate-template FILE` で、エクスポート時に何が使われるかを確認できます。 |
+| `--pptx-template-config FILE` | `--pptx-template` 用の上書き設定を書いた TOML / JSON ファイル。スライドの種類ごとのレイアウト、フォント、配色、ヘッダー帯と表紙パネルを描くかどうかを指定します。 |
+| `--no-verify-identifiers` | 論文の DOI と URL を確認せずにエクスポートします。既定では、誤った DOI / URL や到達できない DOI / URL があると、何も書き出す前に実行が止まります。オフライン用。 |
+| `--diagnostics` | `--query` 検索のランキングを説明します。各論文のスコア (関連性 + 新しさ + 被引用数) と、助言としての `keep` / `review` / `prune` の提案を表示し、詳細の全体を `--out` の `diagnostics.json` に書き出します。論文は削除されません。 |
+| `--snowball` | エクスポート前に結果を引用関係に沿って広げます。`references` (上位の結果が引用する文献)、`cited_by` (それらを引用する文献)、または `both`。新しい論文は結果の後ろに追加され、同じダウンロードとエクスポートを通ります。既定は無効。 |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` の上限: 広げる上位結果の数 (既定 5)、たどる段数 (1、最大 3)、シードと方向ごとの件数 (20)、新しい論文の合計 (20)、残す最低関連性 (0..1、既定は無効)。 |
+| `--library PATH` | 文献ライブラリ: 実行をまたいで論文、引用関係、識別子の確認結果を保存する SQLite ファイル。存在しなければ作成されます。通常の実行では識別子のキャッシュとして働き、以前に確認できた DOI や URL は再確認されません。 |
+| `--library-add` | この実行の論文を `--library` に取り込みます。クエリ、各論文のスコア、`--snowball` が見つけた引用関係も一緒に保存されます。既にライブラリにある論文は統合され、重複しません。 |
+| `--library-search QUERY` | `--library` の中で QUERY に一致する論文を関連の高い順に一覧して終了します。何も取得しません。`--max` で件数を制限でき、 `""` を渡すと最近見つかった論文を一覧します。 |
+| `--library-export [QUERY]` | `--library` の論文を `--export` で出力します。すべて、または QUERY に一致するものだけです。既定の形式は `xlsx,bib`。`--export` に `pdf` を含めない限り PDF はダウンロードされません。 |
 | `--quiet` | 論文ごとの出力を抑制。 |
 
 ### 環境変数
@@ -241,11 +261,16 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | すべてのプラグインを列挙し、現在の env で各々が有効かを報告。`search` の前に一度呼ぶ。 |
 | `list_exports` | すべてのエクスポート形式を、その 1 行説明と、集約ファイルを 1 つ書くか論文ごとに 1 ファイルを書くかとともに列挙。 |
-| `search` | キーワード → 論文リスト。`top_tier_only`、`min_citations` を受理。デフォルトは API キー不要のソース全体。 |
+| `search` | キーワード → 論文リスト。`top_tier_only`、`min_citations` を受理。デフォルトは API キー不要のソース全体。 `diagnostics=true` で、論文ごとのスコア内訳と助言としての `keep` / `review` / `prune` の提案が加わります (`papers` からは何も削除されません)。 常に `source_stats` を返します。ソースごとの `requested`、`returned`、`after_dedup`、`status` (`ok` / `failed` / `rate_limited` / `disabled`) です。 `snowball="both"` を付けると上位の結果を引用関係に沿って広げ、`snowball` ブロックを追加します (`papers` は変わりません)。 |
+| `snowball` | シード論文 → それらが引用する文献 (`references`)、それらを引用する文献 (`cited_by`)、または `both` を、固定の上限 (`depth`、`max_per_seed`、`max_total`) の範囲で取得。見つかった各論文には到達経路が付きます。任意の `keywords` で採点して並べ替え、`min_relevance` で主題から外れた論文を除きます。 |
+| `library_add` | 論文 → 文献ライブラリ (`library` が指す SQLite ファイル) に保存し、後のセッションで使えるようにします。追加は統合です。既にある論文は更新され、重複しません。`relations` には `snowball` が返す引用関係を保存できます。 |
+| `library_search` | クエリ → ライブラリに既にある論文を、検索と同じ方法で採点して返します。ネットワークは使いません。各論文には履歴が付きます。最初と最後に見つかった日時、そしてどのソースが返したかです。 |
+| `library_stats` | ライブラリ → 保存している論文、実行、引用関係の件数、ソースごとの論文数、最近の取り込み。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別子 → 単一論文。 |
 | `fetch_pdf_text` | 単一 PDF をダウンロードし、抽出した本文を返す。**MCP 経由で「論文を読んだ」に至る入口。** |
 | `download_pdfs` | 論文リストの PDF を `{out_dir}/pdfs/` に一括ダウンロード。BibTeX キーをキーとする論文ごとの結果を返す。 |
-| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出す。リッチな論文発表級スキーマ用の論文ごとの `summary` フィールド、`max_slides_per_paper`(デフォルト 25)、`dark_mode`(デフォルト `false` — プロジェクトのデフォルトはライトの navy バンドデッキ、ダークの OLED / 暗所向け post-pass には `true` を渡す)を受理。 |
+| `export` | 論文リスト + 形式 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` を書き出す。リッチな論文発表級スキーマ用の論文ごとの `summary` フィールド、`max_slides_per_paper`(デフォルト 25)、`dark_mode`(デフォルト `false` — プロジェクトのデフォルトはライトの navy バンドデッキ、ダークの OLED / 暗所向け post-pass には `true` を渡す)を受理。 書き出す前にすべての DOI / URL を検証します (`verify_identifiers`、既定 `true`)。誤った識別子や到達できない識別子があると呼び出しは失敗して該当論文を示し、レスポンスには `verification` レポートが含まれます。 `library` には識別子の確認結果を保存する文献ライブラリを指定します。以前の呼び出しで確認できた識別子は再確認されません。 `pptx_template` (任意で `pptx_template_config`) を渡すと、手持ちの PowerPoint テンプレートの上にスライドを作ります。 |
+| `pptx_validate_template` | テンプレート → `export(pptx_template=...)` に使えるかどうか。スライドの種類ごとに使われるレイアウトと、何を直すべきかを示すエラーと警告を返します。スライドは生成されません。 |
 | `pptx_inspect` | 既存デッキのスライド / シェイプ構造を読む。 |
 | `pptx_review` | 1 回の呼び出しでデッキを監査 — overflow + 色コントラクト + `paper_rule` セクション網羅性。デッキ言語を自動検出。CLI 版は `python -m thesisagents review <deck.pptx>` でも。 |
 | `pptx_update_slide` | `title` / `body` / `meta`(シェイプ名経由)または任意のシェイプ(インデックス経由)を置換。 |
@@ -265,7 +290,7 @@ LLM-as-agent フロー(`ANTHROPIC_API_KEY` 不要 — LLM 自身がエージェ�
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-完全な参照は [`docs/mcp.md`](docs/mcp.md)。
+完全な参照は [`docs/mcp.md`](../docs/mcp.md)。
 
 ## プロジェクト構成
 
@@ -276,8 +301,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,
@@ -311,18 +337,19 @@ thesisagents-gui                 # or: thesisagents gui
 ```
 
 ウィンドウには 4 つのタブがあります — **Search**、**Settings**(QSettings 経由で API キーを永続化)、**Enrich**(`collection_ready` シグナルを介して LLM-as-agent / Python パイプラインのエンリッチを駆動)、**Deck**(Light モードトグル + スライド上限 + 最大図数のコントロールが `ExportOptions` に流れる)。Windows リリース zip は PySide6 を含む Nuitka コンパイル済みバンドルを同梱するので、別途 Python をインストールせずに `thesisagents.exe gui` が動作します。
+Search タブでは、上位の結果から引用をたどること (スノーボール)、結果をライブラリファイルに保存してネットワークなしでそのライブラリを検索することもでき、Deck タブでは手持ちの PowerPoint テンプレートの上にスライドを作れます。
 **UI は 14 言語すべてで提供**(English、繁體中文、简体中文、日本語、Español、Français、Deutsch、한국어、Português、Русский、Italiano、Tiếng Việt、हिन्दी、Bahasa Indonesia) — 初回起動は OS ロケールから言語を選び、その後 **Settings → Interface language** で変更できます。デッキ出力言語は別のドロップダウンなので、UI を 1 つの言語で動かしつつ別の言語でスライドを出力できます。レイアウトはレスポンシブ: すべてのフォームが `QScrollArea` に収まり、ウィンドウは 900×600 まで縮小可能(720p にもなお収まる)、HiDPI スケーリングはデフォルトで有効です。
 
-完全な参照: [`docs/gui.md`](docs/gui.md)。
+完全な参照: [`docs/gui.md`](../docs/gui.md)。
 
 ## スタンドアロン実行ファイルとしてのパッケージング
 
 Python がインストールされていなくても動く単一ファイルバイナリを出荷するために、2 つのパッケージャがドキュメント化されています:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — 高速ビルド(1 分未満)、200〜300 MB の出力、2〜4 秒の起動。
   ビルドスクリプトを反復するときに最適。
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   低速ビルド(5〜15 分)、80〜150 MB の出力、1 秒未満の起動、
   いくらかのバイトコード保護。エンドユーザーがバイナリを
   何度も実行するときに最適。
@@ -359,7 +386,7 @@ Python がインストールされていなくても動く単一ファイルバ�
      ロックダウンされたマシンでアンチウイルスのヒューリスティックに引っかかる。
      設計上 Windows 専用でもある: Linux / macOS ユーザーは PyPI から
      インストール。`pyproject.toml` をキーとするビルドキャッシュが、
-     ウォームビルドをコールドの約 70 分から約 5〜10 分に短縮。
+     ウォームビルドをコールドの約 85 分から約 5〜10 分に短縮。
   5. **`publish-release`** — Nuitka アセットがアップロードされたら draft を
      解除、ユーザーが半端なリリースを見ないように。
 
@@ -378,7 +405,7 @@ PyPI 公開 + リリース実行ファイルを有効にするには:
    General → Workflow permissions → Read and write permissions`。bump
    コミットはワークフローの `GITHUB_TOKEN` によって push されます。
 4. PR を `main` にマージしてリリースを切る。パイプラインは PyPI 公開まで
-   約 3〜5 分、Windows zip の添付までさらに約 50〜70 分(コールド)または
+   約 3〜5 分、Windows zip の添付までさらに約 80〜90 分(コールド)または
    約 5〜10 分(ウォームな Nuitka キャッシュ)かかります。
 
 `publish-pypi` ジョブは意図的に GitHub Environment を付けません。そのため

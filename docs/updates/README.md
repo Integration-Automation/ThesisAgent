@@ -58,6 +58,23 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-08 | 2026-10-08 | The GUI gets snowballing, the library and deck templates | #done #gui #snowball #library #templates | [2026-10](2026-10.md) |
+| U-20261008-07 | 2026-10-08 | A template contract for decks, with validation before the export | #done #pptx #templates #cli #mcp | [2026-10](2026-10.md) |
+| U-20261008-06 | 2026-10-08 | A persistent SQLite literature library | #done #library #cli #mcp | [2026-10](2026-10.md) |
+| U-20261008-05 | 2026-10-08 | Citation providers and a bounded snowball search | #done #snowball #sources #cli #mcp | [2026-10](2026-10.md) |
+| U-20261008-04 | 2026-10-08 | Every search reports what each source returned | #done #search #cli #mcp #gui | [2026-10](2026-10.md) |
+| U-20261008-03 | 2026-10-08 | Rankings are explained, results get advisory pruning recommendations | #done #ranking #cli #mcp #gui | [2026-10](2026-10.md) |
+| U-20261008-02 | 2026-10-08 | Export verifies every DOI and URL before writing | #done #export #cli #mcp #gui | [2026-10](2026-10.md) |
+| U-20261008-01 | 2026-10-08 | Test suite restores the environment and refuses live HTTP | #incident #tests | [2026-10](2026-10.md) |
+| U-20261001-05 | 2026-10-01 | Publish job builds with the locked build backend | #done #ci #security #X-13 | [2026-10](2026-10.md) |
+| U-20261001-04 | 2026-10-01 | Publish job installs hash-locked build tooling | #done #ci #security #X-13 | [2026-10](2026-10.md) |
+| U-20261001-03 | 2026-10-01 | The sdist carries no tests | #done #packaging #X-13 | [2026-10](2026-10.md) |
+| U-20261001-02 | 2026-10-01 | Workflow-timeout test failed CI lint (ruff B905) | #incident #ci | [2026-10](2026-10.md) |
+| U-20261001-01 | 2026-10-01 | Every workflow job has a timeout | #ci #tests | [2026-10](2026-10.md) |
+| U-20260925-04 | 2026-09-25 | Translated READMEs link back to the repository root | #docs #tests | [2026-09](2026-09.md) |
+| U-20260925-03 | 2026-09-25 | License metadata uses the SPDX expression | #packaging | [2026-09](2026-09.md) |
+| U-20260925-02 | 2026-09-25 | Dependabot waits 7 days before proposing a new release | #ci #security #deps | [2026-09](2026-09.md) |
+| U-20260925-01 | 2026-09-25 | Nuitka release build actually uses its compiler cache; cap raised to 120 min | #ci #release #fix | [2026-09](2026-09.md) |
 | U-20260924-03 | 2026-09-24 | Test that every checkout decides on persisted credentials | #ci #tests | [2026-09](2026-09.md) |
 | U-20260924-02 | 2026-09-24 | Release runs only for pushes here; least-privilege workflow permissions | #ci #security | [2026-09](2026-09.md) |
 | U-20260924-01 | 2026-09-24 | Move CI to Node 24 actions pinned by commit | #ci #security #deps | [2026-09](2026-09.md) |
@@ -84,4 +101,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 21 |
+| [2026-10.md](2026-10.md) | 2026-10 | 13 |
+| [2026-09.md](2026-09.md) | 2026-09 | 25 |

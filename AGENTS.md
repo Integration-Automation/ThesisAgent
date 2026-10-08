@@ -166,6 +166,24 @@ to the user. An early batch regen script (since removed) had to be
 rebuilt this way after two papers (Wen, Fang) were caught with
 fabricated AAAI URLs that pointed nowhere.
 
+**The export also checks at run time.** `export_collection`, the CLI,
+the MCP `export` tool and the GUI Deck tab look up every DOI at doi.org
+and request every URL once before writing anything. A DOI that is not
+registered, a URL that answers 404, or an unreachable host stops the
+export and names the paper and the identifier.
+
+* **Why**: the audit above is a manual step, and it was skipped often
+  enough that fabricated identifiers shipped.
+* **What it does not do**: it proves an identifier exists, not that it
+  belongs to this paper. A real DOI attached to the wrong paper passes.
+  So the copy-verbatim rule and the audit above still apply.
+* **Example**: `Paper(doi="10.1234/typo")` fails with
+  `doi 10.1234/typo is invalid (doi.org has no such DOI registered)`.
+* **Anti-pattern**: passing `--no-verify-identifiers` /
+  `verify_identifiers=False` to get past a failure. The opt-out is for a
+  machine with no network. A failed identifier is fixed by copying the
+  right value from the search xlsx.
+
 ### Pruning irrelevant downloads (mandatory)
 
 The search engine is keyword-based, so off-topic papers will slip in:
@@ -196,6 +214,28 @@ languages" is off-topic for a "Claude Code code review" query (paper
 is about Claude the model's multilingual ability, not Claude Code
 the agentic tool). Borderline cases get a rich summary — better to
 over-include than to silently drop a possible match.
+
+**Start from the tool's recommendations, then read the abstracts.** Run
+the search with `--diagnostics` (CLI) or `diagnostics=true` (MCP
+`search`). Each paper comes back with its score split into relevance,
+recency and citations, the query terms that matched, and a `keep` /
+`review` / `prune` recommendation naming the threshold that triggered
+it. The CLI writes the same to `exports/<run>/diagnostics.json`, with
+each paper's `bibtex_key`, the name its PDF and deck carry on disk.
+
+* **Why**: the classification used to rest on the agent noticing an
+  off-topic title among 25 results. The ranking already knew that a
+  paper matched none of the query terms and threw that away.
+* **It is advice.** Nothing is removed for you, and the rule is
+  lexical: a paper on the right topic that words it differently can be
+  marked `prune`, and an off-topic paper that repeats the query words
+  can be marked `keep`. Read the abstract before deleting.
+* **Example**: for "LLM code review", an object-detection literature
+  review comes back `review` with "title matches 1 of 3 query terms
+  (review)". Its abstract confirms it is off-topic, so it is pruned.
+* **Anti-pattern**: deleting every `prune` paper without opening one.
+  The recommendation narrows where to look, it does not replace the
+  judgement this section asks for.
 
 ## Sources you can search
 

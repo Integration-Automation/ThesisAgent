@@ -51,12 +51,59 @@ Flujo MCP de 6 pasos
    5. (lee cada PDF y produce dict summary estructurado)
    6. export(papers=[{...paper, "summary": {...}}], language="es", ...)
 
-13 herramientas MCP en total: descubrimiento (``list_sources``,
-``list_exports``), ``search``, ``fetch_paper``, ``fetch_pdf_text``,
-``download_pdfs``, ``export`` y seis operaciones de deck ``pptx_*``
+18 herramientas MCP en total: descubrimiento (``list_sources``,
+``list_exports``), ``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``,
+``download_pdfs``, ``pptx_validate_template``, ``export`` y seis operaciones de deck ``pptx_*``
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
 Referencia completa: :doc:`/mcp`.
+
+**Para detectar resultados fuera de tema, empiece por el consejo de la
+propia herramienta.** ``--diagnostics`` (CLI) o ``diagnostics=true`` en
+la herramienta MCP ``search`` explica la clasificación: la puntuación de
+cada artículo dividida en relevancia, actualidad y citas, los términos
+de la consulta que coincidieron y una recomendación ``keep`` /
+``review`` / ``prune`` con el umbral que la motivó. La CLI también
+escribe el desglose completo en ``diagnostics.json`` dentro del
+directorio de salida. Las recomendaciones son orientativas y no se
+elimina nada por usted, así que lea los resúmenes de los artículos
+``review`` y ``prune`` antes de borrar algo.
+
+**Compruebe qué fuentes respondieron.** Cada respuesta de ``search``
+incluye ``source_stats``: para cada fuente, cuántos registros devolvió,
+cuántos artículos únicos se le atribuyen tras la deduplicación y un
+``status`` que vale ``ok``, ``failed``, ``rate_limited`` o ``disabled``.
+Una fuente que falla se omite sin detener la búsqueda, así que lea estos
+recuentos antes de concluir que un tema tiene pocos artículos. La CLI
+imprime la misma tabla tras cada búsqueda ``--query``.
+
+**Siga las citas.** ``--snowball both`` (CLI) o la herramienta
+``snowball`` amplía los primeros resultados siguiendo sus enlaces de
+citación: ``references`` añade lo que citan y ``cited_by`` añade lo que
+los cita. Encuentra trabajos que una búsqueda por palabras clave pierde
+porque los autores usaron otros términos. La ampliación está acotada (un
+paso por defecto), cada artículo descubierto conserva el camino que lo
+alcanzó, y todos se puntúan frente a sus palabras clave, de modo que un
+artículo no se conserva solo por ser muy citado.
+
+**Conserve lo que encuentra.** ``--library thesis.db --library-add``
+(CLI) o la herramienta ``library_add`` guarda los artículos de una
+ejecución en una biblioteca de literatura, un único archivo SQLite que
+sobrevive a la sesión. Añadir de nuevo la misma búsqueda no duplica
+nada: un artículo se reconoce por su DOI, su ID de arXiv o su título, y
+la nueva observación se fusiona con el registro guardado. Después
+``library_search`` encuentra los artículos guardados sin tocar la red, y
+los DOI y URL ya verificados no se vuelven a comprobar durante 30 días.
+
+**Use su propia plantilla.** ``--pptx-template thesis.pptx`` (CLI) o
+``pptx_template`` en la herramienta ``export`` construye la presentación
+sobre una plantilla de PowerPoint, de modo que el fondo, el logotipo y
+los diseños son los suyos. Ejecute antes ``thesisagents
+validate-template thesis.pptx`` (o la herramienta
+``pptx_validate_template``): lista qué diseño usaría cada tipo de
+diapositiva y le dice qué corregir. Una plantilla necesita diapositivas
+16:9 y un diseño para el contenido, y un pequeño archivo de
+configuración puede asignar diseños, fuentes y colores.
 
 Obligatorio: verificación URL / DOI antes de entregar
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -82,6 +129,16 @@ columna 7 = DOI, columna 8 = URL. Audite su script regen al terminar:
        if actual and not (p.url == actual
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
+
+**La exportación lo comprueba en tiempo de ejecución.** Antes de
+escribir nada, la CLI, la herramienta MCP ``export`` y la pestaña Deck
+de la GUI consultan el DOI de cada artículo en doi.org y solicitan cada
+URL una vez. Un DOI no registrado, una URL que responde 404 o un host
+inalcanzable detienen la exportación e indican el artículo y el
+identificador. La comprobación demuestra que un identificador existe, no
+que pertenezca a este artículo, por lo que la regla de copiar desde el
+xlsx y la auditoría anterior siguen siendo necesarias. Sin conexión, use
+``--no-verify-identifiers`` (CLI) o ``verify_identifiers=false`` (MCP).
 
 Prohibiciones
 ^^^^^^^^^^^^^
@@ -157,7 +214,7 @@ Dónde buscar más
 ----------------
 
 * Flags CLI y variables de entorno: :doc:`/cli`
-* 13 herramientas del servidor MCP: :doc:`/mcp`
+* 18 herramientas del servidor MCP: :doc:`/mcp`
 * Kit de edición PPTX: :doc:`/pptx_editing`
 * El archivo ``readmes/README.es.md`` en la raíz del repo tiene la lista
   completa de funcionalidades del proyecto.

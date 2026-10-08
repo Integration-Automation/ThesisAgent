@@ -16,6 +16,11 @@ from thesisagents.core.constants import (
     EXPORT_XLSX,
 )
 from thesisagents.core.exceptions import ExportError
+from thesisagents.core.export_validation import (
+    IdentifierVerificationError,
+    VerificationCache,
+    verify_collection_blocking,
+)
 from thesisagents.core.models import ExportOptions, PaperCollection
 from thesisagents.exporters.base import Exporter
 from thesisagents.exporters.bibtex import BibtexExporter
@@ -26,6 +31,7 @@ from thesisagents.exporters.markdown import MarkdownExporter
 from thesisagents.exporters.pptx import PptxExporter
 from thesisagents.exporters.ris import RisExporter
 from thesisagents.exporters.xlsx import XlsxExporter
+from thesisagents.utils.logging import get_logger
 
 _REGISTRY: Mapping[str, type[Exporter]] = {
     EXPORT_BIBTEX: BibtexExporter,
@@ -39,10 +45,24 @@ _REGISTRY: Mapping[str, type[Exporter]] = {
 }
 
 
+_LOG = get_logger(__name__)
+
+
 def export_collection(
-    collection: PaperCollection, options: ExportOptions
+    collection: PaperCollection,
+    options: ExportOptions,
+    *,
+    verification_cache: VerificationCache | None = None,
 ) -> dict[str, Path]:
     """Run every requested exporter; return {format: output path}.
+
+    The identifier preflight runs first (see :func:`_preflight_identifiers`):
+    unless ``options.verify_identifiers`` is False, a paper whose DOI or URL is
+    wrong or unreachable raises ``IdentifierVerificationError`` before any
+    file is written, so a failed run leaves no half-finished export behind.
+    ``verification_cache`` lets a caller that exports the same papers more than
+    once in one run (the CLI: aggregate formats, then one deck per paper) check
+    each identifier only once.
 
     Every exporter already wraps its *render* step in an ``ExportError``, but
     each one then writes to disk outside that guard. The write is where the
@@ -54,12 +74,13 @@ def export_collection(
     turns that into ``error: [xlsx] could not write ...`` with the fix in the
     message.
     """
+    for fmt in options.formats:
+        if fmt not in _REGISTRY:
+            raise ExportError(fmt, "no exporter registered for this format")
+    _preflight_identifiers(collection, options, verification_cache)
     written: dict[str, Path] = {}
     for fmt in options.formats:
-        exporter_cls = _REGISTRY.get(fmt)
-        if exporter_cls is None:
-            raise ExportError(fmt, "no exporter registered for this format")
-        exporter = exporter_cls()
+        exporter = _REGISTRY[fmt]()
         try:
             path = exporter.export(collection, options)
         except OSError as err:
@@ -71,6 +92,35 @@ def export_collection(
             ) from err
         written[fmt] = path
     return written
+
+
+def _preflight_identifiers(
+    collection: PaperCollection,
+    options: ExportOptions,
+    cache: VerificationCache | None,
+) -> None:
+    """Stop the export when a paper's DOI or URL does not check out.
+
+    The boundary this guards: the last point before a bibliography leaves the
+    program. Failure mode it prevents: a hand-authored ``Paper`` whose DOI was
+    typed from memory reaching a ``.bib`` file or a references slide.
+
+    The opt-out is logged at WARNING so an unverified export is never silent.
+
+    Example: a collection holding ``Paper(doi="10.1234/typo")`` raises
+    ``IdentifierVerificationError`` whose ``report.failures`` names that paper
+    and DOI. With ``ExportOptions(verify_identifiers=False)`` the same call
+    exports and logs "identifier verification is OFF".
+    """
+    if not options.verify_identifiers:
+        _LOG.warning(
+            "identifier verification is OFF for this export "
+            "(verify_identifiers=False): DOIs and URLs were not checked"
+        )
+        return
+    report = verify_collection_blocking(collection, cache=cache)
+    if not report.ok:
+        raise IdentifierVerificationError(report)
 
 
 __all__ = [

@@ -50,7 +50,53 @@ Fluxo MCP de 6 passos
    5. (você lê cada PDF e produz dict summary estruturado)
    6. export(papers=[{...paper, "summary": {...}}], language="pt", ...)
 
-As 13 ferramentas MCP completas: :doc:`/mcp`.
+As 18 ferramentas MCP completas: :doc:`/mcp`.
+
+**Para identificar resultados fora do tema, comece pelo conselho da
+própria ferramenta.** ``--diagnostics`` (CLI) ou ``diagnostics=true`` na
+ferramenta MCP ``search`` explica a classificação: a pontuação de cada
+artigo dividida em relevância, atualidade e citações, os termos da
+consulta que coincidiram e uma recomendação ``keep`` / ``review`` /
+``prune`` com o limiar que a motivou. A CLI também grava o detalhamento
+completo em ``diagnostics.json`` no diretório de saída. As recomendações
+são orientativas e nada é removido por você, portanto leia os resumos
+dos artigos ``review`` e ``prune`` antes de apagar qualquer coisa.
+
+**Verifique quais fontes responderam.** Toda resposta de ``search`` traz
+``source_stats``: para cada fonte, quantos registros ela retornou,
+quantos artigos únicos lhe são atribuídos após a deduplicação e um
+``status`` com valor ``ok``, ``failed``, ``rate_limited`` ou
+``disabled``. Uma fonte que falha é ignorada sem interromper a busca,
+portanto leia esses números antes de concluir que um tema tem poucos
+artigos. A CLI imprime a mesma tabela após cada busca ``--query``.
+
+**Siga as citações.** ``--snowball both`` (CLI) ou a ferramenta
+``snowball`` expande os primeiros resultados seguindo seus vínculos de
+citação: ``references`` acrescenta o que eles citam e ``cited_by``
+acrescenta o que os cita. Isso encontra trabalhos que uma busca por
+palavras-chave perde porque os autores usaram outros termos. A expansão
+é limitada (um passo por padrão), cada artigo descoberto guarda o
+caminho que o alcançou, e todos são pontuados em relação às suas
+palavras-chave, de modo que um artigo não é mantido só por ser muito
+citado.
+
+**Guarde o que encontrar.** ``--library thesis.db --library-add`` (CLI)
+ou a ferramenta ``library_add`` guarda os artigos de uma execução em uma
+biblioteca de literatura, um único arquivo SQLite que sobrevive à
+sessão. Adicionar a mesma busca de novo não duplica nada: um artigo é
+reconhecido por seu DOI, seu ID do arXiv ou seu título, e a nova
+observação é mesclada ao registro guardado. Depois ``library_search``
+encontra os artigos guardados sem tocar na rede, e os DOIs e URLs já
+verificados não são verificados de novo por 30 dias.
+
+**Use o seu próprio modelo.** ``--pptx-template thesis.pptx`` (CLI) ou
+``pptx_template`` na ferramenta ``export`` constrói a apresentação sobre
+um modelo do PowerPoint, de modo que o fundo, o logotipo e os layouts
+são os seus. Execute antes ``thesisagents validate-template
+thesis.pptx`` (ou a ferramenta ``pptx_validate_template``): ele lista
+qual layout cada tipo de slide usaria e diz o que corrigir. Um modelo
+precisa de slides 16:9 e de um layout para o conteúdo, e um pequeno
+arquivo de configuração pode atribuir layouts, fontes e cores.
 
 Obrigatório: verificação URL / DOI antes da entrega
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -76,6 +122,16 @@ coluna 7 = DOI, coluna 8 = URL. Audite seu script regen ao terminar:
        if actual and not (p.url == actual
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
+
+**A exportação verifica isso em tempo de execução.** Antes de gravar
+qualquer coisa, a CLI, a ferramenta MCP ``export`` e a aba Deck da GUI
+consultam o DOI de cada artigo em doi.org e solicitam cada URL uma vez.
+Um DOI não registrado, uma URL que responde 404 ou um host inalcançável
+interrompem a exportação e indicam o artigo e o identificador. A
+verificação prova que um identificador existe, não que pertence a este
+artigo, por isso a regra de copiar do xlsx e a auditoria acima continuam
+necessárias. Offline, passe ``--no-verify-identifiers`` (CLI) ou
+``verify_identifiers=false`` (MCP).
 
 Proibições
 ^^^^^^^^^^
@@ -149,7 +205,7 @@ Onde procurar mais
 ------------------
 
 * Flags CLI e variáveis de ambiente: :doc:`/cli`
-* 13 ferramentas do servidor MCP: :doc:`/mcp`
+* 18 ferramentas do servidor MCP: :doc:`/mcp`
 * Toolkit de edição PPTX: :doc:`/pptx_editing`
 * O arquivo ``readmes/README.pt.md`` na raiz do repo tem a lista completa de
   funcionalidades.

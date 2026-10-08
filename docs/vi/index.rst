@@ -50,7 +50,52 @@ Quy trình MCP 6 bước
    5. (bạn đọc mỗi PDF và tạo dict tóm tắt có cấu trúc)
    6. export(papers=[{...paper, "summary": {...}}], language="vi", ...)
 
-13 công cụ MCP đầy đủ: :doc:`/mcp`.
+18 công cụ MCP đầy đủ: :doc:`/mcp`.
+
+**Để tìm các kết quả lạc đề, hãy bắt đầu từ gợi ý của chính công cụ.**
+``--diagnostics`` (CLI) hoặc ``diagnostics=true`` trên công cụ MCP
+``search`` giải thích thứ hạng: điểm của từng bài báo được tách thành độ
+liên quan, độ mới và số trích dẫn, các từ khóa truy vấn đã khớp, cùng
+một khuyến nghị ``keep`` / ``review`` / ``prune`` kèm ngưỡng đã kích
+hoạt nó. CLI cũng ghi bảng phân tích đầy đủ vào ``diagnostics.json``
+trong thư mục đầu ra. Các khuyến nghị chỉ mang tính tham khảo và không
+có gì bị xóa thay bạn, vì vậy hãy đọc tóm tắt của các bài ``review`` và
+``prune`` trước khi xóa bất cứ thứ gì.
+
+**Hãy kiểm tra nguồn nào đã trả lời.** Mọi phản hồi của ``search`` đều
+kèm ``source_stats``: với từng nguồn, số bản ghi nguồn đó trả về, số bài
+báo duy nhất được tính cho nguồn đó sau khi khử trùng lặp, và một
+``status`` có giá trị ``ok``, ``failed``, ``rate_limited`` hoặc
+``disabled``. Một nguồn bị lỗi sẽ được bỏ qua mà không dừng việc tìm
+kiếm, vì vậy hãy đọc các con số này trước khi kết luận rằng một chủ đề
+có ít bài báo. CLI cũng in cùng bảng đó sau mỗi lần tìm ``--query``.
+
+**Hãy lần theo trích dẫn.** ``--snowball both`` (CLI) hoặc công cụ
+``snowball`` mở rộng các kết quả đứng đầu theo liên kết trích dẫn:
+``references`` thêm những gì chúng trích dẫn và ``cited_by`` thêm những
+gì trích dẫn chúng. Cách này tìm ra các công trình mà tìm kiếm theo từ
+khóa bỏ sót vì tác giả dùng thuật ngữ khác. Việc mở rộng có giới hạn
+(mặc định một bước), mỗi bài tìm được giữ lại đường đã dẫn tới nó, và
+tất cả đều được chấm điểm theo từ khóa của bạn, nên một bài không được
+giữ chỉ vì được trích dẫn nhiều.
+
+**Hãy giữ lại những gì bạn tìm được.** ``--library thesis.db
+--library-add`` (CLI) hoặc công cụ ``library_add`` lưu các bài báo của
+một lần chạy vào thư viện tài liệu, một tệp SQLite duy nhất còn lại sau
+khi phiên kết thúc. Thêm lại cùng một lần tìm kiếm không tạo ra bản
+trùng nào: bài báo được nhận ra qua DOI, arXiv ID hoặc tiêu đề, và lần
+ghi nhận mới được gộp vào bản ghi đã lưu. Sau đó ``library_search`` tìm
+các bài đã lưu mà không cần mạng, còn các DOI và URL đã xác minh sẽ
+không bị kiểm tra lại trong 30 ngày.
+
+**Hãy dùng mẫu của riêng bạn.** ``--pptx-template thesis.pptx`` (CLI)
+hoặc ``pptx_template`` trên công cụ ``export`` dựng bộ trang chiếu trên
+một mẫu PowerPoint, nên nền, logo và bố cục là của bạn. Hãy chạy
+``thesisagents validate-template thesis.pptx`` (hoặc công cụ
+``pptx_validate_template``) trước: nó liệt kê bố cục mà mỗi loại trang
+chiếu sẽ dùng và cho bạn biết cần sửa gì. Một mẫu cần trang chiếu 16:9
+và một bố cục cho nội dung, và một tệp cấu hình nhỏ có thể chỉ định bố
+cục, phông chữ và màu sắc.
 
 Bắt buộc: xác minh URL / DOI trước khi giao
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -76,6 +121,16 @@ xlsx được ghi vào ``exports/<run>/<slug>-<timestamp>.xlsx`` với cột 7
        if actual and not (p.url == actual
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
+
+**Bước xuất kiểm tra điều này khi chạy.** Trước khi ghi bất cứ thứ gì,
+CLI, công cụ MCP ``export`` và tab Deck của GUI tra cứu DOI của từng bài
+báo tại doi.org và gửi một yêu cầu tới từng URL. Một DOI chưa đăng ký,
+một URL trả về 404 hoặc một máy chủ không thể kết nối sẽ dừng việc xuất
+và nêu rõ bài báo cùng mã định danh. Phép kiểm tra chứng minh rằng mã
+định danh tồn tại, không chứng minh nó thuộc về bài báo này, nên quy tắc
+chép từ xlsx và bước kiểm toán ở trên vẫn cần thực hiện. Khi làm việc
+ngoại tuyến, hãy truyền ``--no-verify-identifiers`` (CLI) hoặc
+``verify_identifiers=false`` (MCP).
 
 Cấm
 ^^^
@@ -148,7 +203,7 @@ Tìm hiểu thêm
 -------------
 
 * Cờ CLI và biến môi trường: :doc:`/cli`
-* 13 công cụ máy chủ MCP: :doc:`/mcp`
+* 18 công cụ máy chủ MCP: :doc:`/mcp`
 * Toolkit chỉnh sửa PPTX: :doc:`/pptx_editing`
 * Tệp ``readmes/README.vi.md`` ở gốc repo có danh sách đầy đủ tính năng.
 * Tham chiếu kỹ thuật sâu (kiến trúc plugin, chính sách bảo mật,

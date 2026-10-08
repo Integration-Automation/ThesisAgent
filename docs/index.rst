@@ -59,6 +59,7 @@ workflow.
    mcp
    gui
    pptx_editing
+   pptx_templates
 
 Concepts
 --------

@@ -26,8 +26,8 @@ pipeline).
 
 **Jika Anda LLM (Claude Code, Cursor, Aider, Codex CLI, …) yang membaca
 README ini untuk mengetahui apa yang harus dilakukan — mulailah di sini.**
-Semua yang di bawah ini juga disematkan di [`AGENTS.md`](AGENTS.md) (cermin
-lintas-agen) dan [`CLAUDE.md`](CLAUDE.md) (referensi kanonik); baca itu
+Semua yang di bawah ini juga disematkan di [`AGENTS.md`](../AGENTS.md) (cermin
+lintas-agen) dan [`CLAUDE.md`](../CLAUDE.md) (referensi kanonik); baca itu
 sebelum melakukan perubahan non-sepele.
 
 ### Apa yang sebenarnya diinginkan pengguna
@@ -64,10 +64,10 @@ meningkatkannya.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Ketiga belas tool MCP (termasuk `list_sources`, `list_exports`,
+Kedelapan belas tool MCP (termasuk `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / dll.)
-didokumentasikan di [`docs/mcp.md`](docs/mcp.md).
+didokumentasikan di [`docs/mcp.md`](../docs/mcp.md).
 
 ### Wajib: verifikasi URL / DOI sebelum penyerahan
 
@@ -98,6 +98,16 @@ Dua fabrikasi yang tertangkap dengan cara ini di produksi: volume AAAI
 salah (`v39i23.34521` vs sebenarnya `v39i22.34537`) dan jalur slug penulis
 yang direka (`view/fang2026` alih-alih `v40i5.37389`).
 
+**Ekspor memeriksa hal ini saat dijalankan.** Sebelum menulis apa pun,
+CLI, tool MCP `export`, dan tab Deck pada GUI mencari DOI setiap makalah
+di doi.org dan meminta setiap URL satu kali. DOI yang tidak terdaftar,
+URL yang menjawab 404, atau host yang tidak dapat dijangkau menghentikan
+ekspor dan menyebutkan makalah serta pengenalnya. Pemeriksaan ini
+membuktikan bahwa sebuah pengenal ada, bukan bahwa pengenal itu milik
+makalah ini, sehingga aturan menyalin dari xlsx dan audit di atas tetap
+berlaku. Saat bekerja luring, berikan `--no-verify-identifiers` (CLI)
+atau `verify_identifiers=false` (MCP).
+
 ### Wajib: pangkas unduhan tidak relevan sebelum penyerahan
 
 Pencocokan kata kunci pencarian bersifat berbasis kata kunci, jadi makalah
@@ -123,9 +133,19 @@ jujur tentang apa yang dikembalikan pencarian. Kasus ambang mendapat
 ringkasan kaya; lebih baik terlalu banyak menyertakan daripada diam-diam
 menjatuhkan kemungkinan kecocokan.
 
+**Untuk menemukan hasil yang melenceng dari topik, mulailah dari saran
+alat itu sendiri.** `--diagnostics` (CLI) atau `diagnostics=true` pada
+tool MCP `search` menjelaskan peringkat: skor setiap makalah yang
+dipecah menjadi relevansi, kebaruan, dan sitasi, istilah kueri yang
+cocok, serta rekomendasi `keep` / `review` / `prune` beserta ambang yang
+memicunya. CLI juga menulis rincian lengkap ke `diagnostics.json` di
+direktori keluaran. Rekomendasi ini hanyalah saran dan tidak ada yang
+dihapus untuk Anda, jadi bacalah abstrak makalah `review` dan `prune`
+sebelum menghapus apa pun.
+
 ### Contoh kerja
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) memuat sebuah
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) memuat sebuah
 ringkasan kaya yang ditulis-tangan persis dengan cara ini (satu makalah,
 rich-tier, zh-tw, setiap field rich terisi). Pencarian multi-makalah
 mengikuti bentuk yang sama, dengan satu entri
@@ -227,9 +247,9 @@ mengikuti bentuk yang sama, dengan satu entri
   bekerja terhadap deck apa pun yang dihasilkan eksportir, plus tool MCP
   `pptx_*` setara sehingga agen LLM dapat beriterasi di atas deck yang
   telah dibuat.
-- **Server MCP**: 13 tool — `list_sources` + `list_exports`
-  (discovery), `search`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, dan enam tool deck `pptx_*`
+- **Server MCP**: 18 tool — `list_sources` + `list_exports`
+  (discovery), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
+  `download_pdfs`, `pptx_validate_template`, `export`, dan enam tool deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Memungkinkan
   LLM apa pun yang sadar-MCP
@@ -255,6 +275,68 @@ mengikuti bentuk yang sama, dengan satu entri
   melalui Unpaywall → S2 `openAccessPdf` → pencarian judul arXiv →
   CORE.ac.uk (bila key di-set). Peningkatan tipikal pada kueri yang padat
   IEEE / ACM / Springer / Elsevier: 40-70 poin persentase.
+- **Pemeriksaan pra-ekspor (verifikasi DOI / URL)**: sebelum berkas apa
+  pun ditulis, setiap DOI dicari di doi.org dan setiap URL diminta satu
+  kali. Pengenal yang salah atau tidak dapat dijangkau menghentikan
+  ekspor dengan daftar makalah dan pengenal yang gagal. Halaman penerbit
+  yang memerlukan peramban sungguhan tidak diminta (pemeriksaan DOI
+  sudah mencakupnya), dan server yang menolak akses otomatis dilaporkan
+  sebagai tidak dapat diperiksa alih-alih menggagalkan proses. Aktif
+  secara default, `--no-verify-identifiers` mematikannya untuk kerja
+  luring.
+- **Peringkat yang dapat dijelaskan dan saran pemangkasan**: setiap
+  pencarian mencatat mengapa tiap makalah berada di posisinya (bagian
+  relevansi, kebaruan, dan sitasi, istilah kueri yang cocok, satu
+  kalimat per kontribusi) dan merekomendasikan `keep`, `review`, atau
+  `prune` untuk setiap hasil, dengan menyebut aturan yang memicunya.
+  Jumlah sitasi yang rendah saja tidak pernah memicu rekomendasi.
+  Ditampilkan dengan `--diagnostics`, dengan `diagnostics=true` pada
+  tool MCP `search`, atau kolom Saran di GUI. Hanya saran: tidak ada
+  makalah yang dihapus.
+- **Statistik pencarian per sumber**: setiap pencarian melaporkan, untuk
+  tiap sumber, berapa rekaman yang dikembalikannya, berapa makalah unik
+  yang dikreditkan kepadanya setelah deduplikasi, dan apakah sumber itu
+  gagal, kena batas laju, atau nonaktif. Sumber yang gagal dilewati
+  tanpa menghentikan pencarian, sehingga angka-angka inilah yang
+  membedakan topik yang memang sedikit makalahnya dari pencarian yang
+  kehilangan separuh sumbernya. CLI mencetaknya setelah setiap pencarian
+  `--query`, tool MCP `search` mengembalikannya sebagai `source_stats`,
+  dan GUI menampilkannya di baris status.
+- **Pencarian bola salju lewat sitasi**: `--snowball
+  references|cited_by|both` (atau tool MCP `snowball`) memperluas hasil
+  teratas mengikuti tautan sitasinya, mundur ke apa yang mereka sitasi
+  dan maju ke apa yang menyitasi mereka, dan menemukan karya yang
+  terlewat oleh pencarian kata kunci karena penulisnya memakai istilah
+  lain. Setiap dimensi dibatasi (kedalaman 1 secara default, makalah per
+  benih, makalah secara keseluruhan), makalah yang dicapai lewat
+  beberapa jalur dihitung satu, dan setiap makalah yang ditemukan
+  menyimpan jalur yang menemukannya. Tautan berasal dari OpenAlex,
+  Semantic Scholar, dan Crossref, dan makalah yang ditemukan dinilai
+  oleh pemeringkat yang sama, sehingga sering disitasi tidak dianggap
+  berarti sesuai topik.
+- **Pustaka literatur**: `--library thesis.db` menyimpan apa yang
+  ditemukan proses Anda dalam satu file SQLite, sehingga hasil pencarian
+  tidak lagi hilang ketika proses selesai. Isinya makalah, proses dan
+  sumber mana yang menemukan masing-masing, skornya, tautan sitasi dari
+  `--snowball`, dan hasil pemeriksaan DOI / URL. `--library-add`
+  menggabungkan satu proses ke dalamnya (makalah yang sudah ada
+  diperbarui, tidak pernah diduplikasi), `--library-search` menemukan
+  makalah tersimpan tanpa akses jaringan, dan `--library-export`
+  mengirimkannya ke format ekspor apa pun. DOI atau URL yang sudah
+  terverifikasi pada proses sebelumnya tidak diperiksa lagi selama 30
+  hari. Tersedia juga sebagai tool MCP `library_add`, `library_search`,
+  dan `library_stats`.
+- **Templat slide**: `--pptx-template thesis.pptx` menyusun slide di
+  atas templat PowerPoint Anda sendiri, sehingga latar, logo, dan tata
+  letak templat yang membentuk deck, bukan tampilan bawaan dengan pita
+  biru navy. Setiap jenis slide (sampul, bagian, isi, tabel, referensi,
+  tanya jawab) memakai tata letak yang Anda tetapkan untuknya, dan file
+  konfigurasi TOML / JSON opsional (`--pptx-template-config`) mengatur
+  font, warna palet, serta apakah pita kepala dan panel sampul digambar.
+  Templat diperiksa sebelum pencarian dimulai, dan `thesisagents
+  validate-template thesis.pptx` menunjukkan tata letak mana yang akan
+  dipakai tiap jenis slide dan apa yang perlu diperbaiki. Tanpa templat,
+  deck bawaan tidak berubah.
 - **Aman secara default**: transport HTTP hanya-HTTPS, rate limit per
   sumber (token bucket), `defusedxml` untuk payload XML apa pun,
   jalur ekspor aman dari path-traversal, tanpa `eval` / `exec` / `pickle`
@@ -335,6 +417,16 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Lewati prompt paywall dan lanjutkan. |
 | `--max-slides` | Batas slide per-makalah (default 25; berikan 0 untuk tanpa batas). |
 | `--dark-mode` | Render pptx dengan latar gelap + teks hampir-putih. Default adalah deck terang band-navy. |
+| `--pptx-template FILE` | Menyusun slide di atas templat PowerPoint (.pptx / .potx) sebagai ganti deck bawaan dengan pita biru navy. Diperiksa sebelum pencarian dimulai: perlu slide 16:9 dan tata letak untuk isi slide. `thesisagents validate-template FILE` menunjukkan apa yang akan dipakai sebuah ekspor. |
+| `--pptx-template-config FILE` | File TOML / JSON berisi penggantian untuk `--pptx-template`: tata letak tiap jenis slide, font, warna palet, serta apakah pita kepala dan panel sampul digambar. |
+| `--no-verify-identifiers` | Mengekspor tanpa memeriksa DOI dan URL makalah. Secara default, DOI / URL yang salah atau tidak dapat dijangkau menghentikan proses sebelum apa pun ditulis. Untuk penggunaan luring. |
+| `--diagnostics` | Menjelaskan peringkat pencarian `--query`: mencetak skor setiap makalah (relevansi + kebaruan + sitasi) dan rekomendasi yang bersifat saran `keep` / `review` / `prune`, serta menulis rincian lengkap ke `diagnostics.json` di `--out`. Tidak ada makalah yang dihapus. |
+| `--snowball` | Memperluas hasil mengikuti tautan sitasi sebelum mengekspor: `references` (yang disitasi hasil teratas), `cited_by` (yang menyitasi mereka), atau `both`. Makalah baru ditambahkan di akhir dan melewati unduhan serta ekspor yang sama. Mati secara default. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Batas untuk `--snowball`: hasil teratas yang diperluas (default 5), langkah yang diikuti (1, paling banyak 3), makalah per benih dan arah (20), makalah baru secara keseluruhan (20), dan relevansi terendah yang dipertahankan (0..1, mati secara default). |
+| `--library PATH` | Pustaka literatur: file SQLite yang menyimpan makalah, tautan sitasi, dan hasil pemeriksaan pengenal di antara proses. Dibuat bila belum ada. Pada proses biasa file ini menjadi cache pengenal, sehingga DOI atau URL yang sudah terverifikasi tidak diperiksa lagi. |
+| `--library-add` | Menggabungkan makalah proses ini ke `--library`, beserta kueri, skor tiap makalah, dan tautan sitasi dari `--snowball`. Makalah yang sudah ada di pustaka digabung, tidak diduplikasi. |
+| `--library-search QUERY` | Menampilkan makalah di `--library` yang cocok dengan QUERY, yang terbaik lebih dulu, lalu keluar. Tidak ada yang diambil. `--max` membatasi daftar, dan `""` menampilkan makalah yang paling baru terlihat. |
+| `--library-export [QUERY]` | Mengekspor makalah di `--library` melalui `--export`, semuanya atau yang cocok dengan QUERY. Format default: `xlsx,bib`. Tidak ada PDF yang diunduh kecuali `--export` memuat `pdf`. |
 | `--quiet` | Tekan cetakan per-makalah. |
 
 ### Variabel lingkungan
@@ -400,11 +492,16 @@ Tool:
 |---|---|
 | `list_sources` | Mendaftar setiap plugin + melaporkan apakah masing-masing aktif di env saat ini. Panggil ini sekali sebelum `search`. |
 | `list_exports` | Mendaftar setiap format ekspor dengan deskripsi satu-barisnya dan apakah ia menulis satu berkas agregat atau satu berkas per makalah. |
-| `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. |
+| `search` | Kata kunci → daftar makalah. Menerima `top_tier_only`, `min_citations`; default ke campuran sumber tanpa-API-key penuh. `diagnostics=true` menambahkan rincian skor per makalah dan rekomendasi yang bersifat saran `keep` / `review` / `prune` (tidak ada yang dihapus dari `papers`). Selalu mengembalikan `source_stats`: per sumber, `requested`, `returned`, `after_dedup`, dan `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` juga memperluas hasil teratas mengikuti tautan sitasi dan menambahkan blok `snowball` (`papers` tidak berubah). |
+| `snowball` | Makalah benih → makalah yang mereka sitasi (`references`), makalah yang menyitasi mereka (`cited_by`), atau `both`, dalam batas tetap (`depth`, `max_per_seed`, `max_total`). Setiap makalah yang ditemukan membawa jalur yang mencapainya. `keywords` opsional menilai dan mengurutkannya, dan `min_relevance` membuang yang melenceng dari topik. |
+| `library_add` | Makalah → pustaka literatur (file SQLite di `library`), disimpan untuk sesi berikutnya. Menambahkan berarti menggabungkan: makalah yang sudah ada diperbarui, tidak diduplikasi. `relations` menyimpan tautan sitasi yang dikembalikan `snowball`. |
+| `library_search` | Kueri → makalah yang sudah ada di pustaka, dinilai seperti pencarian, tanpa akses jaringan. Masing-masing disertai riwayatnya: kapan pertama dan terakhir terlihat, serta sumber mana yang mengembalikannya. |
+| `library_stats` | Pustaka → berapa makalah, proses, dan tautan sitasi yang disimpannya, jumlah makalah per sumber, dan impor terbaru. |
 | `fetch_paper` | Identifier arXiv / DOI / PMID / IEEE → satu makalah. |
 | `fetch_pdf_text` | Unduh satu PDF, kembalikan teks tubuh hasil ekstraksi. **Jalur MCP menuju "saya membaca makalahnya".** |
 | `download_pdfs` | Unduh PDF daftar makalah secara batch ke `{out_dir}/pdfs/`. Mengembalikan hasil per-makalah berindeks kunci BibTeX. |
-| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah untuk skema gaya-tesis yang kaya, `max_slides_per_paper` (default 25), dan `dark_mode` (default `false` — default proyek adalah deck terang band-navy, berikan `true` untuk post-pass gelap OLED / minim-cahaya). |
+| `export` | Daftar makalah + format → menulis `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Menerima field `summary` per makalah untuk skema gaya-tesis yang kaya, `max_slides_per_paper` (default 25), dan `dark_mode` (default `false` — default proyek adalah deck terang band-navy, berikan `true` untuk post-pass gelap OLED / minim-cahaya). Memverifikasi setiap DOI / URL sebelum menulis (`verify_identifiers`, default `true`): pengenal yang salah atau tidak dapat dijangkau menggagalkan pemanggilan dan menyebutkan makalahnya, dan respons memuat laporan `verification`. `library` menunjuk pustaka literatur tempat hasil pemeriksaan pengenal disimpan, sehingga pengenal yang sudah terverifikasi pada pemanggilan sebelumnya tidak diperiksa lagi. `pptx_template` (dengan `pptx_template_config` opsional) menyusun deck di atas templat PowerPoint Anda sendiri. |
+| `pptx_validate_template` | Templat → apakah dapat dipakai untuk `export(pptx_template=...)`: tata letak yang akan dipakai tiap jenis slide, beserta galat dan peringatan yang menyebutkan apa yang harus diubah. Tidak ada yang dirender. |
 | `pptx_inspect` | Membaca struktur slide / shape dari deck yang ada. |
 | `pptx_review` | Audit deck dalam satu panggilan — overflow + kontrak warna + kelengkapan bagian `paper_rule`. Mendeteksi bahasa deck secara otomatis; juga CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Mengganti `title` / `body` / `meta` (berdasarkan nama shape) atau shape sembarang berdasarkan indeks. |
@@ -424,7 +521,7 @@ Alur LLM-as-agent (tanpa `ANTHROPIC_API_KEY` — LLM-nya sendiri yang menjadi ag
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Referensi lengkap di [`docs/mcp.md`](docs/mcp.md).
+Referensi lengkap di [`docs/mcp.md`](../docs/mcp.md).
 
 ## Tata letak proyek
 
@@ -435,8 +532,9 @@ ThesisAgents/
 │   ├── fetchers/                    # client async HTTPS-only, rate limit token-bucket
 │   ├── exporters/                   # pptx (gaya tesis) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # unduh PDF + summarizer Anthropic  (extra [intelligence])
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # benchmark kualitas-pencarian offline (docs/search-quality.md)
-│   ├── mcp/                         # server FastMCP (13 tool)
+│   ├── mcp/                         # server FastMCP (18 tool)
 │   ├── sources/<name>/              # folder plugin: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,
@@ -478,6 +576,10 @@ toggle mode Terang + batas-slide + max-figures mengalir ke
 `ExportOptions`). Zip rilis Windows memuat bundle terkompilasi-Nuitka
 dengan PySide6 disertakan, jadi `thesisagents.exe gui` bekerja tanpa
 instalasi Python terpisah.
+Tab Search juga dapat mengikuti sitasi dari hasil teratas (bola salju),
+menyimpan hasil dalam file pustaka dan mencari di pustaka itu tanpa
+jaringan, dan tab Deck dapat menyusun deck di atas templat PowerPoint
+Anda sendiri.
 **UI hadir dalam semua 14 bahasa** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — run pertama memilih
@@ -488,17 +590,17 @@ menghasilkan slide dalam bahasa lain. Tata letaknya responsif: setiap
 form berada dalam sebuah `QScrollArea` dan jendela mengecil hingga
 900×600 (masih muat 720p), dengan penskalaan HiDPI aktif secara default.
 
-Referensi lengkap: [`docs/gui.md`](docs/gui.md).
+Referensi lengkap: [`docs/gui.md`](../docs/gui.md).
 
 ## Pemaketan sebagai executable mandiri
 
 Dua packager didokumentasikan untuk mengirim biner satu-berkas yang
 berjalan tanpa Python terpasang:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — build cepat (di bawah satu menit), output 200–300 MB, startup 2–4 s.
   Terbaik saat Anda beriterasi pada skrip build.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   build lambat (5–15 menit), output 80–150 MB, startup sub-detik,
   ada proteksi bytecode. Terbaik saat pengguna akhir menjalankan biner
   berkali-kali.
@@ -538,7 +640,7 @@ Dua workflow GitHub Actions ada di bawah `.github/workflows/`:
      memicu heuristik antivirus pada mesin yang terkunci. Windows-saja
      juga secara desain: pengguna Linux / macOS memasang dari PyPI.
      Cache build berkunci pada `pyproject.toml` memangkas build hangat
-     dari ~70 menit dingin menjadi ~5–10 menit.
+     dari ~85 menit dingin menjadi ~5–10 menit.
   5. **`publish-release`** — batalkan tanda draft begitu aset Nuitka
      terunggah, sehingga pengguna tidak pernah melihat rilis
      setengah-jadi.
@@ -559,7 +661,7 @@ Untuk mengaktifkan publikasi PyPI + executable rilis:
    General → Workflow permissions → Read and write permissions`. Commit
    kenaikan di-push oleh `GITHUB_TOKEN` workflow.
 4. Potong rilis dengan me-merge PR ke `main`. Pipeline memakan
-   ~3–5 menit untuk publikasi ke PyPI dan ~50–70 menit lagi (dingin) atau
+   ~3–5 menit untuk publikasi ke PyPI dan ~80–90 menit lagi (dingin) atau
    ~5–10 menit (cache Nuitka hangat) agar zip Windows terlampir.
 
 Job `publish-pypi` sengaja TIDAK melampirkan sebuah GitHub Environment,

@@ -71,3 +71,90 @@ def test_export_button_disabled_until_results(qtbot):
     # _export_button is wired to enable on result; without running a
     # search it should stay disabled.
     assert page._export_button.isEnabled() is False  # noqa: SLF001
+
+
+def test_quick_export_formats_are_all_registered():
+    """The one-button Export once asked for "bibtex", which is not a format
+    name (it is "bib"), so every click ended in "no exporter registered"."""
+    from thesisagents.exporters import _REGISTRY
+    from thesisagents.gui.pages.search import QUICK_EXPORT_FORMATS
+
+    assert QUICK_EXPORT_FORMATS == ("pptx", "xlsx", "bib")
+    assert set(QUICK_EXPORT_FORMATS) <= set(_REGISTRY)
+
+
+def _collection_with_source_stats():
+    from thesisagents.core.diagnostics import (
+        SearchDiagnostics,
+        SourceStat,
+        SourceStatus,
+    )
+    from thesisagents.core.models import Paper, PaperCollection, Query
+
+    paper = Paper(
+        source="arxiv", source_id="1", title="A Paper", authors=("Ada Author",),
+        year=2025, venue=None, abstract="", url="https://example.org/1",
+    )
+    stats = (
+        SourceStat("arxiv", requested=25, returned=23, after_dedup=19),
+        SourceStat("openalex", requested=25, returned=0, after_dedup=0),
+        SourceStat(
+            "ieee", requested=25, returned=0, after_dedup=0,
+            status=SourceStatus.FAILED, detail="[ieee] blocked",
+        ),
+        SourceStat(
+            "semantic_scholar", requested=25, returned=0, after_dedup=0,
+            status=SourceStatus.RATE_LIMITED, detail="429",
+        ),
+        SourceStat(
+            "springer", requested=25, returned=0, after_dedup=0,
+            status=SourceStatus.DISABLED, detail="no key",
+        ),
+    )
+    return PaperCollection(
+        query=Query(keywords="x", sources=("arxiv",)), papers=(paper,),
+        diagnostics=SearchDiagnostics(source_stats=stats),
+    )
+
+
+def test_status_line_says_what_each_source_returned(qtbot):
+    from thesisagents.gui.pages.search import SearchPage
+
+    page = SearchPage(ui_language="en")
+    qtbot.addWidget(page)
+    page._on_search_finished(_collection_with_source_stats())  # noqa: SLF001
+
+    assert page.status_text() == (
+        "Found 1 paper(s). Sources: arxiv 23, openalex 0, ieee (failed), "
+        "semantic_scholar (rate limited), springer (disabled)"
+    )
+
+
+def test_status_line_source_labels_are_localised(qtbot):
+    from thesisagents.gui.pages.search import SearchPage
+
+    page = SearchPage(ui_language="zh-tw")
+    qtbot.addWidget(page)
+    page._on_search_finished(_collection_with_source_stats())  # noqa: SLF001
+
+    text = page.status_text()
+    assert "來源: arxiv 23, openalex 0, ieee (失敗)" in text
+    assert "semantic_scholar (被限流)" in text
+    assert "springer (未啟用)" in text
+
+
+def test_status_line_has_no_source_part_without_counts(qtbot):
+    from thesisagents.core.models import Paper, PaperCollection, Query
+    from thesisagents.gui.pages.search import SearchPage
+
+    paper = Paper(
+        source="arxiv", source_id="1", title="A Paper", authors=("Ada Author",),
+        year=2025, venue=None, abstract="", url="https://example.org/1",
+    )
+    page = SearchPage(ui_language="en")
+    qtbot.addWidget(page)
+    page._on_search_finished(  # noqa: SLF001
+        PaperCollection(query=Query(keywords="x", sources=("arxiv",)), papers=(paper,))
+    )
+
+    assert page.status_text() == "Found 1 paper(s)."

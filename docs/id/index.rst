@@ -50,7 +50,54 @@ Alur MCP 6 langkah
    5. (Anda membaca tiap PDF dan menghasilkan dict ringkasan terstruktur)
    6. export(papers=[{...paper, "summary": {...}}], language="id", ...)
 
-13 tool MCP lengkap: :doc:`/mcp`.
+18 tool MCP lengkap: :doc:`/mcp`.
+
+**Untuk menemukan hasil yang melenceng dari topik, mulailah dari saran
+alat itu sendiri.** ``--diagnostics`` (CLI) atau ``diagnostics=true``
+pada tool MCP ``search`` menjelaskan peringkat: skor setiap makalah yang
+dipecah menjadi relevansi, kebaruan, dan sitasi, istilah kueri yang
+cocok, serta rekomendasi ``keep`` / ``review`` / ``prune`` beserta
+ambang yang memicunya. CLI juga menulis rincian lengkap ke
+``diagnostics.json`` di direktori keluaran. Rekomendasi ini hanyalah
+saran dan tidak ada yang dihapus untuk Anda, jadi bacalah abstrak
+makalah ``review`` dan ``prune`` sebelum menghapus apa pun.
+
+**Periksa sumber mana yang menjawab.** Setiap respons ``search`` memuat
+``source_stats``: untuk tiap sumber, berapa rekaman yang
+dikembalikannya, berapa makalah unik yang dikreditkan kepadanya setelah
+deduplikasi, dan sebuah ``status`` bernilai ``ok``, ``failed``,
+``rate_limited``, atau ``disabled``. Sumber yang gagal dilewati tanpa
+menghentikan pencarian, jadi bacalah angka-angka ini sebelum
+menyimpulkan bahwa suatu topik sedikit makalahnya. CLI mencetak tabel
+yang sama setelah setiap pencarian ``--query``.
+
+**Ikuti sitasinya.** ``--snowball both`` (CLI) atau tool ``snowball``
+memperluas hasil teratas mengikuti tautan sitasinya: ``references``
+menambahkan apa yang mereka sitasi dan ``cited_by`` menambahkan apa yang
+menyitasi mereka. Cara ini menemukan karya yang terlewat oleh pencarian
+kata kunci karena penulisnya memakai istilah lain. Perluasan ini
+dibatasi (satu langkah secara default), setiap makalah yang ditemukan
+menyimpan jalur yang mencapainya, dan semuanya dinilai terhadap kata
+kunci Anda, sehingga sebuah makalah tidak dipertahankan hanya karena
+sering disitasi.
+
+**Simpan apa yang Anda temukan.** ``--library thesis.db --library-add``
+(CLI) atau tool ``library_add`` menyimpan makalah sebuah proses ke
+pustaka literatur, satu file SQLite yang tetap ada setelah sesi
+berakhir. Menambahkan pencarian yang sama lagi tidak menduplikasi apa
+pun: makalah dikenali dari DOI, arXiv ID, atau judulnya, dan temuan baru
+digabungkan ke catatan yang tersimpan. Setelah itu ``library_search``
+menemukan makalah tersimpan tanpa menyentuh jaringan, dan DOI serta URL
+yang sudah terverifikasi tidak diperiksa lagi selama 30 hari.
+
+**Pakai templat Anda sendiri.** ``--pptx-template thesis.pptx`` (CLI)
+atau ``pptx_template`` pada tool ``export`` menyusun deck di atas
+templat PowerPoint, sehingga latar, logo, dan tata letaknya milik Anda.
+Jalankan dulu ``thesisagents validate-template thesis.pptx`` (atau tool
+``pptx_validate_template``): perintah ini mendaftar tata letak yang akan
+dipakai tiap jenis slide dan memberi tahu apa yang perlu diperbaiki.
+Templat memerlukan slide 16:9 dan tata letak untuk isi slide, dan sebuah
+file konfigurasi kecil dapat menetapkan tata letak, font, dan warna.
 
 Wajib: verifikasi URL / DOI sebelum penyerahan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -76,6 +123,17 @@ xlsx ditulis ke ``exports/<run>/<slug>-<timestamp>.xlsx`` dengan kolom
        if actual and not (p.url == actual
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
+
+**Ekspor memeriksa hal ini saat dijalankan.** Sebelum menulis apa pun,
+CLI, tool MCP ``export``, dan tab Deck pada GUI mencari DOI setiap
+makalah di doi.org dan meminta setiap URL satu kali. DOI yang tidak
+terdaftar, URL yang menjawab 404, atau host yang tidak dapat dijangkau
+menghentikan ekspor dan menyebutkan makalah serta pengenalnya.
+Pemeriksaan ini membuktikan bahwa sebuah pengenal ada, bukan bahwa
+pengenal itu milik makalah ini, sehingga aturan menyalin dari xlsx dan
+audit di atas tetap berlaku. Saat bekerja luring, berikan
+``--no-verify-identifiers`` (CLI) atau ``verify_identifiers=false``
+(MCP).
 
 Larangan
 ^^^^^^^^
@@ -149,7 +207,7 @@ Bacaan lebih lanjut
 -------------------
 
 * Flag CLI dan variabel lingkungan: :doc:`/cli`
-* 13 tool server MCP: :doc:`/mcp`
+* 18 tool server MCP: :doc:`/mcp`
 * Toolkit edit PPTX: :doc:`/pptx_editing`
 * Berkas ``readmes/README.id.md`` di akar repo berisi daftar fitur lengkap.
 * Referensi teknis mendalam (arsitektur plugin, kebijakan keamanan,

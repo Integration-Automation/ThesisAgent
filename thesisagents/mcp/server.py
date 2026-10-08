@@ -10,21 +10,53 @@ Tools:
   ``export`` accepts plus a one-line description, so an agent can pick the
   format set without guessing.
 - search(keywords, sources, exclude_sources, max_results, year_from, year_to,
-         top_tier_only, min_citations) -> {papers: [...]}
+         top_tier_only, min_citations, diagnostics)
+         -> {papers: [...], source_stats: [...]}
+  source_stats says, per source, how many records it returned for this query,
+  how many unique papers it is credited with, and whether it failed.
+  diagnostics=True adds a per-paper score breakdown and an advisory
+  keep / review / prune recommendation. Nothing is removed from papers.
+- list_sources stays a discovery tool: it reports configuration, not the
+  result counts of a query. Those are in search's source_stats.
+  search(snowball="both", ...) also expands the top results along their
+  citation links and adds a snowball block. papers is left unchanged.
+- snowball(papers, direction, depth, max_per_seed, max_total, keywords,
+           min_relevance, known) -> {discovered, papers, relations, errors,
+           truncated}
+  Bounded citation search from seed papers: references (what they cite),
+  cited_by (what cites them) or both. Each discovered paper carries the path
+  that reached it. Links come from OpenAlex, Semantic Scholar and Crossref.
 - fetch_paper(identifier) -> {paper: {...}}
 - fetch_pdf_text(pdf_url) -> {text, page_count, chars}
 - download_pdfs(papers, out_dir) -> {results: [...]}
   Batch-download a list of papers' PDFs into ``{out_dir}/pdfs/`` so an
   LLM agent can drive the PDF retrieval step before authoring rich
   summaries.
+- library_add(library, papers, keywords, relations) -> {added, merged, total, ...}
+  Keep papers in a literature library (an SQLite file) between sessions.
+  Adding is a merge: a paper the library already holds is updated, not
+  duplicated.
+- library_search(library, query, limit, year_from, year_to)
+         -> {papers: [...], entries: [...], total}
+  Find stored papers without any network access, scored like a search.
+- library_stats(library) -> {papers, runs, relations, sources, ...}
 - export(papers, keywords, formats, out_dir, filename_stem, include_abstract,
-         language, max_slides_per_paper, dark_mode) -> {written: {fmt: path}}
+         language, max_slides_per_paper, dark_mode, verify_identifiers, library)
+         -> {written: {fmt: path}, verification: {...}}
   formats may be any of: pptx, xlsx, md, bib, json, ris, csv, csl
+  Every DOI / URL is verified before anything is written (strict by default):
+  a wrong or unreachable identifier fails the call and names the paper. Pass
+  verify_identifiers=False only when working offline. library names a
+  literature library to remember the verdicts in, so an identifier verified
+  by an earlier call is not checked again.
   papers[*].summary may include rich fields (pain_points, research_question,
   headline_metrics, technique_table, literature_table, method_sections,
   research_questions, rq_results, …) — when present, the PPT switches to
   thesis-style layout. ``dark_mode`` defaults to False (project default
   is the light navy-band deck); pass True for the dark OLED/low-light variant.
+- pptx_validate_template(path, config?, dark_mode?) -> {ok, layouts, errors, warnings}
+  Check a PowerPoint template against the template contract (16:9 slides, a
+  layout for every slide role) before passing it to export as pptx_template.
 - pptx_inspect(path) -> {slides: [...]}
 - pptx_review(path, language?) -> {overflow, contrast, missing_sections, ok}
   Audit an existing deck against the overflow, colour-contract, and
@@ -68,14 +100,26 @@ from thesisagents.core.constants import (
     EXPORT_PDF,
     EXPORT_PPTX,
 )
+from thesisagents.core.diagnostics import collection_report, source_stats_payload
 from thesisagents.core.exceptions import ThesisAgentsError
+from thesisagents.core.export_validation import (
+    IdentifierVerificationError,
+    MemoryVerificationCache,
+    VerificationCache,
+    verify_collection_blocking,
+)
 from thesisagents.core.identifiers import parse_identifier
 from thesisagents.core.models import ExportOptions, Paper, PaperCollection, Query
 from thesisagents.core.pdf_download import download_pdfs as core_download_pdfs
 from thesisagents.core.pipeline import run_search, run_single_paper
 from thesisagents.core.query import normalize_query
+from thesisagents.core.snowball import SnowballResult
+from thesisagents.core.snowball import snowball as run_snowball
 from thesisagents.exporters import export_collection, pptx_edit, review
+from thesisagents.exporters.template import validate_template
 from thesisagents.fetchers.http import shutdown_clients
+from thesisagents.library import Library
+from thesisagents.mcp.library_tools import register_library_tools
 from thesisagents.utils.logging import get_logger
 
 _LOG = get_logger(__name__)
@@ -96,6 +140,10 @@ _PLUGIN_OPT_OUT_ENV: dict[str, tuple[str, ...]] = {
     "ieee": ("THESISAGENTS_DISABLE_IEEE_SCRAPING",),
     "scholar": ("THESISAGENTS_DISABLE_SCHOLAR_SCRAPING",),
 }
+#: New papers a snowball started from an MCP tool may collect by default. Far
+#: below the hard cap (1000): the result goes into a model's context, and
+#: fifty papers with abstracts is already a long response.
+_SEARCH_SNOWBALL_MAX_TOTAL = 50
 
 
 def _as_tool_error(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -141,6 +189,8 @@ def build_server() -> FastMCP:
     server = FastMCP("thesisagents")
     _register_discovery_tools(server)
     _register_search_tools(server)
+    _register_snowball_tool(server)
+    register_library_tools(_tool(server))
     _register_export_tool(server)
     _register_pdf_tool(server)
     _register_pdf_download_tool(server)
@@ -309,8 +359,31 @@ def _register_search_tools(server: FastMCP) -> None:
         year_to: int | None = None,
         top_tier_only: bool = True,
         min_citations: int | None = None,
+        diagnostics: bool = False,
+        snowball: str | None = None,
+        snowball_seeds: int = 5,
+        snowball_depth: int = 1,
+        snowball_max_per_seed: int = 20,
     ) -> dict[str, Any]:
         """Search papers by keywords across one or more sources.
+
+        ``snowball`` (``"references"``, ``"cited_by"`` or ``"both"``, default
+        off) expands the top ``snowball_seeds`` results along their citation
+        links and adds a ``snowball`` block with the papers found, how each
+        was reached and every link seen. ``papers`` is left as the search
+        returned it: the discovered papers are listed separately so you choose
+        which to keep. They are scored against ``keywords`` and listed best
+        first. For other seeds or tighter bounds call the ``snowball`` tool.
+
+        ``diagnostics`` (default ``False``) adds a ``diagnostics`` block that
+        explains the ranking: per paper, the score split into relevance /
+        recency / citation, the query terms and phrases that matched, a
+        sentence per contribution, and a pruning recommendation (``keep`` /
+        ``review`` / ``prune``) with the threshold that triggered it. The
+        recommendations are advice: ``papers`` always holds every result, and
+        nothing is removed for you. Use it to decide which results are
+        off-topic before downloading PDFs. Without the flag the response is
+        unchanged.
 
         Defaults to the project's full default source mix (all plugins
         that need no API key) when ``sources`` is omitted — call
@@ -333,6 +406,15 @@ def _register_search_tools(server: FastMCP) -> None:
 
         Returns a JSON-serialisable dict with a `papers` list. Each paper has
         the same fields as Paper.to_dict() — pass the list straight to `export`.
+
+        The response also carries ``source_stats``: one entry per source of
+        this query with ``requested`` (the per-source cap), ``returned``
+        (records it sent back), ``after_dedup`` (unique papers credited to it:
+        a paper several sources returned is credited to the first of them) and
+        ``status`` (``ok`` / ``failed`` / ``rate_limited`` / ``disabled``, with
+        the error text in ``detail``). Read it before concluding a topic has
+        few papers: a source with ``status: "failed"`` returned nothing
+        because it broke, not because nothing matched.
         """
         normalised = normalize_query(keywords)
         chosen = tuple(sources) if sources else DEFAULT_SOURCES
@@ -352,11 +434,27 @@ def _register_search_tools(server: FastMCP) -> None:
             top_tier_only=top_tier_only,
             min_citations=min_citations,
         )
+        expansion: SnowballResult | None = None
         try:
             collection = await run_search(query)
+            if snowball is not None and collection.papers:
+                expansion = await _run_snowball(
+                    collection.papers[: max(1, snowball_seeds)],
+                    known=collection.papers,
+                    direction=snowball,
+                    depth=snowball_depth,
+                    max_per_seed=snowball_max_per_seed,
+                    max_total=_SEARCH_SNOWBALL_MAX_TOTAL,
+                    keywords=normalised,
+                )
         finally:
             await shutdown_clients()
-        return _collection_to_payload(collection)
+        payload = _collection_to_payload(collection)
+        if diagnostics:
+            payload["diagnostics"] = collection_report(collection)
+        if expansion is not None:
+            payload["snowball"] = expansion.to_dict()
+        return payload
 
     @_tool(server)
     async def fetch_paper(identifier: str) -> dict[str, Any]:
@@ -374,6 +472,64 @@ def _register_search_tools(server: FastMCP) -> None:
         }
 
 
+def _register_snowball_tool(server: FastMCP) -> None:
+    @_tool(server)
+    async def snowball(
+        papers: list[dict[str, Any]],
+        direction: str = "both",
+        depth: int = 1,
+        max_per_seed: int = 20,
+        max_total: int = _SEARCH_SNOWBALL_MAX_TOTAL,
+        keywords: str | None = None,
+        min_relevance: float | None = None,
+        known: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Grow a set of papers along its citation links.
+
+        ``papers`` are the seeds (paper dicts from ``search`` or
+        ``fetch_paper``). ``direction`` is ``"references"`` (what the seeds
+        cite), ``"cited_by"`` (what cites them) or ``"both"``. It finds work a
+        keyword search misses because the authors used other words.
+
+        Every dimension is capped: ``depth`` 1..3 (2 also expands the papers
+        found at step 1), ``max_per_seed`` 1..100 papers per seed and
+        direction, ``max_total`` 1..1000 new papers in all. ``truncated`` in
+        the response is true when ``max_total`` stopped the search early.
+
+        ``keywords`` scores each discovered paper with the search ranker and
+        lists them best first. ``min_relevance`` (0..1, needs ``keywords``)
+        drops papers below that fraction of the best possible relevance.
+        Being cited often is not treated as a sign of being on topic.
+
+        ``known`` lists papers you already hold besides the seeds, so they are
+        not reported as new.
+
+        Returns ``discovered`` (each with ``paper``, ``found_by`` and
+        ``score``), ``papers`` (the same papers as plain dicts, ready for
+        ``download_pdfs`` or ``export``), ``relations`` (every link seen) and
+        ``errors`` (a provider that failed: the search carried on without it).
+        Links come from OpenAlex, Semantic Scholar and Crossref.
+        """
+        if not papers:
+            raise ThesisAgentsError("snowball requires at least one seed paper")
+        try:
+            result = await _run_snowball(
+                tuple(Paper.from_dict(entry) for entry in papers),
+                known=tuple(Paper.from_dict(entry) for entry in known or ()),
+                direction=direction,
+                depth=depth,
+                max_per_seed=max_per_seed,
+                max_total=max_total,
+                keywords=normalize_query(keywords) if keywords else None,
+                min_relevance=min_relevance,
+            )
+        finally:
+            await shutdown_clients()
+        payload = result.to_dict()
+        payload["papers"] = [paper.to_dict() for paper in result.papers]
+        return payload
+
+
 def _register_export_tool(server: FastMCP) -> None:
     @_tool(server)
     def export(
@@ -386,8 +542,35 @@ def _register_export_tool(server: FastMCP) -> None:
         language: str = "en",
         max_slides_per_paper: int | None = 25,
         dark_mode: bool = False,
+        verify_identifiers: bool = True,
+        library: str | None = None,
+        pptx_template: str | None = None,
+        pptx_template_config: str | None = None,
     ) -> dict[str, Any]:
         """Export a list of papers (from search / fetch_paper) to disk.
+
+        ``verify_identifiers`` (default ``True``) checks every paper's DOI at
+        doi.org and requests every URL once before anything is written. A DOI
+        or URL that is wrong or unreachable fails the call with the list of
+        failed identifiers and writes no file, so copy ``doi`` / ``url`` from
+        the ``search`` results instead of composing them. Pass ``False`` only
+        when working offline. The response's ``verification`` block reports
+        what was checked, including identifiers that could not be checked
+        (``status: "skipped"``, for example a publisher page that needs a real
+        browser).
+
+        ``library`` is the path of a literature library (see ``library_add``).
+        When given, the verdicts are kept there: a DOI or URL that verified in
+        an earlier call is not checked again for 30 days. A failure is always
+        checked again.
+
+        ``pptx_template`` builds the deck on a PowerPoint template (.pptx /
+        .potx) instead of the built-in navy-band deck, and
+        ``pptx_template_config`` is a TOML / JSON file of overrides for it
+        (layout per slide role, fonts, colours, chrome). A template that does
+        not meet the template contract fails the call with every problem
+        listed and writes nothing: check one first with
+        ``pptx_validate_template``.
 
         Each paper dict may carry a ``summary`` field — when populated with
         the rich-tier shape (pain_points, research_question, headline_metrics,
@@ -441,15 +624,55 @@ def _register_export_tool(server: FastMCP) -> None:
             language=language,
             max_slides_per_paper=slide_cap,
             dark_mode=dark_mode,
+            verify_identifiers=verify_identifiers,
+            pptx_template=pptx_template,
+            pptx_template_config=pptx_template_config,
         )
-        written = export_collection(collection, options)
+        store = Library(library) if library else None
+        try:
+            # Verify here, with a cache handed on to export_collection, so the
+            # report can go into the response without checking anything twice.
+            cache: VerificationCache = (
+                store.verification_cache() if store is not None else MemoryVerificationCache()
+            )
+            verification: dict[str, Any] = {"enabled": verify_identifiers}
+            if verify_identifiers:
+                report = verify_collection_blocking(collection, cache=cache)
+                if not report.ok:
+                    raise IdentifierVerificationError(report)
+                verification.update(report.to_dict())
+            written = export_collection(collection, options, verification_cache=cache)
+        finally:
+            if store is not None:
+                store.close()
         return {
             "written": {fmt: str(path) for fmt, path in written.items()},
             "pptx_path": str(written[EXPORT_PPTX]) if EXPORT_PPTX in written else None,
+            "verification": verification,
         }
 
 
 def _register_pptx_tools(server: FastMCP) -> None:
+    @_tool(server)
+    def pptx_validate_template(
+        path: str, config: str | None = None, dark_mode: bool = False
+    ) -> dict[str, Any]:
+        """Check a PowerPoint template before using it as ``export(pptx_template=...)``.
+
+        ``path`` is the template (.pptx / .potx). ``config`` is the optional
+        TOML / JSON file of overrides that would be passed as
+        ``pptx_template_config``. ``dark_mode`` adds the warnings that apply
+        to a dark export.
+
+        Returns ``ok``, the slide size, ``available_layouts`` (every layout
+        name in the template), ``layouts`` (the layout each slide role, cover
+        / section / content / table / references / qa, would use), ``errors``
+        (each with a ``code`` and a ``message`` saying what to change) and
+        ``warnings``. Nothing is rendered or written. A template with errors
+        makes ``export`` fail, one with only warnings exports.
+        """
+        return validate_template(path, config, dark_mode=dark_mode).to_dict()
+
     @_tool(server)
     def pptx_inspect(path: str) -> dict[str, Any]:
         """Return slide-by-slide structure (index, title, every text frame)."""
@@ -546,6 +769,20 @@ def _register_pptx_tools(server: FastMCP) -> None:
         return {"path": str(written), "position": position}
 
 
+async def _run_snowball(seeds, **bounds: Any) -> SnowballResult:
+    """Run the snowball search and report a bad bound as a tool error.
+
+    ``snowball`` raises ``ValueError`` for a bound outside its range. Left as
+    it is, the 2.x SDK would report that to the client as an unexplained crash
+    ("Error executing tool"). Re-raised as ``ThesisAgentsError`` it reaches the
+    client with its message, for example "depth must be in [1, 3]".
+    """
+    try:
+        return await run_snowball(seeds, **bounds)
+    except ValueError as err:
+        raise ThesisAgentsError(str(err)) from err
+
+
 def _collection_to_payload(collection: PaperCollection) -> dict[str, Any]:
     return {
         "query": {
@@ -557,6 +794,9 @@ def _collection_to_payload(collection: PaperCollection) -> dict[str, Any]:
         },
         "count": len(collection),
         "papers": [paper.to_dict() for paper in collection.papers],
+        # What each source contributed to this query. Always present, so a
+        # client can tell "this source failed" from "this source found nothing".
+        "source_stats": source_stats_payload(collection),
     }
 
 

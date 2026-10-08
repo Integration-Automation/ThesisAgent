@@ -100,6 +100,32 @@ Crossref hit. Workarounds:
 - Use the arXiv version if the paper has one (`arxiv.org` mirror).
 - Search by query instead of by paper.
 
+### A search returns fewer papers than expected
+
+Look at the `Sources` table the CLI prints after the search (the MCP
+`search` tool returns the same as `source_stats`):
+
+```
+Sources (up to 25 requested from each):
+  arxiv      23 returned, 23 after dedup
+  openalex   25 returned, 21 after dedup
+  dblp        0 returned, 0 after dedup
+  ieee        0 returned  failed: [ieee] search page returned HTTP 403
+  springer    0 returned  disabled: THESISAGENTS_SPRINGER_API_KEY is not set
+```
+
+| What the table shows | Cause | What to do |
+|---|---|---|
+| `failed: ...` | The source raised an error: a block page, a changed response format, a network failure. | Read the message. For `ieee` and `scholar`, check that a Chrome window opened and that VPN / institutional access is active. |
+| `rate_limited: ...` | The source answered HTTP 429 through every retry. | Wait and run again, or set the source's API key (`THESISAGENTS_S2_API_KEY` for Semantic Scholar). |
+| `disabled: ...` | The plugin could not be loaded, usually a missing API key (`springer`, `core`). | Set the variable named in the message, or ignore the source. |
+| `0 returned, 0 after dedup` | The source answered and had nothing for this query. | Nothing is wrong. Try broader keywords. |
+| `returned` far above `after dedup` | Most of the source's records duplicated an earlier source's. | Nothing is wrong. The source adds little for this query. |
+
+A source that fails is skipped without stopping the search, so the
+result list alone cannot tell a narrow topic from a search that lost
+half its sources.
+
 ### `error: Unknown source(s): <name>`
 
 You passed `--source` a name not in `ALL_SOURCES`. The valid set:
@@ -177,6 +203,39 @@ exists and the path is absolute or relative to your current
 directory. The `--pdf` flag accepts either one `.pdf` or a
 directory of them.
 
+### `error: no library at <path>`
+
+`--library-search` and `--library-export` (and the MCP `library_search`
+/ `library_stats` tools) read a library, and the path does not exist. A
+read never creates the file, so a mistyped path is an error and not an
+empty result. Check the path. A library is created the first time
+papers are added to it, with `--library PATH --library-add` or the
+`library_add` tool.
+
+### `error: <path> is not an SQLite database` / `is not a ThesisAgents library`
+
+The `--library` path exists and is something else: a text file, a
+directory, or another application's database. The file is left
+untouched. Point `--library` at another path. A new library is created
+when the path does not exist yet.
+
+### `error: <path> has library schema version N, and this ThesisAgents understands up to version M`
+
+The library was written by a newer ThesisAgents than the one running.
+It is not opened, because the newer layout could be misread. Upgrade
+ThesisAgents (`pip install -U thesisagents`), or point `--library` at
+another file. The opposite case needs nothing: an older library is
+upgraded in place when it is opened.
+
+### An export keeps checking the same DOIs and URLs
+
+Without `--library`, the identifier check starts from nothing on every
+run. Name a library (`--library thesis.db`, or `library=` on the MCP
+`export` tool) and a DOI or URL that verified is not checked again for
+30 days. Identifiers reported as *not checkable* are remembered the
+same way. A failed check is made again on every run by design, so an
+export that failed while the network was down succeeds once it is back.
+
 ### `error: --pdf file is empty / not a PDF / encrypted`
 
 The pre-flight check rejected the file. Encrypted PDFs need
@@ -231,6 +290,65 @@ with bad metadata. Workarounds:
   (`ocrmypdf in.pdf out.pdf`).
 
 ## PPTX / export errors
+
+### `error: [preflight] identifier verification failed for N identifier(s)`
+
+The export checks every paper's DOI and URL before it writes anything
+(see [`cli.md`](cli.md) "Identifier verification"). Each line under the
+error names one paper, one identifier, and why it failed:
+
+| Reason shown | Cause | Fix |
+|---|---|---|
+| `is invalid (not a DOI: expected the form 10.<registrant>/<suffix>)` | The `doi` field is not a DOI, for example a URL fragment or a truncated value. | Copy the DOI from the search `.xlsx` (column 7). |
+| `is invalid (doi.org has no such DOI registered)` | The DOI is well-formed but does not exist. Usually it was typed or composed, not copied. | Copy it from the search results. |
+| `is invalid (HTTP 404: the page does not exist)` | The URL is dead or was guessed. Publisher URL paths cannot be derived from a title. | Copy the URL from the search `.xlsx` (column 8). |
+| `is unreachable (ConnectError: …)` | The host does not resolve or refuses connections. A made-up domain fails this way, and so does every identifier when the machine is offline. | Check the URL. When offline, pass `--no-verify-identifiers`. |
+| `is timeout (no answer within 8 s)` | The host did not answer, after one retry. | Run again, or pass `--no-verify-identifiers` if the host stays slow. |
+
+Nothing is written when this error appears, so there is no partial
+export to clean up.
+
+An identifier reported as `skipped` is not an error. It means the check
+could not be made: the URL is on a publisher host that only answers a
+real browser, or the server refuses automated access (HTTP 401 / 403 /
+429). The run continues.
+
+### Export passes but a DOI points at the wrong paper
+
+The preflight proves that an identifier exists. It cannot tell that the
+DOI belongs to a different paper than the one it is attached to. Copy
+`doi` / `url` / `arxiv_id` from the search results that produced the
+run, and run the audit in `AGENTS.md` "URL / DOI verification" on any
+hand-authored `scripts/regen_*.py`.
+
+### `error: [pptx] template ... does not meet the template contract`
+
+The file passed as `--pptx-template` (or `pptx_template`) cannot be
+used as it is. The lines under the message each name one problem and
+the change that fixes it: slides that are not 16:9 with
+`slide_size = "reject"`, a layout name in `[layouts]` the template
+does not have (the message lists the ones it has), no layout for slide
+content, or a title placeholder that `[placeholders] title` asks for
+and the layout lacks. Run `thesisagents validate-template FILE
+--config CONFIG` to see the same report without starting a run. See
+[Deck templates](pptx_templates.md).
+
+### A template deck shows the template's artwork off-centre
+
+The template is 4:3 (or another size) and was resized to 16:9, which
+the run reports as `Template warning: the template's slides are ...`.
+Artwork keeps the position it had on the narrower slide. Save a 16:9
+version of the template in PowerPoint (Design > Slide Size) and use
+that.
+
+### Titles are invisible on a template deck
+
+Slide titles are white because they sit on the exporter's navy header
+band. If the template covers that band with its own artwork, switch
+the band off in the config (`[chrome] header_band = false`), which
+also sets the titles in the `primary` colour, or send the titles into
+the template's title placeholder (`[placeholders] title = ["content",
+"table", "references"]`).
 
 ### `Slide overflowed the footer guard at 7.05"`
 
@@ -321,14 +439,17 @@ the available height.
 
 ## CI / Release errors
 
-### `Nuitka build timed out at 45 min`
+### Nuitka build timed out
 
-The PySide6 cold build is heavy (~50-70 min). The timeout was
-bumped to 90 min in commit `ba28953`. If you're forking and seeing
-this on your fork's CI:
+The PySide6 cold build is heavy (~80-90 min on a GitHub Windows
+runner). `release.yml` caps the job at 120 min. If you're forking and
+seeing this on your fork's CI:
 
-- Make sure your fork inherits the 90-min cap from `release.yml`.
-- Subsequent runs should hit the Nuitka cache and finish in 5-10 min.
+- Make sure your fork inherits the 120-min cap and the
+  `NUITKA_CACHE_DIR` setting from `release.yml`.
+- Subsequent runs should hit the Nuitka cache. If the Nuitka log ends
+  with `Compiled N C files using clcache with 0 cache hits`, the cache
+  step is not saving the directory `NUITKA_CACHE_DIR` points at.
 
 ### `Failed to locate package 'arxiv' you asked to include`
 

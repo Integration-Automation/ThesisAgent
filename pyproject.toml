@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ version = "0.1.22"
 description = "Keyword-driven paper search assistant that exports slides, summaries, and BibTeX."
 requires-python = ">=3.12"
 readme = { file = "README.md", content-type = "text/markdown" }
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "JeffreyChen" }]
 keywords = [
     "academic",
@@ -23,7 +24,6 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -134,6 +134,12 @@ max-complexity = 10
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    # tests/conftest.py stubs the export preflight's network step for every
+    # test; this marker opts a test out so it can drive the real resolver
+    # against its own mock transport.
+    "real_identifier_preflight: run the real DOI / URL resolver instead of the offline stub",
+]
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "build"]

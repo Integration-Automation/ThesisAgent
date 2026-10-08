@@ -12,6 +12,7 @@ from thesisagents.core.constants import (
     DEFAULT_PAGE_SIZE,
     MAX_RESULTS_PER_SOURCE,
 )
+from thesisagents.core.diagnostics import SearchDiagnostics
 from thesisagents.core.exceptions import ThesisAgentsError
 
 _TITLE_NOISE_RE = re.compile(r"[^a-z0-9]+")
@@ -537,6 +538,15 @@ class PaperCollection:
 
     query: Query
     papers: tuple[Paper, ...]
+    #: What the search can say about itself: the score behind each paper's
+    #: position and the advisory pruning recommendations. ``run_search`` fills
+    #: it in. A collection built by hand (the MCP ``export`` tool, a regen
+    #: script, ``--pdf`` mode) leaves it ``None``, so every reader must accept
+    #: that. Left out of ``==``: two collections holding the same papers are
+    #: the same result however they were explained. A stage that swaps papers
+    #: should use ``dataclasses.replace(collection, papers=...)`` so this
+    #: survives, as the entries are keyed by ``Paper.dedup_key()``.
+    diagnostics: SearchDiagnostics | None = field(default=None, compare=False)
 
     def __len__(self) -> int:
         return len(self.papers)
@@ -555,7 +565,18 @@ class ExportOptions:
     formats: tuple[str, ...]
     out_dir: str
     filename_stem: str | None = None
+    #: A PowerPoint file (.pptx / .potx) whose layouts, master artwork and
+    #: theme the deck is built on. ``None`` is the built-in navy-band deck.
+    #: The file is checked against the template contract before any slide is
+    #: rendered (``thesisagents/exporters/template.py``: 16:9 slides, a layout
+    #: for every slide role), and a template that does not meet it stops the
+    #: export with every problem listed.
     pptx_template: str | None = None
+    #: A TOML or JSON file of overrides for ``pptx_template``: which layout
+    #: each slide role uses, font families, the four palette colours, and
+    #: whether the exporter draws its own header band and cover panel. Only
+    #: read together with ``pptx_template``.
+    pptx_template_config: str | None = None
     include_abstract: bool = True
     language: str = "en"
     #: Hard cap on slides per paper for the pptx exporter. Defaults to
@@ -575,7 +596,20 @@ class ExportOptions:
     #: post-build pass lightens the band / cover / table fills so the
     #: same chrome reads on the dark background.
     dark_mode: bool = False
+    #: When True (the default), ``export_collection`` checks every paper's DOI
+    #: and URL before any exporter runs and raises
+    #: ``IdentifierVerificationError`` when one is wrong or cannot be reached
+    #: (see ``thesisagents/core/export_validation.py``). Set False to export
+    #: without the check, for example on a machine with no network: the CLI
+    #: flag is ``--no-verify-identifiers``. The opt-out is logged, never
+    #: inferred, so an unverified bibliography is always a visible choice.
+    verify_identifiers: bool = True
 
     def __post_init__(self) -> None:
         if not self.formats:
             raise ValueError("at least one export format must be specified")
+        if self.pptx_template_config and not self.pptx_template:
+            raise ValueError(
+                "pptx_template_config is a set of overrides for a template, "
+                "so it needs pptx_template as well"
+            )

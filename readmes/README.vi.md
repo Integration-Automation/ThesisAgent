@@ -25,8 +25,8 @@ LLM-as-agent) hoặc qua API Anthropic (luồng Python pipeline).
 
 **Nếu bạn là một LLM (Claude Code, Cursor, Aider, Codex CLI, …) đang đọc
 README này để tìm hiểu cần làm gì — hãy bắt đầu từ đây.** Mọi thứ bên dưới
-cũng được ghim trong [`AGENTS.md`](AGENTS.md) (bản phản chiếu cho mọi agent) và
-[`CLAUDE.md`](CLAUDE.md) (tham chiếu chính thức); hãy đọc chúng trước khi
+cũng được ghim trong [`AGENTS.md`](../AGENTS.md) (bản phản chiếu cho mọi agent) và
+[`CLAUDE.md`](../CLAUDE.md) (tham chiếu chính thức); hãy đọc chúng trước khi
 thực hiện các thay đổi không tầm thường.
 
 ### Điều người dùng thực sự muốn
@@ -64,10 +64,10 @@ nâng cấp nó.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Cả mười ba công cụ MCP (gồm `list_sources`, `list_exports`,
+Cả mười tám công cụ MCP (gồm `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / v.v.) đều được
-tài liệu hóa trong [`docs/mcp.md`](docs/mcp.md).
+tài liệu hóa trong [`docs/mcp.md`](../docs/mcp.md).
 
 ### Bắt buộc: xác minh URL / DOI trước khi giao
 
@@ -98,6 +98,16 @@ Hai vụ ngụy tạo bị bắt theo cách này trong môi trường sản xu�
 AAAI (`v39i23.34521` so với thực tế `v39i22.34537`) và đường dẫn slug tác
 giả tự bịa (`view/fang2026` thay vì `v40i5.37389`).
 
+**Bước xuất kiểm tra điều này khi chạy.** Trước khi ghi bất cứ thứ gì,
+CLI, công cụ MCP `export` và tab Deck của GUI tra cứu DOI của từng bài
+báo tại doi.org và gửi một yêu cầu tới từng URL. Một DOI chưa đăng ký,
+một URL trả về 404 hoặc một máy chủ không thể kết nối sẽ dừng việc xuất
+và nêu rõ bài báo cùng mã định danh. Phép kiểm tra chứng minh rằng mã
+định danh tồn tại, không chứng minh nó thuộc về bài báo này, nên quy tắc
+chép từ xlsx và bước kiểm toán ở trên vẫn cần thực hiện. Khi làm việc
+ngoại tuyến, hãy truyền `--no-verify-identifiers` (CLI) hoặc
+`verify_identifiers=false` (MCP).
+
 ### Bắt buộc: loại bỏ các tải xuống không liên quan trước khi giao
 
 Việc so khớp từ khóa tìm kiếm dựa trên từ khóa, nên các bài lạc đề sẽ
@@ -123,9 +133,19 @@ bản ghi trung thực về những gì tìm kiếm đã trả về. Các trư�
 giới thì cứ tạo một bản tóm tắt đầy đủ; thà bao gồm quá mức còn hơn âm
 thầm bỏ sót một khả năng khớp.
 
+**Để tìm các kết quả lạc đề, hãy bắt đầu từ gợi ý của chính công cụ.**
+`--diagnostics` (CLI) hoặc `diagnostics=true` trên công cụ MCP `search`
+giải thích thứ hạng: điểm của từng bài báo được tách thành độ liên quan,
+độ mới và số trích dẫn, các từ khóa truy vấn đã khớp, cùng một khuyến
+nghị `keep` / `review` / `prune` kèm ngưỡng đã kích hoạt nó. CLI cũng
+ghi bảng phân tích đầy đủ vào `diagnostics.json` trong thư mục đầu ra.
+Các khuyến nghị chỉ mang tính tham khảo và không có gì bị xóa thay bạn,
+vì vậy hãy đọc tóm tắt của các bài `review` và `prune` trước khi xóa bất
+cứ thứ gì.
+
 ### Ví dụ thực tế
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) chứa một bản
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) chứa một bản
 tóm tắt rich được soạn tay đúng theo cách này (một bài,
 rich-tier, zh-tw, mọi trường rich đều được điền). Một tìm kiếm đa-bài
 theo cùng khuôn dạng với một mục `Paper(...summary=PaperSummary(...))`
@@ -224,9 +244,9 @@ cho mỗi bài trong tuple `PaperCollection`.
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   làm việc với bất kỳ deck nào exporter sinh ra, cộng với các công cụ MCP
   `pptx_*` tương đương để một LLM agent có thể lặp trên một deck đã sinh.
-- **Server MCP**: 13 công cụ — `list_sources` + `list_exports`
-  (khám phá), `search`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, và sáu công cụ deck `pptx_*`
+- **Server MCP**: 18 công cụ — `list_sources` + `list_exports`
+  (khám phá), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
+  `download_pdfs`, `pptx_validate_template`, `export`, và sáu công cụ deck `pptx_*`
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Cho phép
   bất kỳ LLM tương thích MCP nào
@@ -251,6 +271,63 @@ cho mỗi bài trong tuple `PaperCollection`.
   đi qua Unpaywall → S2 `openAccessPdf` → tìm kiếm tiêu đề trên arXiv →
   CORE.ac.uk (khi các key được đặt). Mức nâng điển hình cho các truy vấn
   nặng IEEE / ACM / Springer / Elsevier: 40-70 điểm phần trăm.
+- **Kiểm tra trước khi xuất (xác minh DOI / URL)**: trước khi ghi bất kỳ
+  tệp nào, mỗi DOI được tra cứu tại doi.org và mỗi URL được yêu cầu một
+  lần. Mã định danh sai hoặc không thể kết nối sẽ dừng việc xuất kèm
+  danh sách bài báo và mã định danh bị lỗi. Các trang của nhà xuất bản
+  cần trình duyệt thật sẽ không được yêu cầu (bước kiểm tra DOI đã bao
+  phủ), còn máy chủ từ chối truy cập tự động được báo là không thể kiểm
+  tra thay vì làm hỏng lần chạy. Bật theo mặc định,
+  `--no-verify-identifiers` tắt nó khi làm việc ngoại tuyến.
+- **Xếp hạng có giải thích và gợi ý lược bỏ**: mỗi lần tìm kiếm ghi lại
+  vì sao từng bài báo đứng ở vị trí đó (phần độ liên quan, độ mới và
+  trích dẫn, các từ khóa truy vấn đã khớp, một câu cho mỗi đóng góp) và
+  khuyến nghị `keep`, `review` hoặc `prune` cho từng kết quả, nêu rõ quy
+  tắc đã kích hoạt. Chỉ riêng số trích dẫn thấp không bao giờ kích hoạt
+  khuyến nghị. Xem bằng `--diagnostics`, bằng `diagnostics=true` trên
+  công cụ MCP `search`, hoặc cột Gợi ý trong GUI. Chỉ là gợi ý: không
+  bài báo nào bị xóa.
+- **Thống kê tìm kiếm theo nguồn**: mỗi lần tìm kiếm báo cáo, với từng
+  nguồn, số bản ghi nguồn đó trả về, số bài báo duy nhất được tính cho
+  nguồn đó sau khi khử trùng lặp, và nguồn có bị lỗi, bị giới hạn tốc độ
+  hay đang tắt hay không. Một nguồn bị lỗi sẽ được bỏ qua mà không dừng
+  việc tìm kiếm, nên chính các con số này giúp phân biệt một chủ đề ít
+  bài với một lần tìm đã mất nửa số nguồn. CLI in chúng sau mỗi lần tìm
+  `--query`, công cụ MCP `search` trả về dưới dạng `source_stats`, còn
+  GUI hiển thị ở dòng trạng thái.
+- **Tìm kiếm lăn cầu tuyết theo trích dẫn**: `--snowball
+  references|cited_by|both` (hoặc công cụ MCP `snowball`) mở rộng các
+  kết quả đứng đầu theo liên kết trích dẫn, lùi về những gì chúng trích
+  dẫn và tiến tới những gì trích dẫn chúng, nhờ đó tìm ra các công trình
+  mà tìm kiếm theo từ khóa bỏ sót vì tác giả dùng thuật ngữ khác. Mọi
+  chiều đều có giới hạn (độ sâu mặc định 1, số bài mỗi hạt giống, tổng
+  số bài), một bài báo được tìm thấy qua nhiều đường chỉ tính là một, và
+  mỗi bài báo tìm được đều giữ lại đường đã dẫn tới nó. Liên kết lấy từ
+  OpenAlex, Semantic Scholar và Crossref, và các bài tìm được cũng do
+  cùng bộ xếp hạng chấm điểm, nên được trích dẫn nhiều không có nghĩa là
+  đúng chủ đề.
+- **Thư viện tài liệu**: `--library thesis.db` lưu những gì các lần chạy
+  tìm được vào một tệp SQLite duy nhất, nên kết quả tìm kiếm không còn
+  mất đi khi tiến trình kết thúc. Thư viện chứa các bài báo, lần chạy và
+  nguồn nào đã tìm thấy từng bài, điểm số của chúng, các liên kết trích
+  dẫn từ `--snowball` và kết quả kiểm tra DOI / URL. `--library-add` gộp
+  một lần chạy vào (bài đã có sẽ được cập nhật, không bao giờ bị trùng
+  lặp), `--library-search` tìm các bài đã lưu mà không cần mạng, và
+  `--library-export` đưa chúng ra bất kỳ định dạng xuất nào. DOI hoặc
+  URL đã được xác minh ở một lần chạy trước sẽ không bị kiểm tra lại
+  trong 30 ngày. Cũng có sẵn dưới dạng các công cụ MCP `library_add`,
+  `library_search` và `library_stats`.
+- **Mẫu trang chiếu**: `--pptx-template thesis.pptx` dựng các trang
+  chiếu trên mẫu PowerPoint của riêng bạn, nên nền, logo và bố cục của
+  mẫu tạo nên bộ trang chiếu thay cho giao diện dải xanh navy có sẵn.
+  Mỗi loại trang chiếu (bìa, phần, nội dung, bảng, tài liệu tham khảo,
+  hỏi đáp) dùng bố cục bạn chỉ định cho nó, và một tệp cấu hình TOML /
+  JSON tùy chọn (`--pptx-template-config`) đặt phông chữ, màu của bảng
+  màu và việc có vẽ dải tiêu đề cùng tấm nền trang bìa hay không. Mẫu
+  được kiểm tra trước khi việc tìm kiếm bắt đầu, và `thesisagents
+  validate-template thesis.pptx` cho biết mỗi loại trang chiếu sẽ dùng
+  bố cục nào và cần sửa gì. Khi không có mẫu, bộ trang chiếu có sẵn
+  không thay đổi.
 - **An toàn theo mặc định**: transport HTTP chỉ-HTTPS, rate limit theo
   từng nguồn (token bucket), `defusedxml` cho mọi payload XML,
   các đường xuất an-toàn-với-path-traversal, không `eval` / `exec` / `pickle` trên
@@ -331,6 +408,16 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Bỏ qua prompt paywall và tiếp tục. |
 | `--max-slides` | Giới hạn slide mỗi bài (mặc định 25; truyền 0 cho không giới hạn). |
 | `--dark-mode` | Render pptx với nền tối + chữ gần trắng. Mặc định là deck sáng dải navy. |
+| `--pptx-template FILE` | Dựng trang chiếu trên một mẫu PowerPoint (.pptx / .potx) thay cho bộ trang chiếu dải xanh navy có sẵn. Được kiểm tra trước khi việc tìm kiếm bắt đầu: cần trang chiếu 16:9 và một bố cục cho nội dung. `thesisagents validate-template FILE` cho biết một lần xuất sẽ dùng gì. |
+| `--pptx-template-config FILE` | Một tệp TOML / JSON chứa các ghi đè cho `--pptx-template`: bố cục cho từng loại trang chiếu, phông chữ, màu của bảng màu, và việc có vẽ dải tiêu đề cùng tấm nền trang bìa hay không. |
+| `--no-verify-identifiers` | Xuất mà không kiểm tra DOI và URL của các bài báo. Theo mặc định, DOI / URL sai hoặc không thể kết nối sẽ dừng lần chạy trước khi ghi bất cứ thứ gì. Dùng khi ngoại tuyến. |
+| `--diagnostics` | Giải thích thứ hạng của một lần tìm `--query`: in điểm của từng bài báo (độ liên quan + độ mới + trích dẫn) cùng khuyến nghị tham khảo `keep` / `review` / `prune`, và ghi bảng phân tích đầy đủ vào `diagnostics.json` trong `--out`. Không bài báo nào bị xóa. |
+| `--snowball` | Mở rộng kết quả theo liên kết trích dẫn trước khi xuất: `references` (những gì các kết quả đứng đầu trích dẫn), `cited_by` (những gì trích dẫn chúng) hoặc `both`. Các bài mới được nối vào cuối và đi qua cùng bước tải xuống và xuất. Mặc định tắt. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Giới hạn cho `--snowball`: số kết quả đứng đầu cần mở rộng (mặc định 5), số bước đi theo (1, tối đa 3), số bài mỗi hạt giống và mỗi chiều (20), tổng số bài mới (20) và độ liên quan thấp nhất được giữ (0..1, mặc định tắt). |
+| `--library PATH` | Thư viện tài liệu: một tệp SQLite lưu bài báo, liên kết trích dẫn và kết quả kiểm tra định danh giữa các lần chạy. Được tạo nếu chưa có. Với một lần chạy thông thường, nó là bộ nhớ đệm định danh, nên DOI hoặc URL đã xác minh trước đó không bị kiểm tra lại. |
+| `--library-add` | Gộp các bài báo của lần chạy này vào `--library`, kèm truy vấn, điểm của từng bài và các liên kết trích dẫn từ `--snowball`. Bài đã có trong thư viện sẽ được gộp, không bị trùng lặp. |
+| `--library-search QUERY` | Liệt kê các bài báo trong `--library` khớp với QUERY, bài phù hợp nhất trước, rồi thoát. Không tải gì cả. `--max` giới hạn danh sách, còn `""` liệt kê các bài được thấy gần đây nhất. |
+| `--library-export [QUERY]` | Xuất các bài báo trong `--library` qua `--export`, toàn bộ hoặc chỉ những bài khớp với QUERY. Định dạng mặc định: `xlsx,bib`. Không tải PDF nào trừ khi `--export` có `pdf`. |
 | `--quiet` | Tắt in ấn theo từng bài. |
 
 ### Biến môi trường
@@ -394,11 +481,16 @@ Công cụ:
 |---|---|
 | `list_sources` | Liệt kê mọi plugin + báo cái nào đang bật trong env hiện tại. Gọi nó một lần trước `search`. |
 | `list_exports` | Liệt kê mọi định dạng xuất với mô tả một dòng và việc nó ghi một file tổng hợp hay một file mỗi bài. |
-| `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. |
+| `search` | Từ khóa → danh sách bài. Nhận `top_tier_only`, `min_citations`; mặc định là tổ hợp nguồn không-cần-API-key đầy đủ. `diagnostics=true` thêm bảng phân tích điểm theo từng bài và khuyến nghị tham khảo `keep` / `review` / `prune` (không có gì bị xóa khỏi `papers`). Luôn trả về `source_stats`: với mỗi nguồn, `requested`, `returned`, `after_dedup` và `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` còn mở rộng các kết quả đứng đầu theo liên kết trích dẫn và thêm một khối `snowball` (`papers` không đổi). |
+| `snowball` | Bài hạt giống → các bài chúng trích dẫn (`references`), các bài trích dẫn chúng (`cited_by`) hoặc `both`, trong giới hạn cố định (`depth`, `max_per_seed`, `max_total`). Mỗi bài tìm được mang theo đường đã dẫn tới nó. `keywords` tùy chọn sẽ chấm điểm và sắp xếp, còn `min_relevance` loại các bài lạc đề. |
+| `library_add` | Bài báo → thư viện tài liệu (tệp SQLite tại `library`), giữ lại cho các phiên sau. Thêm tức là gộp: bài đã có sẽ được cập nhật, không bị trùng lặp. `relations` lưu các liên kết trích dẫn mà `snowball` trả về. |
+| `library_search` | Truy vấn → các bài báo đã có trong thư viện, được chấm điểm như một lần tìm kiếm, không cần mạng. Mỗi bài kèm lịch sử của nó: lần đầu và lần cuối được thấy, và những nguồn nào đã trả về nó. |
+| `library_stats` | Thư viện → số bài báo, số lần chạy và số liên kết trích dẫn mà nó đang giữ, số bài theo từng nguồn và các lần nhập gần nhất. |
 | `fetch_paper` | Định danh arXiv / DOI / PMID / IEEE → một bài đơn. |
 | `fetch_pdf_text` | Tải một PDF, trả về văn bản thân bài đã trích. **Cổng MCP tới "tôi đã đọc bài".** |
 | `download_pdfs` | Tải hàng loạt PDF của một danh sách bài vào `{out_dir}/pdfs/`. Trả về kết quả từng bài có khóa theo khóa BibTeX. |
-| `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận một trường `summary` mỗi bài cho schema phong cách luận văn đầy đủ, `max_slides_per_paper` (mặc định 25), và `dark_mode` (mặc định `false` — mặc định dự án là deck sáng dải navy, truyền `true` cho post-pass tối OLED / thiếu sáng). |
+| `export` | Danh sách bài + định dạng → ghi `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Nhận một trường `summary` mỗi bài cho schema phong cách luận văn đầy đủ, `max_slides_per_paper` (mặc định 25), và `dark_mode` (mặc định `false` — mặc định dự án là deck sáng dải navy, truyền `true` cho post-pass tối OLED / thiếu sáng). Xác minh mọi DOI / URL trước khi ghi (`verify_identifiers`, mặc định `true`): mã định danh sai hoặc không thể kết nối làm lệnh gọi thất bại và nêu rõ bài báo, và phản hồi kèm báo cáo `verification`. `library` chỉ định thư viện tài liệu dùng để lưu kết quả kiểm tra định danh, nên định danh đã được xác minh ở một lần gọi trước sẽ không bị kiểm tra lại. `pptx_template` (kèm `pptx_template_config` tùy chọn) dựng bộ trang chiếu trên mẫu PowerPoint của riêng bạn. |
+| `pptx_validate_template` | Mẫu → nó có dùng được cho `export(pptx_template=...)` hay không: bố cục mà mỗi loại trang chiếu sẽ dùng, cùng các lỗi và cảnh báo cho biết cần sửa gì. Không có gì được tạo ra. |
 | `pptx_inspect` | Đọc cấu trúc slide / shape của một deck hiện có. |
 | `pptx_review` | Kiểm toán một deck trong một lời gọi — overflow + hợp đồng màu + độ đầy đủ mục `paper_rule`. Tự phát hiện ngôn ngữ deck; cũng là CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Thay `title` / `body` / `meta` (theo tên shape) hoặc các shape tùy ý theo index. |
@@ -418,7 +510,7 @@ Luồng LLM-as-agent (không cần `ANTHROPIC_API_KEY` — LLM chính là agent)
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Tham chiếu đầy đủ trong [`docs/mcp.md`](docs/mcp.md).
+Tham chiếu đầy đủ trong [`docs/mcp.md`](../docs/mcp.md).
 
 ## Bố cục dự án
 
@@ -429,8 +521,9 @@ ThesisAgents/
 │   ├── fetchers/                    # client async chỉ-HTTPS, rate limit token bucket
 │   ├── exporters/                   # pptx (phong cách luận văn) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # tải PDF + bộ tóm tắt Anthropic  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # benchmark chất lượng tìm kiếm offline (docs/search-quality.md)
-│   ├── mcp/                         # server FastMCP (13 công cụ)
+│   ├── mcp/                         # server FastMCP (18 công cụ)
 │   ├── sources/<name>/              # thư mục plugin: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,
@@ -472,6 +565,10 @@ Light mode + slide-cap + max-figures luồng vào
 `ExportOptions`). Bản release zip Windows đóng gói bundle được biên dịch
 bằng Nuitka kèm sẵn PySide6, nên `thesisagents.exe gui` chạy
 mà không cần cài Python riêng.
+Tab Search còn có thể lần theo trích dẫn từ các kết quả đứng đầu (lăn
+cầu tuyết), lưu kết quả vào một tệp thư viện và tìm trong thư viện đó
+khi không có mạng, còn tab Deck có thể dựng bộ trang chiếu trên mẫu
+PowerPoint của riêng bạn.
 **Giao diện phát hành đủ 14 ngôn ngữ** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — lần chạy đầu chọn
@@ -482,17 +579,17 @@ slide ở ngôn ngữ khác. Bố cục responsive: mọi form nằm trong
 một `QScrollArea` và cửa sổ thu nhỏ xuống 900×600 (vẫn vừa
 720p), với HiDPI scaling bật theo mặc định.
 
-Tham chiếu đầy đủ: [`docs/gui.md`](docs/gui.md).
+Tham chiếu đầy đủ: [`docs/gui.md`](../docs/gui.md).
 
 ## Đóng gói thành file thực thi độc lập
 
 Hai packager được tài liệu hóa để giao một binary một-file chạy
 mà không cần cài Python:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — build nhanh (dưới một phút), đầu ra 200–300 MB, khởi động 2–4 giây.
   Tốt nhất khi bạn lặp trên build script.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   build chậm (5–15 phút), đầu ra 80–150 MB, khởi động dưới một giây,
   có chút bảo vệ bytecode. Tốt nhất khi người dùng cuối chạy binary
   nhiều lần.
@@ -531,7 +628,7 @@ Hai workflow GitHub Actions nằm trong `.github/workflows/`:
      thêm độ trễ khởi động và kích hoạt heuristic diệt virus trên các
      máy bị khóa chặt. Cũng chỉ-Windows theo thiết kế: người dùng Linux /
      macOS cài từ PyPI. Cache build khóa trên `pyproject.toml`
-     cắt build ấm từ ~70 phút lạnh xuống ~5–10 phút.
+     cắt build ấm từ ~85 phút lạnh xuống ~5–10 phút.
   5. **`publish-release`** — bỏ đánh dấu nháp một khi asset Nuitka
      đã được tải lên, nên người dùng không bao giờ thấy một release dở dang.
 
@@ -551,7 +648,7 @@ Hai workflow GitHub Actions nằm trong `.github/workflows/`:
    General → Workflow permissions → Read and write permissions`.
    Commit tăng phiên bản được push bởi `GITHUB_TOKEN` của workflow.
 4. Cắt release bằng cách merge PR vào `main`. Pipeline mất
-   ~3–5 phút để xuất bản lên PyPI và ~50–70 phút nữa (lạnh) hoặc ~5–10 phút
+   ~3–5 phút để xuất bản lên PyPI và ~80–90 phút nữa (lạnh) hoặc ~5–10 phút
    (cache Nuitka ấm) để zip Windows được đính kèm.
 
 Job `publish-pypi` cố ý KHÔNG đính kèm một GitHub

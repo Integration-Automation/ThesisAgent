@@ -90,6 +90,29 @@ DEFAULT_SOURCES: tuple[str, ...] = (
     SOURCE_CORE,
 )
 
+# Sources asked for citation links, in order, until one has an answer.
+# OpenAlex first: it is fast (10 req/s allowed) and answers both directions
+# for any paper with a DOI. Semantic Scholar second: it also resolves
+# arXiv-only papers, which OpenAlex cannot, but its anonymous tier is limited
+# to about one request per second and answers 429 readily. Crossref last: it
+# has reference lists only, and only the references that carry a DOI.
+DEFAULT_CITATION_PROVIDERS: tuple[str, ...] = (
+    SOURCE_OPENALEX,
+    SOURCE_SEMANTIC_SCHOLAR,
+    SOURCE_CROSSREF,
+)
+
+# Snowball search bounds. Each default is what a first look at a topic needs,
+# each maximum is where the request count stops being reasonable: one lookup
+# is one to three requests per paper and direction, so depth 2 from 20 seeds
+# with 20 papers per seed is already several hundred requests.
+SNOWBALL_DEFAULT_DEPTH: int = 1
+SNOWBALL_MAX_DEPTH: int = 3
+SNOWBALL_DEFAULT_MAX_PER_SEED: int = 20
+SNOWBALL_MAX_PER_SEED: int = 100
+SNOWBALL_DEFAULT_MAX_TOTAL: int = 200
+SNOWBALL_MAX_TOTAL: int = 1000
+
 EXPORT_BIBTEX: str = "bib"
 EXPORT_MARKDOWN: str = "md"
 EXPORT_PPTX: str = "pptx"

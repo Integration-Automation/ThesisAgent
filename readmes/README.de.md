@@ -26,8 +26,8 @@ entweder im Kontext (LLM-as-agent-Ablauf) oder über die Anthropic-API
 
 **Wenn du ein LLM bist (Claude Code, Cursor, Aider, Codex CLI, …) und diese
 README liest, um herauszufinden, was zu tun ist — beginne hier.** Alles
-Folgende ist auch in [`AGENTS.md`](AGENTS.md) (agentübergreifendes Spiegelbild)
-und [`CLAUDE.md`](CLAUDE.md) (kanonische Referenz) verankert; lies diese, bevor
+Folgende ist auch in [`AGENTS.md`](../AGENTS.md) (agentübergreifendes Spiegelbild)
+und [`CLAUDE.md`](../CLAUDE.md) (kanonische Referenz) verankert; lies diese, bevor
 du nicht-triviale Änderungen vornimmst.
 
 ### Was der Nutzer tatsächlich will
@@ -65,10 +65,10 @@ Zwischenartefakt — deine Aufgabe ist es, ihn aufzuwerten.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-Alle dreizehn MCP-Tools (einschließlich `list_sources`, `list_exports`,
+Alle achtzehn MCP-Tools (einschließlich `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) sind
-in [`docs/mcp.md`](docs/mcp.md) dokumentiert.
+in [`docs/mcp.md`](../docs/mcp.md) dokumentiert.
 
 ### Pflicht: URL-/DOI-Verifikation vor der Auslieferung
 
@@ -98,6 +98,16 @@ Zwei auf diese Weise in der Produktion entdeckte Fabrikationen: falscher
 AAAI-Band (`v39i23.34521` statt echt `v39i22.34537`) und erfundener
 Autoren-Slug-Pfad (`view/fang2026` statt `v40i5.37389`).
 
+**Der Export prüft das zur Laufzeit.** Bevor etwas geschrieben wird,
+schlagen die CLI, das MCP-Tool `export` und der Deck-Tab der GUI die DOI
+jedes Papers bei doi.org nach und rufen jede URL einmal ab. Eine nicht
+registrierte DOI, eine URL, die 404 antwortet, oder ein nicht
+erreichbarer Host stoppen den Export und nennen das Paper und den
+Bezeichner. Die Prüfung belegt, dass ein Bezeichner existiert, nicht
+dass er zu diesem Paper gehört, daher gelten die Regel zum Kopieren aus
+der xlsx und das Audit oben weiterhin. Offline übergeben Sie
+`--no-verify-identifiers` (CLI) oder `verify_identifiers=false` (MCP).
+
 ### Pflicht: irrelevante Downloads vor der Auslieferung aussortieren
 
 Der Abgleich der Suchschlüsselwörter ist schlagwortbasiert, daher rutschen
@@ -123,9 +133,20 @@ ehrliche Aufzeichnung dessen, was die Suche zurückgegeben hat. Grenzfälle
 erhalten eine reichhaltige Zusammenfassung; besser zu viel aufnehmen als
 stillschweigend einen möglichen Treffer fallen zu lassen.
 
+**Um themenfremde Ergebnisse zu erkennen, beginnen Sie mit den Hinweisen
+des Werkzeugs selbst.** `--diagnostics` (CLI) oder `diagnostics=true`
+beim MCP-Tool `search` erklärt das Ranking: die Punktzahl jedes Papers,
+aufgeteilt in Relevanz, Aktualität und Zitationen, die übereinstimmenden
+Suchbegriffe und eine Empfehlung `keep` / `review` / `prune` mit dem
+auslösenden Schwellenwert. Die CLI schreibt die vollständige
+Aufschlüsselung außerdem in `diagnostics.json` im Ausgabeverzeichnis.
+Die Empfehlungen sind Hinweise und es wird nichts für Sie entfernt,
+lesen Sie daher die Abstracts der `review`- und `prune`-Papers, bevor
+Sie etwas löschen.
+
 ### Durchgearbeitetes Beispiel
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) liefert eine von Hand
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) liefert eine von Hand
 verfasste reichhaltige Zusammenfassung, die genau auf diese Weise erstellt wurde
 (einzelnes Paper, reichhaltige Stufe, zh-tw, jedes reichhaltige Feld befüllt).
 Eine Suche über mehrere Paper folgt derselben Form mit einem
@@ -227,9 +248,9 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   funktioniert mit jedem Foliensatz, den der Exporter erzeugt, plus den
   äquivalenten `pptx_*`-MCP-Tools, sodass ein LLM-Agent an einem erzeugten
   Foliensatz iterieren kann.
-- **MCP-Server**: 13 Tools — `list_sources` + `list_exports`
-  (Discovery), `search`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export` und die sechs `pptx_*`-Deck-Tools
+- **MCP-Server**: 18 Tools — `list_sources` + `list_exports`
+  (Discovery), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
+  `download_pdfs`, `pptx_validate_template`, `export` und die sechs `pptx_*`-Deck-Tools
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Lässt jedes
   MCP-fähige LLM
@@ -254,6 +275,67 @@ Eine Suche über mehrere Paper folgt derselben Form mit einem
   `pdf_url` Unpaywall → S2 `openAccessPdf` → arXiv-Titelsuche →
   CORE.ac.uk (wenn Schlüssel gesetzt sind). Typischer Zuwachs bei
   IEEE-/ACM-/Springer-/Elsevier-lastigen Suchen: 40–70 Prozentpunkte.
+- **Export-Vorabprüfung (DOI- / URL-Verifizierung)**: Bevor eine Datei
+  geschrieben wird, wird jede DOI bei doi.org nachgeschlagen und jede
+  URL einmal abgerufen. Ein falscher oder nicht erreichbarer Bezeichner
+  stoppt den Export mit einer Liste der fehlgeschlagenen Papers und
+  Bezeichner. Verlagsseiten, die einen echten Browser brauchen, werden
+  nicht abgerufen (die DOI-Prüfung deckt sie ab), und ein Server, der
+  automatisierten Zugriff ablehnt, wird als nicht prüfbar gemeldet,
+  statt den Lauf scheitern zu lassen. Standardmäßig aktiv,
+  `--no-verify-identifiers` schaltet sie für Offline-Arbeit ab.
+- **Erklärbares Ranking und Aussortier-Hinweise**: Jede Suche hält fest,
+  warum ein Paper an seiner Position steht (Anteile von Relevanz,
+  Aktualität und Zitationen, übereinstimmende Suchbegriffe, ein Satz pro
+  Beitrag), und empfiehlt für jedes Ergebnis `keep`, `review` oder
+  `prune` samt der auslösenden Regel. Eine niedrige Zitationszahl allein
+  löst nie eine Empfehlung aus. Sichtbar mit `--diagnostics`, mit
+  `diagnostics=true` beim MCP-Tool `search` oder in der Spalte
+  Empfehlung der GUI. Nur ein Hinweis: Kein Paper wird entfernt.
+- **Suchstatistik pro Quelle**: Jede Suche meldet für jede Quelle, wie
+  viele Datensätze sie geliefert hat, wie viele eindeutige Papers ihr
+  nach der Deduplizierung zugerechnet werden und ob sie fehlgeschlagen
+  ist, ins Ratenlimit lief oder deaktiviert ist. Eine fehlerhafte Quelle
+  wird übersprungen, ohne die Suche anzuhalten, daher zeigen erst diese
+  Zahlen, ob ein Thema wenig Literatur hat oder die Suche die Hälfte
+  ihrer Quellen verloren hat. Die CLI gibt sie nach jeder
+  `--query`-Suche aus, das MCP-Tool `search` liefert sie als
+  `source_stats` und die GUI zeigt sie in der Statuszeile.
+- **Zitations-Schneeballsuche**: `--snowball references|cited_by|both`
+  (oder das MCP-Tool `snowball`) erweitert die obersten Ergebnisse
+  entlang ihrer Zitationsverknüpfungen, rückwärts zu dem, was sie
+  zitieren, und vorwärts zu dem, was sie zitiert, und findet Arbeiten,
+  die eine Stichwortsuche übersieht, weil die Autoren andere Begriffe
+  verwendet haben. Jede Dimension ist begrenzt (Tiefe 1 als Standard,
+  Papers pro Startpaper, Papers insgesamt), ein über mehrere Wege
+  erreichtes Paper zählt als eines, und jedes gefundene Paper behält den
+  Weg, der zu ihm führte. Die Verknüpfungen stammen von OpenAlex,
+  Semantic Scholar und Crossref, und gefundene Papers werden vom selben
+  Ranker bewertet, sodass häufiges Zitiertwerden nicht als thematisch
+  passend gilt.
+- **Literaturbibliothek**: `--library thesis.db` bewahrt in einer
+  einzigen SQLite-Datei auf, was Ihre Läufe finden, sodass eine Suche
+  nicht mehr mit dem Prozessende verschwindet. Sie enthält die Papers,
+  welcher Lauf und welche Quelle jedes gefunden hat, ihre Bewertungen,
+  die Zitationsverknüpfungen aus `--snowball` und die DOI- /
+  URL-Prüfungen. `--library-add` führt einen Lauf hinein zusammen (ein
+  bereits vorhandenes Paper wird aktualisiert, nie dupliziert),
+  `--library-search` findet gespeicherte Papers ohne Netzwerkzugriff,
+  und `--library-export` gibt sie in jedem Exportformat aus. Eine DOI
+  oder URL, die in einem früheren Lauf bestätigt wurde, wird 30 Tage
+  lang nicht erneut geprüft. Auch als MCP-Tools `library_add`,
+  `library_search` und `library_stats` verfügbar.
+- **Folienvorlagen**: `--pptx-template thesis.pptx` baut die Folien auf
+  Ihrer eigenen PowerPoint-Vorlage auf, sodass deren Hintergrund, Logo
+  und Layouts das Deck tragen statt des eingebauten Designs mit
+  marineblauem Band. Jede Folienart (Titel, Abschnitt, Inhalt, Tabelle,
+  Literatur, Fragen) verwendet das Layout, das Sie ihr zuweisen, und
+  eine optionale TOML- / JSON-Konfiguration (`--pptx-template-config`)
+  legt die Schriftarten, die Palettenfarben und fest, ob das Kopfband
+  und die Titelfläche gezeichnet werden. Die Vorlage wird geprüft, bevor
+  die Suche beginnt, und `thesisagents validate-template thesis.pptx`
+  zeigt, welches Layout jede Folienart verwenden würde und was zu
+  korrigieren ist. Ohne Vorlage bleibt das eingebaute Deck unverändert.
 - **Standardmäßig sicher**: Nur-HTTPS-HTTP-Transport, quellenweise
   Ratenbegrenzung (Token-Bucket), `defusedxml` für jede XML-Nutzlast,
   pfadtraversierungssichere Exportpfade, kein `eval` / `exec` / `pickle` auf
@@ -336,6 +418,16 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Überspringt die Paywall-Abfrage und fährt fort. |
 | `--max-slides` | Folienobergrenze pro Paper (Standard 25; übergib 0 für unbegrenzt). |
 | `--dark-mode` | Rendert die pptx mit dunklem Hintergrund + fast weißem Text. Standard ist der helle Foliensatz mit marineblauem Band. |
+| `--pptx-template FILE` | Baut die Folien auf einer PowerPoint-Vorlage (.pptx / .potx) auf statt auf dem eingebauten Deck mit marineblauem Band. Wird geprüft, bevor die Suche beginnt: Nötig sind 16:9-Folien und ein Layout für den Folieninhalt. `thesisagents validate-template FILE` zeigt, was ein Export verwenden würde. |
+| `--pptx-template-config FILE` | Eine TOML- / JSON-Datei mit Überschreibungen für `--pptx-template`: das Layout je Folienart, Schriftarten, Palettenfarben und ob das Kopfband und die Titelfläche gezeichnet werden. |
+| `--no-verify-identifiers` | Exportiert, ohne die DOIs und URLs der Papers zu prüfen. Standardmäßig stoppt eine falsche oder nicht erreichbare DOI / URL den Lauf, bevor etwas geschrieben wird. Für den Offline-Einsatz. |
+| `--diagnostics` | Erklärt das Ranking einer `--query`-Suche: gibt die Punktzahl jedes Papers aus (Relevanz + Aktualität + Zitationen) sowie eine unverbindliche Empfehlung `keep` / `review` / `prune` und schreibt die vollständige Aufschlüsselung nach `diagnostics.json` in `--out`. Kein Paper wird entfernt. |
+| `--snowball` | Erweitert die Ergebnisse vor dem Export entlang der Zitationsverknüpfungen: `references` (was die obersten Ergebnisse zitieren), `cited_by` (was sie zitiert) oder `both`. Die neuen Papers werden angehängt und durchlaufen denselben Download und Export. Standardmäßig aus. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Grenzen für `--snowball`: zu erweiternde oberste Ergebnisse (Standard 5), zu folgende Schritte (1, höchstens 3), Papers pro Startpaper und Richtung (20), neue Papers insgesamt (20) und die niedrigste Relevanz, die behalten wird (0..1, standardmäßig aus). |
+| `--library PATH` | Eine Literaturbibliothek: eine SQLite-Datei, die Papers, Zitationsverknüpfungen und Kennungsprüfungen zwischen den Läufen aufbewahrt. Wird angelegt, wenn sie fehlt. Bei einem normalen Lauf ist sie der Kennungs-Cache, sodass eine zuvor bestätigte DOI oder URL nicht erneut geprüft wird. |
+| `--library-add` | Führt die Papers dieses Laufs in `--library` zusammen, samt Anfrage, Bewertung jedes Papers und den Zitationsverknüpfungen aus `--snowball`. Ein bereits in der Bibliothek vorhandenes Paper wird zusammengeführt, nicht dupliziert. |
+| `--library-search QUERY` | Listet die Papers in `--library` auf, die zu QUERY passen, die besten zuerst, und beendet sich. Es wird nichts abgerufen. `--max` begrenzt die Liste, und `""` listet die zuletzt gesehenen Papers auf. |
+| `--library-export [QUERY]` | Exportiert die Papers in `--library` über `--export`, alle oder nur die zu QUERY passenden. Standardformate: `xlsx,bib`. Es wird kein PDF heruntergeladen, außer `--export` enthält `pdf`. |
 | `--quiet` | Unterdrückt die Ausgabe pro Paper. |
 
 ### Umgebungsvariablen
@@ -401,11 +493,16 @@ Tools:
 |---|---|
 | `list_sources` | Zählt jedes Plugin auf + meldet, ob es in der aktuellen Umgebung aktiviert ist. Rufe dies einmal vor `search` auf. |
 | `list_exports` | Zählt jedes Exportformat mit seiner einzeiligen Beschreibung auf und ob es eine aggregierte Datei oder eine Datei pro Paper schreibt. |
-| `search` | Schlagwörter → Liste von Papern. Akzeptiert `top_tier_only`, `min_citations`; nutzt standardmäßig den vollständigen Quellenmix ohne API-Schlüssel. |
+| `search` | Schlagwörter → Liste von Papern. Akzeptiert `top_tier_only`, `min_citations`; nutzt standardmäßig den vollständigen Quellenmix ohne API-Schlüssel. `diagnostics=true` ergänzt die Punkteaufschlüsselung pro Paper und eine unverbindliche Empfehlung `keep` / `review` / `prune` (aus `papers` wird nichts entfernt). Liefert immer `source_stats`: pro Quelle `requested`, `returned`, `after_dedup` und `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` erweitert zusätzlich die obersten Ergebnisse entlang ihrer Zitationsverknüpfungen und ergänzt einen `snowball`-Block (`papers` bleibt unverändert). |
+| `snowball` | Startpapers → Papers, die von ihnen zitiert werden (`references`), Papers, von denen sie zitiert werden (`cited_by`), oder `both`, innerhalb fester Grenzen (`depth`, `max_per_seed`, `max_total`). Jedes gefundene Paper trägt den Weg, über den es erreicht wurde. Optionale `keywords` bewerten und ordnen sie, `min_relevance` verwirft themenfremde. |
+| `library_add` | Papers → eine Literaturbibliothek (die SQLite-Datei unter `library`), aufbewahrt für spätere Sitzungen. Hinzufügen heißt zusammenführen: Ein bereits vorhandenes Paper wird aktualisiert, nicht dupliziert. `relations` speichert die Zitationsverknüpfungen, die `snowball` zurückgibt. |
+| `library_search` | Anfrage → Papers, die bereits in der Bibliothek liegen, bewertet wie bei einer Suche, ohne Netzwerkzugriff. Jedes kommt mit seiner Historie: wann zuerst und zuletzt gesehen und von welchen Quellen geliefert. |
+| `library_stats` | Bibliothek → wie viele Papers, Läufe und Zitationsverknüpfungen sie enthält, die Papers je Quelle und die letzten Importe. |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE-Identifikator → einzelnes Paper. |
 | `fetch_pdf_text` | Lädt ein PDF herunter, gibt extrahierten Fließtext zurück. **Der MCP-Pfad zu „Ich habe das Paper gelesen".** |
 | `download_pdfs` | Lädt die PDFs einer Paper-Liste stapelweise nach `{out_dir}/pdfs/` herunter. Gibt Ergebnisse pro Paper zurück, indiziert nach BibTeX-Schlüssel. |
-| `export` | Paper-Liste + Formate → schreibt `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Akzeptiert ein `summary`-Feld pro Paper für das reichhaltige Thesis-Stil-Schema, `max_slides_per_paper` (Standard 25) und `dark_mode` (Standard `false` — der Projektstandard ist der helle Foliensatz mit marineblauem Band, übergib `true` für den dunklen OLED-/Schwachlicht-Nachlauf). |
+| `export` | Paper-Liste + Formate → schreibt `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Akzeptiert ein `summary`-Feld pro Paper für das reichhaltige Thesis-Stil-Schema, `max_slides_per_paper` (Standard 25) und `dark_mode` (Standard `false` — der Projektstandard ist der helle Foliensatz mit marineblauem Band, übergib `true` für den dunklen OLED-/Schwachlicht-Nachlauf). Verifiziert vor dem Schreiben jede DOI / URL (`verify_identifiers`, Standard `true`): Ein falscher oder nicht erreichbarer Bezeichner lässt den Aufruf scheitern und nennt das Paper, und die Antwort enthält einen `verification`-Bericht. `library` nennt eine Literaturbibliothek, in der die Kennungsprüfungen aufbewahrt werden, sodass eine bei einem früheren Aufruf bestätigte Kennung nicht erneut geprüft wird. `pptx_template` (optional mit `pptx_template_config`) baut das Deck auf Ihrer eigenen PowerPoint-Vorlage auf. |
+| `pptx_validate_template` | Vorlage → ob sie für `export(pptx_template=...)` taugt: das Layout, das jede Folienart verwenden würde, dazu Fehler und Warnungen, die sagen, was zu ändern ist. Es wird nichts gerendert. |
 | `pptx_inspect` | Liest die Folien-/Shape-Struktur eines vorhandenen Foliensatzes. |
 | `pptx_review` | Prüft einen Foliensatz in einem Aufruf — Überlauf + Farbverträge + `paper_rule`-Abschnittsvollständigkeit. Erkennt die Foliensatzsprache automatisch; auch die CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Ersetzt `title` / `body` / `meta` (nach Shape-Name) oder beliebige Shapes nach Index. |
@@ -425,7 +522,7 @@ LLM-as-agent-Ablauf (kein `ANTHROPIC_API_KEY` nötig — das LLM ist der Agent):
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-Vollständige Referenz in [`docs/mcp.md`](docs/mcp.md).
+Vollständige Referenz in [`docs/mcp.md`](../docs/mcp.md).
 
 ## Projektstruktur
 
@@ -436,8 +533,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,
@@ -479,6 +577,10 @@ die Folienobergrenze- und Max-Figures-Steuerungen fließen in `ExportOptions`
 ein). Das Windows-Release-Zip liefert das mit Nuitka kompilierte Bündel mit
 enthaltenem PySide6, sodass `thesisagents.exe gui` ohne separate
 Python-Installation funktioniert.
+Der Tab Search kann außerdem den Zitationen der obersten Ergebnisse
+folgen (Schneeball), Ergebnisse in einer Bibliotheksdatei aufbewahren
+und diese Bibliothek ohne Netzwerk durchsuchen, und der Tab Deck kann
+das Deck auf Ihrer eigenen PowerPoint-Vorlage aufbauen.
 **Die UI wird in allen 14 Sprachen ausgeliefert** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — der erste Start wählt die
@@ -489,17 +591,17 @@ anderen erzeugen kannst. Das Layout ist responsiv: Jedes Formular sitzt in
 einer `QScrollArea` und das Fenster lässt sich bis auf 900×600 verkleinern
 (passt noch auf 720p), mit standardmäßig aktivierter HiDPI-Skalierung.
 
-Vollständige Referenz: [`docs/gui.md`](docs/gui.md).
+Vollständige Referenz: [`docs/gui.md`](../docs/gui.md).
 
 ## Paketierung als eigenständige ausführbare Datei
 
 Zwei Packager sind dokumentiert, um eine einzelne Binärdatei auszuliefern, die
 ohne installiertes Python läuft:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — schneller Build (unter einer Minute), 200–300 MB Output, 2–4 s Startzeit.
   Am besten, wenn du am Build-Skript iterierst.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   langsamer Build (5–15 Minuten), 80–150 MB Output, Startzeit unter einer
   Sekunde, etwas Bytecode-Schutz. Am besten, wenn Endnutzer die Binärdatei
   viele Male ausführen.
@@ -538,7 +640,7 @@ Zwei GitHub-Actions-Workflows leben unter `.github/workflows/`:
      Startlatenz hinzufügt und Antiviren-Heuristiken auf gesperrten Maschinen
      auslöst. Auch nur Windows nach Design: Linux-/macOS-Nutzer installieren
      von PyPI. Der auf `pyproject.toml` verschlüsselte Build-Cache reduziert
-     warme Builds von ~70 min kalt auf ~5–10 min.
+     warme Builds von ~85 min kalt auf ~5–10 min.
   5. **`publish-release`** — entfernt die Entwurfsmarkierung, sobald das
      Nuitka-Asset hochgeladen ist, sodass Nutzer nie ein halbfertiges Release
      sehen.
@@ -559,7 +661,7 @@ Um PyPI-Publishing + Release-Executables zu aktivieren:
    General → Workflow permissions → Read and write permissions`. Der
    Bump-Commit wird vom `GITHUB_TOKEN` des Workflows gepusht.
 4. Erstelle Releases durch das Mergen von PRs in `main`. Die Pipeline benötigt
-   ~3–5 min, um zu PyPI zu publizieren, und ~50–70 min mehr (kalt) oder ~5–10 min
+   ~3–5 min, um zu PyPI zu publizieren, und ~80–90 min mehr (kalt) oder ~5–10 min
    (warmer Nuitka-Cache), damit das Windows-Zip angehängt wird.
 
 Der `publish-pypi`-Job hängt absichtlich KEINE GitHub-Environment an, sodass

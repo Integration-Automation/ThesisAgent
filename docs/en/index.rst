@@ -51,7 +51,51 @@ Decision tree
    5. (you read each PDF and produce a structured summary dict)
    6. export(papers=[{..., "summary": {...}}], language="zh-tw", ...)
 
-Twelve MCP tools total; full reference at :doc:`/mcp`.
+Eighteen MCP tools total; full reference at :doc:`/mcp`.
+
+**To spot off-topic results, start from the tool's own advice.**
+``--diagnostics`` (CLI) or ``diagnostics=true`` on the MCP ``search``
+tool explains the ranking: each paper's score split into relevance,
+recency and citations, the query terms that matched, and a ``keep`` /
+``review`` / ``prune`` recommendation with the threshold behind it. The
+CLI also writes the full breakdown to ``diagnostics.json`` in the output
+directory. The recommendations are advice and nothing is removed for
+you, so read the abstracts of the ``review`` and ``prune`` papers before
+deleting anything.
+
+**Check which sources answered.** Every ``search`` response carries
+``source_stats``: for each source, how many records it returned, how
+many unique papers it is credited with after de-duplication, and a
+``status`` of ``ok``, ``failed``, ``rate_limited`` or ``disabled``. A
+source that fails is skipped without stopping the search, so read these
+counts before concluding that a topic has few papers. The CLI prints the
+same table after every ``--query`` search.
+
+**Follow the citations.** ``--snowball both`` (CLI) or the ``snowball``
+tool expands the top results along their citation links: ``references``
+adds what they cite, ``cited_by`` adds what cites them. It finds work a
+keyword search misses because the authors used other words. The
+expansion is bounded (one step by default), each discovered paper keeps
+the path that reached it, and every one is scored against your keywords,
+so a paper is not kept just because it is cited often.
+
+**Keep what you find.** ``--library thesis.db --library-add`` (CLI) or
+the ``library_add`` tool stores a run's papers in a literature library,
+one SQLite file that outlives the session. Adding the same search again
+duplicates nothing: a paper is recognised by its DOI, arXiv ID or title,
+and the new sighting is merged into the stored record.
+``library_search`` then finds stored papers without touching the
+network, and DOIs and URLs that already verified are not checked again
+for 30 days.
+
+**Use your own template.** ``--pptx-template thesis.pptx`` (CLI) or
+``pptx_template`` on the ``export`` tool builds the deck on a PowerPoint
+template, so the background, logo and layouts are yours. Run
+``thesisagents validate-template thesis.pptx`` (or the
+``pptx_validate_template`` tool) first: it lists which layout each kind
+of slide would use and tells you what to fix. A template needs 16:9
+slides and a layout for slide content, and a small config file can map
+layouts, fonts and colours.
 
 Mandatory: URL / DOI verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -77,6 +121,16 @@ column 7 = DOI, column 8 = URL. Audit your regen script after running:
        if actual and not (p.url == actual
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
+
+**The export checks this at run time.** Before anything is written, the
+CLI, the MCP ``export`` tool and the GUI Deck tab look up every paper's
+DOI at doi.org and request every URL once. A DOI that is not registered,
+a URL that answers 404, or a host that cannot be reached stops the
+export and names the paper and the identifier. The check proves that an
+identifier exists, not that it belongs to this paper, so the
+copy-from-the-xlsx rule and the audit above still apply. When working
+offline, pass ``--no-verify-identifiers`` (CLI) or
+``verify_identifiers=false`` (MCP).
 
 Don'ts
 ^^^^^^
@@ -389,10 +443,12 @@ reverse for zh-cn strings. Full rule + the regex catalogue live in
 MCP server
 ----------
 
-ThesisAgents ships an MCP server exposing **thirteen tools** — discovery
-(``list_sources``, ``list_exports``), search, single-paper fetch,
+ThesisAgents ships an MCP server exposing **eighteen tools** — discovery
+(``list_sources``, ``list_exports``), search, citation snowballing (``snowball``), a literature library
+(``library_add``, ``library_search``, ``library_stats``), single-paper fetch,
 single-PDF text extraction (``fetch_pdf_text``), batch PDF download
-(``download_pdfs``), export, and six PPTX deck operations
+(``download_pdfs``), template validation (``pptx_validate_template``),
+export, and six PPTX deck operations
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``). Any
 MCP-aware LLM client (Claude Code, Claude Desktop, Cursor, …) can
@@ -434,6 +490,24 @@ Tools at a glance:
        Accepts ``top_tier_only`` (default ``True``) and
        ``min_citations``; defaults to the full no-API-key source mix
        when ``sources`` is omitted.
+   * - ``snowball``
+     - Seed papers → the papers they cite (``references``), the papers
+       that cite them (``cited_by``) or ``both``, within fixed bounds
+       (``depth``, ``max_per_seed``, ``max_total``). Each discovered
+       paper carries the path that reached it. ``keywords`` score and
+       order the results, ``min_relevance`` drops the off-topic ones.
+   * - ``library_add``
+     - Papers → a literature library (the SQLite file at ``library``),
+       kept for later sessions. Adding is a merge: a paper already there
+       is updated, not duplicated. ``relations`` stores the citation
+       links ``snowball`` returns.
+   * - ``library_search``
+     - Query → papers already in the library, scored like a search, with
+       no network access. Each comes with its history: first and last
+       seen, and which sources returned it.
+   * - ``library_stats``
+     - Library → how many papers, runs and citation links it holds, the
+       papers per source, and the latest imports.
    * - ``fetch_paper``
      - arXiv / DOI / PMID / IEEE identifier → single paper.
    * - ``fetch_pdf_text``
@@ -449,6 +523,11 @@ Tools at a glance:
        ``max_slides_per_paper`` (default 25; pass ``0`` for unlimited),
        and ``dark_mode`` (default ``false`` — the light navy-band deck;
        pass ``true`` for the dark OLED / low-light variant).
+   * - ``pptx_validate_template``
+     - Template → whether it can be used for ``export(pptx_template=...)``:
+       the layout each kind of slide would use, plus errors and warnings
+       that say what to change. Nothing is rendered. See
+       :doc:`/pptx_templates`.
    * - ``pptx_inspect``
      - Read slide / shape structure of an existing deck.
    * - ``pptx_review``
@@ -542,7 +621,8 @@ Architecture
    │   ├── exporters/                # pptx (thesis-style + lightweight), xlsx,
    │   │                             #   bibtex, markdown, json + pptx_edit + i18n
    │   ├── intelligence/             # PDF fetch + Anthropic summariser ([intelligence] extra)
-   │   ├── mcp/                      # FastMCP server registering 13 tools
+   │   ├── library/                  # SQLite literature library kept across runs
+   │   ├── mcp/                      # FastMCP server registering 18 tools
    │   ├── utils/                    # logging, path safety
    │   ├── cli.py                    # argparse CLI
    │   └── __main__.py               # `python -m thesisagents`

@@ -23,7 +23,7 @@ OpenAIRE、Springer Nature、Europe PMC、DOAJ、HAL、CORE 與 Google Scholar
 
 **如果你是一個 LLM(Claude Code、Cursor、Aider、Codex CLI …)正在讀這份
 README 想搞清楚要做什麼 —— 從這裡開始。** 底下的所有內容也都釘在
-[`AGENTS.md`](AGENTS.md)(跨 agent 鏡像)與 [`CLAUDE.md`](CLAUDE.md)
+[`AGENTS.md`](../AGENTS.md)(跨 agent 鏡像)與 [`CLAUDE.md`](../CLAUDE.md)
 (權威參考)裡;做非小改動之前請先讀那兩份。
 
 ### 使用者真正想要的
@@ -57,9 +57,9 @@ README 想搞清楚要做什麼 —— 從這裡開始。** 底下的所有內�
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-全部十三個 MCP 工具(包含 `list_sources`、`list_exports`、
+全部十八個 MCP 工具(包含 `list_sources`、`list_exports`、
 `download_pdfs`、`pptx_inspect` / `pptx_review` / `pptx_update_slide` /
-`pptx_add_slide` / 等等)都記載於 [`docs/mcp.md`](docs/mcp.md)。
+`pptx_add_slide` / 等等)都記載於 [`docs/mcp.md`](../docs/mcp.md)。
 
 ### 必辦:出貨前先驗證 URL / DOI
 
@@ -88,6 +88,8 @@ for p in ALL_PAPERS:
 (`v39i23.34521` vs 真實 `v39i22.34537`),以及發明出來的作者 slug 路徑
 (`view/fang2026` 而非 `v40i5.37389`)。
 
+**匯出時會在執行期檢查這一點。** 寫入任何檔案之前,CLI、MCP 的 `export` 工具與 GUI 的 Deck 分頁會到 doi.org 查詢每篇論文的 DOI,並對每個網址送出一次請求。DOI 未註冊、網址回應 404,或主機無法連線時,匯出會停止並指出是哪一篇論文的哪一個識別碼。這項檢查只能證明識別碼存在,無法證明它屬於這篇論文,所以上面「逐字從 xlsx 抄」的規則與稽核仍然要做。離線作業時,請加上 `--no-verify-identifiers` (CLI) 或 `verify_identifiers=false` (MCP)。
+
 ### 必辦:出貨前先剔除不相關的下載
 
 搜尋是以關鍵字比對的,所以離題論文一定會混進來:一次「Claude code」
@@ -110,9 +112,11 @@ for key in irrelevant_keys:
 回傳了什麼的誠實紀錄。邊界案例就給它一份豐富摘要;寧可多收也不要
 默默漏掉一個可能的匹配。
 
+**要找出離題的結果,先參考工具自己的建議。** CLI 的 `--diagnostics` 或 MCP `search` 工具的 `diagnostics=true` 會解釋排名: 每篇論文的分數拆成相關性、新近度與引用數三部分,列出命中的查詢詞,並給出 `keep` / `review` / `prune` 建議與觸發它的門檻。CLI 還會把完整明細寫到輸出目錄的 `diagnostics.json`。這些只是建議,工具不會替你移除任何論文,所以刪除前請先讀過 `review` 與 `prune` 論文的摘要。
+
 ### 實作範例
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) 附了一份正是
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) 附了一份正是
 以這種方式親手撰寫的豐富摘要(單篇論文、豐富層、zh-tw、每個豐富欄位
 都填滿)。多篇論文的搜尋遵循同樣的形狀,在 `PaperCollection` tuple
 裡每篇論文一個 `Paper(...summary=PaperSummary(...))` 條目。
@@ -195,8 +199,8 @@ for key in irrelevant_keys:
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   可對匯出器產出的任何投影片運作,加上對應的 `pptx_*` MCP 工具,好讓
   一個 LLM agent 能在產出的投影片上反覆迭代。
-- **MCP 伺服器**:13 個工具 —— `list_sources` + `list_exports`
-  (探索)、`search`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、
+- **MCP 伺服器**:18 個工具 —— `list_sources` + `list_exports`
+  (探索)、`search`、`snowball`、`library_add`、`library_search`、`library_stats`、`fetch_paper`、`fetch_pdf_text`、`download_pdfs`、`pptx_validate_template`、
   `export`,以及六個 `pptx_*` 投影片工具(`inspect`、`review`、
   `update_slide`、`delete_slide`、`reorder_slides`、`add_slide`)。讓任何
   懂 MCP 的 LLM(Claude Code、Claude Desktop、Cursor …)驅動整個工作
@@ -220,6 +224,12 @@ for key in irrelevant_keys:
   Unpaywall → S2 `openAccessPdf` → arXiv 標題搜尋 → CORE.ac.uk(在有設
   金鑰時)。在 IEEE / ACM / Springer / Elsevier 為主的查詢上典型的
   提升:40-70 個百分點。
+- **匯出前檢查 (DOI / URL 驗證)**: 寫入任何檔案之前,會到 doi.org 查詢每個 DOI,並對每個網址送出一次請求。識別碼錯誤或無法連線時,匯出會停止並列出失敗的論文與識別碼。需要真實瀏覽器才能開啟的出版商頁面不會被請求 (由 DOI 檢查涵蓋),拒絕自動化存取的伺服器會回報為「無法檢查」而不會讓整次執行失敗。預設開啟,離線時用 `--no-verify-identifiers` 關閉。
+- **可解釋的排名與修剪建議**: 每次搜尋都會記錄每篇論文排在該位置的原因 (相關性、新近度、引用數三部分,命中的查詢詞,每項貢獻一句說明),並為每筆結果建議 `keep`、`review` 或 `prune`,同時指出觸發的規則。單憑引用數低不會觸發任何建議。可用 `--diagnostics`、MCP `search` 工具的 `diagnostics=true`,或 GUI 的「建議」欄查看。僅供參考,不會移除任何論文。
+- **各來源的搜尋統計**: 每次搜尋都會回報每個來源回傳了幾筆記錄、去重後有幾篇論文歸屬於它,以及它是否失敗、被限流或未啟用。出錯的來源會被跳過而不中斷搜尋,所以要分辨「主題本來就冷門」與「搜尋掉了一半來源」,靠的就是這些數字。CLI 在每次 `--query` 搜尋後印出,MCP `search` 工具以 `source_stats` 回傳,GUI 則顯示在狀態列。
+- **引用滾雪球搜尋**: `--snowball references|cited_by|both` (或 MCP 的 `snowball` 工具) 會沿著引用關係擴充排名最前面的結果,往回找它們引用的文獻、往前找引用它們的文獻,補上關鍵字搜尋因作者用詞不同而漏掉的研究。每個維度都有上限 (預設深度 1、每個種子的篇數、總篇數),經由多條路徑找到的同一篇論文只算一篇,每篇新找到的論文都會記下找到它的路徑。引用資料來自 OpenAlex、Semantic Scholar 與 Crossref,新找到的論文同樣由排名器評分,所以被引用得多不代表切題。
+- **文獻庫**: `--library thesis.db` 把每次執行找到的內容保存在一個 SQLite 檔案裡,搜尋結果不再隨著程序結束而消失。裡面有論文、每篇論文是哪一次執行與哪個來源找到的、它們的分數、`--snowball` 找到的引用關係,以及 DOI / 網址的檢查結果。`--library-add` 把一次執行合併進去 (已經存在的論文會被更新,絕不重複), `--library-search` 不需要網路就能找出已保存的論文, `--library-export` 則把它們送到任何匯出格式。先前執行中已通過檢查的 DOI 或網址,30 天內不會再檢查一次。也能透過 MCP 工具 `library_add`、`library_search` 與 `library_stats` 使用。
+- **投影片範本**: `--pptx-template thesis.pptx` 會在你自己的 PowerPoint 範本上產生投影片,由範本的背景、標誌與版面配置呈現整份簡報,而不是內建的海軍藍橫幅樣式。每一種投影片 (封面、章節、內容、表格、參考文獻、Q&A) 會使用你為它指定的版面配置,另外可用選擇性的 TOML / JSON 設定檔 (`--pptx-template-config`) 指定字型、配色,以及是否繪製標題橫幅與封面底板。範本會在搜尋開始前先檢查, `thesisagents validate-template thesis.pptx` 會列出每一種投影片將使用哪個版面配置,以及需要修正的地方。不指定範本時,內建的投影片樣式維持不變。
 - **預設就安全**:僅 HTTPS 的 HTTP 傳輸、每來源速率限制(token bucket)、
   對任何 XML payload 用 `defusedxml`、防路徑穿越的匯出路徑、不對
   使用者輸入用 `eval` / `exec` / `pickle`。
@@ -298,6 +308,16 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | 跳過付費牆提示直接進行。 |
 | `--max-slides` | 每篇論文的投影片上限(預設 25;傳 0 表示無上限)。 |
 | `--dark-mode` | 以深色背景 + 近白文字渲染 pptx。預設是淺色深藍帶投影片。 |
+| `--pptx-template FILE` | 在 PowerPoint 範本 (.pptx / .potx) 上產生投影片,取代內建的海軍藍橫幅樣式。搜尋開始前會先檢查: 範本需要 16:9 的投影片,以及一個放內容的版面配置。`thesisagents validate-template FILE` 會顯示匯出時將使用什麼。 |
+| `--pptx-template-config FILE` | 供 `--pptx-template` 使用的 TOML / JSON 覆寫設定檔: 每一種投影片使用的版面配置、字型、配色,以及是否繪製標題橫幅與封面底板。 |
+| `--no-verify-identifiers` | 匯出時不檢查論文的 DOI 與網址。預設情況下,DOI / 網址錯誤或無法連線會在寫入任何檔案之前停止執行。供離線使用。 |
+| `--diagnostics` | 解釋 `--query` 搜尋的排名: 印出每篇論文的分數 (相關性 + 新近度 + 引用數) 與僅供參考的 `keep` / `review` / `prune` 建議,並把完整明細寫到 `--out` 目錄的 `diagnostics.json`。不會移除任何論文。 |
+| `--snowball` | 匯出前沿著引用關係擴充結果: `references` (最前面的結果所引用的文獻)、`cited_by` (引用它們的文獻) 或 `both`。新論文會附加在結果後面,並走同樣的下載與匯出流程。預設關閉。 |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` 的上限: 要擴充的前幾筆結果 (預設 5)、追蹤的步數 (1,最多 3)、每個種子每個方向的篇數 (20)、新論文總數 (20),以及保留的最低相關性 (0..1,預設不啟用)。 |
+| `--library PATH` | 文獻庫: 一個在多次執行之間保存論文、引用關係與識別碼檢查結果的 SQLite 檔案。不存在時會自動建立。搭配一般執行時,它就是識別碼快取,先前已通過檢查的 DOI 或網址不會再檢查一次。 |
+| `--library-add` | 把這次執行的論文合併進 `--library`,連同查詢、每篇論文的分數與 `--snowball` 找到的引用關係。文獻庫裡已有的論文會被合併,不會重複。 |
+| `--library-search QUERY` | 列出 `--library` 中符合 QUERY 的論文 (最相關的在前) 後結束。不會抓取任何東西。`--max` 限制筆數, `""` 則列出最近看到的論文。 |
+| `--library-export [QUERY]` | 透過 `--export` 匯出 `--library` 裡的論文,全部或只匯出符合 QUERY 的。預設格式: `xlsx,bib`。除非 `--export` 包含 `pdf`,否則不會下載 PDF。 |
 | `--quiet` | 抑制每篇論文的列印輸出。 |
 
 ### 環境變數
@@ -361,11 +381,16 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 列舉每個外掛 + 回報各自在目前環境下是否啟用。在 `search` 前呼叫一次。 |
 | `list_exports` | 列舉每種匯出格式,附一行描述,並說明它寫一個彙總檔還是每篇論文一檔。 |
-| `search` | 關鍵字 → 論文清單。接受 `top_tier_only`、`min_citations`;預設走完整的免 API 金鑰來源組合。 |
+| `search` | 關鍵字 → 論文清單。接受 `top_tier_only`、`min_citations`;預設走完整的免 API 金鑰來源組合。 `diagnostics=true` 會加上每篇論文的分數明細與僅供參考的 `keep` / `review` / `prune` 建議 (不會從 `papers` 移除任何項目)。 一律回傳 `source_stats`: 每個來源的 `requested`、`returned`、`after_dedup` 與 `status` (`ok` / `failed` / `rate_limited` / `disabled`)。 `snowball="both"` 還會沿著引用關係擴充最前面的結果,並加上 `snowball` 區塊 (`papers` 不變)。 |
+| `snowball` | 種子論文 → 它們引用的文獻 (`references`)、引用它們的文獻 (`cited_by`) 或 `both`,皆在固定上限內 (`depth`、`max_per_seed`、`max_total`)。每篇新找到的論文都帶有找到它的路徑。可選的 `keywords` 會評分並排序,`min_relevance` 會濾掉離題的論文。 |
+| `library_add` | 論文 → 文獻庫 (`library` 指向的 SQLite 檔案),保留給之後的工作階段使用。加入就是合併: 已經存在的論文會被更新,不會重複。`relations` 可存入 `snowball` 回傳的引用關係。 |
+| `library_search` | 查詢 → 文獻庫裡已有的論文,評分方式與搜尋相同,不需要網路。每篇都附上它的紀錄: 第一次與最近一次看到的時間,以及哪些來源回傳過它。 |
+| `library_stats` | 文獻庫 → 它保存了多少論文、執行紀錄與引用關係,各來源的論文數,以及最近幾次匯入。 |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 識別碼 → 單篇論文。 |
 | `fetch_pdf_text` | 下載一份 PDF,回傳擷取出的本文文字。**這是「我讀了論文」的 MCP 路徑。** |
 | `download_pdfs` | 批次把一份論文清單的 PDF 下載到 `{out_dir}/pdfs/`。回傳以 BibTeX 鍵為索引的每篇論文結果。 |
-| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 |
+| `export` | 論文清單 + 格式 → 寫出 `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`。每篇論文可接受一個 `summary` 欄位,用於豐富論文口試級 schema、`max_slides_per_paper`(預設 25)與 `dark_mode`(預設 `false` —— 專案預設是淺色深藍帶投影片,傳 `true` 走深色 OLED / 低光後製)。 寫入前會驗證每個 DOI / 網址 (`verify_identifiers`,預設 `true`): 識別碼錯誤或無法連線時呼叫會失敗並指出是哪篇論文,回應中附有 `verification` 報告。 `library` 指定用來保存識別碼檢查結果的文獻庫,先前呼叫已通過檢查的識別碼就不會再檢查一次。 `pptx_template` (可搭配選擇性的 `pptx_template_config`) 會在你自己的 PowerPoint 範本上產生投影片。 |
+| `pptx_validate_template` | 範本 → 它能否用於 `export(pptx_template=...)`: 每一種投影片將使用的版面配置,以及說明該改什麼的錯誤與警告。不會產生任何投影片。 |
 | `pptx_inspect` | 讀取既有投影片的 slide / shape 結構。 |
 | `pptx_review` | 一次呼叫審核一份投影片 —— 溢位 + 顏色契約 + `paper_rule` 章節完整度。自動偵測投影片語言;也是 CLI `python -m thesisagents review <deck.pptx>`。 |
 | `pptx_update_slide` | 替換 `title` / `body` / `meta`(依 shape 名稱)或依索引替換任意 shape。 |
@@ -385,7 +410,7 @@ LLM-as-agent 流程(不需要 `ANTHROPIC_API_KEY` —— LLM 就是那個 agent)
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-完整參考在 [`docs/mcp.md`](docs/mcp.md)。
+完整參考在 [`docs/mcp.md`](../docs/mcp.md)。
 
 ## 專案結構
 
@@ -396,8 +421,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,
@@ -438,6 +464,7 @@ Python-pipeline 加值),以及 **Deck**(淺色模式切換 + 投影片上限 +
 最大圖數控制項會流向 `ExportOptions`)。Windows 發行版 zip 出貨的是
 Nuitka 編譯的套件,已含 PySide6,所以 `thesisagents.exe gui` 不必另外
 裝 Python 就能運作。
+Search 分頁還可以沿著引用關係擴充最前面的結果 (滾雪球)、把結果保存到文獻庫檔案並在沒有網路時搜尋該文獻庫,Deck 分頁則可以在你自己的 PowerPoint 範本上產生投影片。
 **UI 以全部 14 種語言出貨**(English、繁體中文、简体中文、日本語、
 Español、Français、Deutsch、한국어、Português、Русский、Italiano、
 Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從你的 OS 語系挑選
@@ -446,16 +473,16 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從
 投影片。版面是自適應的:每個表單都坐在一個 `QScrollArea` 裡,視窗可以
 縮小到 900×600(仍容得下 720p),並預設開啟 HiDPI 縮放。
 
-完整參考:[`docs/gui.md`](docs/gui.md)。
+完整參考:[`docs/gui.md`](../docs/gui.md)。
 
 ## 打包成獨立執行檔
 
 記載了兩個打包器,用來出貨一個不必安裝 Python 就能跑的單檔二進位檔:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   —— 快速建置(不到一分鐘)、輸出 200–300 MB、啟動 2–4 秒。當你在
   迭代建置腳本時最合適。
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** ——
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** ——
   緩慢建置(5–15 分鐘)、輸出 80–150 MB、次秒級啟動,帶一些位元碼
   保護。當終端使用者會多次執行二進位檔時最合適。
 
@@ -489,7 +516,7 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從
      校驗碼附到草稿 release。刻意設計成 standalone(不是 onefile):
      onefile 每次啟動都會自解壓到 `%TEMP%`,增加啟動延遲並在鎖死的
      機器上觸發防毒啟發式。也刻意只支援 Windows:Linux / macOS 使用者
-     從 PyPI 安裝。以 `pyproject.toml` 為鍵的建置快取把暖建置從約 70 分
+     從 PyPI 安裝。以 `pyproject.toml` 為鍵的建置快取把暖建置從約 85 分
      冷建置削減到約 5–10 分。
   5. **`publish-release`** —— 一旦 Nuitka 資產上傳完成就取消草稿標記,
      讓使用者永遠不會看到一個做到一半的 release。
@@ -508,7 +535,7 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次執行會從
    General → Workflow permissions → Read and write permissions`。升號
    commit 由工作流程的 `GITHUB_TOKEN` 推送。
 4. 透過把 PR 併入 `main` 來發行。管線需要約 3–5 分鐘發布到 PyPI,再
-   約 50–70 分鐘(冷)或約 5–10 分鐘(暖 Nuitka 快取)讓 Windows zip
+   約 80–90 分鐘(冷)或約 5–10 分鐘(暖 Nuitka 快取)讓 Windows zip
    附上。
 
 `publish-pypi` job 刻意**不**附加一個 GitHub Environment,所以每次執行

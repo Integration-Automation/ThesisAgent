@@ -51,12 +51,62 @@ Workflow MCP en 6 étapes
    5. (vous lisez chaque PDF et produisez un dict de résumé structuré)
    6. export(papers=[{...paper, "summary": {...}}], language="fr", ...)
 
-13 outils MCP au total : découverte (``list_sources``,
-``list_exports``), ``search``, ``fetch_paper``, ``fetch_pdf_text``,
-``download_pdfs``, ``export`` et six opérations de deck ``pptx_*``
+18 outils MCP au total : découverte (``list_sources``,
+``list_exports``), ``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``,
+``download_pdfs``, ``pptx_validate_template``, ``export`` et six opérations de deck ``pptx_*``
 (``pptx_inspect``, ``pptx_review``, ``pptx_update_slide``,
 ``pptx_delete_slide``, ``pptx_reorder_slides``, ``pptx_add_slide``).
 Référence complète : :doc:`/mcp`.
+
+**Pour repérer les résultats hors sujet, partez des conseils de l'outil
+lui-même.** ``--diagnostics`` (CLI) ou ``diagnostics=true`` sur l'outil
+MCP ``search`` explique le classement : le score de chaque article
+réparti en pertinence, récence et citations, les termes de la requête
+qui correspondent, et une recommandation ``keep`` / ``review`` /
+``prune`` avec le seuil qui l'a déclenchée. La CLI écrit aussi le détail
+complet dans ``diagnostics.json`` dans le répertoire de sortie. Les
+recommandations sont indicatives et rien n'est supprimé à votre place,
+lisez donc les résumés des articles ``review`` et ``prune`` avant de
+supprimer quoi que ce soit.
+
+**Vérifiez quelles sources ont répondu.** Chaque réponse de ``search``
+contient ``source_stats`` : pour chaque source, combien
+d'enregistrements elle a renvoyés, combien d'articles uniques lui sont
+attribués après déduplication, et un ``status`` valant ``ok``,
+``failed``, ``rate_limited`` ou ``disabled``. Une source en échec est
+ignorée sans arrêter la recherche, lisez donc ces chiffres avant de
+conclure qu'un sujet compte peu d'articles. La CLI affiche le même
+tableau après chaque recherche ``--query``.
+
+**Suivez les citations.** ``--snowball both`` (CLI) ou l'outil
+``snowball`` étend les premiers résultats en suivant leurs liens de
+citation : ``references`` ajoute ce qu'ils citent et ``cited_by`` ajoute
+ce qui les cite. Cela trouve des travaux qu'une recherche par mots-clés
+manque parce que les auteurs ont employé d'autres termes. L'extension
+est bornée (une étape par défaut), chaque article découvert garde le
+chemin qui l'a atteint, et tous sont notés par rapport à vos mots-clés,
+si bien qu'un article n'est pas conservé au seul motif qu'il est souvent
+cité.
+
+**Conservez ce que vous trouvez.** ``--library thesis.db --library-add``
+(CLI) ou l'outil ``library_add`` enregistre les articles d'une exécution
+dans une bibliothèque de littérature, un seul fichier SQLite qui survit
+à la session. Ajouter de nouveau la même recherche ne duplique rien : un
+article est reconnu par son DOI, son identifiant arXiv ou son titre, et
+la nouvelle observation est fusionnée dans l'enregistrement conservé.
+Ensuite ``library_search`` retrouve les articles conservés sans toucher
+au réseau, et les DOI et URL déjà vérifiés ne sont pas revérifiés
+pendant 30 jours.
+
+**Utilisez votre propre modèle.** ``--pptx-template thesis.pptx`` (CLI)
+ou ``pptx_template`` sur l'outil ``export`` construit la présentation
+sur un modèle PowerPoint, si bien que l'arrière-plan, le logo et les
+dispositions sont les vôtres. Lancez d'abord ``thesisagents
+validate-template thesis.pptx`` (ou l'outil ``pptx_validate_template``)
+: il liste la disposition que chaque type de diapositive utiliserait et
+vous dit quoi corriger. Un modèle doit avoir des diapositives 16:9 et
+une disposition pour le contenu, et un petit fichier de configuration
+peut attribuer dispositions, polices et couleurs.
 
 Obligatoire : vérification URL / DOI avant livraison
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -83,6 +133,16 @@ colonne 7 = DOI, colonne 8 = URL. Auditez votre script regen à la fin :
        if actual and not (p.url == actual
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
+
+**L'export le vérifie à l'exécution.** Avant toute écriture, la CLI,
+l'outil MCP ``export`` et l'onglet Deck de la GUI interrogent doi.org
+pour le DOI de chaque article et demandent chaque URL une fois. Un DOI
+non enregistré, une URL qui répond 404 ou un hôte injoignable arrêtent
+l'export et indiquent l'article et l'identifiant concernés. Le contrôle
+prouve qu'un identifiant existe, pas qu'il appartient à cet article,
+donc la règle de copie depuis le xlsx et l'audit ci-dessus restent
+nécessaires. Hors ligne, passez ``--no-verify-identifiers`` (CLI) ou
+``verify_identifiers=false`` (MCP).
 
 À ne pas faire
 ^^^^^^^^^^^^^^
@@ -158,7 +218,7 @@ Où chercher plus loin
 ---------------------
 
 * Flags CLI + variables d'environnement : :doc:`/cli`
-* 13 outils du serveur MCP : :doc:`/mcp`
+* 18 outils du serveur MCP : :doc:`/mcp`
 * Boîte à outils d'édition PPTX : :doc:`/pptx_editing`
 * Le fichier ``readmes/README.fr.md`` à la racine du repo donne la liste
   complète des fonctionnalités.

@@ -8,6 +8,8 @@ malicious redirect cannot exfiltrate over plain HTTP.
 from __future__ import annotations
 
 import asyncio
+import contextlib
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import httpx
@@ -94,6 +96,35 @@ async def get_client(source: str) -> httpx.AsyncClient:
             _CLIENTS[key] = client
             _LOG.debug("Constructed HTTP client for source=%s", source)
     return client
+
+
+@contextlib.asynccontextmanager
+async def scoped_client(source: str) -> AsyncIterator[httpx.AsyncClient]:
+    """An HTTPS-only client that lives for one ``async with`` block.
+
+    Same transport, timeout and User-Agent rules as :func:`get_client`, but the
+    client is not put in the shared registry and is closed when the block ends.
+
+    Why it exists: a registry client belongs to the event loop that created
+    it. Code that may run on a private, short-lived loop (the export preflight
+    under ``run_blocking``, which starts a fresh loop per call) would leave a
+    client in the registry bound to a loop that has already closed, and the
+    next caller would fail with ``Event loop is closed``.
+
+    Example::
+
+        async with scoped_client("identifier_preflight") as client:
+            response = await client.get("https://doi.org/api/handles/10.1/x")
+
+    Anti-pattern: ``httpx.AsyncClient()`` built by hand for the same purpose.
+    That skips the HTTPS-only transport, which is the guarantee every outbound
+    request in this package relies on.
+    """
+    client = _build_client(source)
+    try:
+        yield client
+    finally:
+        await client.aclose()
 
 
 async def shutdown_clients() -> None:

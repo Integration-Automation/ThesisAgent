@@ -883,3 +883,577 @@ def test_cli_export_pdf_alone_is_a_download_only_run(tmp_path, patched_pipeline)
     )
     assert code == 0
     assert list((tmp_path / "pdfs").glob("*.pdf"))
+
+
+# ---------------------------------------------------------------------------
+# Identifier preflight (--no-verify-identifiers)
+# ---------------------------------------------------------------------------
+
+
+def _collection_with_doi(doi: str) -> PaperCollection:
+    from thesisagents.core.models import Paper
+
+    paper = Paper(
+        source="arxiv", source_id="p1", title="Preflight Probe Paper",
+        authors=("Ada Author",), year=2024, venue=None, abstract="An abstract.",
+        url="https://example.org/p1", doi=doi,
+        pdf_url="https://example.org/p1.pdf",
+    )
+    query = Query(keywords="preflight", sources=("arxiv",), max_results=5)
+    return PaperCollection(query=query, papers=(paper,))
+
+
+@pytest.fixture()
+def pipeline_returning(monkeypatch):
+    """Make the CLI's search return a given collection, with no client shutdown."""
+
+    def _install(collection: PaperCollection) -> None:
+        async def fake_run_search(query, **_kwargs):  # NOSONAR async stub
+            return collection
+
+        async def fake_shutdown():  # NOSONAR async stub
+            return None
+
+        monkeypatch.setattr(cli_module, "run_search", fake_run_search)
+        monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
+
+    return _install
+
+
+def test_cli_reports_verified_identifiers(tmp_path, patched_pipeline, capsys):
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    # sample_papers: two URLs and one DOI, all answered "ok" by the offline stub.
+    assert "Identifiers: 3 verified, 0 not checkable, 0 failed." in capsys.readouterr().out
+
+
+def test_cli_stops_on_a_bad_identifier_before_downloading(
+    tmp_path, pipeline_returning, monkeypatch, capsys
+):
+    """A wrong DOI fails the run right after the search: exit 2, no PDF
+    download, no export file."""
+    pipeline_returning(_collection_with_doi("10.x/typed-from-memory"))
+    downloads: list[object] = []
+
+    async def recording_download(collection, out_dir):
+        downloads.append(collection)
+        return []
+
+    monkeypatch.setattr(cli_module, "download_pdfs", recording_download)
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--out", str(tmp_path), "--yes"]
+    )
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "identifier verification failed" in err
+    assert "10.x/typed-from-memory is invalid" in err
+    assert "--no-verify-identifiers" in err
+    assert downloads == []
+    assert [p for p in tmp_path.rglob("*") if p.is_file()] == []
+
+
+def test_cli_no_verify_identifiers_exports_and_says_so(
+    tmp_path, pipeline_returning, capsys
+):
+    pipeline_returning(_collection_with_doi("10.x/typed-from-memory"))
+    code = cli_module.main(
+        [
+            "--query", "x", "--source", "arxiv", "--export", "bib",
+            "--out", str(tmp_path), "--no-verify-identifiers", "--quiet",
+        ]
+    )
+    assert code == 0
+    captured = capsys.readouterr()
+    # Printed even under --quiet: skipping the check must be visible.
+    assert "Identifier verification is OFF (--no-verify-identifiers)" in captured.err
+    assert "Identifiers:" not in captured.out
+    assert len(list(tmp_path.glob("*.bib"))) == 1
+
+
+def test_cli_checks_each_identifier_once_across_per_paper_decks(
+    tmp_path, patched_pipeline, monkeypatch
+):
+    """The run-wide cache: the early check asks, the aggregate export and the
+    two per-paper deck exports reuse the answers."""
+    from thesisagents.core import export_validation
+
+    asked: list[list[tuple[str, str]]] = []
+
+    async def counting_resolver(targets):
+        asked.append(list(targets))
+        return {
+            target: export_validation.Verdict(export_validation.VerificationStatus.OK)
+            for target in targets
+        }
+
+    monkeypatch.setattr(export_validation, "_resolve_targets", counting_resolver)
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--out", str(tmp_path), "--yes"]
+    )
+    assert code == 0
+    assert len(list(tmp_path.glob("*.pptx"))) == 2  # one deck per paper
+    assert len(asked) == 1
+    assert len(asked[0]) == 3
+
+
+def test_cli_verify_identifiers_defaults_on():
+    parser = cli_module.build_parser()
+    assert parser.parse_args(["--query", "x"]).verify_identifiers is True
+    assert (
+        parser.parse_args(["--query", "x", "--no-verify-identifiers"]).verify_identifiers
+        is False
+    )
+
+
+# ---------------------------------------------------------------------------
+# --diagnostics
+# ---------------------------------------------------------------------------
+
+
+def _diagnosed(papers, keywords: str = "attention") -> PaperCollection:
+    """A collection the way ``run_search`` returns it: ranked, with diagnostics."""
+    from thesisagents.core import pipeline
+    from thesisagents.core.ranking import rank_with_scores
+
+    ranked = rank_with_scores(papers, keywords, current_year=2026)
+    query = Query(keywords=keywords, sources=("arxiv",), max_results=5)
+    return PaperCollection(
+        query=query,
+        papers=tuple(entry.paper for entry in ranked),
+        diagnostics=pipeline._diagnose(ranked),  # noqa: SLF001
+    )
+
+
+def test_cli_diagnostics_prints_and_writes_the_breakdown(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    import json
+
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        [
+            "--query", "attention", "--source", "arxiv", "--export", "bib",
+            "--out", str(tmp_path), "--diagnostics",
+        ]
+    )
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "Ranking diagnostics for: attention" in out
+    assert "[  1] keep " in out
+    assert "[  2] prune " in out
+    assert "total " in out and "= relevance " in out
+    # Reasons are spelled out only for papers that are not "keep".
+    assert "        - no query term appears in the title or abstract" in out
+    assert "        rule: prune_below_relevance=0.10" in out
+    assert "title matches 1 of 1 query terms" not in out
+    assert "Recommendations: 1 keep, 0 review, 1 prune. Advice only, nothing was removed." in out
+
+    report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
+    assert report["summary"] == {"keep": 1, "review": 0, "prune": 1}
+    assert [p["bibtex_key"] for p in report["papers"]] == [
+        sample_papers[0].bibtex_key(), sample_papers[1].bibtex_key()
+    ]
+    # The file holds the full reasons for every paper, including "keep".
+    assert report["papers"][0]["score"]["reasons"][0].startswith(
+        "title matches 1 of 1 query terms (attention)"
+    )
+    # Advice only: the pruned paper is still exported.
+    bib = next(tmp_path.glob("*.bib")).read_text(encoding="utf-8")
+    assert bib.count("@") == 2
+
+
+def test_cli_without_diagnostics_writes_no_report(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    assert "Ranking diagnostics" not in capsys.readouterr().out
+    assert not (tmp_path / "diagnostics.json").exists()
+
+
+def test_cli_diagnostics_quiet_still_writes_the_file(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        [
+            "--query", "attention", "--source", "arxiv", "--export", "bib",
+            "--out", str(tmp_path), "--diagnostics", "--quiet",
+        ]
+    )
+    assert code == 0
+    assert "Ranking diagnostics" not in capsys.readouterr().out
+    assert (tmp_path / "diagnostics.json").exists()
+
+
+def test_cli_diagnostics_says_when_a_run_has_none(tmp_path, monkeypatch, sample_papers, capsys):
+    """--paper fetches one paper by ID: there is no query to be relevant to."""
+
+    async def fake_single(identifier: PaperIdentifier) -> PaperCollection:
+        query = Query(keywords=identifier.value, sources=("arxiv",), max_results=1)
+        return PaperCollection(query=query, papers=(sample_papers[0],))
+
+    async def fake_shutdown() -> None:
+        return None
+
+    monkeypatch.setattr(cli_module, "run_single_paper", fake_single)
+    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
+    code = cli_module.main(
+        ["--paper", "2401.08741", "--export", "bib", "--out", str(tmp_path), "--diagnostics"]
+    )
+    assert code == 0
+    assert "No ranking diagnostics for this run" in capsys.readouterr().err
+    assert not (tmp_path / "diagnostics.json").exists()
+
+
+def test_cli_diagnostics_survive_the_per_paper_deck_path(
+    tmp_path, pipeline_returning, sample_papers
+):
+    """The per-paper path rebuilds the collection from the downloadable papers.
+    The report is written before that, from the full ranked result."""
+    import json
+
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--out", str(tmp_path),
+         "--diagnostics", "--yes"]
+    )
+    assert code == 0
+    report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
+    assert len(report["papers"]) == 2
+    assert len(list(tmp_path.glob("*.pptx"))) == 2
+
+
+# ---------------------------------------------------------------------------
+# Per-source statistics printout
+# ---------------------------------------------------------------------------
+
+
+def _collection_with_stats(papers) -> PaperCollection:
+    from thesisagents.core.diagnostics import (
+        SearchDiagnostics,
+        SourceStat,
+        SourceStatus,
+    )
+
+    stats = (
+        SourceStat("arxiv", requested=25, returned=23, after_dedup=19),
+        SourceStat(
+            "semantic_scholar", requested=25, returned=0, after_dedup=0,
+            status=SourceStatus.RATE_LIMITED,
+            detail="gave up after 3 rate-limit retries: [semantic_scholar] slow down",
+        ),
+        SourceStat(
+            "springer", requested=25, returned=0, after_dedup=0,
+            status=SourceStatus.DISABLED, detail="x" * 300,
+        ),
+        SourceStat("dblp", requested=25, returned=0, after_dedup=0),
+    )
+    query = Query(keywords="attention", sources=("arxiv",), max_results=25)
+    return PaperCollection(
+        query=query, papers=tuple(papers),
+        diagnostics=SearchDiagnostics(source_stats=stats),
+    )
+
+
+def test_cli_prints_what_each_source_returned(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    pipeline_returning(_collection_with_stats(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    lines = capsys.readouterr().out.splitlines()
+    start = lines.index("Sources (up to 25 requested from each):")
+    block = lines[start + 1 : start + 5]
+    assert block[0] == "  arxiv              23 returned, 19 after dedup"
+    assert block[1] == (
+        "  semantic_scholar    0 returned  rate_limited: gave up after 3 "
+        "rate-limit retries: [semantic_scholar] slow down"
+    )
+    assert block[2].startswith("  springer            0 returned  disabled: xxx")
+    assert block[2].endswith("…")
+    assert len(block[2]) == len("  springer            0 returned  disabled: ") + 100
+    assert block[3] == "  dblp                0 returned, 0 after dedup"
+
+
+def test_cli_quiet_hides_the_source_block(
+    tmp_path, pipeline_returning, sample_papers, capsys
+):
+    pipeline_returning(_collection_with_stats(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--quiet"]
+    )
+    assert code == 0
+    assert "Sources (up to" not in capsys.readouterr().out
+
+
+def test_cli_prints_no_source_block_without_counts(tmp_path, patched_pipeline, capsys):
+    """``patched_pipeline`` returns a bare collection, as --paper and --pdf do."""
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    assert "Sources (up to" not in capsys.readouterr().out
+
+
+def test_cli_diagnostics_file_includes_the_source_stats(
+    tmp_path, pipeline_returning, sample_papers
+):
+    import json
+
+    pipeline_returning(_collection_with_stats(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--diagnostics", "--quiet"]
+    )
+    assert code == 0
+    report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
+    assert [stat["source"] for stat in report["source_stats"]] == [
+        "arxiv", "semantic_scholar", "springer", "dblp"
+    ]
+    assert report["source_stats"][0]["after_dedup"] == 19
+
+
+# ---------------------------------------------------------------------------
+# --snowball
+# ---------------------------------------------------------------------------
+
+
+class _GraphProvider:
+    """Citation provider answering from a dict keyed by ``(source_id, direction)``."""
+
+    def __init__(self, graph, name="openalex", fail_with=None):
+        self.name = name
+        self._graph = graph
+        self._fail_with = fail_with
+        self.calls: list[tuple[str, str, int]] = []
+
+    async def _answer(self, paper, direction, limit):
+        self.calls.append((paper.source_id, direction, limit))
+        if self._fail_with is not None:
+            raise self._fail_with
+        return list(self._graph.get((paper.source_id, direction), []))
+
+    async def references(self, paper, limit):
+        return await self._answer(paper, "references", limit)
+
+    async def cited_by(self, paper, limit):
+        return await self._answer(paper, "cited_by", limit)
+
+
+def _found(sid: str, title: str):
+    from thesisagents.core.models import Paper
+
+    return Paper(
+        source="openalex", source_id=sid, title=title, authors=("Ada Author",),
+        year=2024, venue=None, abstract="An abstract.",
+        url=f"https://example.org/{sid}", doi=f"10.1000/{sid}",
+        pdf_url=f"https://example.org/{sid}.pdf",
+    )
+
+
+@pytest.fixture()
+def citation_graph(monkeypatch, sample_papers):
+    seed_id = sample_papers[0].source_id
+    provider = _GraphProvider(
+        {
+            (seed_id, "references"): [_found("r1", "Attention Mechanisms Reviewed")],
+            (seed_id, "cited_by"): [
+                _found("c1", "Sparse Attention at Scale"),
+                _found("c2", "Cooking With Gas"),
+            ],
+        }
+    )
+    monkeypatch.setattr("thesisagents.core.snowball._default_providers", lambda: [provider])
+    return provider
+
+
+def test_cli_snowball_appends_the_discovered_papers_to_the_export(
+    tmp_path, patched_pipeline, citation_graph, sample_papers, capsys
+):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "both", "--snowball-seeds", "1"]
+    )
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "Snowball (both, depth 1) from 1 seed(s): 3 new paper(s), 3 citation link(s)." in out
+    assert "  + Attention Mechanisms Reviewed" in out
+    seed_key = sample_papers[0].bibtex_key()
+    assert f"      references of {seed_key} (openalex, depth 1)" in out
+    assert f"      cited_by of {seed_key} (openalex, depth 1)" in out
+    bib = next(tmp_path.glob("*.bib")).read_text(encoding="utf-8")
+    assert bib.count("@") == 5          # 2 search results + 3 discovered
+    assert "Sparse Attention at Scale" in bib
+    # The discovered papers are verified like any other: 2 URLs + 1 DOI from
+    # the search, 3 URLs + 3 DOIs from the snowball.
+    assert "Identifiers: 9 verified" in out
+
+
+def test_cli_snowball_is_off_by_default(tmp_path, patched_pipeline, citation_graph, capsys):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path)]
+    )
+    assert code == 0
+    assert citation_graph.calls == []
+    assert "Snowball" not in capsys.readouterr().out
+
+
+def test_cli_snowball_passes_the_flags_through(
+    tmp_path, patched_pipeline, citation_graph, sample_papers
+):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "cited_by", "--snowball-seeds", "1",
+         "--snowball-max-per-seed", "7", "--snowball-max-total", "1", "--quiet"]
+    )
+    assert code == 0
+    assert citation_graph.calls == [(sample_papers[0].source_id, "cited_by", 7)]
+    assert next(tmp_path.glob("*.bib")).read_text(encoding="utf-8").count("@") == 3
+
+
+def test_cli_snowball_min_relevance_drops_off_topic_papers(
+    tmp_path, patched_pipeline, citation_graph
+):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "both", "--snowball-seeds", "1",
+         "--snowball-min-relevance", "0.3", "--quiet"]
+    )
+    assert code == 0
+    bib = next(tmp_path.glob("*.bib")).read_text(encoding="utf-8")
+    assert "Sparse Attention at Scale" in bib
+    assert "Cooking With Gas" not in bib
+
+
+def test_cli_snowball_says_when_the_cap_stopped_it(
+    tmp_path, patched_pipeline, citation_graph, capsys
+):
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "both", "--snowball-seeds", "1",
+         "--snowball-max-total", "2"]
+    )
+    assert code == 0
+    assert "Stopped at --snowball-max-total 2" in capsys.readouterr().out
+
+
+def test_cli_snowball_reports_a_failing_provider_and_still_exports(
+    tmp_path, patched_pipeline, monkeypatch, capsys
+):
+    from thesisagents.core.exceptions import SourceUnavailableError
+
+    broken = _GraphProvider({}, fail_with=SourceUnavailableError("openalex", "HTTP 503"))
+    monkeypatch.setattr("thesisagents.core.snowball._default_providers", lambda: [broken])
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "references", "--quiet"]
+    )
+    assert code == 0
+    err = capsys.readouterr().err
+    assert "snowball: openalex references lookup failed" in err   # shown despite --quiet
+    assert next(tmp_path.glob("*.bib")).read_text(encoding="utf-8").count("@") == 2
+
+
+def test_cli_snowball_records_the_links_in_the_diagnostics_file(
+    tmp_path, pipeline_returning, citation_graph, sample_papers
+):
+    import json
+
+    pipeline_returning(_diagnosed(sample_papers))
+    code = cli_module.main(
+        ["--query", "attention", "--source", "arxiv", "--export", "bib",
+         "--out", str(tmp_path), "--snowball", "references", "--snowball-seeds", "1",
+         "--diagnostics", "--quiet"]
+    )
+    assert code == 0
+    report = json.loads((tmp_path / "diagnostics.json").read_text(encoding="utf-8"))
+    assert report["relations"] == [
+        {"source_key": sample_papers[0].dedup_key(), "target_key": "doi:10.1000/r1",
+         "relation": "references", "provider": "openalex", "depth": 1}
+    ]
+    assert [entry["rank"] for entry in report["papers"]] == [1, 2, 3]
+    discovered = report["papers"][2]
+    assert discovered["title"] == "Attention Mechanisms Reviewed"
+    assert discovered["score"]["matched_terms"] == ["attention"]
+    assert discovered["recommendation"]["action"] == "keep"
+
+
+@pytest.mark.parametrize(
+    ("flags", "message"),
+    [
+        (["--snowball-depth", "9"], "--snowball-depth must be in 1..3"),
+        (["--snowball-depth", "0"], "--snowball-depth must be in 1..3"),
+        (["--snowball-seeds", "0"], "--snowball-seeds must be in 1..200"),
+        (["--snowball-max-per-seed", "101"], "--snowball-max-per-seed must be in 1..100"),
+        (["--snowball-max-total", "1001"], "--snowball-max-total must be in 1..1000"),
+        (["--snowball-min-relevance", "1.5"], "--snowball-min-relevance must be in 0..1"),
+    ],
+)
+def test_cli_snowball_rejects_a_bad_bound_before_searching(
+    tmp_path, patched_pipeline, flags, message
+):
+    with pytest.raises(SystemExit) as raised:
+        cli_module.main(
+            ["--query", "x", "--source", "arxiv", "--out", str(tmp_path),
+             "--snowball", "both", *flags]
+        )
+    assert str(raised.value) == message
+    assert "query" not in patched_pipeline   # the search never ran
+
+
+def test_cli_snowball_bounds_are_ignored_when_snowball_is_off(tmp_path, patched_pipeline):
+    code = cli_module.main(
+        ["--query", "x", "--source", "arxiv", "--export", "bib", "--out", str(tmp_path),
+         "--snowball-depth", "9"]
+    )
+    assert code == 0
+
+
+def test_cli_snowball_min_relevance_needs_a_query(tmp_path, monkeypatch, sample_papers):
+    with pytest.raises(SystemExit, match="cannot be used with --paper, --pdf or --library-export"):
+        cli_module.main(
+            ["--paper", "2401.08741", "--out", str(tmp_path), "--snowball", "both",
+             "--snowball-min-relevance", "0.3"]
+        )
+
+
+def test_cli_snowball_rejects_an_unknown_direction(tmp_path):
+    with pytest.raises(SystemExit):
+        cli_module.main(
+            ["--query", "x", "--out", str(tmp_path), "--snowball", "sideways"]
+        )
+
+
+def test_cli_snowball_from_a_single_paper_keeps_discovery_order(
+    tmp_path, monkeypatch, sample_papers, citation_graph, capsys
+):
+    """--paper has no keywords, so nothing is scored and nothing reordered."""
+
+    async def fake_single(identifier: PaperIdentifier) -> PaperCollection:
+        query = Query(keywords=identifier.value, sources=("arxiv",), max_results=1)
+        return PaperCollection(query=query, papers=(sample_papers[0],))
+
+    async def fake_shutdown() -> None:
+        return None
+
+    monkeypatch.setattr(cli_module, "run_single_paper", fake_single)
+    monkeypatch.setattr(cli_module, "shutdown_clients", fake_shutdown)
+    code = cli_module.main(
+        ["--paper", "2401.08741", "--export", "bib", "--out", str(tmp_path),
+         "--snowball", "both"]
+    )
+    assert code == 0
+    out = capsys.readouterr().out
+    order = [out.index(title) for title in (
+        "Attention Mechanisms Reviewed", "Sparse Attention at Scale", "Cooking With Gas",
+    )]
+    assert order == sorted(order)

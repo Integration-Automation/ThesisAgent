@@ -54,8 +54,9 @@ ThesisAgents/
 │   ├── fetchers/                   # HTTPS-only http client + Fetcher base
 │   ├── exporters/                  # pptx / xlsx / bib / md / json / ris / csv / csl + pptx_edit + i18n
 │   ├── intelligence/               # PDF + Anthropic summariser ([intelligence] extra)
+│   ├── library/                    # SQLite literature library kept across runs
 │   ├── evaluation/                 # offline search-quality benchmark (see docs/search-quality.md)
-│   ├── mcp/                        # FastMCP server registering 13 tools ([mcp] extra)
+│   ├── mcp/                        # FastMCP server registering 18 tools ([mcp] extra)
 │   ├── gui/                        # PySide6 desktop UI ([gui] extra)
 │   ├── utils/                      # logging, path safety, async helpers
 │   ├── cli.py                      # argparse CLI
@@ -123,8 +124,8 @@ came back.
                   │
                   ▼
             ┌──────────┐
-            │ rank     │  recency × log(citation_count)
-            └──────────┘
+            │ rank     │  relevance + recency + citation, the three
+            └──────────┘  parts kept per paper (rank_with_scores)
                   │
                   ▼
         (optional) top-tier filter
@@ -135,16 +136,151 @@ came back.
           └────────────────┘  fills pdf_url for paywalled-source papers
                   │
                   ▼
+        (optional) snowball    citation links → more papers, each with
+                  │            the path that reached it
+                  ▼
         (optional) enrich      PDF → PaperSummary
                   │
                   ▼
-          PaperCollection
+          PaperCollection      + diagnostics: score per paper and
+                  │              advisory keep / review / prune
+                  ▼
+        (optional) library     merge into the SQLite library, which
+                  │            also remembers the preflight verdicts
+                  ▼
+          ┌───────────────┐
+          │ preflight     │  every DOI at doi.org, every URL once;
+          └───────────────┘  a wrong / unreachable one stops the export
                   │
                   ▼
           ┌───────────────┐
           │ Exporter      │  pptx, xlsx, bibtex, md, json, ris, csv, csl
           └───────────────┘
 ```
+
+### Citation providers and snowballing
+
+`core/snowball.py` grows a result along citation links: backward to the
+papers a seed cites, forward to the papers that cite it. It runs after
+ranking, on the top results, and the papers it finds join the collection
+before the export preflight.
+
+The citation logic is not in the search plugins' fetchers and not in the
+exporters. It sits behind `fetchers/citations.py::CitationProvider`
+(`references(paper, limit)`, `cited_by(paper, limit)`), implemented by a
+`citations.py` inside each plugin that has citation data:
+
+| Provider | Directions | Resolves a paper by |
+|---|---|---|
+| `openalex` | both | DOI, or its own work ID |
+| `semantic_scholar` | both | DOI, arXiv ID, or its own paper ID |
+| `crossref` | references only, and only those with a DOI | DOI |
+
+For each paper and direction the providers are asked in that order until
+one returns papers. `CitationNotAvailableError` ("I have no answer for
+this paper") moves on quietly. Any other error is recorded in the
+result and the next provider is asked, the same containment the search
+applies to a failing source.
+
+Four properties keep an unbounded graph in check:
+
+- **Bounds.** Depth 1 by default and at most 3, a cap per seed and
+  direction, and a cap on the total. A paper is expanded at most once.
+- **One identity model.** Found papers are matched with
+  `dedup.IdentityIndex`, the incremental form of `dedupe`: same DOI /
+  arXiv ID / title-hash keys, same guard against merging two papers
+  whose DOIs disagree. A paper reached along two paths is one paper.
+- **Provenance.** Each discovered paper keeps the first path that
+  reached it as a `PaperRelation(source_key, target_key, relation,
+  provider, depth)`. Levels are expanded in order, so the first path is
+  also a shortest one. Every link seen is kept for a citation graph.
+- **Relevance is scored.** Discovered papers go through
+  `rank_with_scores` against the query. A citation link is not treated
+  as evidence that a paper is on topic.
+
+The relationship lives in `PaperRelation`, outside `Paper`, because one
+paper can be reached along many paths and a list of them does not
+belong in a bibliographic record.
+
+### Literature library
+
+`thesisagents/library/` keeps what the runs find in one SQLite file.
+It is a layer of its own beside the exporters: it reads and writes the
+core models and nothing in `core/` imports it.
+
+```
+run_search / snowball ──► PaperCollection ──► Library.add_collection
+                                                   │  merge on identity keys
+                                                   ▼
+                                   papers · runs · observations
+                                   relations · verifications
+                                                   │
+        Library.search / .collection ◄─────────────┤
+                    │                              │
+                    ▼                              ▼
+              exporters              LibraryVerificationCache
+                                     (the export preflight's memory)
+```
+
+Three decisions shape it:
+
+- **One identity model.** A stored paper is matched with the same keys
+  and the same two functions search de-duplication uses
+  (`Paper.identity_keys`, `dedup.fuzzy_link_allowed`,
+  `dedup.merge_papers`). An import therefore merges exactly the records
+  `dedupe` would have merged had they arrived in one search, and adding
+  a search twice changes no paper count.
+- **The relationship model is the snowball's.** Citation links are
+  stored as the `PaperRelation` records snowballing produces, between
+  rows instead of keys. That is why the citation providers were built
+  first: the library persists a model that already existed.
+- **Only passing verdicts are reused.** The preflight's verdicts are
+  stored with a timestamp. One that lets an export through is reused
+  for 30 days, a failure never, because a reused failure would block
+  exports with no request made that could clear it.
+
+The schema carries an explicit version (`PRAGMA user_version`) and an
+application id. `schema.prepare` brings an older file up to date one
+migration at a time, each in a transaction, and refuses a newer one or
+a file that is not a library. WAL mode lets other processes read while
+one writes.
+
+Search inside the library is not SQL text matching. `Library.search`
+scores the stored papers with `rank_with_scores`, so a library lookup
+understands a query the way a search does (stemming, phrases, acronym
+expansion, CJK tokenisation) and returns the same score breakdown.
+
+### Export preflight
+
+`export_collection` runs `core/export_validation.py` before any
+exporter. Each paper's DOI is checked for syntax and then looked up at
+the doi.org handle API, and each URL gets one request that reads only
+the response headers. A wrong or unreachable identifier raises
+`IdentifierVerificationError` (an `ExportError`) carrying the full
+report, and no file is written. `ExportOptions(verify_identifiers=False)`
+skips the check and logs a warning.
+
+Three choices keep a default-on gate from blocking honest exports:
+
+- **Publisher pages are not requested.** A URL on a host that needs a
+  real browser (the list in `fetchers/webrunner_pdf.py`) would answer a
+  plain client with 403. The DOI lookup stands in for it, and the DOI
+  registry is not behind a bot wall.
+- **"Could not check" does not block.** HTTP 401 / 403 / 429, a
+  `file://` URL and a browser-only host end as `skipped`. Only a
+  definite failure (`invalid`) or no answer at all (`unreachable`,
+  `timeout`, each after one retry) stops the export.
+- **Verdicts are cached.** The CLI checks once, right after the search,
+  and hands the same `MemoryVerificationCache` to every later
+  `export_collection` call, so the per-paper deck exports ask nothing
+  twice.
+
+The preflight opens its own client through `fetchers.http.scoped_client`
+instead of the shared registry. `export_collection` is synchronous and
+may be called from inside a running event loop (the CLI's `_run`), in
+which case `utils.async_helpers.run_blocking` runs the probes on a
+private loop in a worker thread. A registry client would stay bound to
+that loop after it closed.
 
 ### OA PDF resolution
 
@@ -208,17 +344,76 @@ index when a record unites two existing groups, which is rare.
 Measured at the full pipeline load (15 sources × 200 results = 3000
 papers, heavy overlap) it completes in under 50 ms.
 
+### Per-source statistics
+
+`run_search` keeps one outcome per source instead of flattening the
+results at once, and records for each source `requested`, `returned`,
+`after_dedup` and a `status` (`ok`, `failed`, `rate_limited`,
+`disabled`) in `PaperCollection.diagnostics.source_stats`.
+
+Failure isolation is unchanged: a source that cannot be loaded or that
+raises contributes nothing and the others carry on. What changed is that
+the search now says so. Before, a run that lost half its sources was
+indistinguishable from a run on a topic with few papers.
+
+`after_dedup` follows from how de-duplication picks the canonical
+record. The merged paper keeps the `source` / `source_id` of its first
+occurrence, so it is credited to the first source whose results contain
+that pair, and the values of all sources add up to the number of unique
+papers. The counts are taken before the `Query` filters and the
+`max_results` cut: they describe the sources, not the filtered result.
+
 ### Ranking
 
-Default rank score: `0.5 · normalised_year + 0.5 · log(1 + citation_count) / 20`.
+`core/ranking.py` scores each paper on three axes and sorts by the sum:
 
-Older but heavily-cited papers (the "Attention Is All You Need"
-of any field) still win against recent unknowns; very recent
-papers without citations are surfaced because the recency term
-keeps them in the top quartile.
+| Axis | Formula | Range |
+|---|---|---|
+| relevance | `3.0 · (query terms in the title / query terms) + 0.6 · (query terms in the abstract / query terms) + 1.0 · (adjacent query pairs adjacent in the title / adjacent query pairs)` | 0 to 4.6 (3.6 for a one-word query) |
+| recency | `exp(-age_in_years / 5)` | 0 to 1 |
+| citation | `0.4 · log10(citation_count + 1)` | about 2.0 at 100,000 citations |
 
-Override the weight split per query via the optional `min_citations`
-filter on the MCP `search` tool.
+Relevance dominates on purpose. De-duplication merges the sources'
+lists and discards each source's own ordering, so without a relevance
+term the merged list would sort by recency and citations alone and a
+heavily cited off-topic paper would bury an on-topic one. A full title
+match (3.0) outranks even a 100,000-citation paper (2.0).
+
+Matching is more than exact words: light stemming (`transformers`
+matches `transformer`), a small acronym map (`llm` matches "large
+language model" and the reverse), and character bigrams for Chinese,
+Japanese and Korean text.
+
+`rank(papers, keywords)` returns the sorted papers.
+`rank_with_scores(papers, keywords)` returns the same order with a
+`RelevanceScore` per paper: the three axis values, the matched terms
+and phrases, and one sentence per contribution. `run_search` uses the
+second form and attaches the result to `PaperCollection.diagnostics`.
+
+### Pruning recommendations
+
+`core/pruning.py` reads those scores and labels each paper `keep`,
+`review` or `prune`, naming the rule and threshold behind the label:
+
+1. relevance below 10% of the best the query allows is `prune`, below
+   30% is `review`,
+2. a `review` paper that is also ten or more years old and has fewer
+   than 5 citations becomes `prune`,
+3. a paper whose title shares at least 85% of its terms with a
+   higher-ranked paper is `review`. De-duplication keeps a workshop
+   paper and its journal version apart because their DOIs differ, and
+   this is where the overlap is reported.
+
+The recommendations are advice. `run_search` attaches them to the
+collection and removes nothing: a paper marked `prune` is still
+returned, downloaded and exported until a person or an agent decides
+otherwise. Two things never trigger a recommendation: a low citation
+count on its own (a new on-topic paper has none yet), and an unknown
+year or citation count (the source did not say, which is not the same
+as old or uncited).
+
+The `min_citations`, year-range and top-tier filters are separate from
+ranking. They run after it, in `run_search`, for every source.
 
 ### Enrichment
 
@@ -267,10 +462,12 @@ library APIs return coroutines.
 
 ### MCP server (`thesisagents.mcp`)
 
-FastMCP registers thirteen tools. The agent calls them in sequence
-(`list_sources` → `search` → `fetch_pdf_text` per paper →
-`export`); the server is stateless across tool calls so the
-agent's context is the only place state lives. See [MCP doc](mcp.md).
+FastMCP registers eighteen tools. The agent calls them in sequence
+(`list_sources` → `search` → optionally `snowball` → `fetch_pdf_text`
+per paper → `export`). The server is stateless across tool calls, so
+state lives in the agent's context, or, when it should outlast the
+session, in a literature library the agent names in `library_add` /
+`library_search`. See [MCP doc](mcp.md).
 
 ### Desktop GUI (`thesisagents.gui`)
 
@@ -295,12 +492,19 @@ async def main():
     collection = await run_search(q)
     written = export_collection(
         collection,
-        ExportOptions(formats=("pptx", "bibtex"), out_dir="./exports"),
+        ExportOptions(formats=("pptx", "bib"), out_dir="./exports"),
     )
     print(written)
 
 asyncio.run(main())
 ```
+
+`export_collection` verifies every paper's DOI and URL first and raises
+`IdentifierVerificationError` when one is wrong or unreachable (see
+"Export preflight" above). Catch it to read the structured report from
+its `report` attribute, or pass
+`ExportOptions(..., verify_identifiers=False)` to export without the
+check.
 
 ## Infrastructure
 
@@ -387,7 +591,7 @@ All three tiers share the same shape-naming convention so
 
 ### Post-build visual-identity passes
 
-After the chosen tier builds the deck on the light palette, three
+After the chosen tier builds the deck on the light palette,
 non-invasive walk-and-rewrite passes run before the file is saved:
 
 1. **Typography** (`_apply_typography(prs, language)`) — walks every
@@ -406,12 +610,60 @@ non-invasive walk-and-rewrite passes run before the file is saved:
    slide / shape / run / table cell and swaps light-palette RGBs to
    their dark equivalents via `_LIGHT_TO_DARK_TEXT` + `_LIGHT_TO_DARK_FILL`
    dicts. The slide background switches to `#12151B`; body text goes
-   to `#E5E7EB`; the teal accent (`#0E7490`) goes to a brighter
-   `#2DD4BF`. The pass is intentionally non-invasive: it doesn't
+   to `#E5E7EB`; the blue accent (`#2563EB`) goes to a brighter
+   `#60A5FA`. The pass is intentionally non-invasive: it doesn't
    refactor the 100+ direct `_BRAND_*` constant references in the
    builders, it just rewrites RGBs after the fact.
+4. **Template styling** (only with `ExportOptions.pptx_template`).
+   `_recolor_text_without_chrome` gives white-on-navy text a dark
+   colour where a template config switched the navy off, and
+   `_apply_template_palette` swaps the built-in palette for the
+   config's `[colors]` with the same lookup-and-swap as dark mode. It
+   runs in place of the dark-mode pass, never with it: dark mode
+   keeps its own palette.
 
-The three passes ship with regression tests in
+### Deck templates
+
+A user template replaces the blank layout the built-in deck sits on.
+`thesisagents/exporters/template.py` holds the contract:
+
+```
+ExportOptions.pptx_template (+ pptx_template_config)
+        │
+        ▼
+open_template ── validate ──► TemplateError (every problem, nothing rendered)
+        │
+        ▼
+LayoutSet: role → layout        TemplateConfig: fonts, colours, chrome
+        │                                   │
+        ▼                                   ▼
+builders call layout.add_slide(prs, role)   the post-build passes above
+```
+
+- **Roles, not indices.** Every slide has one of six roles (cover,
+  section, content, table, references, qa). A role's layout is the one
+  the config names, else a layout named after the role, else the
+  content layout, else (for content) the blank layout. The exporter
+  used to take `slide_layouts[6]`, which is blank only in
+  python-pptx's own template.
+- **The exporter still draws the slide.** A layout contributes its
+  artwork. Its placeholders are removed from each new slide, and the
+  exporter places its named text boxes as before, so geometry, the
+  content caps and the overflow check hold on any template. The one
+  opt-in exception is the slide title, which a config can send into
+  the layout's title placeholder for content, table and reference
+  slides.
+- **Validation is the first step of the export**, on the same
+  presentation object that is then filled, and the CLI runs it before
+  the search. `validate_template()` exposes the check on its own.
+- **Fixed on purpose**: font sizes and margins. The config parser
+  refuses them with the reason.
+
+The built-in path goes through the same `LayoutSet` with every role on
+the blank layout, so there is one code path and the built-in deck is
+unchanged. User-facing reference: [Deck templates](pptx_templates.md).
+
+The passes ship with regression tests in
 `tests/test_exporters.py`: `test_pptx_default_is_dark_mode`,
 `test_pptx_dark_mode_has_no_invisible_runs` (no run is `rgb=None` or
 black), `test_pptx_dark_mode_no_light_text_on_light_fill` (no

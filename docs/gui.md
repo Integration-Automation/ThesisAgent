@@ -59,6 +59,51 @@ Press **Search**. The query runs on a worker thread so the UI stays
 responsive; the status bar reports progress and the results table
 populates when the run finishes.
 
+When the run finishes the status line reports the number of papers and
+what each source returned, for example
+`Found 25 paper(s). Sources: arxiv 23, openalex 25, dblp 0, ieee (failed), springer (disabled)`.
+A source marked failed, rate limited or disabled contributed nothing
+for a reason other than the topic, so check it before concluding the
+topic has few papers.
+
+The last column, **Suggestion**, shows the advisory recommendation the
+search recorded for each paper: keep, review or prune. Hover any cell
+of a row to see why: the score split into relevance, recency and
+citations, a sentence per contribution, and the rule that triggered the
+recommendation. The column is advice. Every result stays in the table
+and in the export, and a low citation count alone never produces a
+recommendation. The rules are listed in [`cli.md`](cli.md) "Ranking
+diagnostics".
+
+**Citation snowball** expands the top results along their citation
+links before they are shown: *References* adds the papers they cite,
+*Cited by* the papers that cite them, *Both* does both. It is off by
+default and uses the CLI's bounds (the top 5 results, one step, at
+most 20 new papers). The papers it finds are appended to the table
+and the status line adds `Snowball: 3 new.` Same as the CLI
+`--snowball` flag, see [`cli.md`](cli.md) "Citation snowballing".
+
+**Library** names a literature library, an SQLite file that keeps
+papers between sessions (see [`cli.md`](cli.md) "Literature
+library"). Type a path or press **Browse…**. A file that does not
+exist yet is created the first time papers are added to it.
+
+- **Add results to the library**, when ticked, merges each search
+  into the file, snowball finds and their citation links included.
+  The status line adds `Library: 4 added, 21 already there.` A paper
+  the library already holds is merged, not duplicated. Ticked with
+  no library file, the search does not start and the status line
+  asks for the file.
+- **Search library** fills the table from the library instead of
+  the network. The query field is the library query (empty lists
+  the most recently seen papers), and max results and the year
+  range apply. The status line reads `12 of 132 library papers.`
+  The papers then behave like search results: they can be
+  exported, enriched and built into a deck.
+- With a library file set, **Export…** here and the Deck tab's
+  export keep their DOI / URL checks in it, so an identifier that
+  verified is not checked again for 30 days.
+
 Press **Export…**, pick an output directory, and the standard
 `.pptx` + `.xlsx` + `.bib` triple lands there.
 
@@ -114,8 +159,8 @@ behind Qt widgets:
 - **Dark mode** checkbox — unchecked (default) ships the light
   navy-band deck (white slides, navy header band with a white title,
   navy cover panel). Tick it for the dark OLED / low-light variant
-  (slide bg `#12151B`, body text `#E5E7EB`, brighter teal accent
-  `#2DD4BF`, lightened navy band / cover / table fills). Mirrors the
+  (slide bg `#12151B`, body text `#E5E7EB`, brighter blue accent
+  `#60A5FA`, lightened navy band / cover / table fills). Mirrors the
   CLI `--dark-mode` flag.
 - **Max slides per paper** — integer spinner. Defaults to 25;
   `0` means unlimited.
@@ -126,6 +171,22 @@ behind Qt widgets:
 - **Include abstract** checkbox — when off, the deck skips the
   abstract slide entirely (useful for an "executive overview only"
   variant).
+- **Verify DOIs and URLs before export** checkbox, ticked by default.
+  The export first looks up every paper's DOI at doi.org and requests
+  every URL once, and a wrong or unreachable identifier stops the
+  export with the failed papers listed in the status line. Untick it
+  only when working offline. Mirrors the CLI `--no-verify-identifiers`
+  flag. The Search tab's one-button Export always runs the check.
+- **Template (.pptx)** and **Template config** build the deck on your
+  own PowerPoint template instead of the built-in design, and apply
+  a TOML / JSON file of overrides to it (layout per kind of slide,
+  fonts, colours, chrome). Both are empty by default. They mirror the
+  CLI `--pptx-template` and `--pptx-template-config` flags. The
+  template is checked before anything is rendered, and one that does
+  not meet the template contract stops the export with every problem
+  in the status line. To read the same report at leisure, run
+  `thesisagents validate-template FILE`. Contract:
+  [`pptx_templates.md`](pptx_templates.md).
 
 The PPTX inspector / editor surface (drives `pptx_inspect` /
 `pptx_update_slide` / `pptx_reorder_slides` / `pptx_delete_slide` /
@@ -215,6 +276,14 @@ round-trip through QSettings).
 
 ## Known limitations
 
+- The snowball on the Search tab always uses the default bounds (top
+  5 results, one step, 20 new papers). Other bounds, and a relevance
+  floor, are CLI (`--snowball-*`) and MCP (`snowball`) options.
+- A library is searched from the Search tab. There is no view of its
+  runs, citation links or statistics in the GUI: use the MCP
+  `library_stats` tool or the Python API.
+- The Deck tab does not preview a template check. A template that
+  cannot be used is reported when the export starts.
 - The Settings page does not validate keys against the live API —
   validation would leak the key into HTTP logs and slow down save.
   An invalid key surfaces later as a `ConfigError` / 401 from the

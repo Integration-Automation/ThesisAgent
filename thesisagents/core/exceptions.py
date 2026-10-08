@@ -31,8 +31,38 @@ class SourceUnavailableError(FetchError):
     """Source temporarily unreachable (5xx, DNS failure, timeout)."""
 
 
+class CitationNotAvailableError(FetchError):
+    """A citation provider has no answer for this paper, and that is expected.
+
+    Raised when the paper carries no identifier the provider understands, the
+    provider does not know the paper, or the provider cannot serve the
+    direction asked for (Crossref has references but not citing works).
+
+    Kept apart from the other ``FetchError`` types because it is not a
+    failure: snowballing moves on to the next provider without reporting an
+    error. A broken provider raises ``SourceUnavailableError`` or
+    ``RateLimitError`` instead, and those are reported.
+
+    Example: asking Crossref for the references of a paper that has no DOI.
+    """
+
+
 class CacheError(ThesisAgentsError):
     """Local cache could not be read or written."""
+
+
+class LibraryError(ThesisAgentsError):
+    """The literature library file cannot be used as it is.
+
+    Raised when the path is not an SQLite database, is a database that is not
+    a ThesisAgents library, or is a library written by a newer version whose
+    schema this version does not understand. The message says which, and what
+    to do, because the only fixes are the user's: point ``--library`` at
+    another file, or upgrade.
+
+    Example: opening a library with schema version 3 from a build that knows
+    version 1 raises this instead of reading tables it would misinterpret.
+    """
 
 
 class ExportError(ThesisAgentsError):

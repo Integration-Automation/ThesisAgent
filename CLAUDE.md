@@ -47,8 +47,9 @@ Concretely, the assistant:
    Python pipeline (`ANTHROPIC_API_KEY` set — Anthropic API call).
 4. **Generates** `.pptx` (three rendering tiers — lightweight / enriched-flat /
    thesis-style), `.xlsx`, `.bib`, `.md`, `.json` outputs.
-5. **Exposes** every step as an MCP tool (13 in all: `list_sources`, `list_exports`,
-   `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`,
+5. **Exposes** every step as an MCP tool (18 in all: `list_sources`, `list_exports`,
+   `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`,
+   `fetch_pdf_text`, `download_pdfs`, `pptx_validate_template`, `export`,
    `pptx_inspect`, `pptx_review`, `pptx_update_slide`, `pptx_delete_slide`,
    `pptx_reorder_slides`, `pptx_add_slide`). `pptx_review` audits an existing deck
    (overflow + colour contracts + `paper_rule` section completeness) in one call —
@@ -66,6 +67,7 @@ ThesisAgents/
 │   ├── fetchers/                     # HTTPS-only shared client, token-bucket rate limit, WebRunner browser
 │   ├── exporters/                    # pptx (rich + lightweight), xlsx, bibtex, markdown, json + pptx_edit + i18n
 │   ├── intelligence/                 # PDF fetch/extract + Anthropic summariser ([intelligence] extra)
+│   ├── library/                      # SQLite literature library: papers, sightings, citation links, verdicts
 │   ├── mcp/                          # FastMCP server registering all tools
 │   ├── sources/<name>/               # per-source plugins (arxiv/, semantic_scholar/, openalex/, pubmed/,
 │   │                                 # ieee/, acm/, scholar/, dblp/, crossref/, openaire/, springer/,
@@ -183,6 +185,7 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
   - Stage only the files that stage touched (`git add <path>`, never `git add -A`), follow this file's commit-message rules, and never add AI attribution.
   - Committing is not pushing: push or open a PR only as this project's branch flow says or when asked.
   - **Commit and push frequently.** After each big feature — a self-contained stage that passes this project's checks — commit and push to the remote; do not pile up a large batch of work before committing or pushing. Smaller batches collide less with other sessions, let CI catch problems earlier, and are easier to revert. Follow this project's normal branch flow (usually `dev`).
+  - **SonarCloud / Codacy findings.** When a PR or commit fails a SonarCloud or Codacy check, look the findings up through their APIs instead of guessing. The keys are in environment variables: `SonarCloudToken` (SonarCloud, e.g. `curl -s -u "$SonarCloudToken:" "https://sonarcloud.io/api/issues/search?componentKeys=<key>&pullRequest=<n>&resolved=false"`) and `CODACY_PROJECT_TOKEN` (a Codacy project token, valid only for its own project: any other repository answers "Bad credentials", so for a public repository query `https://app.codacy.com/api/v3/analysis/organizations/gh/<org>/repositories/<repo>/pull-requests/<n>/issues?status=new` without a key). **Never reveal a key or any personal credential while doing so**: refer to the variables by name only, never echo or print their values, and never put them in files, commit messages, PR or issue text, logs, or any output that leaves the machine.
 - **`progress.md`** (repository root, tracked) holds outstanding work only: no finished items, no history, no rules.
 - **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `progress.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
 - **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those.
@@ -282,7 +285,13 @@ After the edit, audit the resulting deck against those subagents' contracts:
 5. **Navy header band (`accent_top`) + full-bleed navy cover (`accent_left`)
    geometry** present on ThesisAgents generated decks (hand-made decks are
    exempt from accent geometry but not from dark-mode / no-red / contrast
-   contracts).
+   contracts). A deck built on a user template (`--pptx-template`) is
+   exempt in the same way where its config switches the chrome off
+   (`[chrome] header_band = false` / `cover_panel = false`) or puts titles
+   in the template's title placeholder: the template supplies that
+   geometry. **Why:** auditing such a deck for `accent_top` reports a
+   missing band that was left out on purpose. The other four contracts
+   bind it unchanged. Contract: `docs/pptx_templates.md`.
 
 **For hand-made decks that don't follow the project's `_BRAND_*` constants**,
 run `_apply_dark_mode(prs)` from `thesisagents.exporters.pptx` as a

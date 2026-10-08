@@ -24,8 +24,8 @@ DOAJ, HAL, CORE, Google Scholar 에서 결과를 가져와 하나의 레코드
 
 **당신이 LLM(Claude Code, Cursor, Aider, Codex CLI, …)이고 무엇을
 해야 하는지 파악하기 위해 이 README 를 읽고 있다면 — 여기서
-시작하세요.** 아래 내용은 모두 [`AGENTS.md`](AGENTS.md)(교차 에이전트
-미러)와 [`CLAUDE.md`](CLAUDE.md)(정본 레퍼런스)에도 고정되어 있으니,
+시작하세요.** 아래 내용은 모두 [`AGENTS.md`](../AGENTS.md)(교차 에이전트
+미러)와 [`CLAUDE.md`](../CLAUDE.md)(정본 레퍼런스)에도 고정되어 있으니,
 사소하지 않은 변경을 하기 전에 먼저 읽으세요.
 
 ### 사용자가 실제로 원하는 것
@@ -60,9 +60,9 @@ DOAJ, HAL, CORE, Google Scholar 에서 결과를 가져와 하나의 레코드
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-열세 개의 MCP 도구 전체(`list_sources`, `list_exports`,
+열여덟 개의 MCP 도구 전체(`list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
-`pptx_add_slide` / 등 포함)는 [`docs/mcp.md`](docs/mcp.md)에
+`pptx_add_slide` / 등 포함)는 [`docs/mcp.md`](../docs/mcp.md)에
 문서화되어 있습니다.
 
 ### 필수: 배포 전 URL / DOI 검증
@@ -93,6 +93,13 @@ for p in ALL_PAPERS:
 (`v39i23.34521` vs 실제 `v39i22.34537`)와 지어낸 저자 슬러그 경로
 (`view/fang2026` 대신 `v40i5.37389`).
 
+**내보내기 단계에서 실행 시점에 이를 검사합니다.** 파일을 쓰기 전에 CLI, MCP `export` 도구, GUI Deck
+탭이 각 논문의 DOI 를 doi.org 에서 조회하고 각 URL 에 한 번씩 요청을 보냅니다. 등록되지 않은 DOI, 404 를
+반환하는 URL, 연결할 수 없는 호스트가 있으면 내보내기가 중단되고 해당 논문과 식별자가 표시됩니다. 이 검사는 식별자가
+존재한다는 것만 보여 줄 뿐 그 논문의 것임을 보장하지 않으므로, 위의 xlsx 에서 그대로 복사하는 규칙과 감사는 여전히
+필요합니다. 오프라인으로 작업할 때는 `--no-verify-identifiers` (CLI) 또는
+`verify_identifiers=false` (MCP) 를 지정하세요.
+
 ### 필수: 배포 전 무관한 다운로드 정리
 
 검색 키워드 매칭은 키워드 기반이므로 주제에서 벗어난 논문이 섞여
@@ -117,9 +124,15 @@ for key in irrelevant_keys:
 경계선상의 경우에는 리치 요약을 부여하세요. 가능한 매칭을 조용히
 버리는 것보다 과하게 포함하는 편이 낫습니다.
 
+**주제에서 벗어난 결과를 찾으려면 먼저 도구가 내놓는 권고를 참고하세요.** CLI 의 `--diagnostics` 또는 MCP
+`search` 도구의 `diagnostics=true` 는 순위의 근거를 설명합니다. 각 논문의 점수를 관련성, 최신성, 인용
+수로 나누고, 일치한 검색어를 나열하며, `keep` / `review` / `prune` 권고와 그 근거가 된 임계값을
+제시합니다. CLI 는 전체 내역을 출력 디렉터리의 `diagnostics.json` 에도 기록합니다. 권고는 조언일 뿐이며 어떤
+논문도 자동으로 제거되지 않으므로, 삭제하기 전에 `review` 와 `prune` 논문의 초록을 읽어 보세요.
+
 ### 작동 예시
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py)는 정확히 이
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py)는 정확히 이
 방식으로 만들어진 직접 작성한 리치 요약을 제공합니다(단일 논문,
 리치 티어, zh-tw, 모든 리치 필드가 채워짐). 다중 논문 검색은
 `PaperCollection` 튜플 안에 논문마다 하나의
@@ -216,9 +229,9 @@ for key in irrelevant_keys:
   add_slide)는 내보내기가 만들어 낸 어떤 덱에도 작동하며, 여기에
   더해 동등한 `pptx_*` MCP 도구가 있어 LLM 에이전트가 생성된 덱을
   반복 개선할 수 있습니다.
-- **MCP 서버**: 13개 도구 — `list_sources` + `list_exports`
-  (탐색), `search`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, 그리고 여섯 개의 `pptx_*` 덱 도구
+- **MCP 서버**: 18개 도구 — `list_sources` + `list_exports`
+  (탐색), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
+  `download_pdfs`, `pptx_validate_template`, `export`, 그리고 여섯 개의 `pptx_*` 덱 도구
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). MCP 를 인식하는 어떤 LLM
   (Claude Code, Claude Desktop, Cursor, …)이든 전체 워크플로를
@@ -244,6 +257,40 @@ for key in irrelevant_keys:
   Unpaywall → S2 `openAccessPdf` → arXiv 제목 검색 →
   CORE.ac.uk(키가 설정된 경우)를 거칩니다. IEEE / ACM / Springer /
   Elsevier 가 많은 쿼리에서의 전형적인 향상: 40-70 퍼센트 포인트.
+- **내보내기 사전 검사 (DOI / URL 검증)**: 파일을 쓰기 전에 모든 DOI 를 doi.org 에서 조회하고 모든
+  URL 에 한 번씩 요청을 보냅니다. 잘못되었거나 연결할 수 없는 식별자가 있으면 내보내기가 중단되고 실패한 논문과 식별자
+  목록이 표시됩니다. 실제 브라우저가 필요한 출판사 페이지에는 요청을 보내지 않으며 (DOI 검사가 대신합니다), 자동 접근을
+  거부하는 서버는 실행을 실패시키지 않고 확인 불가로 보고됩니다. 기본적으로 켜져 있으며, 오프라인 작업 시
+  `--no-verify-identifiers` 로 끕니다.
+- **설명 가능한 순위와 정리 권고**: 검색할 때마다 각 논문이 그 순위에 놓인 이유 (관련성, 최신성, 인용 수 구성과
+  일치한 검색어, 기여 항목마다 한 문장) 를 기록하고, 결과마다 `keep`, `review`, `prune` 중 하나를
+  발동된 규칙과 함께 권고합니다. 인용 수가 적다는 이유만으로는 권고가 발동되지 않습니다. `--diagnostics`, MCP
+  `search` 도구의 `diagnostics=true`, 또는 GUI 의 제안 열에서 볼 수 있습니다. 조언일 뿐이며 논문은
+  제거되지 않습니다.
+- **소스별 검색 통계**: 검색할 때마다 각 소스가 반환한 레코드 수, 중복 제거 후 그 소스에 귀속된 논문 수, 그리고
+  실패·요청 제한·비활성 여부를 보고합니다. 오류가 난 소스는 검색을 멈추지 않고 건너뛰므로, 원래 논문이 적은 주제인지 소스의
+  절반을 잃은 검색인지 구분해 주는 것이 이 수치입니다. CLI 는 `--query` 검색마다 출력하고, MCP `search`
+  도구는 `source_stats` 로 반환하며, GUI 는 상태 표시줄에 보여 줍니다.
+- **인용 스노볼 검색**: `--snowball references|cited_by|both` (또는 MCP
+  `snowball` 도구) 는 상위 결과를 인용 관계를 따라 확장합니다. 뒤로는 그 논문들이 인용한 문헌을, 앞으로는 그
+  논문들을 인용한 문헌을 따라가, 저자가 다른 용어를 써서 키워드 검색이 놓치는 연구를 찾아냅니다. 모든 차원에 상한이 있고
+  (기본 깊이 1, 시드당 편수, 전체 편수), 여러 경로로 도달한 같은 논문은 한 편으로 처리되며, 발견된 논문마다 도달
+  경로가 기록됩니다. 인용 정보는 OpenAlex, Semantic Scholar, Crossref 에서 가져오고, 발견된
+  논문도 같은 랭커로 채점하므로 많이 인용되었다고 해서 주제에 맞는 것으로 보지 않습니다.
+- **문헌 라이브러리**: `--library thesis.db` 는 실행에서 찾은 내용을 하나의 SQLite 파일에
+  보관합니다. 검색 결과가 프로세스 종료와 함께 사라지지 않습니다. 보관되는 것은 논문, 각 논문을 찾은 실행과 소스, 점수,
+  `--snowball` 이 찾은 인용 관계, DOI / URL 확인 결과입니다. `--library-add` 는 실행 결과를
+  병합하고 (이미 있는 논문은 갱신될 뿐 중복되지 않습니다), `--library-search` 는 네트워크 없이 보관된 논문을
+  찾으며, `--library-export` 는 그것들을 어떤 내보내기 형식으로든 보냅니다. 이전 실행에서 확인된 DOI 나
+  URL 은 30일 동안 다시 확인하지 않습니다. MCP 도구 `library_add`, `library_search`,
+  `library_stats` 로도 사용할 수 있습니다.
+- **슬라이드 템플릿**: `--pptx-template thesis.pptx` 는 사용자의 PowerPoint 템플릿 위에
+  슬라이드를 만듭니다. 기본 제공되는 네이비 띠 디자인 대신 템플릿의 배경, 로고, 레이아웃이 그대로 쓰입니다. 슬라이드 종류
+  (표지, 섹션, 내용, 표, 참고문헌, Q&A) 마다 지정한 레이아웃이 사용되며, 선택 사항인 TOML / JSON 설정 파일
+  (`--pptx-template-config`) 로 글꼴, 색상, 헤더 띠와 표지 패널을 그릴지 여부를 정할 수 있습니다.
+  템플릿은 검색이 시작되기 전에 검사되고, `thesisagents validate-template thesis.pptx` 를
+  실행하면 각 종류의 슬라이드가 어떤 레이아웃을 쓰는지와 고쳐야 할 점을 보여 줍니다. 템플릿을 지정하지 않으면 기본 슬라이드는
+  그대로입니다.
 - **기본값이 안전**: HTTPS 전용 HTTP 전송, 소스별 속도 제한(토큰
   버킷), 모든 XML 페이로드에 `defusedxml`, 경로 순회에 안전한
   내보내기 경로, 사용자 입력에 대한 `eval` / `exec` / `pickle` 없음.
@@ -324,6 +371,16 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | 페이월 프롬프트를 건너뛰고 진행. |
 | `--max-slides` | 논문당 슬라이드 상한(기본 25; 무제한은 0 을 넘김). |
 | `--dark-mode` | pptx 를 어두운 배경 + 거의 흰 텍스트로 렌더링. 기본은 라이트 네이비 밴드 덱. |
+| `--pptx-template FILE` | 기본 네이비 띠 슬라이드 대신 PowerPoint 템플릿 (.pptx / .potx) 위에 슬라이드를 만듭니다. 검색이 시작되기 전에 검사됩니다. 16:9 슬라이드와 내용을 놓을 레이아웃이 필요합니다. `thesisagents validate-template FILE` 로 내보낼 때 무엇이 쓰이는지 확인할 수 있습니다. |
+| `--pptx-template-config FILE` | `--pptx-template` 에 대한 재정의를 담은 TOML / JSON 파일. 슬라이드 종류별 레이아웃, 글꼴, 색상, 헤더 띠와 표지 패널을 그릴지 여부를 정합니다. |
+| `--no-verify-identifiers` | 논문의 DOI 와 URL 을 확인하지 않고 내보냅니다. 기본적으로는 잘못되었거나 연결할 수 없는 DOI / URL 이 있으면 아무것도 쓰기 전에 실행이 중단됩니다. 오프라인용. |
+| `--diagnostics` | `--query` 검색의 순위를 설명합니다. 각 논문의 점수 (관련성 + 최신성 + 인용 수) 와 조언용 `keep` / `review` / `prune` 권고를 출력하고, 전체 내역을 `--out` 의 `diagnostics.json` 에 기록합니다. 논문은 제거되지 않습니다. |
+| `--snowball` | 내보내기 전에 결과를 인용 관계를 따라 확장합니다: `references` (상위 결과가 인용한 문헌), `cited_by` (그것들을 인용한 문헌) 또는 `both`. 새 논문은 결과 뒤에 추가되어 같은 다운로드와 내보내기를 거칩니다. 기본은 꺼짐. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` 의 상한: 확장할 상위 결과 수 (기본 5), 따라갈 단계 (1, 최대 3), 시드와 방향마다의 편수 (20), 새 논문 전체 수 (20), 유지할 최소 관련성 (0..1, 기본은 사용 안 함). |
+| `--library PATH` | 문헌 라이브러리: 실행 사이에 논문, 인용 관계, 식별자 확인 결과를 보관하는 SQLite 파일. 없으면 만들어집니다. 일반 실행에서는 식별자 캐시로 쓰여, 이전에 확인된 DOI 나 URL 은 다시 확인하지 않습니다. |
+| `--library-add` | 이번 실행의 논문을 `--library` 에 병합합니다. 쿼리, 각 논문의 점수, `--snowball` 이 찾은 인용 관계도 함께 보관됩니다. 이미 라이브러리에 있는 논문은 병합될 뿐 중복되지 않습니다. |
+| `--library-search QUERY` | `--library` 에서 QUERY 와 일치하는 논문을 관련도 순으로 나열하고 종료합니다. 아무것도 가져오지 않습니다. `--max` 로 개수를 제한하며, `""` 를 주면 최근에 본 논문을 나열합니다. |
+| `--library-export [QUERY]` | `--library` 의 논문을 `--export` 로 내보냅니다. 전부 또는 QUERY 와 일치하는 것만입니다. 기본 형식은 `xlsx,bib`. `--export` 에 `pdf` 가 없으면 PDF 는 다운로드하지 않습니다. |
 | `--quiet` | 논문별 출력을 억제. |
 
 ### 환경 변수
@@ -388,11 +445,16 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | 모든 플러그인을 열거 + 현재 환경에서 각각이 활성인지 보고. `search` 전에 한 번 호출. |
 | `list_exports` | 모든 내보내기 형식을 한 줄 설명과 함께, 그리고 그것이 하나의 집계 파일을 쓰는지 논문당 하나의 파일을 쓰는지 열거. |
-| `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. |
+| `search` | 키워드 → 논문 목록. `top_tier_only`, `min_citations` 를 받으며; 기본은 API 키 없는 전체 소스 믹스. `diagnostics=true` 는 논문별 점수 내역과 조언용 `keep` / `review` / `prune` 권고를 추가합니다 (`papers` 에서는 아무것도 제거되지 않습니다). 항상 `source_stats` 를 반환합니다: 소스별 `requested`, `returned`, `after_dedup`, `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` 를 주면 상위 결과를 인용 관계를 따라 확장하고 `snowball` 블록을 추가합니다 (`papers` 는 그대로입니다). |
+| `snowball` | 시드 논문 → 그 논문들이 인용한 문헌 (`references`), 그 논문들을 인용한 문헌 (`cited_by`) 또는 `both` 를 고정된 상한 (`depth`, `max_per_seed`, `max_total`) 안에서 가져옵니다. 발견된 논문마다 도달 경로가 붙습니다. 선택 항목 `keywords` 로 채점하고 정렬하며, `min_relevance` 로 주제에서 벗어난 논문을 걸러냅니다. |
+| `library_add` | 논문 → 문헌 라이브러리 (`library` 가 가리키는 SQLite 파일) 에 보관해 이후 세션에서 쓸 수 있게 합니다. 추가는 곧 병합입니다. 이미 있는 논문은 갱신될 뿐 중복되지 않습니다. `relations` 에는 `snowball` 이 반환한 인용 관계를 보관할 수 있습니다. |
+| `library_search` | 쿼리 → 라이브러리에 이미 있는 논문을 검색과 같은 방식으로 채점해 반환합니다. 네트워크를 쓰지 않습니다. 논문마다 이력이 붙습니다. 처음과 마지막으로 본 시각, 그리고 어떤 소스가 반환했는지입니다. |
+| `library_stats` | 라이브러리 → 보관 중인 논문, 실행, 인용 관계의 수, 소스별 논문 수, 최근 가져오기 내역. |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE 식별자 → 단일 논문. |
 | `fetch_pdf_text` | 하나의 PDF 를 다운로드하여 추출한 본문 텍스트를 반환. **"내가 논문을 읽었다"에 이르는 MCP 경로.** |
 | `download_pdfs` | 논문 목록의 PDF 를 `{out_dir}/pdfs/` 로 일괄 다운로드. BibTeX 키로 키가 지정된 논문별 결과를 반환. |
-| `export` | 논문 목록 + 형식 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 을 작성. 리치 논문 스타일 스키마를 위한 논문당 `summary` 필드, `max_slides_per_paper`(기본 25), `dark_mode`(기본 `false` — 프로젝트 기본은 라이트 네이비 밴드 덱, 어두운 OLED / 저조도 후처리에는 `true`)를 받음. |
+| `export` | 논문 목록 + 형식 → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` 을 작성. 리치 논문 스타일 스키마를 위한 논문당 `summary` 필드, `max_slides_per_paper`(기본 25), `dark_mode`(기본 `false` — 프로젝트 기본은 라이트 네이비 밴드 덱, 어두운 OLED / 저조도 후처리에는 `true`)를 받음. 쓰기 전에 모든 DOI / URL 을 검증합니다 (`verify_identifiers`, 기본값 `true`). 잘못되었거나 연결할 수 없는 식별자가 있으면 호출이 실패하고 해당 논문을 알려 주며, 응답에 `verification` 보고서가 포함됩니다. `library` 에는 식별자 확인 결과를 보관할 문헌 라이브러리를 지정합니다. 이전 호출에서 확인된 식별자는 다시 확인하지 않습니다. `pptx_template` (선택적으로 `pptx_template_config`) 을 주면 사용자의 PowerPoint 템플릿 위에 슬라이드를 만듭니다. |
+| `pptx_validate_template` | 템플릿 → `export(pptx_template=...)` 에 쓸 수 있는지 여부. 슬라이드 종류별로 쓰일 레이아웃과, 무엇을 고쳐야 하는지 알려 주는 오류와 경고를 반환합니다. 슬라이드는 만들어지지 않습니다. |
 | `pptx_inspect` | 기존 덱의 슬라이드 / 셰이프 구조를 읽음. |
 | `pptx_review` | 한 번의 호출로 덱을 감사 — 오버플로 + 색상 계약 + `paper_rule` 섹션 완전성. 덱 언어를 자동 감지; CLI `python -m thesisagents review <deck.pptx>` 이기도 함. |
 | `pptx_update_slide` | `title` / `body` / `meta`(셰이프 이름으로) 또는 인덱스로 임의의 셰이프를 교체. |
@@ -412,7 +474,7 @@ LLM-as-agent 흐름(`ANTHROPIC_API_KEY` 불필요 — LLM 이 에이전트):
           language="zh-tw", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-전체 레퍼런스는 [`docs/mcp.md`](docs/mcp.md) 에 있습니다.
+전체 레퍼런스는 [`docs/mcp.md`](../docs/mcp.md) 에 있습니다.
 
 ## 프로젝트 구성
 
@@ -423,8 +485,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,
@@ -466,6 +529,8 @@ LLM-as-agent / Python 파이프라인 보강을 구동), 그리고 **Deck**(Ligh
 흘러 들어감). Windows 릴리스 zip 은 PySide6 를 포함한 Nuitka 컴파일
 번들을 제공하므로, 별도의 Python 설치 없이 `thesisagents.exe gui` 가
 동작합니다.
+Search 탭에서는 상위 결과에서 인용을 따라가거나 (스노볼), 결과를 라이브러리 파일에 보관하고 네트워크 없이 그 라이브러리를
+검색할 수도 있으며, Deck 탭에서는 사용자의 PowerPoint 템플릿 위에 슬라이드를 만들 수 있습니다.
 **UI 는 14개 언어 모두로 제공됩니다**(English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — 첫 실행은 OS
@@ -476,17 +541,17 @@ Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — 첫 실행�
 줄어들며(720p 에도 여전히 맞음), HiDPI 스케일링이 기본으로
 켜져 있습니다.
 
-전체 레퍼런스: [`docs/gui.md`](docs/gui.md).
+전체 레퍼런스: [`docs/gui.md`](../docs/gui.md).
 
 ## 독립 실행형 바이너리로 패키징
 
 Python 설치 없이 실행되는 단일 파일 바이너리를 배포하기 위한 두
 패키저가 문서화되어 있습니다:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)**
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)**
   — 빠른 빌드(1분 미만), 200–300 MB 출력, 2–4초 시작. 빌드
   스크립트를 반복 개선할 때 최적.
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** —
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** —
   느린 빌드(5–15분), 80–150 MB 출력, 1초 미만 시작, 약간의 바이트
   코드 보호. 최종 사용자가 바이너리를 여러 번 실행할 때 최적.
 
@@ -526,7 +591,7 @@ Python 설치 없이 실행되는 단일 파일 바이너리를 배포하기 위
      `%TEMP%` 로 자기 압축을 풀어 시작 지연을 더하고 잠긴 머신에서
      안티바이러스 휴리스틱을 건드립니다. 마찬가지로 설계상
      Windows 전용: Linux / macOS 사용자는 PyPI 에서 설치합니다.
-     `pyproject.toml` 에 키를 둔 빌드 캐시가 웜 빌드를 콜드 ~70분
+     `pyproject.toml` 에 키를 둔 빌드 캐시가 웜 빌드를 콜드 ~85분
      에서 ~5–10분으로 줄입니다.
   5. **`publish-release`** — Nuitka 자산이 업로드되면 초안 표시를
      해제하여 사용자가 절반만 완성된 릴리스를 결코 보지 않게 합니다.
@@ -546,7 +611,7 @@ PyPI 게시 + 릴리스 실행 파일을 활성화하려면:
    General → Workflow permissions → Read and write permissions`. 올림
    커밋은 워크플로의 `GITHUB_TOKEN` 이 푸시합니다.
 4. PR 을 `main` 에 병합하여 릴리스를 냅니다. 파이프라인은 PyPI 게시에
-   ~3–5분, Windows zip 첨부에 추가로 ~50–70분(콜드) 또는 ~5–10분
+   ~3–5분, Windows zip 첨부에 추가로 ~80–90분(콜드) 또는 ~5–10분
    (웜 Nuitka 캐시)이 걸립니다.
 
 `publish-pypi` 잡은 의도적으로 GitHub Environment 를 붙이지

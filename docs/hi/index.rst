@@ -49,11 +49,57 @@ MCP 6 चरण
    5. (आप प्रत्येक PDF पढ़ें और संरचित summary dict तैयार करें)
    6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 
-कुल 13 MCP उपकरण: डिस्कवरी (``list_sources``, ``list_exports``),
-``search``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+कुल 18 MCP उपकरण: डिस्कवरी (``list_sources``, ``list_exports``),
+``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``, ``pptx_validate_template``,
 ``export`` और छह ``pptx_*`` डेक ऑपरेशन (``pptx_inspect``,
 ``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
 ``pptx_reorder_slides``, ``pptx_add_slide``)। पूर्ण संदर्भ: :doc:`/mcp`।
+
+**विषय से बाहर के परिणाम पहचानने के लिए tool की अपनी सलाह से शुरू
+करें।** ``--diagnostics`` (CLI) या MCP ``search`` tool पर
+``diagnostics=true`` ranking समझाता है: हर paper का score relevance,
+recency और citations में बँटा हुआ, query के जो शब्द मिले, और ``keep`` /
+``review`` / ``prune`` की सिफ़ारिश उस threshold के साथ जिसने उसे trigger
+किया। CLI पूरा breakdown output directory में ``diagnostics.json`` में
+भी लिखता है। ये सिफ़ारिशें केवल सलाह हैं और आपके लिए कुछ भी हटाया नहीं
+जाता, इसलिए कुछ भी delete करने से पहले ``review`` और ``prune`` वाले
+papers के abstract पढ़ें।
+
+**जाँचें कि किन sources ने जवाब दिया।** हर ``search`` response में
+``source_stats`` होता है: हर source के लिए, उसने कितने records लौटाए,
+de-duplication के बाद कितने unique papers उसके खाते में गए, और एक
+``status`` जिसका मान ``ok``, ``failed``, ``rate_limited`` या
+``disabled`` होता है। विफल source को search रोके बिना छोड़ दिया जाता है,
+इसलिए यह निष्कर्ष निकालने से पहले कि किसी विषय पर कम papers हैं, ये
+संख्याएँ पढ़ें। CLI भी हर ``--query`` search के बाद यही table print करता
+है।
+
+**Citations का पीछा करें।** ``--snowball both`` (CLI) या ``snowball``
+tool शीर्ष परिणामों को उनके citation links के सहारे फैलाता है:
+``references`` वह जोड़ता है जिसे वे cite करते हैं और ``cited_by`` वह
+जोड़ता है जो उन्हें cite करता है। इससे वह काम मिलता है जिसे keyword
+search इसलिए चूक जाता है कि लेखकों ने दूसरे शब्द इस्तेमाल किए। यह फैलाव
+सीमित है (default रूप से एक कदम), हर खोजा गया paper वह रास्ता रखता है
+जिससे वह मिला, और सभी को आपके keywords के सामने score किया जाता है,
+इसलिए कोई paper केवल बहुत cite होने के कारण नहीं रखा जाता।
+
+**जो मिले उसे सँभाल कर रखें।** ``--library thesis.db --library-add``
+(CLI) या ``library_add`` tool किसी run के papers को literature library
+में रखता है, यानी एक SQLite file जो session के बाद भी बनी रहती है। वही
+search दोबारा जोड़ने से कुछ भी duplicate नहीं होता: paper अपने DOI,
+arXiv ID या title से पहचाना जाता है, और नई जानकारी सहेजे हुए record में
+merge हो जाती है। इसके बाद ``library_search`` बिना network के सहेजे हुए
+papers खोजता है, और verify हो चुके DOI तथा URL 30 दिनों तक दोबारा नहीं
+जाँचे जाते।
+
+**अपना template इस्तेमाल करें।** ``--pptx-template thesis.pptx`` (CLI)
+या ``export`` tool पर ``pptx_template`` deck को PowerPoint template पर
+बनाता है, इसलिए background, logo और layouts आपके अपने होते हैं। पहले
+``thesisagents validate-template thesis.pptx`` (या
+``pptx_validate_template`` tool) चलाएँ: यह बताता है कि हर तरह की slide
+कौन-सा layout इस्तेमाल करेगी और क्या ठीक करना है। Template में 16:9
+slides और content के लिए एक layout होना चाहिए, और एक छोटी config file
+layouts, fonts और रंग तय कर सकती है।
 
 अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -79,6 +125,16 @@ xlsx ``exports/<run>/<slug>-<timestamp>.xlsx`` में लिखी जात�
        if actual and not (p.url == actual
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
+
+**Export इसे run time पर जाँचता है।** कुछ भी लिखने से पहले CLI, MCP
+``export`` tool और GUI का Deck tab हर paper का DOI doi.org पर देखते हैं
+और हर URL को एक बार request करते हैं। जो DOI registered नहीं है, जो URL
+404 लौटाता है, या जिस host तक पहुँचा नहीं जा सकता, वह export को रोक देता
+है और paper तथा identifier का नाम बताता है। यह जाँच सिद्ध करती है कि
+identifier मौजूद है, यह नहीं कि वह इसी paper का है, इसलिए xlsx से copy
+करने का नियम और ऊपर का audit अब भी ज़रूरी हैं। Offline काम करते समय
+``--no-verify-identifiers`` (CLI) या ``verify_identifiers=false`` (MCP)
+दें।
 
 निषेध
 ^^^^^
@@ -151,7 +207,7 @@ CLI फ़्लैग की पूरी तालिका: :doc:`/cli`।
 --------------
 
 * CLI फ़्लैग और पर्यावरण चर: :doc:`/cli`
-* 13 MCP सर्वर उपकरण: :doc:`/mcp`
+* 18 MCP सर्वर उपकरण: :doc:`/mcp`
 * PPTX संपादन टूलकिट: :doc:`/pptx_editing`
 * repo जड़ में ``readmes/README.hi.md`` फ़ाइल में सुविधाओं की पूरी सूची है।
 * गहन तकनीकी संदर्भ (प्लगइन वास्तुकला, सुरक्षा नीतियाँ, Definition of

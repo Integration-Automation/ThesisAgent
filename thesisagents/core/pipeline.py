@@ -9,12 +9,21 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+from collections.abc import Coroutine
+from dataclasses import dataclass
+from typing import Any
 
 from thesisagents.core.constants import (
     RATE_LIMIT_RETRY_ATTEMPTS,
     RATE_LIMIT_RETRY_BASE_SECONDS,
 )
 from thesisagents.core.dedup import dedupe
+from thesisagents.core.diagnostics import (
+    PaperScore,
+    SearchDiagnostics,
+    SourceStat,
+    SourceStatus,
+)
 from thesisagents.core.exceptions import (
     ConfigError,
     FetchError,
@@ -24,7 +33,8 @@ from thesisagents.core.exceptions import (
 from thesisagents.core.identifiers import PaperIdentifier
 from thesisagents.core.models import Paper, PaperCollection, Query
 from thesisagents.core.oa_resolver import resolve_oa_pdfs
-from thesisagents.core.ranking import rank
+from thesisagents.core.pruning import recommend_pruning
+from thesisagents.core.ranking import RankedPaper, rank_with_scores
 from thesisagents.core.top_venues import is_top_tier
 from thesisagents.fetchers.base import load_fetcher
 from thesisagents.utils.logging import get_logger
@@ -51,25 +61,122 @@ async def run_search(
     (typical for IEEE / ACM / Springer / Elsevier) get a chance to pick
     up an open-access mirror from Unpaywall or an arXiv preprint.
     Pass ``False`` from tests or CLI flags that want raw source output.
+
+    The returned collection carries ``diagnostics``: what each source
+    contributed (``source_stats``), the score behind each paper's position and
+    the advisory pruning recommendations.
     """
-    fetchers = [
-        loaded
-        for loaded in (_load_fetcher_safe(name) for name in query.sources)
-        if loaded is not None
-    ]
-    per_source_query = query.with_max(query.max_results)
-    results = await asyncio.gather(
-        *(_safe_search(fetcher, per_source_query) for fetcher in fetchers),
-        return_exceptions=False,
-    )
-    flat: list[Paper] = []
-    for source_papers in results:
-        flat.extend(source_papers)
+    outcomes = await _fetch_all(query)
+    flat = [paper for outcome in outcomes for paper in outcome.papers]
     unique = dedupe(flat)
-    ordered = rank(unique, keywords=query.keywords)
+    ranked = rank_with_scores(unique, keywords=query.keywords)
+    kept = _apply_query_filters(ranked, query)[: query.max_results]
+    stats = _source_stats(outcomes, unique, requested=query.max_results)
+    collection = PaperCollection(
+        query=query,
+        papers=tuple(entry.paper for entry in kept),
+        diagnostics=_diagnose(kept, stats),
+    )
+    if resolve_oa:
+        collection = await resolve_oa_pdfs(collection)
+    return collection
+
+
+@dataclass(frozen=True, slots=True)
+class _SourceOutcome:
+    """What one source produced for one query, before any merging.
+
+    Kept per source (the results used to be flattened at once) so the search
+    can report who returned what. ``status`` and ``detail`` say why
+    ``papers`` is empty when it is empty for a reason other than "no match".
+    """
+
+    source: str
+    papers: tuple[Paper, ...] = ()
+    status: SourceStatus = SourceStatus.OK
+    detail: str = ""
+
+
+async def _fetch_all(query: Query) -> list[_SourceOutcome]:
+    """Search every source of ``query`` concurrently, one outcome per source.
+
+    The outcomes come back in the order the sources were named, including the
+    sources that could not be loaded (``disabled``), so the report lists every
+    source the user asked for and not only the ones that ran.
+
+    Failure containment is unchanged: a source that cannot be loaded or that
+    raises contributes an empty outcome and never stops the others.
+    """
+    per_source_query = query.with_max(query.max_results)
+    outcomes: dict[int, _SourceOutcome] = {}
+    running: list[tuple[int, Coroutine[Any, Any, _SourceOutcome]]] = []
+    for index, name in enumerate(query.sources):
+        try:
+            fetcher = load_fetcher(name)
+        except ConfigError as err:
+            _LOG.warning("Source %s disabled: %s", name, err)
+            outcomes[index] = _SourceOutcome(
+                name, status=SourceStatus.DISABLED, detail=str(err)
+            )
+            continue
+        running.append((index, _safe_search(fetcher, per_source_query, name)))
+    finished = await asyncio.gather(*(search for _, search in running))
+    for (index, _), outcome in zip(running, finished, strict=True):
+        outcomes[index] = outcome
+    return [outcomes[index] for index in range(len(query.sources))]
+
+
+def _source_stats(
+    outcomes: list[_SourceOutcome], unique: list[Paper], *, requested: int
+) -> tuple[SourceStat, ...]:
+    """Count, per source, what it returned and what it is credited with.
+
+    A de-duplicated paper keeps the ``source`` / ``source_id`` of its first
+    occurrence (see ``dedup.merge_papers``), so it is credited to the first source
+    whose results contain that pair. Every unique paper is credited exactly
+    once, which makes the ``after_dedup`` values add up to ``len(unique)``.
+
+    Example: arXiv returns 3 records and OpenAlex returns 3, two of which are
+    the same papers as arXiv's. With arXiv named first the stats read
+    ``arxiv: returned 3, after_dedup 3`` and ``openalex: returned 3,
+    after_dedup 1``.
+    """
+    owner: dict[tuple[str, str], int] = {}
+    for index, outcome in enumerate(outcomes):
+        for paper in outcome.papers:
+            owner.setdefault((paper.source, paper.source_id), index)
+    credited = [0] * len(outcomes)
+    for paper in unique:
+        index = owner.get((paper.source, paper.source_id))
+        if index is not None:
+            credited[index] += 1
+    return tuple(
+        SourceStat(
+            source=outcome.source,
+            requested=requested,
+            returned=len(outcome.papers),
+            after_dedup=credited[index],
+            status=outcome.status,
+            detail=outcome.detail,
+        )
+        for index, outcome in enumerate(outcomes)
+    )
+
+
+def _apply_query_filters(
+    ranked: list[RankedPaper], query: Query
+) -> list[RankedPaper]:
+    """Apply every ``Query`` filter, for all sources, after ranking.
+
+    Filters live here and not in the source plugins so that they hold for
+    every source (see ``compliance-auditor`` "Query semantics are enforced in
+    core"). They run on the ranked entries, so each surviving paper keeps the
+    score that explains its position.
+    """
+    ordered = ranked
     if query.top_tier_only:
         before = len(ordered)
-        ordered = [paper for paper in ordered if is_top_tier(paper)]
+        ordered = [entry for entry in ordered if is_top_tier(entry.paper)]
         _LOG.info(
             "top-tier filter kept %d / %d papers", len(ordered), before
         )
@@ -81,10 +188,10 @@ async def run_search(
         # treated as zero and silently dropped.
         before = len(ordered)
         ordered = [
-            paper
-            for paper in ordered
-            if paper.citation_count is None
-            or paper.citation_count >= query.min_citations
+            entry
+            for entry in ordered
+            if entry.paper.citation_count is None
+            or entry.paper.citation_count >= query.min_citations
         ]
         _LOG.info(
             "min-citations(>=%d) filter kept %d / %d papers (unknown counts kept)",
@@ -97,32 +204,53 @@ async def run_search(
         # (uncertainty must not silently drop a possibly-in-range paper).
         before = len(ordered)
         ordered = [
-            paper
-            for paper in ordered
-            if _in_year_range(paper.year, query.year_from, query.year_to)
+            entry
+            for entry in ordered
+            if _in_year_range(entry.paper.year, query.year_from, query.year_to)
         ]
         _LOG.info(
             "year filter [%s..%s] kept %d / %d papers (unknown years kept)",
             query.year_from or "", query.year_to or "", len(ordered), before,
         )
-    collection = PaperCollection(
-        query=query, papers=tuple(ordered[: query.max_results])
+    return ordered
+
+
+def _diagnose(
+    kept: list[RankedPaper], source_stats: tuple[SourceStat, ...] = ()
+) -> SearchDiagnostics:
+    """Record why each surviving paper ranks where it does, and the advice.
+
+    ``kept`` is the ranked list after the filters and the ``max_results`` cut,
+    so positions are renumbered 1..n to match the collection the caller sees
+    (a filter may have removed the papers that held ranks 2 and 3).
+
+    The pruning recommendations are advice. Every paper in ``kept`` stays in
+    the collection, whatever the advice says.
+
+    ``source_stats`` is stored as given. It describes the sources before the
+    filters, so it is not recomputed from ``kept``.
+    """
+    final = [
+        dataclasses.replace(entry, rank=position)
+        for position, entry in enumerate(kept, start=1)
+    ]
+    scores = tuple(
+        PaperScore(paper_key=entry.paper.dedup_key(), rank=entry.rank, score=entry.score)
+        for entry in final
     )
-    if resolve_oa:
-        collection = await resolve_oa_pdfs(collection)
-    return collection
+    return SearchDiagnostics(
+        scores=scores,
+        pruning=recommend_pruning(final),
+        source_stats=source_stats,
+    )
 
 
-def _load_fetcher_safe(name: str):
-    try:
-        return load_fetcher(name)
-    except ConfigError as err:
-        _LOG.warning("Source %s disabled: %s", name, err)
-        return None
-
-
-async def _safe_search(fetcher, query: Query) -> list[Paper]:
+async def _safe_search(fetcher, query: Query, source: str) -> _SourceOutcome:
     """Run one source's search with retry-on-RateLimitError + backoff.
+
+    ``source`` is the name the query asked for. Every return is a
+    ``_SourceOutcome`` so the caller can report, per source, how many records
+    came back and why a source came back empty.
 
     A ``RateLimitError`` (HTTP 429 normalised by the source plugin) gets
     exponential backoff up to ``RATE_LIMIT_RETRY_ATTEMPTS`` total attempts.
@@ -153,17 +281,23 @@ async def _safe_search(fetcher, query: Query) -> list[Paper]:
     raises ``KeyError``, the search now returns the arXiv papers and logs
     ``Source openalex raised an unexpected error``.
     """
-    source = fetcher.config.name
     for attempt in range(1, RATE_LIMIT_RETRY_ATTEMPTS + 1):
         try:
-            return await fetcher.search(query)
+            return _SourceOutcome(source, papers=tuple(await fetcher.search(query)))
         except RateLimitError as err:
             if attempt >= RATE_LIMIT_RETRY_ATTEMPTS:
                 _LOG.warning(
                     "Source %s gave up after %d rate-limit retries: %s",
                     source, RATE_LIMIT_RETRY_ATTEMPTS, err,
                 )
-                return []
+                return _SourceOutcome(
+                    source,
+                    status=SourceStatus.RATE_LIMITED,
+                    detail=(
+                        f"gave up after {RATE_LIMIT_RETRY_ATTEMPTS} "
+                        f"rate-limit retries: {err}"
+                    ),
+                )
             wait = RATE_LIMIT_RETRY_BASE_SECONDS * (2 ** (attempt - 1))
             _LOG.info(
                 "Source %s rate-limited; sleeping %.1fs before retry %d/%d",
@@ -172,15 +306,19 @@ async def _safe_search(fetcher, query: Query) -> list[Paper]:
             await asyncio.sleep(wait)
         except FetchError as err:
             _LOG.warning("Source %s failed: %s", source, err)
-            return []
+            return _SourceOutcome(source, status=SourceStatus.FAILED, detail=str(err))
         except Exception as err:  # noqa: BLE001 — containment boundary, see docstring
             _LOG.warning(
                 "Source %s raised an unexpected error (%s: %s); "
                 "skipping it and keeping the other sources' results",
                 source, type(err).__name__, err,
             )
-            return []
-    return []
+            return _SourceOutcome(
+                source,
+                status=SourceStatus.FAILED,
+                detail=f"{type(err).__name__}: {err}",
+            )
+    return _SourceOutcome(source, status=SourceStatus.FAILED, detail="no attempt made")
 
 
 def _in_year_range(
@@ -247,7 +385,9 @@ async def enrich_collection(
     enriched_papers = await asyncio.gather(
         *(_bounded(paper) for paper in collection.papers)
     )
-    return PaperCollection(query=collection.query, papers=tuple(enriched_papers))
+    # ``replace`` keeps ``diagnostics``: a summary changes neither a paper's
+    # identity key nor the score that ranked it.
+    return dataclasses.replace(collection, papers=tuple(enriched_papers))
 
 
 async def _enrich_one(

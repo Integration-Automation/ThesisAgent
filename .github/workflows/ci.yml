@@ -18,6 +18,7 @@ jobs:
   test:
     name: ${{ matrix.os }} · Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15  # about 3x the slowest recent run, at least 15
     strategy:
       # Don't abort the whole matrix when one cell fails — surfaces all
       # OS/version regressions in a single CI run.

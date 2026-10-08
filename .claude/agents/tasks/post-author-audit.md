@@ -74,6 +74,10 @@ Allowed differences:
 
 Anything else is a fabrication. Report it as a violation — the parent must fix the regen script and re-run before shipping.
 
+**This audit is still required now that the export verifies identifiers at run time.** `export_collection` looks up every DOI at doi.org and requests every URL once before it writes (`thesisagents/core/export_validation.py`), and a regen script that ran to completion has already passed that check. **Why the audit stays**: the runtime check proves an identifier *exists*, the xlsx comparison proves it is *this paper's*. A real DOI copied from the wrong row passes the runtime check and fails this audit. **Example**: two papers in one run whose DOIs were swapped while authoring export cleanly, and only the title-to-URL comparison above reports them. **Anti-pattern**: reporting "Audit 1 PASS, the export preflight was green" without opening the xlsx.
+
+If the regen script was run with `ExportOptions(verify_identifiers=False)`, say so in the report: the identifiers were never checked for existence either, and the opt-out is meant for a machine with no network, not for getting past a failed identifier.
+
 ## Audit 2 — Pruning off-topic downloads
 
 Read each paper's abstract (from the xlsx or from your own PDF read) and classify against the user's actual intent.
@@ -105,6 +109,8 @@ What you KEEP intact (pruning them would rewrite history):
 - The aggregate `exports/<run>/<slug>-<timestamp>.xlsx`
 - The aggregate `exports/<run>/<slug>-<timestamp>.bib`
 - Every rich `.pptx` (and language variants like `<key>-zh-tw.pptx`) for ON-topic papers
+**Use `diagnostics.json` as the starting list, not as the verdict.** When the search ran with `--diagnostics` (or MCP `search` with `diagnostics=true`), `exports/<run>/diagnostics.json` lists every paper with a `keep` / `review` / `prune` recommendation, the threshold that triggered it, and the `bibtex_key` its files carry. Read the abstracts of the `review` and `prune` entries first. **Why**: the recommendation is computed from word overlap between the query and the title / abstract, so it finds the papers that share no query term at once, which is the case this audit most often missed. **Example**: an entry with `"action": "prune"` and the reason "no query term appears in the title or abstract" for a query about code review is the Viterbi-decoder kind of hit. **Anti-pattern**: deleting every `prune` entry unread, or skipping the `keep` entries. The rule is lexical, so a paper that repeats the query words in another sense is marked `keep` and is still off-topic.
+
 
 ## Audit 3 — Drafting-metadata leak scan
 

@@ -16,6 +16,7 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 
 from thesisagents.core.exceptions import ExportError
+from thesisagents.exporters.template import ROLE_CONTENT, LayoutSet, content_layout
 
 _DEFAULT_TITLE_PT = 28
 _DEFAULT_BODY_PT = 14
@@ -142,8 +143,11 @@ def add_slide(
 ) -> Path:
     """Append (or insert at `position`) a new slide with title/meta/body textboxes."""
     presentation = _open(path)
-    layout = presentation.slide_layouts[6]
-    slide = presentation.slides.add_slide(layout)
+    # Not ``slide_layouts[6]``: that is the blank layout only in python-pptx's
+    # own template, and a deck built on a custom template may not have it.
+    slide = LayoutSet({ROLE_CONTENT: content_layout(presentation)}).add_slide(
+        presentation, ROLE_CONTENT
+    )
     _add_named_textbox(
         slide, "title", title, _SLIDE_TOP, _TITLE_HEIGHT, _DEFAULT_TITLE_PT, bold=True
     )

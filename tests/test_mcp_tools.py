@@ -524,3 +524,468 @@ def test_as_tool_error_passes_results_and_other_errors_through():
     assert asyncio.run(_as_tool_error(ok)(3)) == {"value": 3}
     with pytest.raises(KeyError):
         _as_tool_error(broken)()
+
+
+# ---------------------------------------------------------------------------
+# export: identifier preflight
+# ---------------------------------------------------------------------------
+
+
+def test_export_reports_the_verification_it_ran(server, sample_papers, tmp_path):
+    papers = [p.to_dict() for p in sample_papers]
+    payload = asyncio.run(
+        _call(
+            server, "export", papers=papers, keywords="attention",
+            formats=["bib"], out_dir=str(tmp_path), filename_stem="verified",
+        )
+    )
+    verification = payload["verification"]
+    assert verification["enabled"] is True
+    assert verification["ok"] is True
+    assert verification["counts"]["ok"] == 3  # two URLs + one DOI
+    assert {check["kind"] for check in verification["checks"]} == {"doi", "url"}
+    assert verification["checks"][0]["paper_key"] == sample_papers[0].bibtex_key()
+
+
+def test_export_fails_on_a_bad_identifier_and_writes_nothing(
+    server, sample_papers, tmp_path
+):
+    """The error text must name the paper and the identifier, since an MCP
+    client only ever sees the message."""
+    papers = [p.to_dict() for p in sample_papers]
+    papers[1]["doi"] = "10.x/composed-by-hand"
+    with pytest.raises(ToolError) as raised:
+        asyncio.run(
+            _call(
+                server, "export", papers=papers, keywords="attention",
+                formats=["bib", "json"], out_dir=str(tmp_path),
+            )
+        )
+    message = str(raised.value)
+    assert "identifier verification failed" in message
+    assert "10.x/composed-by-hand is invalid" in message
+    assert sample_papers[1].bibtex_key() in message
+    assert "verify_identifiers=False" in message
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_export_can_skip_verification(server, sample_papers, tmp_path):
+    papers = [p.to_dict() for p in sample_papers]
+    papers[1]["doi"] = "10.x/composed-by-hand"
+    payload = asyncio.run(
+        _call(
+            server, "export", papers=papers, keywords="attention",
+            formats=["bib"], out_dir=str(tmp_path), verify_identifiers=False,
+        )
+    )
+    assert payload["verification"] == {"enabled": False}
+    assert Path(payload["written"]["bib"]).exists()
+
+
+# ---------------------------------------------------------------------------
+# search: diagnostics
+# ---------------------------------------------------------------------------
+
+
+def _diagnosed_collection(query, papers) -> PaperCollection:
+    """A collection the way ``run_search`` returns it: ranked, with diagnostics."""
+    from thesisagents.core import pipeline
+    from thesisagents.core.ranking import rank_with_scores
+
+    ranked = rank_with_scores(papers, query.keywords, current_year=2026)
+    return PaperCollection(
+        query=query,
+        papers=tuple(entry.paper for entry in ranked),
+        diagnostics=pipeline._diagnose(ranked),  # noqa: SLF001
+    )
+
+
+def test_search_without_the_flag_has_no_diagnostics_block(
+    monkeypatch, server, sample_papers
+):
+    """``source_stats`` is always there. The score breakdown is opt-in."""
+
+    async def fake_run_search(query, **_kwargs):
+        return _diagnosed_collection(query, sample_papers)
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(_call(server, "search", keywords="attention", sources=["arxiv"]))
+
+    assert set(payload) == {"query", "count", "papers", "source_stats"}
+    assert set(payload["papers"][0]) == set(sample_papers[0].to_dict())
+
+
+def test_search_diagnostics_explain_the_ranking(monkeypatch, server, sample_papers):
+    async def fake_run_search(query, **_kwargs):
+        return _diagnosed_collection(query, sample_papers)
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "search", keywords="attention", sources=["arxiv"], diagnostics=True)
+    )
+
+    report = payload["diagnostics"]
+    assert report["advisory"] is True
+    assert report["summary"] == {"keep": 1, "review": 0, "prune": 1}
+    assert payload["count"] == 2  # advice only: both papers are still returned
+    on_topic, off_topic = report["papers"]
+    assert on_topic["title"] == "Sample Paper on Attention"
+    assert on_topic["bibtex_key"] == sample_papers[0].bibtex_key()
+    assert on_topic["score"]["matched_terms"] == ["attention"]
+    assert on_topic["recommendation"]["action"] == "keep"
+    assert off_topic["recommendation"]["action"] == "prune"
+    assert off_topic["recommendation"]["threshold"] == "prune_below_relevance=0.10"
+    assert [p["rank"] for p in report["papers"]] == [1, 2]
+
+
+def test_search_diagnostics_tolerate_a_collection_without_any(
+    monkeypatch, server, sample_papers
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "search", keywords="attention", sources=["arxiv"], diagnostics=True)
+    )
+
+    assert [p["score"] for p in payload["diagnostics"]["papers"]] == [None, None]
+
+
+# ---------------------------------------------------------------------------
+# search: source_stats
+# ---------------------------------------------------------------------------
+
+
+def _collection_with_stats(query, papers) -> PaperCollection:
+    from thesisagents.core.diagnostics import (
+        SearchDiagnostics,
+        SourceStat,
+        SourceStatus,
+    )
+
+    stats = (
+        SourceStat("arxiv", requested=5, returned=2, after_dedup=2),
+        SourceStat(
+            "ieee", requested=5, returned=0, after_dedup=0,
+            status=SourceStatus.FAILED, detail="[ieee] blocked",
+        ),
+    )
+    return PaperCollection(
+        query=query, papers=tuple(papers),
+        diagnostics=SearchDiagnostics(source_stats=stats),
+    )
+
+
+def test_search_reports_what_each_source_returned(monkeypatch, server, sample_papers):
+    async def fake_run_search(query, **_kwargs):
+        return _collection_with_stats(query, sample_papers)
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "search", keywords="attention", sources=["arxiv", "ieee"], max_results=5)
+    )
+
+    assert payload["source_stats"] == [
+        {"source": "arxiv", "requested": 5, "returned": 2, "after_dedup": 2,
+         "status": "ok", "detail": ""},
+        {"source": "ieee", "requested": 5, "returned": 0, "after_dedup": 0,
+         "status": "failed", "detail": "[ieee] blocked"},
+    ]
+    # The papers are exactly what they were before the stats existed.
+    assert payload["papers"] == [paper.to_dict() for paper in sample_papers]
+    assert payload["count"] == 2
+
+
+def test_search_source_stats_is_an_empty_list_without_diagnostics(
+    monkeypatch, server, sample_papers
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(_call(server, "search", keywords="attention", sources=["arxiv"]))
+
+    assert payload["source_stats"] == []
+
+
+def test_search_diagnostics_block_repeats_the_source_stats(
+    monkeypatch, server, sample_papers
+):
+    async def fake_run_search(query, **_kwargs):
+        return _collection_with_stats(query, sample_papers)
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "search", keywords="attention", sources=["arxiv"], diagnostics=True)
+    )
+
+    assert payload["diagnostics"]["source_stats"] == payload["source_stats"]
+
+
+def test_list_sources_carries_no_query_state(server):
+    """Discovery only: per-query counts belong to ``search``."""
+    payload = asyncio.run(_call(server, "list_sources"))
+
+    assert set(payload) == {"sources", "default_sources"}
+    assert set(payload["sources"][0]) == {
+        "name", "in_default_mix", "opt_in_env_var", "opt_out_env_var", "enabled",
+    }
+
+
+# ---------------------------------------------------------------------------
+# snowball tool + search(snowball=...)
+# ---------------------------------------------------------------------------
+
+
+class _GraphProvider:
+    """Citation provider answering from a dict keyed by ``(source_id, direction)``."""
+
+    def __init__(self, graph, name="graph", fail_with=None):
+        self.name = name
+        self._graph = graph
+        self._fail_with = fail_with
+        self.calls: list[tuple[str, str, int]] = []
+
+    async def _answer(self, paper, direction, limit):
+        self.calls.append((paper.source_id, direction, limit))
+        if self._fail_with is not None:
+            raise self._fail_with
+        return list(self._graph.get((paper.source_id, direction), []))
+
+    async def references(self, paper, limit):
+        return await self._answer(paper, "references", limit)
+
+    async def cited_by(self, paper, limit):
+        return await self._answer(paper, "cited_by", limit)
+
+
+def _found(sid: str, title: str):
+    from thesisagents.core.models import Paper
+
+    return Paper(
+        source="openalex", source_id=sid, title=title, authors=("Ada Author",),
+        year=2024, venue=None, abstract="", url=f"https://example.org/{sid}",
+        doi=f"10.1000/{sid}",
+    )
+
+
+@pytest.fixture()
+def citation_graph(monkeypatch, sample_papers):
+    """Install an in-memory citation provider as the only default provider."""
+    seed_id = sample_papers[0].source_id
+    provider = _GraphProvider(
+        {
+            (seed_id, "references"): [_found("r1", "Attention Mechanisms Reviewed")],
+            (seed_id, "cited_by"): [
+                _found("c1", "Sparse Attention at Scale"),
+                _found("c2", "Cooking With Gas"),
+            ],
+        }
+    )
+    monkeypatch.setattr(
+        "thesisagents.core.snowball._default_providers", lambda: [provider]
+    )
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    return provider
+
+
+def test_snowball_tool_returns_discovered_papers_with_their_path(
+    server, sample_papers, citation_graph
+):
+    seed = sample_papers[0]
+    payload = asyncio.run(
+        _call(server, "snowball", papers=[seed.to_dict()], keywords="attention")
+    )
+
+    assert payload["seed_count"] == 1
+    assert payload["discovered_count"] == 3
+    assert payload["truncated"] is False
+    assert payload["errors"] == []
+    titles = [entry["paper"]["title"] for entry in payload["discovered"]]
+    assert titles[-1] == "Cooking With Gas"          # scored last: off topic
+    assert set(titles[:2]) == {"Attention Mechanisms Reviewed", "Sparse Attention at Scale"}
+    by_title = {entry["paper"]["title"]: entry for entry in payload["discovered"]}
+    assert by_title["Attention Mechanisms Reviewed"]["found_by"] == {
+        "source_key": seed.dedup_key(), "target_key": "doi:10.1000/r1",
+        "relation": "references", "provider": "graph", "depth": 1,
+    }
+    assert by_title["Cooking With Gas"]["score"]["relevance"] == 0.0
+    # ``papers`` is the same list as plain paper dicts, ready for export.
+    assert [paper["title"] for paper in payload["papers"]] == titles
+    assert len(payload["relations"]) == 3
+
+
+def test_snowball_tool_passes_its_bounds_through(server, sample_papers, citation_graph):
+    payload = asyncio.run(
+        _call(
+            server, "snowball", papers=[sample_papers[0].to_dict()],
+            direction="cited_by", max_per_seed=7, max_total=1,
+        )
+    )
+
+    assert citation_graph.calls == [(sample_papers[0].source_id, "cited_by", 7)]
+    assert payload["discovered_count"] == 1
+    assert payload["truncated"] is True
+    assert payload["discovered"][0]["score"] is None   # no keywords, no score
+
+
+def test_snowball_tool_does_not_rediscover_known_papers(
+    server, sample_papers, citation_graph
+):
+    known = _found("c1", "Sparse Attention at Scale").to_dict()
+    payload = asyncio.run(
+        _call(
+            server, "snowball", papers=[sample_papers[0].to_dict()],
+            direction="cited_by", known=[known],
+        )
+    )
+
+    assert [entry["paper"]["source_id"] for entry in payload["discovered"]] == ["c2"]
+    assert len(payload["relations"]) == 2   # the link to the known paper is kept
+
+
+def test_snowball_tool_reports_a_bad_bound_as_a_tool_error(
+    server, sample_papers, citation_graph
+):
+    with pytest.raises(ToolError, match=r"depth must be in \[1, 3\]"):
+        asyncio.run(
+            _call(server, "snowball", papers=[sample_papers[0].to_dict()], depth=9)
+        )
+    assert citation_graph.calls == []
+
+
+def test_snowball_tool_needs_a_seed(server, citation_graph):
+    with pytest.raises(ToolError, match="at least one seed paper"):
+        asyncio.run(_call(server, "snowball", papers=[]))
+
+
+def test_snowball_tool_reports_provider_errors_without_failing(
+    server, sample_papers, monkeypatch
+):
+    from thesisagents.core.exceptions import SourceUnavailableError
+
+    broken = _GraphProvider({}, name="openalex",
+                            fail_with=SourceUnavailableError("openalex", "HTTP 503"))
+    monkeypatch.setattr("thesisagents.core.snowball._default_providers", lambda: [broken])
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(server, "snowball", papers=[sample_papers[0].to_dict()], direction="references")
+    )
+
+    assert payload["discovered"] == []
+    assert len(payload["errors"]) == 1
+    assert "openalex references lookup failed" in payload["errors"][0]
+
+
+def test_search_without_snowball_has_no_snowball_block(
+    monkeypatch, server, sample_papers, citation_graph
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    payload = asyncio.run(_call(server, "search", keywords="attention", sources=["arxiv"]))
+
+    assert "snowball" not in payload
+    assert citation_graph.calls == []
+
+
+def test_search_snowball_expands_the_top_results_and_leaves_papers_alone(
+    monkeypatch, server, sample_papers, citation_graph
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    payload = asyncio.run(
+        _call(
+            server, "search", keywords="attention", sources=["arxiv"],
+            snowball="both", snowball_seeds=1, snowball_max_per_seed=9,
+        )
+    )
+
+    assert payload["count"] == 2
+    assert payload["papers"] == [paper.to_dict() for paper in sample_papers]
+    block = payload["snowball"]
+    assert block["seed_count"] == 1
+    assert block["discovered_count"] == 3
+    assert block["discovered"][0]["score"] is not None   # scored against the keywords
+    seed_id = sample_papers[0].source_id
+    assert citation_graph.calls == [(seed_id, "references", 9), (seed_id, "cited_by", 9)]
+
+
+def test_search_snowball_knows_the_whole_result_not_only_the_seeds(
+    monkeypatch, server, sample_papers
+):
+    """The second search result is not a seed. Found again through a citation
+    link, it must not come back as a new paper."""
+    second = sample_papers[1]
+    provider = _GraphProvider(
+        {(sample_papers[0].source_id, "references"): [second, _found("r9", "A New Paper")]}
+    )
+    monkeypatch.setattr("thesisagents.core.snowball._default_providers", lambda: [provider])
+
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    async def fake_shutdown():
+        return None
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    monkeypatch.setattr("thesisagents.mcp.server.shutdown_clients", fake_shutdown)
+    payload = asyncio.run(
+        _call(
+            server, "search", keywords="attention", sources=["arxiv"],
+            snowball="references", snowball_seeds=1,
+        )
+    )
+
+    found = [entry["paper"]["source_id"] for entry in payload["snowball"]["discovered"]]
+    assert found == ["r9"]
+
+
+def test_search_snowball_bad_direction_is_a_tool_error(
+    monkeypatch, server, sample_papers, citation_graph
+):
+    async def fake_run_search(query, **_kwargs):
+        return PaperCollection(query=query, papers=tuple(sample_papers))
+
+    monkeypatch.setattr("thesisagents.mcp.server.run_search", fake_run_search)
+    with pytest.raises(ToolError, match="direction must be one of"):
+        asyncio.run(
+            _call(server, "search", keywords="attention", sources=["arxiv"],
+                  snowball="sideways")
+        )

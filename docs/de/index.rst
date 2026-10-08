@@ -51,12 +51,62 @@ MCP-Workflow in 6 Schritten
    5. (Sie lesen jedes PDF und erzeugen strukturierten Summary-Dict)
    6. export(papers=[{...paper, "summary": {...}}], language="de", ...)
 
-Insgesamt 13 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
-``search``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``,
+Insgesamt 18 MCP-Tools: Discovery (``list_sources``, ``list_exports``),
+``search``, ``snowball``, ``library_add``, ``library_search``, ``library_stats``, ``fetch_paper``, ``fetch_pdf_text``, ``download_pdfs``, ``pptx_validate_template``,
 ``export`` und sechs ``pptx_*``-Deck-Operationen (``pptx_inspect``,
 ``pptx_review``, ``pptx_update_slide``, ``pptx_delete_slide``,
 ``pptx_reorder_slides``, ``pptx_add_slide``). Vollständige Referenz:
 :doc:`/mcp`.
+
+**Um themenfremde Ergebnisse zu erkennen, beginnen Sie mit den Hinweisen
+des Werkzeugs selbst.** ``--diagnostics`` (CLI) oder
+``diagnostics=true`` beim MCP-Tool ``search`` erklärt das Ranking: die
+Punktzahl jedes Papers, aufgeteilt in Relevanz, Aktualität und
+Zitationen, die übereinstimmenden Suchbegriffe und eine Empfehlung
+``keep`` / ``review`` / ``prune`` mit dem auslösenden Schwellenwert. Die
+CLI schreibt die vollständige Aufschlüsselung außerdem in
+``diagnostics.json`` im Ausgabeverzeichnis. Die Empfehlungen sind
+Hinweise und es wird nichts für Sie entfernt, lesen Sie daher die
+Abstracts der ``review``- und ``prune``-Papers, bevor Sie etwas löschen.
+
+**Prüfen Sie, welche Quellen geantwortet haben.** Jede Antwort von
+``search`` enthält ``source_stats``: für jede Quelle, wie viele
+Datensätze sie geliefert hat, wie viele eindeutige Papers ihr nach der
+Deduplizierung zugerechnet werden, und einen ``status`` mit dem Wert
+``ok``, ``failed``, ``rate_limited`` oder ``disabled``. Eine fehlerhafte
+Quelle wird übersprungen, ohne die Suche anzuhalten, lesen Sie diese
+Zahlen daher, bevor Sie schließen, dass es zu einem Thema wenige Papers
+gibt. Die CLI gibt dieselbe Tabelle nach jeder ``--query``-Suche aus.
+
+**Folgen Sie den Zitationen.** ``--snowball both`` (CLI) oder das Tool
+``snowball`` erweitert die obersten Ergebnisse entlang ihrer
+Zitationsverknüpfungen: ``references`` ergänzt, was sie zitieren, und
+``cited_by`` ergänzt, was sie zitiert. So finden sich Arbeiten, die eine
+Stichwortsuche übersieht, weil die Autoren andere Begriffe verwendet
+haben. Die Erweiterung ist begrenzt (standardmäßig ein Schritt), jedes
+gefundene Paper behält den Weg, der zu ihm führte, und alle werden gegen
+Ihre Stichwörter bewertet, sodass ein Paper nicht allein deshalb bleibt,
+weil es häufig zitiert wird.
+
+**Bewahren Sie auf, was Sie finden.** ``--library thesis.db
+--library-add`` (CLI) oder das Tool ``library_add`` speichert die Papers
+eines Laufs in einer Literaturbibliothek, einer einzigen SQLite-Datei,
+die die Sitzung überdauert. Dieselbe Suche erneut hinzuzufügen
+dupliziert nichts: Ein Paper wird an seiner DOI, seiner arXiv-ID oder
+seinem Titel erkannt, und die neue Sichtung wird in den gespeicherten
+Datensatz zusammengeführt. Danach findet ``library_search`` gespeicherte
+Papers ohne Netzwerkzugriff, und bereits bestätigte DOIs und URLs werden
+30 Tage lang nicht erneut geprüft.
+
+**Verwenden Sie Ihre eigene Vorlage.** ``--pptx-template thesis.pptx``
+(CLI) oder ``pptx_template`` beim Tool ``export`` baut das Deck auf
+einer PowerPoint-Vorlage auf, sodass Hintergrund, Logo und Layouts Ihre
+eigenen sind. Führen Sie zuerst ``thesisagents validate-template
+thesis.pptx`` aus (oder das Tool ``pptx_validate_template``): Es listet
+auf, welches Layout jede Folienart verwenden würde, und sagt, was zu
+korrigieren ist. Eine Vorlage braucht 16:9-Folien und ein Layout für den
+Folieninhalt, und eine kleine Konfigurationsdatei kann Layouts,
+Schriftarten und Farben zuordnen.
 
 Pflicht: URL / DOI-Verifikation vor Auslieferung
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -84,6 +134,17 @@ Regen-Script am Ende:
        if actual and not (p.url == actual
                           or p.url.split("v")[0] == actual.split("v")[0]):
            print(f"! {p.bibtex_key()} authored {p.url} vs real {actual}")
+
+**Der Export prüft das zur Laufzeit.** Bevor etwas geschrieben wird,
+schlagen die CLI, das MCP-Tool ``export`` und der Deck-Tab der GUI die
+DOI jedes Papers bei doi.org nach und rufen jede URL einmal ab. Eine
+nicht registrierte DOI, eine URL, die 404 antwortet, oder ein nicht
+erreichbarer Host stoppen den Export und nennen das Paper und den
+Bezeichner. Die Prüfung belegt, dass ein Bezeichner existiert, nicht
+dass er zu diesem Paper gehört, daher gelten die Regel zum Kopieren aus
+der xlsx und das Audit oben weiterhin. Offline übergeben Sie
+``--no-verify-identifiers`` (CLI) oder ``verify_identifiers=false``
+(MCP).
 
 Verbote
 ^^^^^^^
@@ -159,7 +220,7 @@ Weiterführende Quellen
 ----------------------
 
 * CLI-Flags und Umgebungsvariablen: :doc:`/cli`
-* 13 MCP-Server-Tools: :doc:`/mcp`
+* 18 MCP-Server-Tools: :doc:`/mcp`
 * PPTX-Edit-Toolkit: :doc:`/pptx_editing`
 * Die Datei ``readmes/README.de.md`` im Repo-Root enthält die vollständige
   Feature-Liste.

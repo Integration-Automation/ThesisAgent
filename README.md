@@ -64,7 +64,7 @@ it.
 6. export(papers=[{...paper, "summary": {...}}], language="zh-tw", ...)
 ```
 
-All thirteen MCP tools (including `list_sources`, `list_exports`,
+All eighteen MCP tools (including `list_sources`, `list_exports`,
 `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` /
 `pptx_add_slide` / etc.) are
 documented in [`docs/mcp.md`](docs/mcp.md).
@@ -98,6 +98,16 @@ Two fabrications caught this way in production: wrong AAAI volume
 (`v39i23.34521` vs real `v39i22.34537`) and invented author-slug path
 (`view/fang2026` instead of `v40i5.37389`).
 
+**The export checks this at run time.** Before anything is written, the
+CLI, the MCP `export` tool and the GUI Deck tab look up every paper's
+DOI at doi.org and request every URL once. A DOI that is not registered,
+a URL that answers 404, or a host that cannot be reached stops the
+export and names the paper and the identifier. The check proves that an
+identifier exists, not that it belongs to this paper, so the
+copy-from-the-xlsx rule and the audit above still apply. When working
+offline, pass `--no-verify-identifiers` (CLI) or
+`verify_identifiers=false` (MCP).
+
 ### Mandatory: prune irrelevant downloads before shipping
 
 Search keyword matching is keyword-based, so off-topic papers will
@@ -122,6 +132,15 @@ Delete `exports/<run>/pdfs/<key>.pdf` + `exports/<run>/<key>.pptx`.
 the honest record of what the search returned. Borderline cases get
 a rich summary; better to over-include than to silently drop a
 possible match.
+
+**To spot off-topic results, start from the tool's own advice.**
+`--diagnostics` (CLI) or `diagnostics=true` on the MCP `search` tool
+explains the ranking: each paper's score split into relevance, recency
+and citations, the query terms that matched, and a `keep` / `review` /
+`prune` recommendation with the threshold behind it. The CLI also writes
+the full breakdown to `diagnostics.json` in the output directory. The
+recommendations are advice and nothing is removed for you, so read the
+abstracts of the `review` and `prune` papers before deleting anything.
 
 ### Worked example
 
@@ -223,9 +242,9 @@ entry per paper in the `PaperCollection` tuple.
   (inspect / update_slide / delete_slide / reorder_slides / add_slide)
   works against any deck the exporter produces, plus the equivalent
   `pptx_*` MCP tools so an LLM agent can iterate on a generated deck.
-- **MCP server**: 13 tools — `list_sources` + `list_exports`
-  (discovery), `search`, `fetch_paper`, `fetch_pdf_text`,
-  `download_pdfs`, `export`, and the six `pptx_*` deck tools
+- **MCP server**: 18 tools — `list_sources` + `list_exports`
+  (discovery), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`,
+  `download_pdfs`, `pptx_validate_template`, `export`, and the six `pptx_*` deck tools
   (`inspect`, `review`, `update_slide`, `delete_slide`,
   `reorder_slides`, `add_slide`). Lets
   any MCP-aware LLM
@@ -250,6 +269,60 @@ entry per paper in the `PaperCollection` tuple.
   goes through Unpaywall → S2 `openAccessPdf` → arXiv title search →
   CORE.ac.uk (when keys are set). Typical lift on IEEE / ACM / Springer
   / Elsevier-heavy queries: 40-70 percentage points.
+- **Export preflight (DOI / URL verification)**: before any file is
+  written, every DOI is looked up at doi.org and every URL is requested
+  once. A wrong or unreachable identifier stops the export with a list
+  of the papers and identifiers that failed. Publisher pages that need a
+  real browser are not requested (the DOI check covers them), and a
+  server that refuses automated access is reported as not checkable
+  instead of failing the run. On by default, `--no-verify-identifiers`
+  turns it off for offline work.
+- **Explainable ranking and pruning advice**: every search records why
+  each paper ranks where it does (relevance, recency and citation parts,
+  the matched query terms, one sentence per contribution) and recommends
+  `keep`, `review` or `prune` for each result, naming the rule that
+  triggered it. A low citation count alone never triggers a
+  recommendation. Shown with `--diagnostics`, with `diagnostics=true` on
+  the MCP `search` tool, or in the Suggestion column of the GUI. Advice
+  only: no paper is removed.
+- **Per-source search statistics**: every search reports, for each
+  source, how many records it returned, how many unique papers it is
+  credited with after de-duplication, and whether it failed, was rate
+  limited or is disabled. A source that breaks is skipped without
+  stopping the search, so these counts are what tells a narrow topic
+  from a search that lost half its sources. Printed by the CLI after
+  each `--query` search, returned as `source_stats` by the MCP `search`
+  tool, and shown in the GUI status line.
+- **Citation snowballing**: `--snowball references|cited_by|both` (or
+  the MCP `snowball` tool) expands the top results along their citation
+  links, backward to what they cite and forward to what cites them, and
+  finds work a keyword search misses because the authors used other
+  words. Every dimension is capped (depth 1 by default, papers per seed,
+  papers in total), a paper reached along several paths is one paper,
+  and each discovered paper keeps the path that found it. Links come
+  from OpenAlex, Semantic Scholar and Crossref, and discovered papers
+  are scored by the same ranker, so being cited often does not count as
+  being on topic.
+- **Literature library**: `--library thesis.db` keeps what your runs
+  find in one SQLite file, so a search is no longer gone when the
+  process ends. It holds the papers, which run and source found each
+  one, their scores, the citation links from `--snowball`, and the DOI /
+  URL checks. `--library-add` merges a run in (a paper already there is
+  updated, never duplicated), `--library-search` finds stored papers
+  without any network access, and `--library-export` sends them to any
+  export format. A DOI or URL that verified in an earlier run is not
+  checked again for 30 days. Also available as the MCP tools
+  `library_add`, `library_search` and `library_stats`.
+- **Deck templates**: `--pptx-template thesis.pptx` builds the decks on
+  your own PowerPoint template, so its background, logo and layouts
+  carry the deck instead of the built-in navy-band look. Each kind of
+  slide (cover, section, content, table, references, Q&A) uses the
+  layout you name for it, and an optional TOML / JSON config
+  (`--pptx-template-config`) sets the fonts, the palette colours and
+  whether the header band and cover panel are drawn. The template is
+  checked before the search starts, and `thesisagents validate-template
+  thesis.pptx` shows which layout each kind of slide would use and what
+  to fix. Without a template the built-in deck is unchanged.
 - **Safety by default**: HTTPS-only HTTP transport, per-source rate
   limit (token bucket), `defusedxml` for any XML payload,
   path-traversal-safe export paths, no `eval` / `exec` / `pickle` on
@@ -330,6 +403,16 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | Skip the paywall prompt and proceed. |
 | `--max-slides` | Per-paper slide cap (default 25; pass 0 for unlimited). |
 | `--dark-mode` | Render the pptx with a dark background + near-white text. The default is the light navy-band deck. |
+| `--pptx-template FILE` | Build decks on a PowerPoint template (.pptx / .potx) instead of the built-in navy-band deck. Checked before the search starts: it needs 16:9 slides and a layout for slide content. `thesisagents validate-template FILE` shows what an export would use. |
+| `--pptx-template-config FILE` | A TOML / JSON file of overrides for `--pptx-template`: the layout for each kind of slide, font families, palette colours, and whether the header band and cover panel are drawn. |
+| `--no-verify-identifiers` | Export without checking the papers' DOIs and URLs. By default a wrong or unreachable DOI / URL stops the run before anything is written. For offline use. |
+| `--diagnostics` | Explain the ranking of a `--query` search: prints each paper's score (relevance + recency + citations) and an advisory `keep` / `review` / `prune` recommendation, and writes the full breakdown to `diagnostics.json` in `--out`. No paper is removed. |
+| `--snowball` | Expand the results along citation links before exporting: `references` (what the top results cite), `cited_by` (what cites them) or `both`. The new papers are appended and go through the same download and export. Off by default. |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | Bounds for `--snowball`: top results to expand (default 5), steps to follow (1, at most 3), papers per seed and direction (20), new papers in all (20), and the lowest relevance to keep (0..1, off by default). |
+| `--library PATH` | A literature library: an SQLite file that keeps papers, citation links and identifier checks between runs. Created when missing. With a normal run it is the identifier cache, so a DOI or URL verified earlier is not checked again. |
+| `--library-add` | Merge this run's papers into `--library`, with the query, each paper's score and the citation links from `--snowball`. A paper already in the library is merged, not duplicated. |
+| `--library-search QUERY` | List the papers in `--library` that match QUERY, best first, and exit. Nothing is fetched. `--max` caps the list, and `""` lists the most recently seen papers. |
+| `--library-export [QUERY]` | Export the papers in `--library` through `--export`, all of them or those matching QUERY. Default formats: `xlsx,bib`. No PDF is downloaded unless `--export` includes `pdf`. |
 | `--quiet` | Suppress per-paper printout. |
 
 ### Environment variables
@@ -393,11 +476,16 @@ Tools:
 |---|---|
 | `list_sources` | Enumerate every plugin + report whether each is enabled in the current env. Call this once before `search`. |
 | `list_exports` | Enumerate every export format with its one-line description and whether it writes one aggregate file or one file per paper. |
-| `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. |
+| `search` | Keywords → list of papers. Accepts `top_tier_only`, `min_citations`; defaults to the full no-API-key source mix. `diagnostics=true` adds a per-paper score breakdown and an advisory `keep` / `review` / `prune` recommendation (nothing is removed from `papers`). Always returns `source_stats`: per source, `requested`, `returned`, `after_dedup` and `status` (`ok` / `failed` / `rate_limited` / `disabled`). `snowball="both"` also expands the top results along citation links and adds a `snowball` block (`papers` is unchanged). |
+| `snowball` | Seed papers → papers they cite (`references`), papers that cite them (`cited_by`) or `both`, within fixed bounds (`depth`, `max_per_seed`, `max_total`). Each discovered paper carries the path that reached it. Optional `keywords` score and order them, `min_relevance` drops the off-topic ones. |
+| `library_add` | Papers → a literature library (the SQLite file at `library`), kept for later sessions. Adding is a merge: a paper already there is updated, not duplicated. `relations` stores the citation links `snowball` returns. |
+| `library_search` | Query → papers already in the library, scored like a search, with no network access. Each comes with its history: first and last seen, and which sources returned it. |
+| `library_stats` | Library → how many papers, runs and citation links it holds, the papers per source, and the latest imports. |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE identifier → single paper. |
 | `fetch_pdf_text` | Download one PDF, return extracted body text. **The MCP path to "I read the paper".** |
 | `download_pdfs` | Batch-download a papers list's PDFs into `{out_dir}/pdfs/`. Returns per-paper results keyed by BibTeX key. |
-| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `false` — the project default is the light navy-band deck, pass `true` for the dark OLED / low-light post-pass). |
+| `export` | Papers list + formats → writes `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json`. Accepts a `summary` field per paper for the rich thesis-style schema, `max_slides_per_paper` (default 25), and `dark_mode` (default `false` — the project default is the light navy-band deck, pass `true` for the dark OLED / low-light post-pass). Verifies every DOI / URL before writing (`verify_identifiers`, default `true`): a wrong or unreachable identifier fails the call and names the paper, and the response carries a `verification` report. `library` names a literature library to keep the identifier checks in, so an identifier verified by an earlier call is not checked again. `pptx_template` (with an optional `pptx_template_config`) builds the deck on your own PowerPoint template. |
+| `pptx_validate_template` | Template → whether it can be used for `export(pptx_template=...)`: the layout each kind of slide would use, plus errors and warnings that say what to change. Nothing is rendered. |
 | `pptx_inspect` | Read slide / shape structure of an existing deck. |
 | `pptx_review` | Audit a deck in one call — overflow + colour contracts + `paper_rule` section completeness. Auto-detects the deck language; also the CLI `python -m thesisagents review <deck.pptx>`. |
 | `pptx_update_slide` | Replace `title` / `body` / `meta` (by shape name) or arbitrary shapes by index. |
@@ -428,8 +516,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (thesis-style) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # offline search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP server (13 tools)
+│   ├── mcp/                         # FastMCP server (18 tools)
 │   ├── sources/<name>/              # plugin folders: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,
@@ -471,6 +560,10 @@ mode toggle + slide-cap + max-figures controls flow through to
 `ExportOptions`). The Windows release zip ships the Nuitka-compiled
 bundle with PySide6 included, so `thesisagents.exe gui` works
 without a separate Python install.
+The Search tab can also follow citations from the top results
+(snowball), keep results in a library file and search that library with
+no network, and the Deck tab can build the deck on your own PowerPoint
+template.
 **UI ships in all 14 languages** (English, 繁體中文, 简体中文,
 日本語, Español, Français, Deutsch, 한국어, Português, Русский,
 Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — first run picks
@@ -530,7 +623,7 @@ Two GitHub Actions workflows live under `.github/workflows/`:
      adding startup latency and tripping antivirus heuristics on
      locked-down machines. Windows-only by design too: Linux / macOS
      users install from PyPI. Build cache keyed on `pyproject.toml`
-     cuts warm builds from ~70 min cold to ~5–10 min.
+     cuts warm builds from ~85 min cold to ~5–10 min.
   5. **`publish-release`** — unmark the draft once the Nuitka asset
      is uploaded, so users never see a half-finished release.
 
@@ -550,7 +643,7 @@ To enable PyPI publishing + release executables:
    General → Workflow permissions → Read and write permissions`. The
    bump commit is pushed by the workflow's `GITHUB_TOKEN`.
 4. Cut releases by merging PRs into `main`. The pipeline takes
-   ~3–5 min to publish to PyPI and ~50–70 min more (cold) or ~5–10 min
+   ~3–5 min to publish to PyPI and ~80–90 min more (cold) or ~5–10 min
    (warm Nuitka cache) for the Windows zip to attach.
 
 The `publish-pypi` job intentionally does NOT attach a GitHub

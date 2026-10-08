@@ -14,7 +14,7 @@
 
 ## इस परियोजना को चलाने वाले AI एजेंट के लिए
 
-**यदि आप एक LLM (Claude Code, Cursor, Aider, Codex CLI, …) हैं जो यह जानने के लिए इस README को पढ़ रहे हैं कि क्या करना है — यहाँ से शुरू करें।** नीचे दिया गया सब कुछ [`AGENTS.md`](AGENTS.md) (एजेंट-क्रॉस मिरर) और [`CLAUDE.md`](CLAUDE.md) (आधिकारिक संदर्भ) में भी पिन किया गया है; गैर-तुच्छ परिवर्तनों से पहले उन्हें पढ़ें।
+**यदि आप एक LLM (Claude Code, Cursor, Aider, Codex CLI, …) हैं जो यह जानने के लिए इस README को पढ़ रहे हैं कि क्या करना है — यहाँ से शुरू करें।** नीचे दिया गया सब कुछ [`AGENTS.md`](../AGENTS.md) (एजेंट-क्रॉस मिरर) और [`CLAUDE.md`](../CLAUDE.md) (आधिकारिक संदर्भ) में भी पिन किया गया है; गैर-तुच्छ परिवर्तनों से पहले उन्हें पढ़ें।
 
 ### उपयोगकर्ता वास्तव में क्या चाहता है
 
@@ -37,7 +37,7 @@
 6. export(papers=[{...paper, "summary": {...}}], language="hi", ...)
 ```
 
-सभी तेरह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / आदि सहित) [`docs/mcp.md`](docs/mcp.md) में प्रलेखित हैं।
+सभी अठारह MCP उपकरण (`list_sources`, `list_exports`, `download_pdfs`, `pptx_inspect` / `pptx_review` / `pptx_update_slide` / `pptx_add_slide` / आदि सहित) [`docs/mcp.md`](../docs/mcp.md) में प्रलेखित हैं।
 
 ### अनिवार्य: डिलीवरी से पहले URL / DOI सत्यापन
 
@@ -60,6 +60,15 @@ for p in ALL_PAPERS:
 
 प्रोडक्शन में इसी तरीके से पकड़े गए दो कूट: गलत AAAI खंड (`v39i23.34521` बनाम वास्तविक `v39i22.34537`) और मनगढ़ंत लेखक-स्लग पथ (`v40i5.37389` के बजाय `view/fang2026`)।
 
+**Export इसे run time पर जाँचता है।** कुछ भी लिखने से पहले CLI, MCP
+`export` tool और GUI का Deck tab हर paper का DOI doi.org पर देखते हैं और
+हर URL को एक बार request करते हैं। जो DOI registered नहीं है, जो URL 404
+लौटाता है, या जिस host तक पहुँचा नहीं जा सकता, वह export को रोक देता है
+और paper तथा identifier का नाम बताता है। यह जाँच सिद्ध करती है कि
+identifier मौजूद है, यह नहीं कि वह इसी paper का है, इसलिए xlsx से copy
+करने का नियम और ऊपर का audit अब भी ज़रूरी हैं। Offline काम करते समय
+`--no-verify-identifiers` (CLI) या `verify_identifiers=false` (MCP) दें।
+
 ### अनिवार्य: डिलीवरी से पहले अप्रासंगिक डाउनलोड हटाएँ
 
 खोज कीवर्ड मिलान कीवर्ड-आधारित है, इसलिए विषय से बाहर के पेपर घुस आएँगे: एक "Claude code" क्वेरी ने एक Viterbi-decoder पेपर लौटाया क्योंकि दोनों में "code" है; "LLM code review" एक object-detection साहित्य समीक्षा से मेल खा गया। एक बार जब आप सार पढ़ लें और किसी पेपर को उपयोगकर्ता के वास्तविक इरादे के लिए विषय से बाहर वर्गीकृत करें, तो run निर्देशिका से उसे हटाएँ:
@@ -76,9 +85,18 @@ for key in irrelevant_keys:
 
 `exports/<run>/pdfs/<key>.pdf` + `exports/<run>/<key>.pptx` हटाएँ। aggregate `<slug>-<timestamp>.xlsx` / `.bib` को **रखें** — वे इस बात का ईमानदार रिकॉर्ड हैं कि खोज ने क्या लौटाया। सीमांत मामलों को समृद्ध सारांश मिलता है; किसी संभावित मिलान को चुपचाप गिराने की तुलना में अधिक-शामिल करना बेहतर है।
 
+**विषय से बाहर के परिणाम पहचानने के लिए tool की अपनी सलाह से शुरू
+करें।** `--diagnostics` (CLI) या MCP `search` tool पर `diagnostics=true`
+ranking समझाता है: हर paper का score relevance, recency और citations में
+बँटा हुआ, query के जो शब्द मिले, और `keep` / `review` / `prune` की
+सिफ़ारिश उस threshold के साथ जिसने उसे trigger किया। CLI पूरा breakdown
+output directory में `diagnostics.json` में भी लिखता है। ये सिफ़ारिशें
+केवल सलाह हैं और आपके लिए कुछ भी हटाया नहीं जाता, इसलिए कुछ भी delete
+करने से पहले `review` और `prune` वाले papers के abstract पढ़ें।
+
 ### कार्यान्वित उदाहरण
 
-[`scripts/regen_fang2026.py`](scripts/regen_fang2026.py) में ठीक इसी प्रक्रिया से हाथ से लिखा एक समृद्ध सारांश है (एकल शोध-पत्र, rich-tier, zh-tw, हर समृद्ध फ़ील्ड भरा हुआ)। बहु-शोध-पत्र खोज इसी आकार का अनुसरण करती है — `PaperCollection` tuple में प्रति शोध-पत्र एक `Paper(...summary=PaperSummary(...))` प्रविष्टि।
+[`scripts/regen_fang2026.py`](../scripts/regen_fang2026.py) में ठीक इसी प्रक्रिया से हाथ से लिखा एक समृद्ध सारांश है (एकल शोध-पत्र, rich-tier, zh-tw, हर समृद्ध फ़ील्ड भरा हुआ)। बहु-शोध-पत्र खोज इसी आकार का अनुसरण करती है — `PaperCollection` tuple में प्रति शोध-पत्र एक `Paper(...summary=PaperSummary(...))` प्रविष्टि।
 
 ### निषेध
 
@@ -107,13 +125,68 @@ for key in irrelevant_keys:
   - `.csv` — spreadsheets / त्वरित grep छँटाई के लिए flat एक-पंक्ति-प्रति-शोध-पत्र तालिका (RFC-4180 quoting, इसलिए शीर्षकों में अल्पविराम कभी कॉलम नहीं खिसकाते)।
   - `.csl.json` — Pandoc / citeproc के लिए CSL-JSON; किसी भी CSL शैली (APA, IEEE, Nature, …) में bibliography रेंडर करें। `.csl.json` एक्सटेंशन इसे सादे `.json` dump से अलग रखता है।
 - **PPT संपादन टूलकिट**: `thesisagents.exporters.pptx_edit` (inspect / update_slide / delete_slide / reorder_slides / add_slide) एक्सपोर्टर द्वारा उत्पन्न किसी भी डेक पर काम करता है, साथ ही समकक्ष `pptx_*` MCP उपकरण ताकि एक LLM एजेंट उत्पन्न डेक पर पुनरावृत्ति कर सके।
-- **MCP सर्वर**: 13 उपकरण — `list_sources` + `list_exports` (खोज/सूची), `search`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `export`, और छह `pptx_*` डेक उपकरण (`inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`)। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
+- **MCP सर्वर**: 18 उपकरण — `list_sources` + `list_exports` (खोज/सूची), `search`, `snowball`, `library_add`, `library_search`, `library_stats`, `fetch_paper`, `fetch_pdf_text`, `download_pdfs`, `pptx_validate_template`, `export`, और छह `pptx_*` डेक उपकरण (`inspect`, `review`, `update_slide`, `delete_slide`, `reorder_slides`, `add_slide`)। किसी भी MCP-अनुकूल LLM (Claude Code, Claude Desktop, Cursor, …) को पूरा कार्यप्रवाह संचालित करने देता है।
 - **दो समृद्धि पथ** सार से आगे एक वास्तविक थीसिस-शैली डेक तक जाने के लिए:
   - **LLM-as-agent (कोई API key नहीं)** — कॉलिंग LLM `fetch_pdf_text` के माध्यम से PDF मुख्य पाठ पढ़ता है, संदर्भ में एक संरचित सारांश लिखता है, और उसे `export` को पास करता है।
   - **Python pipeline (`--enrich`)** — CLI स्वयं Anthropic का API कॉल करती है; डिफ़ॉल्ट मॉडल `claude-opus-4-7`।
 - **दृश्यमान-Chrome प्रकाशक प्रवाह**: Scholar SERP, IEEE `/rest/search`, और हर paywalled-PDF डाउनलोड (ieeexplore / dl.acm / link.springer / sciencedirect / wiley / oup / nature / science / …) `selenium` के माध्यम से एक वास्तविक दृश्यमान Chrome सत्र के भीतर चलते हैं। उपयोगकर्ता लाइव विंडो में एक बार captcha हल करता है / SSO पूरा करता है; `THESISAGENTS_CHROME_PROFILE_DIR` कुकीज़ को रनों के बीच बनाए रखता है।
 - **LLM-as-agent प्रवाह**: MCP उपकरण खोज, PDF डाउनलोड और पाठ निष्कर्षण प्रदान करते हैं। `scripts/regen_*.py` में प्रति शोध-पत्र एक समृद्ध `PaperSummary` हाथ से लिखने के पुनरुत्पाद्य उदाहरण हैं।
 - **OA PDF resolver**: dedup के बाद, `pdf_url` रहित हर शोध-पत्र Unpaywall → S2 `openAccessPdf` → arXiv शीर्षक खोज → CORE.ac.uk (जब keys सेट हों) से गुज़रता है। IEEE / ACM / Springer / Elsevier-भारी क्वेरियों पर विशिष्ट वृद्धि: 40-70 प्रतिशत-अंक।
+- **Export preflight (DOI / URL सत्यापन)**: कोई भी file लिखने से पहले हर
+  DOI doi.org पर देखा जाता है और हर URL को एक बार request किया जाता है।
+  ग़लत या पहुँच से बाहर identifier export को रोक देता है और विफल papers
+  तथा identifiers की सूची देता है। जिन publisher pages को असली browser
+  चाहिए उन्हें request नहीं किया जाता (DOI जाँच उन्हें cover करती है),
+  और जो server automated access से इनकार करता है उसे run विफल करने के
+  बजाय जाँच-योग्य नहीं के रूप में report किया जाता है। Default रूप से
+  चालू, offline काम के लिए `--no-verify-identifiers` इसे बंद करता है।
+- **समझाने योग्य ranking और pruning सलाह**: हर search दर्ज करता है कि हर
+  paper अपनी जगह पर क्यों है (relevance, recency और citation के हिस्से,
+  query के मिले हुए शब्द, हर योगदान के लिए एक वाक्य) और हर परिणाम के लिए
+  `keep`, `review` या `prune` की सिफ़ारिश करता है, trigger हुए नियम के
+  नाम के साथ। केवल कम citation count कभी कोई सिफ़ारिश trigger नहीं करता।
+  `--diagnostics`, MCP `search` tool पर `diagnostics=true`, या GUI के
+  सुझाव column में देखें। केवल सलाह: कोई paper हटाया नहीं जाता।
+- **हर source के search आँकड़े**: हर search बताता है कि हर source ने
+  कितने records लौटाए, de-duplication के बाद कितने unique papers उसके
+  खाते में गए, और वह विफल हुआ, rate limit में फँसा या बंद है या नहीं।
+  विफल source को search रोके बिना छोड़ दिया जाता है, इसलिए यही संख्याएँ
+  बताती हैं कि विषय पर सचमुच कम papers हैं या search ने अपने आधे sources
+  खो दिए। CLI इन्हें हर `--query` search के बाद print करता है, MCP
+  `search` tool इन्हें `source_stats` के रूप में लौटाता है, और GUI
+  status line में दिखाता है।
+- **Citation snowball खोज**: `--snowball references|cited_by|both` (या
+  MCP `snowball` tool) शीर्ष परिणामों को उनके citation links के सहारे
+  फैलाता है, पीछे की ओर जिन्हें वे cite करते हैं और आगे की ओर जो उन्हें
+  cite करते हैं, और वह काम खोज निकालता है जिसे keyword search इसलिए चूक
+  जाता है कि लेखकों ने दूसरे शब्द इस्तेमाल किए। हर आयाम की सीमा तय है
+  (default depth 1, प्रति seed papers, कुल papers), कई रास्तों से पहुँचा
+  गया paper एक ही गिना जाता है, और हर खोजा गया paper वह रास्ता सँभाल कर
+  रखता है जिससे वह मिला। Links OpenAlex, Semantic Scholar और Crossref से
+  आते हैं, और खोजे गए papers को वही ranker score करता है, इसलिए बहुत
+  cite होना विषय से जुड़ा होना नहीं माना जाता।
+- **Literature library**: `--library thesis.db` आपके runs में मिली
+  चीज़ों को एक ही SQLite file में सँभाल कर रखता है, इसलिए process ख़त्म
+  होने पर search का नतीजा ग़ायब नहीं होता। इसमें papers, हर paper किस
+  run और किस source से मिला, उनके scores, `--snowball` से मिले citation
+  links और DOI / URL की जाँच के नतीजे रहते हैं। `--library-add` एक run
+  को इसमें मिला देता है (पहले से मौजूद paper update होता है, कभी
+  duplicate नहीं होता), `--library-search` बिना network के सहेजे हुए
+  papers खोजता है, और `--library-export` उन्हें किसी भी export format
+  में भेजता है। किसी पिछले run में verify हो चुका DOI या URL 30 दिनों तक
+  दोबारा नहीं जाँचा जाता। MCP tools `library_add`, `library_search` और
+  `library_stats` के रूप में भी उपलब्ध है।
+- **Deck templates**: `--pptx-template thesis.pptx` आपके अपने PowerPoint
+  template पर slides बनाता है, इसलिए built-in navy-band रूप की जगह
+  template का background, logo और layouts ही deck को आकार देते हैं। हर
+  तरह की slide (cover, section, content, table, references, Q&A) वही
+  layout इस्तेमाल करती है जो आप उसके लिए तय करते हैं, और एक वैकल्पिक
+  TOML / JSON config (`--pptx-template-config`) fonts, palette के रंग और
+  header band तथा cover panel बनाए जाएँ या नहीं, यह तय करता है। Search
+  शुरू होने से पहले template की जाँच होती है, और `thesisagents
+  validate-template thesis.pptx` बताता है कि हर तरह की slide कौन-सा
+  layout इस्तेमाल करेगी और क्या ठीक करना है। Template के बिना built-in
+  deck जस का तस रहता है।
 - **डिफ़ॉल्ट रूप से सुरक्षित**: HTTPS-only HTTP परिवहन, प्रति-स्रोत दर सीमा (token bucket), किसी भी XML payload के लिए `defusedxml`, path-traversal-सुरक्षित निर्यात पथ, उपयोगकर्ता इनपुट पर कोई `eval` / `exec` / `pickle` नहीं।
 - **zh-tw / zh-cn शब्दावली रक्षक**: `tests/test_i18n.py::test_zh_tw_files_use_traditional_chinese_vocabulary` में ~244 regex पैटर्न पारंपरिक हांज़ी में रेंडर किए गए सरलीकृत-चीनी उधार शब्द पकड़ते हैं (जैसे `內存` → `記憶體`, `魯棒性` → `穩健性`, `軟件` → `軟體`, `緩存` → `快取`)। वही रक्षक zh-cn locale स्ट्रिंग्स के लिए उलटा चलता है। पूर्ण नियम + regex कैटलॉग `.claude/agents/rules/language-vocabulary-check.md` में हैं।
 
@@ -184,6 +257,16 @@ py -m thesisagents --paper "https://arxiv.org/abs/1706.03762" `
 | `--yes` | paywall प्रॉम्प्ट छोड़ें और आगे बढ़ें। |
 | `--max-slides` | प्रति-शोध-पत्र स्लाइड सीमा (डिफ़ॉल्ट 25; असीमित के लिए 0 पास करें)। |
 | `--dark-mode` | pptx को गहरे पृष्ठभूमि + लगभग-सफ़ेद टेक्स्ट के साथ render करें। डिफ़ॉल्ट हल्का navy-band डेक है। |
+| `--pptx-template FILE` | Built-in navy-band deck की जगह PowerPoint template (.pptx / .potx) पर slides बनाता है। Search शुरू होने से पहले जाँचा जाता है: इसमें 16:9 slides और content के लिए एक layout होना चाहिए। `thesisagents validate-template FILE` दिखाता है कि export क्या इस्तेमाल करेगा। |
+| `--pptx-template-config FILE` | `--pptx-template` के लिए overrides वाली TOML / JSON file: हर तरह की slide का layout, fonts, palette के रंग, और header band तथा cover panel बनाए जाएँ या नहीं। |
+| `--no-verify-identifiers` | Papers के DOI और URL जाँचे बिना export करता है। Default रूप से ग़लत या पहुँच से बाहर DOI / URL कुछ भी लिखने से पहले run रोक देता है। Offline उपयोग के लिए। |
+| `--diagnostics` | `--query` search की ranking समझाता है: हर paper का score (relevance + recency + citations) और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश print करता है, और पूरा breakdown `--out` में `diagnostics.json` में लिखता है। कोई paper हटाया नहीं जाता। |
+| `--snowball` | Export से पहले परिणामों को citation links के सहारे फैलाता है: `references` (शीर्ष परिणाम जिन्हें cite करते हैं), `cited_by` (जो उन्हें cite करते हैं) या `both`। नए papers अंत में जोड़े जाते हैं और उसी download तथा export से गुज़रते हैं। Default रूप से बंद। |
+| `--snowball-seeds` / `--snowball-depth` / `--snowball-max-per-seed` / `--snowball-max-total` / `--snowball-min-relevance` | `--snowball` की सीमाएँ: फैलाए जाने वाले शीर्ष परिणाम (default 5), कितने कदम चलना है (1, अधिकतम 3), प्रति seed और दिशा papers (20), कुल नए papers (20), और रखी जाने वाली न्यूनतम relevance (0..1, default रूप से बंद)। |
+| `--library PATH` | Literature library: एक SQLite file जो runs के बीच papers, citation links और identifiers की जाँच के नतीजे सँभाल कर रखती है। मौजूद न हो तो बना दी जाती है। सामान्य run में यह identifier cache का काम करती है, इसलिए पहले verify हो चुका DOI या URL दोबारा नहीं जाँचा जाता। |
+| `--library-add` | इस run के papers को `--library` में मिला देता है, साथ में query, हर paper का score और `--snowball` से मिले citation links। Library में पहले से मौजूद paper merge होता है, duplicate नहीं होता। |
+| `--library-search QUERY` | `--library` के वे papers सूचीबद्ध करता है जो QUERY से मेल खाते हैं, सबसे अच्छे पहले, और बाहर निकल जाता है। कुछ भी fetch नहीं होता। `--max` सूची को सीमित करता है, और `""` सबसे हाल में देखे गए papers दिखाता है। |
+| `--library-export [QUERY]` | `--library` के papers को `--export` के ज़रिए export करता है, सभी या केवल QUERY से मेल खाने वाले। Default formats: `xlsx,bib`। जब तक `--export` में `pdf` न हो, कोई PDF download नहीं होता। |
 | `--quiet` | प्रति-शोध-पत्र प्रिंटआउट दबाएँ। |
 
 ### पर्यावरण चर
@@ -241,11 +324,16 @@ claude mcp add thesisagents -- ".venv\Scripts\python.exe" -m thesisagents.mcp
 |---|---|
 | `list_sources` | प्रत्येक plugin की गणना करें + रिपोर्ट करें कि वर्तमान env में प्रत्येक सक्षम है या नहीं। `search` से पहले इसे एक बार कॉल करें। |
 | `list_exports` | प्रत्येक निर्यात प्रारूप की एक-पंक्ति व्याख्या + यह एक aggregate फ़ाइल लिखता है या प्रति-शोध-पत्र एक फ़ाइल, इसके साथ गणना करें। |
-| `search` | कीवर्ड → शोध-पत्रों की सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूर्ण API-key-रहित स्रोत मिश्रण। |
+| `search` | कीवर्ड → शोध-पत्रों की सूची। `top_tier_only`, `min_citations` स्वीकार करता है; डिफ़ॉल्ट पूर्ण API-key-रहित स्रोत मिश्रण। `diagnostics=true` हर paper का score breakdown और सलाह के तौर पर `keep` / `review` / `prune` की सिफ़ारिश जोड़ता है (`papers` से कुछ नहीं हटाया जाता)। हमेशा `source_stats` लौटाता है: हर source के लिए `requested`, `returned`, `after_dedup` और `status` (`ok` / `failed` / `rate_limited` / `disabled`)। `snowball="both"` शीर्ष परिणामों को citation links के सहारे भी फैलाता है और एक `snowball` block जोड़ता है (`papers` नहीं बदलता)। |
+| `snowball` | Seed papers → वे papers जिन्हें वे cite करते हैं (`references`), वे papers जो उन्हें cite करते हैं (`cited_by`) या `both`, तय सीमाओं (`depth`, `max_per_seed`, `max_total`) के भीतर। हर खोजे गए paper के साथ वह रास्ता आता है जिससे वह मिला। वैकल्पिक `keywords` उन्हें score और क्रमबद्ध करते हैं, और `min_relevance` विषय से बाहर वालों को हटा देता है। |
+| `library_add` | Papers → एक literature library (`library` पर स्थित SQLite file), जो बाद के sessions के लिए सँभाल कर रखी जाती है। जोड़ना यानी merge करना: पहले से मौजूद paper update होता है, duplicate नहीं होता। `relations` में `snowball` से लौटे citation links रखे जाते हैं। |
+| `library_search` | Query → library में पहले से मौजूद papers, search की तरह ही score किए हुए, बिना network के। हर paper के साथ उसका इतिहास आता है: पहली और आख़िरी बार कब देखा गया, और किन sources ने उसे लौटाया। |
+| `library_stats` | Library → उसमें कितने papers, runs और citation links हैं, हर source के papers, और सबसे हाल के imports। |
 | `fetch_paper` | arXiv / DOI / PMID / IEEE पहचानकर्ता → एकल शोध-पत्र। |
 | `fetch_pdf_text` | एक PDF डाउनलोड करें, निकाला गया मुख्य पाठ लौटाएँ। **"मैंने शोध-पत्र पढ़ा" तक का MCP पथ।** |
 | `download_pdfs` | एक शोध-पत्र सूची की PDFs को `{out_dir}/pdfs/` में बैच-डाउनलोड करें। BibTeX कुंजी द्वारा अनुक्रमित प्रति-शोध-पत्र परिणाम लौटाता है। |
-| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। rich थीसिस-शैली schema के लिए प्रति-शोध-पत्र `summary` फ़ील्ड, `max_slides_per_paper` (डिफ़ॉल्ट 25), और `dark_mode` (डिफ़ॉल्ट `false` — परियोजना डिफ़ॉल्ट हल्का navy-band डेक है, dark OLED / low-light post-pass के लिए `true` पास करें) स्वीकार करता है। |
+| `export` | शोध-पत्र सूची + प्रारूप → `.pptx/.xlsx/.md/.bib/.json/.ris/.csv/.csl.json` लिखता है। rich थीसिस-शैली schema के लिए प्रति-शोध-पत्र `summary` फ़ील्ड, `max_slides_per_paper` (डिफ़ॉल्ट 25), और `dark_mode` (डिफ़ॉल्ट `false` — परियोजना डिफ़ॉल्ट हल्का navy-band डेक है, dark OLED / low-light post-pass के लिए `true` पास करें) स्वीकार करता है। लिखने से पहले हर DOI / URL verify करता है (`verify_identifiers`, default `true`): ग़लत या पहुँच से बाहर identifier call को विफल करता है और paper का नाम बताता है, और response में `verification` report होती है। `library` उस literature library का नाम देता है जिसमें identifiers की जाँच के नतीजे रखे जाते हैं, इसलिए किसी पिछले call में verify हो चुका identifier दोबारा नहीं जाँचा जाता। `pptx_template` (वैकल्पिक `pptx_template_config` के साथ) deck को आपके अपने PowerPoint template पर बनाता है। |
+| `pptx_validate_template` | Template → क्या उसे `export(pptx_template=...)` के लिए इस्तेमाल किया जा सकता है: हर तरह की slide कौन-सा layout लेगी, साथ में errors और warnings जो बताते हैं कि क्या बदलना है। कुछ भी render नहीं होता। |
 | `pptx_inspect` | मौजूदा डेक की स्लाइड / शेप संरचना पढ़ें। |
 | `pptx_review` | एक ही कॉल में डेक ऑडिट करें — overflow + रंग अनुबंध + `paper_rule` अनुभाग पूर्णता। डेक भाषा स्वतः पहचानता है; CLI `python -m thesisagents review <deck.pptx>` भी। |
 | `pptx_update_slide` | `title` / `body` / `meta` (शेप नाम से) या मनमाने शेप (अनुक्रमणिका से) प्रतिस्थापित करें। |
@@ -265,7 +353,7 @@ LLM-as-agent प्रवाह (`ANTHROPIC_API_KEY` की आवश्यक�
           language="hi", formats=["pptx","bib"], dark_mode=true, ...)
 ```
 
-पूर्ण संदर्भ [`docs/mcp.md`](docs/mcp.md) में।
+पूर्ण संदर्भ [`docs/mcp.md`](../docs/mcp.md) में।
 
 ## परियोजना संरचना
 
@@ -276,8 +364,9 @@ ThesisAgents/
 │   ├── fetchers/                    # HTTPS-only async client, token-bucket rate limit
 │   ├── exporters/                   # pptx (थीसिस-शैली) · xlsx · bib · md · json · ris · csv · csl · pptx_edit · i18n
 │   ├── intelligence/                # PDF fetch + Anthropic summariser  ([intelligence] extra)
+│   ├── library/                     # SQLite literature library kept across runs
 │   ├── evaluation/                  # ऑफ़लाइन search-quality benchmark (docs/search-quality.md)
-│   ├── mcp/                         # FastMCP सर्वर (13 उपकरण)
+│   ├── mcp/                         # FastMCP सर्वर (18 उपकरण)
 │   ├── sources/<name>/              # plugin फ़ोल्डर: arxiv, semantic_scholar,
 │   │                                #   openalex, pubmed, acm, ieee, scholar,
 │   │                                #   dblp, crossref, openaire, springer,
@@ -311,16 +400,20 @@ thesisagents-gui                 # या: thesisagents gui
 ```
 
 विंडो में चार tab हैं — **Search**, **Settings** (QSettings के माध्यम से API keys बनाए रखता है), **Enrich** (एक `collection_ready` सिग्नल पर LLM-as-agent / Python-pipeline समृद्धि चलाता है), और **Deck** (Light mode toggle + slide-cap + max-figures नियंत्रण `ExportOptions` तक प्रवाहित होते हैं)। Windows रिलीज़ zip में PySide6 सहित Nuitka-compiled बंडल आता है, इसलिए `thesisagents.exe gui` एक अलग Python इंस्टॉल के बिना काम करता है।
+Search tab शीर्ष परिणामों से citations का पीछा भी कर सकता है (snowball),
+results को एक library file में रख सकता है और बिना network के उस library
+में खोज सकता है, और Deck tab आपके अपने PowerPoint template पर deck बना
+सकता है।
 **UI सभी 14 भाषाओं में आता है** (English, 繁體中文, 简体中文, 日本語, Español, Français, Deutsch, 한국어, Português, Русский, Italiano, Tiếng Việt, हिन्दी, Bahasa Indonesia) — पहला रन आपके OS locale से भाषा चुनता है, फिर **Settings → Interface language** आपको इसे बदलने देता है। डेक आउटपुट भाषा एक अलग dropdown है ताकि आप UI को एक भाषा में चला सकें और स्लाइड दूसरी में जारी कर सकें। लेआउट उत्तरदायी है: हर फ़ॉर्म एक `QScrollArea` में बैठता है और विंडो 900×600 तक नीचे resize होती है (फिर भी 720p में फ़िट), डिफ़ॉल्ट रूप से HiDPI स्केलिंग चालू के साथ।
 
-पूर्ण संदर्भ: [`docs/gui.md`](docs/gui.md)।
+पूर्ण संदर्भ: [`docs/gui.md`](../docs/gui.md)।
 
 ## एक स्टैंडअलोन निष्पादन योग्य के रूप में पैकेजिंग
 
 Python इंस्टॉल के बिना चलने वाला एकल-फ़ाइल बाइनरी शिप करने के लिए दो packagers प्रलेखित हैं:
 
-- **[`docs/packaging-pyinstaller.md`](docs/packaging-pyinstaller.md)** — तेज़ build (एक मिनट से कम), 200–300 MB आउटपुट, 2–4 s स्टार्टअप। तब सबसे अच्छा जब आप build स्क्रिप्ट पर पुनरावृत्ति करते हैं।
-- **[`docs/packaging-nuitka.md`](docs/packaging-nuitka.md)** — धीमा build (5–15 मिनट), 80–150 MB आउटपुट, उप-सेकंड स्टार्टअप, कुछ bytecode सुरक्षा। तब सबसे अच्छा जब अंतिम उपयोगकर्ता बाइनरी को कई बार चलाते हैं।
+- **[`docs/packaging-pyinstaller.md`](../docs/packaging-pyinstaller.md)** — तेज़ build (एक मिनट से कम), 200–300 MB आउटपुट, 2–4 s स्टार्टअप। तब सबसे अच्छा जब आप build स्क्रिप्ट पर पुनरावृत्ति करते हैं।
+- **[`docs/packaging-nuitka.md`](../docs/packaging-nuitka.md)** — धीमा build (5–15 मिनट), 80–150 MB आउटपुट, उप-सेकंड स्टार्टअप, कुछ bytecode सुरक्षा। तब सबसे अच्छा जब अंतिम उपयोगकर्ता बाइनरी को कई बार चलाते हैं।
 
 दोनों docs परियोजना-विशिष्ट पेच को कवर करते हैं — `sources/<name>/` के अंतर्गत dynamic source plugins — और CLI तथा MCP सर्वर प्रवेश-बिंदुओं के लिए एक सत्यापित कमांड शिप करते हैं।
 
@@ -333,7 +426,7 @@ Python इंस्टॉल के बिना चलने वाला ए�
   1. **`bump-version`** — `pyproject.toml` से वर्तमान `X.Y.Z` पढ़ें, `X.Y.(Z+1)` तक बढ़ाएँ, workflow `GITHUB_TOKEN` का उपयोग करके `main` पर commit + push करें। वह push CI को फिर से trigger नहीं करता (GitHub के नियम के अनुसार कि `GITHUB_TOKEN`-चालित push नए workflow रन शुरू नहीं कर सकते), इसलिए चक्र स्वाभाविक रूप से समाप्त होता है।
   2. **`publish-pypi`** — sdist + wheel build करें, `twine check`, `PYPI_API_TOKEN` के माध्यम से `twine upload`।
   3. **`create-draft-release`** — auto-generated notes के साथ tag `v<version>` पर एक *draft* GitHub रिलीज़ खोलें।
-  4. **`build-nuitka`** — एक Windows runner पर एक Nuitka standalone बंडल compile करें (प्रवेश-बिंदु: `--python-flag=-m` के माध्यम से `python -m thesisagents`), उसे smoke-test करें, परिणामी `thesisagents.dist/` फ़ोल्डर को zip करें, और zip + एक `.sha256` checksum को draft रिलीज़ से attach करें। डिज़ाइन के अनुसार standalone (onefile नहीं): onefile हर launch पर `%TEMP%` में स्वयं-extract होता है, स्टार्टअप विलंब जोड़ता है और locked-down मशीनों पर antivirus heuristics को trigger करता है। डिज़ाइन के अनुसार Windows-only भी: Linux / macOS उपयोगकर्ता PyPI से इंस्टॉल करते हैं। `pyproject.toml` पर keyed build cache warm builds को ~70 मिनट cold से ~5–10 मिनट तक घटाता है।
+  4. **`build-nuitka`** — एक Windows runner पर एक Nuitka standalone बंडल compile करें (प्रवेश-बिंदु: `--python-flag=-m` के माध्यम से `python -m thesisagents`), उसे smoke-test करें, परिणामी `thesisagents.dist/` फ़ोल्डर को zip करें, और zip + एक `.sha256` checksum को draft रिलीज़ से attach करें। डिज़ाइन के अनुसार standalone (onefile नहीं): onefile हर launch पर `%TEMP%` में स्वयं-extract होता है, स्टार्टअप विलंब जोड़ता है और locked-down मशीनों पर antivirus heuristics को trigger करता है। डिज़ाइन के अनुसार Windows-only भी: Linux / macOS उपयोगकर्ता PyPI से इंस्टॉल करते हैं। `pyproject.toml` पर keyed build cache warm builds को ~85 मिनट cold से ~5–10 मिनट तक घटाता है।
   5. **`publish-release`** — Nuitka asset अपलोड होने पर draft को unmark करें, ताकि उपयोगकर्ता कभी अधूरी रिलीज़ न देखें।
 
   **एक रिलीज़ छोड़ना।** commit संदेश में कहीं भी `[skip release]` शामिल करें और bump + हर downstream job छोड़ दिया जाता है — इसे docs-only / typo / refactor commits के लिए उपयोग करें जिन्हें एक संस्करण संख्या नहीं जलानी चाहिए।
@@ -343,7 +436,7 @@ PyPI publishing + रिलीज़ निष्पादन योग्य �
 1. <https://pypi.org/manage/account/token/> पर एक project-scoped API token उत्पन्न करें।
 2. GitHub repo में: `Settings → Secrets and variables → Actions → New repository secret`। इसे `PYPI_API_TOKEN` नाम दें और token मान पेस्ट करें।
 3. GitHub Actions को `main` पर push करने की अनुमति दें: `Settings → Actions → General → Workflow permissions → Read and write permissions`। bump commit workflow के `GITHUB_TOKEN` द्वारा push किया जाता है।
-4. `main` में PRs मर्ज करके रिलीज़ करें। pipeline को PyPI पर publish करने में ~3–5 मिनट और Windows zip attach होने में ~50–70 मिनट अधिक (cold) या ~5–10 मिनट (warm Nuitka cache) लगते हैं।
+4. `main` में PRs मर्ज करके रिलीज़ करें। pipeline को PyPI पर publish करने में ~3–5 मिनट और Windows zip attach होने में ~80–90 मिनट अधिक (cold) या ~5–10 मिनट (warm Nuitka cache) लगते हैं।
 
 `publish-pypi` job जानबूझकर कोई GitHub Environment attach नहीं करता, इसलिए प्रत्येक रन repo home पर एक "Deployment" sidebar widget के बजाय एक Release प्रविष्टि (अपने Nuitka `.exe` attached के साथ) के रूप में दिखता है — रिलीज़ को अपना समर्पित पृष्ठ मिलता है और शीर्ष पर एक Deployment प्रविष्टि बस अनावश्यक शोर होगी।
 

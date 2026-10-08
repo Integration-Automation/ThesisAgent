@@ -303,16 +303,68 @@ and only for runs > 4 papers.
 
 ### Master-slide expectations
 
-A real template (`assets/template/thesis-style.pptx`, when added) would
-ship master + 4-6 layouts. As long as the exporter still uses
-`prs.slide_layouts[6]` (blank), the visual identity comes from the
-programmatic accent bar + typography pass. Either path is acceptable
-provided every slide ends up with:
-1. A consistent font family per language (no Calibri default).
-2. An accent geometry (top bar / cover band / section band) at fixed
-   positions across slides.
+There are two paths, and both must end in the same place.
+
+- **Built-in deck (no template).** Every slide sits on python-pptx's
+  blank layout and the visual identity comes from the programmatic
+  accent shapes + the typography pass.
+- **User template** (`ExportOptions.pptx_template`, `--pptx-template`).
+  The template's layouts and master carry background, logo and chrome.
+  The exporter picks a layout **by slide role** (cover / section /
+  content / table / references / qa) through
+  `thesisagents/exporters/template.py::LayoutSet`, never by index, and a
+  config file may override fonts, the four palette colours and whether
+  the exporter's own header band / cover panel are drawn. Full contract:
+  `docs/pptx_templates.md`.
+
+Either way every slide must end up with:
+1. A consistent font family per language (no Calibri default). A
+   template config may name the families, the pass still sets them on
+   every run.
+2. An accent geometry at fixed positions across slides: the exporter's
+   (top band / cover panel), or the template's own when its config
+   switches the exporter's off.
 3. Page numbers in `_BRAND_GREY` (already set).
-4. The semantic shape names listed in `slide-deck-rules.md`.
+4. The semantic shape names listed in `slide-deck-rules.md`, including
+   `title` when the title is written into a template's title placeholder.
+5. An explicit colour on every run, as the dark-mode contract requires.
+
+**Rules for code that touches layouts or template styling:**
+
+- **Never pick a layout by index.** `prs.slide_layouts[6]` is the blank
+  layout only in python-pptx's own template. **Why:** with a user
+  template of five layouts that line raised `list index out of range`
+  in the middle of an export, and with a seventh layout that had
+  placeholders every slide shipped a "Click to add title" box.
+  **Pattern:** `layout.add_slide(prs, ROLE_TABLE)` on the deck's
+  `LayoutSet`. **Anti-pattern:** `prs.slides.add_slide(prs.slide_layouts[6])`
+  in a new builder (`pptx_edit.add_slide` had exactly this and now goes
+  through `template.content_layout`).
+- **Style overrides are post-passes over the built-in palette.** A
+  template's `[colors]` are applied by `_apply_template_palette`, which
+  looks each built-in colour up and swaps it, the same way the dark-mode
+  pass works. **Why:** builders keep writing `_BRAND_*`, so the explicit-
+  colour contract and the dark-mode maps keep working with a template.
+  **Anti-pattern:** threading a palette object through the builders, or
+  writing a template colour straight onto a run inside a builder (the
+  dark-mode pass would not know how to map it).
+- **White text needs its navy.** Titles and the cover's text are white
+  because they sit on the header band and the cover panel. When a
+  template switches that chrome off, `_recolor_text_without_chrome` sets
+  them to `_BRAND_DARK` / `_BRAND_GREY`. **Why:** otherwise the deck is
+  white-on-white on the template's light background, the light-on-light
+  failure above. **Example:** `[chrome] header_band = false` turns a
+  content title from `#FFFFFF` to `#1F3A66`. Any new light-on-navy text
+  must be covered by that pass.
+- **A template colour must pass the same contrast bar.** The config
+  parser refuses a palette colour brighter than the light-on-light
+  threshold (luminance 0.7 x 255) and refuses `#C0392B`. **Why:** the
+  no-red and contrast contracts bind every deck this project produces,
+  including ones styled by a user's file.
+- **Sizes and margins are not template settings.** **Why:** slide
+  geometry, the content caps and the overflow inspector are calibrated
+  for the built-in values. A config with `[sizes]` or `[margins]` is
+  refused with that reason, not silently ignored.
 
 ### Tables — additional anti-patterns
 
