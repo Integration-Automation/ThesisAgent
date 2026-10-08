@@ -457,7 +457,8 @@ def test_concurrent_readers_do_not_corrupt_the_database(path):
             with Library(path, create=False) as reader:    # its own connection
                 while not done.is_set():
                     count = len(reader.search("graphs", limit=None))
-                    assert 5 <= count <= 40
+                    if not 5 <= count <= 40:
+                        raise RuntimeError(f"Concurrent reader saw an invalid paper count: {count}")
                     reader.stats()
         except BaseException as err:  # noqa: BLE001 - reported by the main thread
             failures.append(err)
