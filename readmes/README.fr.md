@@ -682,6 +682,10 @@ Nuitka attaché) plutôt que comme un widget « Deployment » dans la barre lat�
 de la page d'accueil du dépôt — les releases obtiennent leur propre page dédiée
 et une entrée de Deployment par-dessus ne serait que du bruit redondant.
 
+## Sécurité
+
+Signalez les vulnérabilités en privé. La politique, les versions prises en charge et les notes destinées aux opérateurs se trouvent dans [SECURITY.md](../SECURITY.md).
+
 ## Licence
 
 Voir `LICENSE`. L'API arXiv est utilisée selon les conditions d'utilisation de

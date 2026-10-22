@@ -440,6 +440,10 @@ PyPI publishing + रिलीज़ निष्पादन योग्य �
 
 `publish-pypi` job जानबूझकर कोई GitHub Environment attach नहीं करता, इसलिए प्रत्येक रन repo home पर एक "Deployment" sidebar widget के बजाय एक Release प्रविष्टि (अपने Nuitka `.exe` attached के साथ) के रूप में दिखता है — रिलीज़ को अपना समर्पित पृष्ठ मिलता है और शीर्ष पर एक Deployment प्रविष्टि बस अनावश्यक शोर होगी।
 
+## सुरक्षा
+
+कमजोरियों की रिपोर्ट निजी रूप से करें। नीति, समर्थित संस्करण और ऑपरेटर नोट [SECURITY.md](../SECURITY.md) में हैं।
+
 ## लाइसेंस
 
 `LICENSE` देखें। arXiv API arXiv की API उपयोग शर्तों (<https://info.arxiv.org/help/api/tou.html>) के तहत उपयोग की जाती है — हर 3 सेकंड में 1 अनुरोध की सॉफ्ट सीमा का पालन करें; बंडल किया गया fetcher पहले से ही अपने token bucket के माध्यम से इसे लागू करता है।

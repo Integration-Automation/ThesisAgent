@@ -652,6 +652,10 @@ Nuitka `.exe` attached) rather than as a "Deployment" sidebar
 widget on the repo home — releases get their own dedicated page
 and a Deployment entry on top would just be redundant noise.
 
+## Security
+
+Report vulnerabilities privately. The policy, supported versions, and operator notes are in [SECURITY.md](SECURITY.md).
+
 ## License
 
 See `LICENSE`. The arXiv API is used under arXiv's API terms of use

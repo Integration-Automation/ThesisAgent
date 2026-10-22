@@ -9,6 +9,8 @@
 
 ## 審核規範
 
+共通規範在工作區 repo [JE-Chen/Codes](https://github.com/JE-Chen/Codes) 的 `docs/code-review-standard.md`。下面留下 2026-10-22 這次審核所用的條款，讓審核紀錄的依據對得上那一次。之後的審核以工作區那份為準。本專案更嚴的條款仍以本節與本專案的 `CLAUDE.md` 為準。
+
 本次依下列 10 條審核。更嚴的專案門檻從嚴。
 
 1. 設計：分層、失敗隔離、擴充點是否與 `architecture.md` 一致。

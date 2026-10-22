@@ -670,6 +670,10 @@ terlampir) alih-alih sebagai widget sidebar "Deployment" di beranda repo
 — rilis mendapat halaman khusus tersendiri dan sebuah entri Deployment
 di atasnya hanya akan menjadi kebisingan yang berlebihan.
 
+## Keamanan
+
+Laporkan kerentanan secara pribadi. Kebijakan, versi yang didukung, dan catatan operator ada di [SECURITY.md](../SECURITY.md).
+
 ## Lisensi
 
 Lihat `LICENSE`. API arXiv digunakan menurut ketentuan penggunaan API

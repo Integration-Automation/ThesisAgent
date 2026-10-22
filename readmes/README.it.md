@@ -670,6 +670,10 @@ allegato) invece che come un widget «Deployment» nella barra laterale della ho
 del repo — le release ottengono la propria pagina dedicata e una voce di
 Deployment in cima sarebbe solo rumore ridondante.
 
+## Sicurezza
+
+Segnala le vulnerabilità in privato. La politica, le versioni supportate e le note per gli operatori sono in [SECURITY.md](../SECURITY.md).
+
 ## Licenza
 
 Vedi `LICENSE`. L'API arXiv è usata secondo i termini di utilizzo dell'API di

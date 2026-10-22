@@ -543,6 +543,10 @@ Tiếng Việt、हिन्दी、Bahasa Indonesia)—— 首次运行会从
 「Deployment」侧边栏小部件呈现 —— release 有自己专属的页面,上头再加一个
 Deployment 条目只会是多余的噪声。
 
+## 安全
+
+请私下报告漏洞。政策、支持版本与操作者注意事项见 [SECURITY.md](../SECURITY.md)。
+
 ## 许可证
 
 见 `LICENSE`。arXiv API 依 arXiv 的 API 使用条款

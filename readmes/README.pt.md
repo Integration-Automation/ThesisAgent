@@ -660,6 +660,10 @@ anexado) em vez de como um widget lateral de "Deployment" na home do repo — os
 releases têm a sua própria página dedicada e uma entrada de Deployment por cima
 seria apenas ruído redundante.
 
+## Segurança
+
+Reporte vulnerabilidades em particular. A política, as versões suportadas e as notas para operadores estão em [SECURITY.md](../SECURITY.md).
+
 ## Licença
 
 Veja `LICENSE`. A API do arXiv é usada sob os termos de uso da API do arXiv

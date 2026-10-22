@@ -657,6 +657,10 @@ Environment, nên mỗi lần chạy hiện ra như một mục Release (với
 trên trang chủ repo — các release có trang riêng dành cho chúng
 và một mục Deployment ở trên cùng sẽ chỉ là nhiễu thừa.
 
+## Bảo mật
+
+Hãy báo cáo lỗ hổng một cách riêng tư. Chính sách, phiên bản được hỗ trợ và lưu ý cho người vận hành nằm trong [SECURITY.md](../SECURITY.md).
+
 ## Giấy phép
 
 Xem `LICENSE`. API arXiv được dùng theo điều khoản sử dụng API của arXiv

@@ -670,6 +670,10 @@ als „Deployment"-Sidebar-Widget auf der Repo-Startseite — Releases erhalten
 ihre eigene dedizierte Seite und ein Deployment-Eintrag obendrauf wäre nur
 redundantes Rauschen.
 
+## Sicherheit
+
+Bitte melden Sie Schwachstellen vertraulich. Die Richtlinie, die unterstützten Versionen und die Hinweise für Betreiber stehen in [SECURITY.md](../SECURITY.md).
+
 ## Lizenz
 
 Siehe `LICENSE`. Die arXiv-API wird gemäß arXivs API-Nutzungsbedingungen
